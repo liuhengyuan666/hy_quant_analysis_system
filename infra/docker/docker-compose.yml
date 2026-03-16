@@ -1,0 +1,30 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    container_name: quant-clickhouse
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18123:8123"
+      - "127.0.0.1:19000:9000"
+    environment:
+      CLICKHOUSE_DB: quant
+      CLICKHOUSE_USER: quant_user
+      CLICKHOUSE_PASSWORD: quant_pass
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+      - ../../sql/clickhouse:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user quant_user --password quant_pass --query 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:

@@ -1,0 +1,17 @@
+[package]
+name = "market-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+backtest-engine = { path = "../backtest-engine" }
+chrono.workspace = true
+core-domain = { path = "../core-domain" }
+reqwest.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+urlencoding.workspace = true

@@ -1,0 +1,39 @@
+[workspace]
+members = [
+  "apps/cli",
+  "apps/desktop/src-tauri",
+  "crates/app-service",
+  "crates/backtest-engine",
+  "crates/core-domain",
+  "crates/data-ingestion",
+  "crates/indicator-engine",
+  "crates/macro-engine",
+  "crates/market-store",
+  "crates/report-engine",
+  "crates/rotation-engine",
+  "crates/signal-engine",
+  "crates/strategy-engine",
+  "crates/task-runner",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "MIT"
+authors = ["OpenCode"]
+
+[workspace.dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+clickhouse = { version = "0.13", default-features = false }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+urlencoding = "2"

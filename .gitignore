@@ -1,0 +1,24 @@
+# Rust / Cargo
+/target/
+**/*.rs.bk
+
+# Node / frontend build
+/apps/desktop/frontend/node_modules/
+/apps/desktop/frontend/dist/
+
+# Local runtime state
+/data/
+*.db
+*.sqlite
+
+# Reports / generated outputs
+/reports/*.md
+/reports/*.png
+
+# IDE / OS
+/.idea/
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
