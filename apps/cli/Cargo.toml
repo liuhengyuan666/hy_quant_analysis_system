@@ -1,0 +1,16 @@
+[package]
+name = "quant-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+app-service = { path = "../../crates/app-service" }
+chrono.workspace = true
+clap.workspace = true
+market-store = { path = "../../crates/market-store" }
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

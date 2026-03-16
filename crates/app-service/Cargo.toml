@@ -1,0 +1,21 @@
+[package]
+name = "app-service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+backtest-engine = { path = "../backtest-engine" }
+chrono.workspace = true
+data-ingestion = { path = "../data-ingestion" }
+core-domain = { path = "../core-domain" }
+indicator-engine = { path = "../indicator-engine" }
+macro-engine = { path = "../macro-engine" }
+market-store = { path = "../market-store" }
+report-engine = { path = "../report-engine" }
+rotation-engine = { path = "../rotation-engine" }
+signal-engine = { path = "../signal-engine" }
+strategy-engine = { path = "../strategy-engine" }
+serde.workspace = true

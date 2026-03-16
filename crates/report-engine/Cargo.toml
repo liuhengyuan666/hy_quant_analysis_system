@@ -1,0 +1,12 @@
+[package]
+name = "report-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+backtest-engine = { path = "../backtest-engine" }
+chrono.workspace = true
+core-domain = { path = "../core-domain" }
+serde.workspace = true
