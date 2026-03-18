@@ -43,12 +43,15 @@ fn http_client() -> Result<Client> {
         .user_agent("rust-quant-analysis-system/0.1")
         .timeout(Duration::from_secs(30))
         .http1_only()
+        .no_proxy()
         .build()
         .map_err(Into::into)
 }
 
 fn fetch_text_via_curl(url: &str) -> Result<String> {
-    let output = Command::new("curl.exe").args(["-L", "-s", url]).output()?;
+    let output = Command::new("curl.exe")
+        .args(["-L", "-s", "--noproxy", "*", url])
+        .output()?;
     if !output.status.success() {
         anyhow::bail!(
             "curl fallback failed (exit code {:?}): {}",
@@ -195,6 +198,7 @@ struct TencentResponse {
 #[derive(Debug, Deserialize)]
 struct TencentSymbolData {
     day: Option<Vec<Vec<String>>>,
+    qfqday: Option<Vec<Vec<String>>>,
 }
 
 fn parse_eastmoney_kline(symbol: &str, line: &str) -> Result<DailyBar> {
@@ -227,7 +231,8 @@ pub fn fetch_eastmoney_daily_bars(
         from.format("%Y%m%d"),
         to.format("%Y%m%d")
     );
-    let payload: EastmoneyResponse = http_client()?.get(url).send()?.error_for_status()?.json()?;
+    let (body, _) = fetch_text_with_fallback(&url, Some("application/json,text/plain,*/*"), None)?;
+    let payload: EastmoneyResponse = serde_json::from_str(&body)?;
     let lines = payload
         .data
         .and_then(|data| data.klines)
@@ -254,7 +259,7 @@ pub fn fetch_tencent_daily_bars(
     let rows = payload
         .data
         .get(tencent_symbol)
-        .and_then(|entry| entry.day.clone())
+        .and_then(|entry| entry.qfqday.clone().or_else(|| entry.day.clone()))
         .unwrap_or_default();
 
     rows.into_iter()

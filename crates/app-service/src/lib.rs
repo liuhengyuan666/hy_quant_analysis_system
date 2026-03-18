@@ -170,19 +170,25 @@ fn analyze_jump_metrics(instrument: &Instrument, bars: &[core_domain::DailyBar])
 
 fn classify_health(
     rows: usize,
+    last_date: Option<NaiveDate>,
+    now: NaiveDate,
     primary_provider_ok: bool,
     fallback_provider_ok: Option<bool>,
     gap_count: usize,
     suspicious_jump_count: usize,
-    missing_turnover_rows: usize,
 ) -> String {
-    if rows == 0 || (!primary_provider_ok && fallback_provider_ok != Some(true)) {
+    let freshness_days = last_date
+        .map(|date| (now - date).num_days())
+        .unwrap_or(i64::MAX);
+    let has_recent_data = freshness_days <= 3;
+
+    if rows == 0 {
         "critical".to_string()
-    } else if !primary_provider_ok
-        || gap_count > 0
-        || suspicious_jump_count > 0
-        || missing_turnover_rows > 0
-    {
+    } else if !has_recent_data {
+        "critical".to_string()
+    } else if !primary_provider_ok && fallback_provider_ok != Some(true) {
+        "review".to_string()
+    } else if !primary_provider_ok || gap_count > 0 || suspicious_jump_count > 0 {
         "review".to_string()
     } else {
         "healthy".to_string()
@@ -619,11 +625,12 @@ impl AppContext {
 
             let status = classify_health(
                 bars.len(),
+                bars.last().map(|bar| bar.date),
+                now,
                 primary_provider_ok,
                 fallback_provider_ok,
                 gap_count,
                 suspicious_jump_count,
-                missing_turnover_rows,
             );
 
             summaries.push(DataHealthSymbolSummary {

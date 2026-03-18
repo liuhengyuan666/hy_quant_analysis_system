@@ -54,71 +54,92 @@ fn app_status() -> Result<app_service::AppStatus, String> {
 }
 
 #[tauri::command]
-fn dashboard_snapshot(
+async fn dashboard_snapshot(
     report_date: Option<String>,
 ) -> Result<Option<report_engine::DashboardSnapshot>, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .dashboard_snapshot(
-            report_date
-                .as_deref()
-                .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
-                .transpose()
-                .map_err(|error| error.to_string())?,
-        )
-        .map_err(|error| error.to_string())
+    let parsed_date = report_date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.dashboard_snapshot(parsed_date)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn dashboard_available_dates() -> Result<Vec<String>, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .dashboard_available_dates()
-        .map_err(|error| error.to_string())
+async fn dashboard_available_dates() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.dashboard_available_dates()
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn export_report(report_date: Option<String>) -> Result<app_service::ReportSummary, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .export_report(
-            report_date
-                .as_deref()
-                .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
-                .transpose()
-                .map_err(|error| error.to_string())?,
-        )
-        .map_err(|error| error.to_string())
+async fn export_report(report_date: Option<String>) -> Result<app_service::ReportSummary, String> {
+    let parsed_date = report_date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.export_report(parsed_date)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn data_health_summary() -> Result<report_engine::DataHealthSummary, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .check_data_health()
-        .map_err(|error| error.to_string())
+async fn data_health_summary() -> Result<report_engine::DataHealthSummary, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.check_data_health()
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn export_data_health_report() -> Result<app_service::ReportSummary, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .export_data_health_report()
-        .map_err(|error| error.to_string())
+async fn export_data_health_report() -> Result<app_service::ReportSummary, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.export_data_health_report()
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn recent_reports(limit: Option<usize>) -> Result<Vec<app_service::RecentReportItem>, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context
-        .recent_reports(limit.unwrap_or(10))
-        .map_err(|error| error.to_string())
+async fn recent_reports(limit: Option<usize>) -> Result<Vec<app_service::RecentReportItem>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.recent_reports(limit.unwrap_or(10))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn usage_guides() -> Result<Vec<app_service::UsageGuide>, String> {
-    let context = AppContext::new(StorageConfig::default());
-    context.usage_guides().map_err(|error| error.to_string())
+async fn usage_guides() -> Result<Vec<app_service::UsageGuide>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.usage_guides()
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
