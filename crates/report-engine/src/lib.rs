@@ -25,7 +25,43 @@ pub struct DashboardSnapshot {
     pub top_signals: Vec<SignalSnapshot>,
     pub bullish_signals: Vec<SignalSnapshot>,
     pub defensive_signals: Vec<SignalSnapshot>,
+    pub watchlist_breadth: Option<WatchlistBreadthSnapshot>,
     pub latest_backtest: Option<BacktestSummary>,
+    pub load_metrics: Option<DashboardLoadMetrics>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardLoadMetrics {
+    pub available_dates_ms: u64,
+    pub regime_ms: u64,
+    pub rotations_ms: u64,
+    pub signals_ms: u64,
+    pub backtest_ms: u64,
+    pub breadth_ms: u64,
+    pub assembly_ms: u64,
+    pub total_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchlistBreadthMarketSnapshot {
+    pub market: String,
+    pub universe_label: String,
+    pub eligible_count: usize,
+    pub above_count: usize,
+    pub breadth_pct: f64,
+    pub breadth_pct_sma5: Option<f64>,
+    pub breadth_5d_delta: Option<f64>,
+    pub range_low_60d: Option<f64>,
+    pub range_high_60d: Option<f64>,
+    pub range_position_60d: Option<f64>,
+    pub status_label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchlistBreadthSnapshot {
+    pub report_date: String,
+    pub markets: Vec<WatchlistBreadthMarketSnapshot>,
+    pub methodology_note: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +143,11 @@ pub fn build_dashboard_snapshot(
     let regime = regimes
         .iter()
         .filter(|row| row.date <= report_date)
-        .max_by(|left, right| left.market.cmp(&right.market))?;
+        .max_by(|left, right| {
+            left.date
+                .cmp(&right.date)
+                .then_with(|| left.market.cmp(&right.market))
+        })?;
     let mut top_rotation = rotations
         .iter()
         .filter(|row| row.date == report_date)
@@ -175,8 +215,95 @@ pub fn build_dashboard_snapshot(
         top_signals,
         bullish_signals,
         defensive_signals,
+        watchlist_breadth: None,
         latest_backtest,
+        load_metrics: None,
     })
+}
+
+pub fn build_dashboard_snapshot_for_date(
+    regime: &MarketRegimeSnapshot,
+    rotations: &[RotationRankSnapshot],
+    signals: &[SignalSnapshot],
+    latest_backtest: Option<BacktestSummary>,
+    report_date: NaiveDate,
+    latest_available_date: NaiveDate,
+) -> DashboardSnapshot {
+    let mut top_rotation = rotations.to_vec();
+    top_rotation.sort_by(|left, right| left.rank.cmp(&right.rank));
+    let mut bottom_rotation = top_rotation.clone();
+    bottom_rotation.sort_by(|left, right| {
+        left.momentum_score
+            .total_cmp(&right.momentum_score)
+            .then_with(|| left.symbol.cmp(&right.symbol))
+    });
+    bottom_rotation.truncate(5);
+    top_rotation.truncate(5);
+
+    let mut top_signals = signals.to_vec();
+    top_signals.sort_by(|left, right| {
+        right
+            .final_score
+            .total_cmp(&left.final_score)
+            .then_with(|| left.symbol.cmp(&right.symbol))
+    });
+    let bullish_signals = top_signals
+        .iter()
+        .filter(|row| {
+            matches!(
+                row.signal_label,
+                core_domain::SignalLabel::StrongBuy | core_domain::SignalLabel::Buy
+            )
+        })
+        .take(5)
+        .cloned()
+        .collect::<Vec<_>>();
+    let defensive_signals = top_signals
+        .iter()
+        .filter(|row| {
+            matches!(
+                row.signal_label,
+                core_domain::SignalLabel::Reduce
+                    | core_domain::SignalLabel::Sell
+                    | core_domain::SignalLabel::Hold
+                    | core_domain::SignalLabel::Watch
+            )
+        })
+        .take(5)
+        .cloned()
+        .collect::<Vec<_>>();
+    top_signals.truncate(5);
+
+    DashboardSnapshot {
+        report_date: report_date.to_string(),
+        latest_available_date: latest_available_date.to_string(),
+        regime_as_of_date: regime.macro_as_of_date.to_string(),
+        regime_stale_days: (report_date - regime.macro_as_of_date).num_days(),
+        regime_label: regime.regime_label.clone(),
+        trend_score: regime.trend_score,
+        liquidity_score: regime.liquidity_score,
+        risk_score: regime.risk_score,
+        top_rotation,
+        bottom_rotation,
+        top_signals,
+        bullish_signals,
+        defensive_signals,
+        watchlist_breadth: None,
+        latest_backtest,
+        load_metrics: None,
+    }
+}
+
+fn format_optional_pct(value: Option<f64>) -> String {
+    value
+        .map(|number| format!("{number:.2}%"))
+        .unwrap_or_else(|| "N/A".to_string())
+}
+
+fn format_optional_delta(value: Option<f64>) -> String {
+    value
+        .map(|number| format!("{number:+.2} pts"))
+        .unwrap_or_else(|| "N/A".to_string())
 }
 
 pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
@@ -195,6 +322,27 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
         snapshot.liquidity_score,
         snapshot.risk_score
     ));
+    output.push_str("## Watchlist Breadth (MA30)\n\n");
+    if let Some(breadth) = &snapshot.watchlist_breadth {
+        output.push_str(&format!("- Methodology: {}\n", breadth.methodology_note));
+        output.push_str(&format!("- Report Date: {}\n", breadth.report_date));
+        for market in &breadth.markets {
+            output.push_str(&format!(
+                "- {} | breadth={:.2}% | above={}/{} | sma5={} | delta={} | range_pos={} | status={}\n",
+                market.universe_label,
+                market.breadth_pct,
+                market.above_count,
+                market.eligible_count,
+                format_optional_pct(market.breadth_pct_sma5),
+                format_optional_delta(market.breadth_5d_delta),
+                format_optional_pct(market.range_position_60d.map(|value| value * 100.0)),
+                market.status_label
+            ));
+        }
+        output.push_str("\n");
+    } else {
+        output.push_str("- Watchlist breadth proxy is unavailable for this report date\n\n");
+    }
     output.push_str("## Top Rotation\n\n");
     for item in &snapshot.top_rotation {
         output.push_str(&format!(
@@ -337,4 +485,54 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
         }
     }
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_markdown_report_includes_watchlist_breadth_section() {
+        let snapshot = DashboardSnapshot {
+            report_date: "2026-03-20".to_string(),
+            latest_available_date: "2026-03-20".to_string(),
+            regime_as_of_date: "2026-03-19".to_string(),
+            regime_stale_days: 1,
+            regime_label: "risk_on".to_string(),
+            trend_score: 72.0,
+            liquidity_score: 60.0,
+            risk_score: 55.0,
+            top_rotation: Vec::new(),
+            bottom_rotation: Vec::new(),
+            top_signals: Vec::new(),
+            bullish_signals: Vec::new(),
+            defensive_signals: Vec::new(),
+            watchlist_breadth: Some(WatchlistBreadthSnapshot {
+                report_date: "2026-03-20".to_string(),
+                methodology_note: "Proxy only; not full-market stock breadth.".to_string(),
+                markets: vec![WatchlistBreadthMarketSnapshot {
+                    market: "CN".to_string(),
+                    universe_label: "CN tracked universe".to_string(),
+                    eligible_count: 4,
+                    above_count: 3,
+                    breadth_pct: 75.0,
+                    breadth_pct_sma5: Some(66.0),
+                    breadth_5d_delta: Some(12.0),
+                    range_low_60d: Some(25.0),
+                    range_high_60d: Some(80.0),
+                    range_position_60d: Some(0.91),
+                    status_label: "near_local_high".to_string(),
+                }],
+            }),
+            latest_backtest: None,
+            load_metrics: None,
+        };
+
+        let rendered = render_markdown_report(&snapshot);
+
+        assert!(rendered.contains("## Watchlist Breadth (MA30)"));
+        assert!(rendered.contains("Proxy only; not full-market stock breadth."));
+        assert!(rendered.contains("CN tracked universe | breadth=75.00% | above=3/4"));
+        assert!(rendered.contains("status=near_local_high"));
+    }
 }
