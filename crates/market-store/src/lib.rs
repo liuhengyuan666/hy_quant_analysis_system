@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
 use backtest_engine::{BacktestEquityPoint, BacktestSummary, BacktestTrade};
@@ -10,6 +11,7 @@ use core_domain::{
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,8 +95,39 @@ pub fn init_sqlite(config: &StorageConfig) -> Result<()> {
     Ok(())
 }
 
-fn clickhouse_client() -> Client {
-    Client::new()
+fn clickhouse_client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(Client::new)
+}
+
+fn parse_json_each_row<T: DeserializeOwned>(body: &str, row_context: &str) -> Result<Vec<T>> {
+    body.lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str::<T>(line).with_context(|| row_context.to_string()))
+        .collect()
+}
+
+fn encode_symbol_list(symbols: &[String]) -> String {
+    symbols
+        .iter()
+        .map(|symbol| format!("'{}'", escape_sql_string(symbol)))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn decode_signal_snapshot_row(mut row: serde_json::Value) -> Result<SignalSnapshot> {
+    if let Some(signal_label) = row.get("signal_label").and_then(|value| value.as_str()) {
+        row["signal_label"] = match signal_label {
+            "STRONG_BUY" => serde_json::json!("StrongBuy"),
+            "BUY" => serde_json::json!("Buy"),
+            "WATCH" => serde_json::json!("Watch"),
+            "HOLD" => serde_json::json!("Hold"),
+            "REDUCE" => serde_json::json!("Reduce"),
+            "SELL" => serde_json::json!("Sell"),
+            _ => serde_json::json!("Hold"),
+        };
+    }
+    serde_json::from_value::<SignalSnapshot>(row).context("failed to decode signal snapshot")
 }
 
 fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> {
@@ -294,6 +327,25 @@ pub fn fetch_daily_bars(config: &StorageConfig, symbol: &str) -> Result<Vec<Dail
         rows.push(serde_json::from_str::<DailyBar>(line).context("failed to parse daily bar row")?);
     }
     Ok(rows)
+}
+
+pub fn fetch_daily_bars_for_symbols_in_range(
+    config: &StorageConfig,
+    symbols: &[String],
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<DailyBar>> {
+    if symbols.is_empty() {
+        return Ok(Vec::new());
+    }
+    let query = format!(
+        "SELECT date,symbol,open,high,low,close,volume,turnover FROM quant.daily_bar WHERE symbol IN ({}) AND date BETWEEN '{}' AND '{}' ORDER BY symbol,date FORMAT JSONEachRow",
+        encode_symbol_list(symbols),
+        from,
+        to
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse daily bar row")
 }
 
 pub fn fetch_latest_daily_bar_date(config: &StorageConfig) -> Result<Option<NaiveDate>> {
@@ -612,6 +664,25 @@ pub fn fetch_indicator_snapshots(
     Ok(rows)
 }
 
+pub fn fetch_indicator_snapshots_for_symbols_in_range(
+    config: &StorageConfig,
+    symbols: &[String],
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<IndicatorSnapshot>> {
+    if symbols.is_empty() {
+        return Ok(Vec::new());
+    }
+    let query = format!(
+        "SELECT date,symbol,ma10,ma20,ma30,ma60,ma120,ema12,ema26,macd,macd_signal,macd_hist,rsi14,atr14,vol_ma20,vol_ma60 FROM quant.indicator_snapshot WHERE symbol IN ({}) AND date BETWEEN '{}' AND '{}' ORDER BY symbol,date FORMAT JSONEachRow",
+        encode_symbol_list(symbols),
+        from,
+        to
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse indicator snapshot row")
+}
+
 pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSnapshot>> {
     let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime ORDER BY date FORMAT JSONEachRow";
     let url = format!(
@@ -645,6 +716,38 @@ pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSn
     Ok(rows)
 }
 
+pub fn fetch_latest_market_regime_on_or_before(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+) -> Result<Option<MarketRegimeSnapshot>> {
+    let query = format!(
+        "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+        report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    Ok(Some(
+        serde_json::from_str::<MarketRegimeSnapshot>(line)
+            .context("failed to parse market regime row")?,
+    ))
+}
+
+pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<NaiveDate>> {
+    let query = "SELECT DISTINCT date FROM quant.signal_snapshot WHERE date IN (SELECT DISTINCT date FROM quant.rotation_rank) AND date >= (SELECT min(date) FROM quant.market_regime) ORDER BY date DESC FORMAT JSONEachRow";
+    let body = fetch_clickhouse_text(config, query)?;
+    let mut dates = Vec::new();
+    for line in body.lines().filter(|line| !line.trim().is_empty()) {
+        let row: serde_json::Value =
+            serde_json::from_str(line).context("failed to parse dashboard date row")?;
+        if let Some(text) = row.get("date").and_then(|value| value.as_str()) {
+            dates.push(NaiveDate::parse_from_str(text, "%Y-%m-%d")?);
+        }
+    }
+    Ok(dates)
+}
+
 pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSnapshot>> {
     let query = "SELECT date,symbol,rs_20,rs_60,rs_120,momentum_score,rank FROM quant.rotation_rank ORDER BY date,symbol FORMAT JSONEachRow";
     let url = format!(
@@ -676,6 +779,18 @@ pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSn
         );
     }
     Ok(rows)
+}
+
+pub fn fetch_rotation_ranks_for_date(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+) -> Result<Vec<RotationRankSnapshot>> {
+    let query = format!(
+        "SELECT date,symbol,rs_20,rs_60,rs_120,momentum_score,rank FROM quant.rotation_rank WHERE date = '{}' ORDER BY rank,symbol FORMAT JSONEachRow",
+        report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse rotation rank row")
 }
 
 pub fn insert_strategy_preferences(
@@ -1028,23 +1143,27 @@ pub fn fetch_signal_snapshots(config: &StorageConfig) -> Result<Vec<SignalSnapsh
         .context("failed to read signal snapshot response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
-        let mut row: serde_json::Value =
+        let row: serde_json::Value =
             serde_json::from_str(line).context("failed to parse signal snapshot row")?;
-        if let Some(signal_label) = row.get("signal_label").and_then(|value| value.as_str()) {
-            row["signal_label"] = match signal_label {
-                "STRONG_BUY" => serde_json::json!("StrongBuy"),
-                "BUY" => serde_json::json!("Buy"),
-                "WATCH" => serde_json::json!("Watch"),
-                "HOLD" => serde_json::json!("Hold"),
-                "REDUCE" => serde_json::json!("Reduce"),
-                "SELL" => serde_json::json!("Sell"),
-                _ => serde_json::json!("Hold"),
-            };
-        }
-        rows.push(
-            serde_json::from_value::<SignalSnapshot>(row)
-                .context("failed to decode signal snapshot")?,
-        );
+        rows.push(decode_signal_snapshot_row(row)?);
+    }
+    Ok(rows)
+}
+
+pub fn fetch_signal_snapshots_for_date(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+) -> Result<Vec<SignalSnapshot>> {
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,explanation FROM quant.signal_snapshot WHERE date = '{}' ORDER BY final_score DESC,symbol FORMAT JSONEachRow",
+        report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let mut rows = Vec::new();
+    for line in body.lines().filter(|line| !line.trim().is_empty()) {
+        let row: serde_json::Value =
+            serde_json::from_str(line).context("failed to parse signal snapshot row")?;
+        rows.push(decode_signal_snapshot_row(row)?);
     }
     Ok(rows)
 }
