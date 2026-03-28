@@ -10,18 +10,23 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 | Analysis interpretation | `分析使用手册.md` | MA20/MA60/MACD, regime, rotation, signals |
 | Architecture overview | `系统架构与数据流.md` | end-to-end data flow, storage, date semantics |
 | Module responsibilities | `功能模块与处理逻辑.md` | per-module inputs, outputs, source logic |
+| Breadth planning | `市场广度指标-MA30规划.md` | true market breadth planning |
+| Breadth V1 plan | `市场广度指标-MA30-V1实施计划.md` | watchlist breadth proxy rollout |
 
 ## CONVENTIONS
 - User-facing docs stay in Chinese unless there is a strong reason otherwise.
 - README is the entry point; docs here are the detailed reference layer.
 - Keep command examples aligned with actual CLI names and current date semantics.
 - If dashboard behavior changes, update both user docs and architecture docs.
+- Desktop Help/Usage viewer reads markdown from this directory; docs should remain renderable as standalone markdown.
 
 ## ANTI-PATTERNS
 - Do **not** document outdated date semantics (`report_date` only) without `regime_as_of_date` context.
 - Do **not** describe Yahoo/Tushare as default runtime dependencies.
 - Do **not** add commands to docs before verifying they still compile/run.
+- Do **not** describe watchlist breadth proxy as stock-universe breadth.
 
 ## NOTES
 - Desktop Help/Usage viewer reads markdown from this directory.
-- Architecture docs should reflect the current background refresh model and health-check flow.
+- Architecture docs should reflect the current bundled dashboard startup, background refresh model, and health-check flow.
+- Root planning docs outside `docs/` (`设计规划.md`, `实施路径-v1.md`, `数据源方案评审.md`) still matter when architecture intent drifts from implementation.

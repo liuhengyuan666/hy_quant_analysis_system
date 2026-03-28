@@ -22,6 +22,7 @@ Provider boundary for market/macro fetch. Owns universe loading, provider symbol
 - `display_symbol` is presentation metadata only; provider IDs stay separate.
 - Provider fetch should return parsed bars, then pass through `normalize_daily_bar()`.
 - FRED macro fetch may use `curl` fallback on Windows when reqwest transport is not viable.
+- Current V1 runtime universe is INDEX/ETF only; stock-universe expansion is future work.
 
 ## ANTI-PATTERNS
 - Do **not** mix unadjusted and forward-adjusted history in the same stored series.
@@ -34,3 +35,4 @@ Provider boundary for market/macro fetch. Owns universe loading, provider symbol
 - Tushare is a future optional enhancement source, not a current dependency.
 - If a symbol lacks `tencent_symbol`, fallback coverage is intentionally partial.
 - Macro transport status is now surfaced into Data Health; changes here affect CLI/report/UI diagnostics.
+- Watchlist breadth proxy consumes stored bars/MA30 downstream; do not special-case breadth logic inside ingestion.
