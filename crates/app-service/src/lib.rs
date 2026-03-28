@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
-use core_domain::{Instrument, InstrumentType};
+use core_domain::{Instrument, InstrumentType, Market};
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
@@ -10,15 +10,16 @@ use indicator_engine::build_indicator_snapshots;
 use macro_engine::{build_macro_snapshots, build_market_regimes};
 use market_store::StorageConfig;
 use report_engine::{
-    build_dashboard_snapshot, collect_dashboard_dates, render_data_health_report,
-    render_markdown_report, DashboardSnapshot, DataHealthMacroSourceSummary, DataHealthSummary,
-    DataHealthSymbolSummary,
+    build_dashboard_snapshot_for_date, render_data_health_report, render_markdown_report,
+    DashboardLoadMetrics, DashboardSnapshot, DataHealthMacroSourceSummary, DataHealthSummary,
+    DataHealthSymbolSummary, WatchlistBreadthMarketSnapshot, WatchlistBreadthSnapshot,
 };
 use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
 use std::fs;
+use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
@@ -31,6 +32,10 @@ fn format_error_chain(error: &anyhow::Error) -> String {
         current = source.source();
     }
     parts.join(" | caused by: ")
+}
+
+fn elapsed_ms(started_at: Instant) -> u64 {
+    started_at.elapsed().as_millis() as u64
 }
 
 #[derive(Debug, Clone)]
@@ -119,6 +124,14 @@ pub struct RecentReportItem {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct DashboardLoadBundle {
+    pub status: AppStatus,
+    pub available_dates: Vec<String>,
+    pub snapshot: Option<DashboardSnapshot>,
+    pub recent_reports: Vec<RecentReportItem>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct UsageGuide {
     pub id: String,
     pub title: String,
@@ -192,6 +205,166 @@ fn classify_health(
         "review".to_string()
     } else {
         "healthy".to_string()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TrackedInstrumentSeries {
+    close_by_date: BTreeMap<NaiveDate, f64>,
+    ma30_by_date: BTreeMap<NaiveDate, f64>,
+}
+
+#[derive(Debug, Clone)]
+struct BreadthPoint {
+    breadth_pct: f64,
+    eligible_count: usize,
+    above_count: usize,
+}
+
+fn market_code(market: &Market) -> &'static str {
+    match market {
+        Market::Cn => "CN",
+        Market::Hk => "HK",
+    }
+}
+
+fn market_universe_label(market: &Market) -> &'static str {
+    match market {
+        Market::Cn => "CN tracked universe",
+        Market::Hk => "HK tracked universe",
+    }
+}
+
+fn compute_breadth_point(series: &[TrackedInstrumentSeries], date: NaiveDate) -> BreadthPoint {
+    let mut eligible_count = 0usize;
+    let mut above_count = 0usize;
+
+    for item in series {
+        let Some(close) = item.close_by_date.get(&date).copied() else {
+            continue;
+        };
+        let Some(ma30) = item.ma30_by_date.get(&date).copied() else {
+            continue;
+        };
+
+        eligible_count += 1;
+        if close > ma30 {
+            above_count += 1;
+        }
+    }
+
+    let breadth_pct = if eligible_count > 0 {
+        above_count as f64 / eligible_count as f64 * 100.0
+    } else {
+        0.0
+    };
+
+    BreadthPoint {
+        breadth_pct,
+        eligible_count,
+        above_count,
+    }
+}
+
+fn compute_watchlist_breadth_status(
+    eligible_count: usize,
+    breadth_pct: f64,
+    range_position_60d: Option<f64>,
+    breadth_5d_delta: Option<f64>,
+) -> String {
+    if eligible_count == 0 {
+        return "unavailable".to_string();
+    }
+    if let Some(position) = range_position_60d {
+        if position <= 0.20 {
+            return "near_local_low".to_string();
+        }
+        if position >= 0.80 {
+            return "near_local_high".to_string();
+        }
+    }
+    if let Some(delta) = breadth_5d_delta {
+        if delta >= 10.0 {
+            return "improving".to_string();
+        }
+        if delta <= -10.0 {
+            return "weakening".to_string();
+        }
+    }
+    if breadth_pct < 35.0 {
+        "weak".to_string()
+    } else if breadth_pct > 65.0 {
+        "strong".to_string()
+    } else {
+        "neutral".to_string()
+    }
+}
+
+fn build_market_watchlist_breadth_snapshot(
+    market: Market,
+    series: &[TrackedInstrumentSeries],
+    report_date: NaiveDate,
+    dashboard_dates: &[NaiveDate],
+) -> WatchlistBreadthMarketSnapshot {
+    let current = compute_breadth_point(series, report_date);
+    let history = dashboard_dates
+        .iter()
+        .copied()
+        .filter(|date| *date <= report_date)
+        .filter_map(|date| {
+            let point = compute_breadth_point(series, date);
+            (point.eligible_count > 0).then_some(point)
+        })
+        .collect::<Vec<_>>();
+
+    let breadth_pct_sma5 = (history.len() >= 5).then(|| {
+        let window = &history[history.len() - 5..];
+        window.iter().map(|point| point.breadth_pct).sum::<f64>() / window.len() as f64
+    });
+    let breadth_5d_delta = (history.len() >= 6).then(|| {
+        let current = history[history.len() - 1].breadth_pct;
+        let previous = history[history.len() - 6].breadth_pct;
+        current - previous
+    });
+    let (range_low_60d, range_high_60d, range_position_60d) = if history.len() >= 60 {
+        let window = &history[history.len() - 60..];
+        let range_low = window
+            .iter()
+            .map(|point| point.breadth_pct)
+            .fold(f64::INFINITY, f64::min);
+        let range_high = window
+            .iter()
+            .map(|point| point.breadth_pct)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let position = if (range_high - range_low).abs() < f64::EPSILON {
+            Some(0.5)
+        } else {
+            Some(((current.breadth_pct - range_low) / (range_high - range_low)).clamp(0.0, 1.0))
+        };
+        (Some(range_low), Some(range_high), position)
+    } else {
+        (None, None, None)
+    };
+
+    let status_label = compute_watchlist_breadth_status(
+        current.eligible_count,
+        current.breadth_pct,
+        range_position_60d,
+        breadth_5d_delta,
+    );
+
+    WatchlistBreadthMarketSnapshot {
+        market: market_code(&market).to_string(),
+        universe_label: market_universe_label(&market).to_string(),
+        eligible_count: current.eligible_count,
+        above_count: current.above_count,
+        breadth_pct: current.breadth_pct,
+        breadth_pct_sma5,
+        breadth_5d_delta,
+        range_low_60d,
+        range_high_60d,
+        range_position_60d,
+        status_label,
     }
 }
 
@@ -500,24 +673,241 @@ impl AppContext {
         &self,
         report_date: Option<NaiveDate>,
     ) -> Result<Option<DashboardSnapshot>> {
-        let regimes = market_store::fetch_market_regimes(&self.storage)?;
-        let rotations = market_store::fetch_rotation_ranks(&self.storage)?;
-        let signals = market_store::fetch_signal_snapshots(&self.storage)?;
+        let total_started_at = Instant::now();
+        let available_dates_started_at = Instant::now();
+        let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
+        let available_dates_ms = elapsed_ms(available_dates_started_at);
+        let (snapshot, mut metrics) =
+            self.dashboard_snapshot_from_available_dates(report_date, &available_dates)?;
+        metrics.available_dates_ms = available_dates_ms;
+        metrics.total_ms = elapsed_ms(total_started_at);
+        Ok(snapshot.map(|mut snapshot| {
+            snapshot.load_metrics = Some(metrics);
+            snapshot
+        }))
+    }
+
+    pub fn dashboard_bundle(
+        &self,
+        report_date: Option<NaiveDate>,
+        recent_report_limit: usize,
+    ) -> Result<DashboardLoadBundle> {
+        let total_started_at = Instant::now();
+        let available_dates_started_at = Instant::now();
+        let status = self.status()?;
+        let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
+        let available_dates_ms = elapsed_ms(available_dates_started_at);
+        let (snapshot, mut metrics) =
+            self.dashboard_snapshot_from_available_dates(report_date, &available_dates)?;
+        let recent_reports = self.recent_reports(recent_report_limit)?;
+        metrics.available_dates_ms = available_dates_ms;
+        metrics.total_ms = elapsed_ms(total_started_at);
+        let snapshot = snapshot.map(|mut snapshot| {
+            snapshot.load_metrics = Some(metrics);
+            snapshot
+        });
+
+        Ok(DashboardLoadBundle {
+            status,
+            available_dates: available_dates
+                .into_iter()
+                .map(|date| date.to_string())
+                .collect(),
+            snapshot,
+            recent_reports,
+        })
+    }
+
+    fn dashboard_snapshot_from_available_dates(
+        &self,
+        report_date: Option<NaiveDate>,
+        available_dates: &[NaiveDate],
+    ) -> Result<(Option<DashboardSnapshot>, DashboardLoadMetrics)> {
+        let zero_metrics = DashboardLoadMetrics {
+            available_dates_ms: 0,
+            regime_ms: 0,
+            rotations_ms: 0,
+            signals_ms: 0,
+            backtest_ms: 0,
+            breadth_ms: 0,
+            assembly_ms: 0,
+            total_ms: 0,
+        };
+        let Some(latest_available_date) = available_dates.first().copied() else {
+            return Ok((None, zero_metrics));
+        };
+        let report_date = if let Some(date) = report_date {
+            if available_dates.contains(&date) {
+                date
+            } else {
+                return Ok((None, zero_metrics));
+            }
+        } else {
+            latest_available_date
+        };
+        let regime_started_at = Instant::now();
+        let regime =
+            market_store::fetch_latest_market_regime_on_or_before(&self.storage, report_date)?
+                .context("no market regime available for dashboard snapshot")?;
+        let regime_ms = elapsed_ms(regime_started_at);
+        let rotations_started_at = Instant::now();
+        let rotations = market_store::fetch_rotation_ranks_for_date(&self.storage, report_date)?;
+        let rotations_ms = elapsed_ms(rotations_started_at);
+        let signals_started_at = Instant::now();
+        let signals = market_store::fetch_signal_snapshots_for_date(&self.storage, report_date)?;
+        let signals_ms = elapsed_ms(signals_started_at);
+        let backtest_started_at = Instant::now();
         let latest_backtest = market_store::fetch_latest_backtest_run(&self.storage)?;
-        Ok(build_dashboard_snapshot(
-            &regimes,
+        let backtest_ms = elapsed_ms(backtest_started_at);
+        let assembly_started_at = Instant::now();
+        let mut snapshot = build_dashboard_snapshot_for_date(
+            &regime,
             &rotations,
             &signals,
             latest_backtest,
             report_date,
+            latest_available_date,
+        );
+        let assembly_ms = elapsed_ms(assembly_started_at);
+        let breadth_started_at = Instant::now();
+        snapshot.watchlist_breadth =
+            self.compute_watchlist_breadth_snapshot(report_date, &available_dates)?;
+        let breadth_ms = elapsed_ms(breadth_started_at);
+        Ok((
+            Some(snapshot),
+            DashboardLoadMetrics {
+                available_dates_ms: 0,
+                regime_ms,
+                rotations_ms,
+                signals_ms,
+                backtest_ms,
+                breadth_ms,
+                assembly_ms,
+                total_ms: 0,
+            },
         ))
     }
 
     pub fn dashboard_available_dates(&self) -> Result<Vec<String>> {
-        let regimes = market_store::fetch_market_regimes(&self.storage)?;
-        let rotations = market_store::fetch_rotation_ranks(&self.storage)?;
-        let signals = market_store::fetch_signal_snapshots(&self.storage)?;
-        Ok(collect_dashboard_dates(&regimes, &rotations, &signals))
+        Ok(
+            market_store::fetch_dashboard_available_dates(&self.storage)?
+                .into_iter()
+                .map(|date| date.to_string())
+                .collect(),
+        )
+    }
+
+    fn compute_watchlist_breadth_snapshot(
+        &self,
+        report_date: NaiveDate,
+        dashboard_dates: &[NaiveDate],
+    ) -> Result<Option<WatchlistBreadthSnapshot>> {
+        let instruments = load_universe(&self.storage.universe_abspath()?)?;
+        let tracked_instruments = instruments
+            .into_iter()
+            .filter(|instrument| {
+                instrument.enabled
+                    && matches!(
+                        instrument.instrument_type,
+                        InstrumentType::Index | InstrumentType::Etf
+                    )
+            })
+            .collect::<Vec<_>>();
+
+        if tracked_instruments.is_empty() {
+            return Ok(None);
+        }
+
+        let mut relevant_dates = dashboard_dates
+            .iter()
+            .copied()
+            .filter(|date| *date <= report_date)
+            .collect::<Vec<_>>();
+        if relevant_dates.is_empty() {
+            return Ok(None);
+        }
+        relevant_dates.sort_unstable();
+        if relevant_dates.len() > 60 {
+            relevant_dates = relevant_dates[relevant_dates.len() - 60..].to_vec();
+        }
+        let history_window_start = relevant_dates[0];
+        let tracked_symbols = tracked_instruments
+            .iter()
+            .map(|instrument| instrument.symbol.clone())
+            .collect::<Vec<_>>();
+        let bars = market_store::fetch_daily_bars_for_symbols_in_range(
+            &self.storage,
+            &tracked_symbols,
+            history_window_start,
+            report_date,
+        )?;
+        let indicators = market_store::fetch_indicator_snapshots_for_symbols_in_range(
+            &self.storage,
+            &tracked_symbols,
+            history_window_start,
+            report_date,
+        )?;
+
+        let mut series_by_symbol = tracked_instruments
+            .iter()
+            .map(|instrument| {
+                (
+                    instrument.symbol.clone(),
+                    TrackedInstrumentSeries {
+                        close_by_date: BTreeMap::new(),
+                        ma30_by_date: BTreeMap::new(),
+                    },
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for row in bars {
+            if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
+                series.close_by_date.insert(row.date, row.close);
+            }
+        }
+        for row in indicators {
+            if let Some(ma30) = row.ma30 {
+                if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
+                    series.ma30_by_date.insert(row.date, ma30);
+                }
+            }
+        }
+
+        let mut cn_series = Vec::new();
+        let mut hk_series = Vec::new();
+
+        for instrument in tracked_instruments {
+            let Some(series) = series_by_symbol.remove(&instrument.symbol) else {
+                continue;
+            };
+
+            match instrument.market {
+                Market::Cn => cn_series.push(series),
+                Market::Hk => hk_series.push(series),
+            }
+        }
+
+        let methodology_note = "Eligible tracked instruments must be enabled INDEX/ETF universe members with both close and MA30 available on the selected date. Proxy only; not full-market stock breadth.".to_string();
+
+        Ok(Some(WatchlistBreadthSnapshot {
+            report_date: report_date.to_string(),
+            markets: vec![
+                build_market_watchlist_breadth_snapshot(
+                    Market::Cn,
+                    &cn_series,
+                    report_date,
+                    &relevant_dates,
+                ),
+                build_market_watchlist_breadth_snapshot(
+                    Market::Hk,
+                    &hk_series,
+                    report_date,
+                    &relevant_dates,
+                ),
+            ],
+            methodology_note,
+        }))
     }
 
     pub fn check_data_health(&self) -> Result<DataHealthSummary> {
@@ -798,5 +1188,78 @@ impl AppContext {
                 })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn build_series(points: &[(NaiveDate, f64, f64)]) -> TrackedInstrumentSeries {
+        TrackedInstrumentSeries {
+            close_by_date: points
+                .iter()
+                .map(|(date, close, _)| (*date, *close))
+                .collect::<BTreeMap<_, _>>(),
+            ma30_by_date: points
+                .iter()
+                .map(|(date, _, ma30)| (*date, *ma30))
+                .collect::<BTreeMap<_, _>>(),
+        }
+    }
+
+    #[test]
+    fn watchlist_breadth_status_returns_unavailable_without_eligible_symbols() {
+        let status = compute_watchlist_breadth_status(0, 0.0, None, None);
+        assert_eq!(status, "unavailable");
+    }
+
+    #[test]
+    fn watchlist_breadth_status_prioritizes_range_position_over_delta() {
+        let status = compute_watchlist_breadth_status(4, 55.0, Some(0.85), Some(-15.0));
+        assert_eq!(status, "near_local_high");
+    }
+
+    #[test]
+    fn market_watchlist_breadth_snapshot_computes_current_ratio_and_history_metrics() {
+        let start = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
+        let dates = (0..6)
+            .map(|offset| start + Duration::days(offset))
+            .collect::<Vec<_>>();
+        let always_above = build_series(
+            &dates
+                .iter()
+                .map(|date| (*date, 110.0, 100.0))
+                .collect::<Vec<_>>(),
+        );
+        let recovering = build_series(&[
+            (dates[0], 90.0, 100.0),
+            (dates[1], 90.0, 100.0),
+            (dates[2], 90.0, 100.0),
+            (dates[3], 90.0, 100.0),
+            (dates[4], 90.0, 100.0),
+            (dates[5], 110.0, 100.0),
+        ]);
+
+        let snapshot = build_market_watchlist_breadth_snapshot(
+            Market::Cn,
+            &[always_above, recovering],
+            dates[5],
+            &dates,
+        );
+
+        assert_eq!(snapshot.market, "CN");
+        assert_eq!(snapshot.universe_label, "CN tracked universe");
+        assert_eq!(snapshot.eligible_count, 2);
+        assert_eq!(snapshot.above_count, 2);
+        assert!((snapshot.breadth_pct - 100.0).abs() < f64::EPSILON);
+        assert_eq!(snapshot.status_label, "improving");
+        assert_eq!(snapshot.range_position_60d, None);
+        assert_eq!(snapshot.range_low_60d, None);
+        assert_eq!(snapshot.range_high_60d, None);
+        let sma5 = snapshot.breadth_pct_sma5.unwrap();
+        assert!((sma5 - 60.0).abs() < 1e-9);
+        let delta = snapshot.breadth_5d_delta.unwrap();
+        assert!((delta - 50.0).abs() < 1e-9);
     }
 }
