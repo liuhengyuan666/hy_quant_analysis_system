@@ -17,6 +17,15 @@ struct DashboardRefreshStatus {
     error: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct DashboardBundlePayload {
+    status: app_service::AppStatus,
+    available_dates: Vec<String>,
+    snapshot: Option<report_engine::DashboardSnapshot>,
+    recent_reports: Vec<app_service::RecentReportItem>,
+    refresh_status: DashboardRefreshStatus,
+}
+
 impl Default for DashboardRefreshStatus {
     fn default() -> Self {
         Self {
@@ -51,6 +60,41 @@ where
 fn app_status() -> Result<app_service::AppStatus, String> {
     let context = AppContext::new(StorageConfig::default());
     context.status().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn dashboard_bundle(
+    refresh: tauri::State<'_, RefreshCoordinator>,
+    report_date: Option<String>,
+    recent_report_limit: Option<usize>,
+) -> Result<DashboardBundlePayload, String> {
+    let parsed_date = report_date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let limit = recent_report_limit.unwrap_or(10);
+    let bundle = tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.dashboard_bundle(parsed_date, limit)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+
+    let refresh_status = refresh
+        .status
+        .lock()
+        .map(|status| status.clone())
+        .map_err(|error| error.to_string())?;
+
+    Ok(DashboardBundlePayload {
+        status: bundle.status,
+        available_dates: bundle.available_dates,
+        snapshot: bundle.snapshot,
+        recent_reports: bundle.recent_reports,
+        refresh_status,
+    })
 }
 
 #[tauri::command]
@@ -277,6 +321,7 @@ pub fn run() {
         .manage(RefreshCoordinator::default())
         .invoke_handler(tauri::generate_handler![
             app_status,
+            dashboard_bundle,
             dashboard_snapshot,
             dashboard_available_dates,
             export_report,

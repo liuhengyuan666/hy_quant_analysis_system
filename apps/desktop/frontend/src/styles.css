@@ -726,6 +726,10 @@ code {
   grid-column: span 7;
 }
 
+.dashboard-grid__breadth {
+  grid-column: span 5;
+}
+
 .dashboard-grid__rotation,
 .dashboard-grid__backtest {
   grid-column: span 7;
@@ -741,6 +745,77 @@ code {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
+}
+
+.breadth-market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.breadth-market {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--color-surface-soft), rgba(19, 23, 28, 0.9));
+}
+
+.breadth-market--unavailable {
+  border-style: dashed;
+}
+
+.breadth-market__headline {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.breadth-market__value {
+  display: block;
+  font-size: clamp(1.8rem, 2.6vw, 2.5rem);
+  line-height: 1;
+}
+
+.breadth-market__summary,
+.breadth-panel__note {
+  color: var(--color-text-soft);
+  line-height: var(--line-height-body);
+}
+
+.breadth-market__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.breadth-market__metric {
+  padding: var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.breadth-market__metric-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-soft);
+  font-size: var(--font-size-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.breadth-market__metric-value {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.breadth-market__range-row {
+  margin-top: var(--space-1);
+}
+
+.breadth-panel__note {
+  margin: var(--space-4) 0 0;
 }
 
 .signal-card--bullish {
@@ -1177,6 +1252,7 @@ code {
 
   .dashboard-grid__status,
   .dashboard-grid__regime,
+  .dashboard-grid__breadth,
   .dashboard-grid__rotation,
   .dashboard-grid__reports,
   .dashboard-grid__signals,
@@ -1186,8 +1262,13 @@ code {
   }
 
   .rotation-dual-grid,
-  .signal-groups-grid {
+  .signal-groups-grid,
+  .breadth-market-grid {
     grid-template-columns: 1fr;
+  }
+
+  .breadth-market__metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .guide-viewer {
@@ -1229,6 +1310,7 @@ code {
 
   .dashboard-grid__status,
   .dashboard-grid__regime,
+  .dashboard-grid__breadth,
   .dashboard-grid__rotation,
   .dashboard-grid__reports,
   .dashboard-grid__signals,
@@ -1238,7 +1320,12 @@ code {
   }
 
   .rotation-dual-grid,
-  .signal-groups-grid {
+  .signal-groups-grid,
+  .breadth-market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .breadth-market__metrics {
     grid-template-columns: 1fr;
   }
 

@@ -4,6 +4,7 @@ import './styles.css';
 const app = document.querySelector('#app');
 
 const RECENT_REPORT_LIMIT = 8;
+const DATA_HEALTH_CACHE_MS = 5 * 60 * 1000;
 
 const state = {
   loading: true,
@@ -22,6 +23,7 @@ const state = {
   status: null,
   snapshot: null,
   dataHealth: null,
+  dataHealthFetchedAt: null,
   recentReports: [],
   usageGuides: [],
   availableDates: [],
@@ -42,9 +44,11 @@ const state = {
 };
 
 let refreshPollTimer = null;
+let renderFrame = 0;
 
 const COMMANDS = {
   status: 'app_status',
+  dashboardBundle: 'dashboard_bundle',
   availableDates: 'dashboard_available_dates',
   snapshot: 'dashboard_snapshot',
   exportReport: 'export_report',
@@ -137,6 +141,19 @@ function formatPercent(value, digits = 2) {
   return `${formatNumber(numeric * 100, digits)}%`;
 }
 
+function formatDisplayPercent(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '—';
+  return `${formatNumber(numeric, digits)}%`;
+}
+
+function formatDeltaPoints(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '—';
+  const sign = numeric > 0 ? '+' : '';
+  return `${sign}${formatNumber(numeric, digits)} pts`;
+}
+
 function formatCurrency(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return '—';
@@ -170,6 +187,15 @@ function regimeTone(label) {
   const normalized = String(label ?? '').toLowerCase();
   if (normalized.includes('risk_on')) return 'positive';
   if (normalized.includes('risk_off')) return 'negative';
+  return 'neutral';
+}
+
+function breadthTone(label) {
+  const normalized = String(label ?? '').toLowerCase();
+  if (normalized === 'improving' || normalized === 'strong') return 'positive';
+  if (normalized === 'weakening' || normalized === 'weak') return 'negative';
+  if (normalized === 'near_local_low' || normalized === 'near_local_high') return 'warning';
+  if (normalized === 'unavailable') return 'outline';
   return 'neutral';
 }
 
@@ -328,6 +354,13 @@ function parseDateValue(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.getTime();
+}
+
+function isDataHealthCacheFresh() {
+  if (!state.dataHealth || !state.dataHealthFetchedAt) return false;
+  const fetchedAt = new Date(state.dataHealthFetchedAt).getTime();
+  if (!Number.isFinite(fetchedAt)) return false;
+  return (Date.now() - fetchedAt) < DATA_HEALTH_CACHE_MS;
 }
 
 function getDayDifference(earlier, later) {
@@ -1021,6 +1054,97 @@ function renderSignalsPanel(snapshot) {
   `;
 }
 
+function renderWatchlistBreadthPanel(snapshot) {
+  const breadth = snapshot?.watchlist_breadth;
+
+  if (!breadth?.markets?.length) {
+    return `
+      <article class="panel panel--soft">
+        <div class="panel__header">
+          <div>
+            <p class="eyebrow">Participation</p>
+            <h2>Watchlist Breadth (MA30)</h2>
+            <p class="panel__lede">Tracked INDEX + ETF participation above MA30 for the selected report date.</p>
+          </div>
+          <span class="pill pill--outline">Proxy only</span>
+        </div>
+        <div class="empty-state">
+          <p>Watchlist breadth is unavailable for this dashboard snapshot.</p>
+        </div>
+      </article>
+    `;
+  }
+
+  const marketCards = breadth.markets
+    .map((market) => {
+      const eligibleCount = Number(market?.eligible_count ?? 0);
+      const aboveCount = Number(market?.above_count ?? 0);
+      const unavailable = String(market?.status_label ?? '').toLowerCase() === 'unavailable' || eligibleCount === 0;
+      const breadthValue = unavailable ? 'Unavailable' : formatDisplayPercent(market?.breadth_pct, 1);
+      const summaryText = unavailable
+        ? 'No eligible instruments with both close and MA30 on this date.'
+        : `${formatInteger(aboveCount)} / ${formatInteger(eligibleCount)} above MA30`;
+      const rangePosition = getFiniteNumber(market?.range_position_60d);
+
+      return `
+        <section class="breadth-market ${unavailable ? 'breadth-market--unavailable' : ''}">
+          <div class="panel__subheader">
+            <p class="panel__section-title">${escapeHtml(market?.universe_label || `${market?.market || 'Tracked'} universe`)}</p>
+            <span class="pill pill--${breadthTone(market?.status_label)}">${escapeHtml(prettifyToken(market?.status_label || 'Unavailable'))}</span>
+          </div>
+
+          <div class="breadth-market__headline">
+            <strong class="breadth-market__value">${escapeHtml(breadthValue)}</strong>
+            <span class="breadth-market__summary">${escapeHtml(summaryText)}</span>
+          </div>
+
+          <div class="breadth-market__metrics">
+            <article class="breadth-market__metric">
+              <span class="breadth-market__metric-label">SMA5</span>
+              <strong class="breadth-market__metric-value">${escapeHtml(formatDisplayPercent(market?.breadth_pct_sma5, 1))}</strong>
+            </article>
+            <article class="breadth-market__metric">
+              <span class="breadth-market__metric-label">5d delta</span>
+              <strong class="breadth-market__metric-value">${escapeHtml(formatDeltaPoints(market?.breadth_5d_delta, 1))}</strong>
+            </article>
+            <article class="breadth-market__metric">
+              <span class="breadth-market__metric-label">60d range</span>
+              <strong class="breadth-market__metric-value">${escapeHtml(rangePosition === null ? 'N/A' : formatPercent(rangePosition, 0))}</strong>
+            </article>
+          </div>
+
+          <div class="score-row breadth-market__range-row">
+            <div class="score-row__meta">
+              <span>Current breadth</span>
+              <strong>${escapeHtml(unavailable ? 'N/A' : formatDisplayPercent(market?.breadth_pct, 1))}</strong>
+            </div>
+            <div class="score-bar" aria-hidden="true">
+              <span class="score-bar__fill" style="width: ${rangePosition === null ? 0 : clampScore(rangePosition * 100)}%"></span>
+            </div>
+          </div>
+        </section>
+      `;
+    })
+    .join('');
+
+  return `
+    <article class="panel panel--soft">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Participation</p>
+          <h2>Watchlist Breadth (MA30)</h2>
+          <p class="panel__lede">Tracked INDEX + ETF participation above MA30 for the selected report date.</p>
+        </div>
+        <span class="pill pill--outline">Proxy only · not full-market stock breadth</span>
+      </div>
+      <div class="breadth-market-grid">
+        ${marketCards}
+      </div>
+      <p class="breadth-panel__note">${escapeHtml(breadth.methodology_note || 'Eligible tracked instruments require both close and MA30 on the selected date.')}</p>
+    </article>
+  `;
+}
+
 function renderBacktestPanel(snapshot) {
   const backtest = snapshot?.latest_backtest;
 
@@ -1362,12 +1486,13 @@ function renderDataHealthPanel(summary) {
   const flaggedSymbols = getFlaggedSymbols(summary);
   const flaggedMacroSources = getFlaggedMacroSources(summary);
   const exportDisabled = state.loading || state.refreshing || state.refreshStatus.running || state.dataHealthLoading || state.dataHealthExporting || !summary;
+  const refreshHealthDisabled = state.dataHealthLoading || state.refreshing || state.refreshStatus.running;
   const healthStatusMeta = state.dataHealthLoading
     ? 'Refreshing health summary…'
     : state.dataHealthError
       ? `Health refresh issue · ${state.dataHealthError}`
       : summary
-        ? `Generated ${formatDateTime(summary.generated_at)}`
+        ? `Generated ${formatDateTime(summary.generated_at)} · session cache active`
         : 'Health summary not loaded';
 
   if (!summary) {
@@ -1381,6 +1506,9 @@ function renderDataHealthPanel(summary) {
           </div>
           <div class="panel__actions">
             <span class="pill pill--outline">${escapeHtml(healthStatusMeta)}</span>
+            <button id="refreshHealthButton" class="button button--secondary button--compact" ${refreshHealthDisabled ? 'disabled' : ''}>
+              ${state.dataHealthLoading ? 'Refreshing…' : 'Load health summary'}
+            </button>
             <button id="exportHealthButton" class="button button--secondary button--compact" disabled>
               Export data-health report
             </button>
@@ -1403,6 +1531,13 @@ function renderDataHealthPanel(summary) {
         </div>
         <div class="panel__actions">
           <span class="pill pill--outline">Canonical ${escapeHtml(formatCanonicalAdjustment(summary.canonical_adjustment))}</span>
+          <button
+            id="refreshHealthButton"
+            class="button button--secondary button--compact"
+            ${refreshHealthDisabled ? 'disabled' : ''}
+          >
+            ${state.dataHealthLoading ? 'Refreshing…' : 'Refresh health summary'}
+          </button>
           <button
             id="exportHealthButton"
             class="button button--secondary button--compact"
@@ -1574,7 +1709,7 @@ function renderDataHealthPanel(summary) {
   `;
 }
 
-function render() {
+function commitRender() {
   const { status, snapshot, dataHealth } = state;
   const shellState = (state.loading || state.refreshing || state.refreshStatus.running) ? 'true' : 'false';
 
@@ -1624,6 +1759,7 @@ function render() {
       <section class="dashboard-grid ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'dashboard-grid--dimmed' : ''}">
         <div class="dashboard-grid__status">${renderStatusPanel(status)}</div>
         <div class="dashboard-grid__regime">${renderRegimePanel(snapshot)}</div>
+        <div class="dashboard-grid__breadth">${renderWatchlistBreadthPanel(snapshot)}</div>
         <div class="dashboard-grid__rotation">${renderRotationPanel(snapshot)}</div>
         <div class="dashboard-grid__signals">${renderSignalsPanel(snapshot)}</div>
         <div class="dashboard-grid__backtest">${renderBacktestPanel(snapshot)}</div>
@@ -1670,6 +1806,10 @@ function render() {
     exportDataHealthReport();
   };
 
+  document.querySelector('#refreshHealthButton').onclick = () => {
+    void loadDataHealthSummary({ force: true });
+  };
+
   document.querySelector('#closeUsageGuidesButton').onclick = () => {
     closeUsageGuides();
   };
@@ -1691,6 +1831,14 @@ function render() {
       state.selectedUsageGuideId = nextGuideId;
       render();
     };
+  });
+}
+
+function render() {
+  if (renderFrame) return;
+  renderFrame = window.requestAnimationFrame(() => {
+    renderFrame = 0;
+    commitRender();
   });
 }
 
@@ -1798,8 +1946,9 @@ async function loadUsageGuides() {
   }
 }
 
-async function loadDataHealthSummary() {
+async function loadDataHealthSummary({ force = false } = {}) {
   if (state.dataHealthLoading) return;
+  if (!force && isDataHealthCacheFresh()) return;
 
   state.dataHealthLoading = true;
   state.dataHealthError = '';
@@ -1807,6 +1956,7 @@ async function loadDataHealthSummary() {
 
   try {
     state.dataHealth = await invoke(COMMANDS.dataHealthSummary);
+    state.dataHealthFetchedAt = new Date().toISOString();
     state.lastUpdatedAt = new Date().toISOString();
   } catch (error) {
     state.dataHealthError = getErrorMessage(error);
@@ -1823,74 +1973,33 @@ async function loadDashboard() {
 
   try {
     const previousSelectedReportDate = state.selectedReportDate;
-    const [statusResult, availableDatesResult, recentReportsResult, refreshStatusResult] = await Promise.allSettled([
-      invoke(COMMANDS.status),
-      invoke(COMMANDS.availableDates),
-      invoke(COMMANDS.recentReports, { limit: RECENT_REPORT_LIMIT }),
-      invoke(COMMANDS.refreshStatus),
-    ]);
+    const bundleResult = await invoke(COMMANDS.dashboardBundle, {
+      reportDate: previousSelectedReportDate || null,
+      recentReportLimit: RECENT_REPORT_LIMIT,
+    });
 
     const errors = [];
-    let shouldLoadSnapshot = true;
 
-    if (statusResult.status === 'fulfilled') {
-      state.status = statusResult.value;
-    } else {
-      errors.push(`App status: ${getErrorMessage(statusResult.reason)}`);
-    }
-
-    if (availableDatesResult.status === 'fulfilled') {
-      state.availableDates = normalizeAvailableDates(availableDatesResult.value);
-      state.selectedReportDate = resolveSelectedReportDate(state.availableDates, previousSelectedReportDate);
-      shouldLoadSnapshot = state.availableDates.length > 0;
-    } else {
-      errors.push(`Dashboard dates: ${getErrorMessage(availableDatesResult.reason)}`);
-    }
-
-    if (recentReportsResult.status === 'fulfilled') {
-      state.recentReports = normalizeRecentReports(recentReportsResult.value);
-    } else {
-      errors.push(`Recent reports: ${getErrorMessage(recentReportsResult.reason)}`);
-    }
-
-    if (refreshStatusResult.status === 'fulfilled') {
-      state.refreshStatus = normalizeRefreshStatus(refreshStatusResult.value);
+    if (bundleResult) {
+      state.status = bundleResult.status || null;
+      state.availableDates = normalizeAvailableDates(bundleResult.available_dates);
+      state.recentReports = normalizeRecentReports(bundleResult.recent_reports);
+      state.snapshot = bundleResult.snapshot || null;
+      state.selectedReportDate = state.snapshot?.report_date
+        || resolveSelectedReportDate(state.availableDates, previousSelectedReportDate);
+      state.refreshStatus = normalizeRefreshStatus(bundleResult.refresh_status);
       state.refreshing = state.refreshStatus.running;
       if (state.refreshStatus.running) {
         scheduleRefreshPoll(1000);
       }
-    } else {
-      errors.push(`Refresh status: ${getErrorMessage(refreshStatusResult.reason)}`);
     }
 
     if (previousSelectedReportDate !== state.selectedReportDate) {
       state.exportResult = null;
     }
 
-    if (shouldLoadSnapshot) {
-      try {
-        const activeReportDate = getActiveReportDate();
-        state.snapshot = await invoke(
-          COMMANDS.snapshot,
-          activeReportDate ? { reportDate: activeReportDate } : {},
-        );
-
-        if (state.snapshot?.report_date) {
-          state.selectedReportDate = state.snapshot.report_date;
-        }
-      } catch (error) {
-        state.snapshot = null;
-        errors.push(`Dashboard snapshot: ${getErrorMessage(error)}`);
-      }
-    } else {
-      state.snapshot = null;
-    }
-
     if (
-      statusResult.status === 'fulfilled'
-      || availableDatesResult.status === 'fulfilled'
-      || recentReportsResult.status === 'fulfilled'
-      || refreshStatusResult.status === 'fulfilled'
+      bundleResult
       || state.snapshot
     ) {
       state.lastUpdatedAt = new Date().toISOString();
@@ -1900,11 +2009,14 @@ async function loadDashboard() {
       state.error = errors.join(' · ');
     }
   } catch (error) {
+    state.snapshot = null;
     state.error = getErrorMessage(error);
   } finally {
     state.loading = false;
     render();
-    void loadDataHealthSummary();
+    if (!isDataHealthCacheFresh()) {
+      void loadDataHealthSummary();
+    }
   }
 }
 
