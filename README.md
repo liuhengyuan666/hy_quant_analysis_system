@@ -336,9 +336,9 @@ cargo run -p quant-desktop
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-03-16 --to 2026-03-27
+cargo run -p quant-cli -- ingest-daily --from 2026-03-23 --to 2026-03-30
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-03-16 --to 2026-03-27
+cargo run -p quant-cli -- compute-macro --from 2026-03-23 --to 2026-03-30
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
