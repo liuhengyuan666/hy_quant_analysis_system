@@ -179,10 +179,20 @@ fn json_u64(value: Option<&serde_json::Value>) -> Option<u64> {
 }
 
 pub fn execute_clickhouse_query(config: &StorageConfig, query: &str) -> Result<()> {
-    let encoded = urlencoding::encode(query);
+    let upper = query.to_ascii_uppercase();
+    let effective_query = if upper.starts_with("ALTER TABLE")
+        && upper.contains(" DELETE ")
+        && !upper.contains("MUTATIONS_SYNC")
+    {
+        format!("{} SETTINGS mutations_sync = 1", query)
+    } else {
+        query.to_string()
+    };
     let url = format!(
         "{}?database={}&query={}",
-        config.clickhouse_url, config.clickhouse_database, encoded
+        config.clickhouse_url,
+        config.clickhouse_database,
+        urlencoding::encode(&effective_query)
     );
     let response = clickhouse_client()
         .post(url)

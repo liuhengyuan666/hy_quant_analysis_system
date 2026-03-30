@@ -485,6 +485,7 @@ impl AppContext {
 
     pub fn compute_macro_regime(&self, from: NaiveDate, to: NaiveDate) -> Result<MacroSummary> {
         let mut failed_items = Vec::new();
+        let macro_fetch_from = from - Duration::days(550);
         let factor_specs = [
             ("vix", "VIXCLS", true),
             ("us10y", "DGS10", true),
@@ -494,13 +495,18 @@ impl AppContext {
 
         let mut factors = Vec::new();
         for (name, series_id, invert) in factor_specs {
-            match fetch_fred_series(name, series_id, invert, from, to) {
+            match fetch_fred_series(name, series_id, invert, macro_fetch_from, to) {
                 Ok(series) => factors.push(series),
                 Err(error) => failed_items.push(format!("{name}: {}", format_error_chain(&error))),
             }
         }
 
-        let macro_rows = build_macro_snapshots(&factors, 20);
+        let all_macro_rows = build_macro_snapshots(&factors, 20);
+        let macro_rows = all_macro_rows
+            .iter()
+            .filter(|row| row.date >= from && row.date <= to)
+            .cloned()
+            .collect::<Vec<_>>();
         if let Err(error) = market_store::insert_macro_snapshots(&self.storage, &macro_rows) {
             failed_items.push(format!("macro_snapshot: {}", format_error_chain(&error)));
         }
@@ -509,7 +515,10 @@ impl AppContext {
             .context("failed to load CN anchor daily bars")?;
         let hk_anchor = market_store::fetch_daily_bars(&self.storage, "HSI")
             .context("failed to load HK anchor daily bars")?;
-        let regime_rows = build_market_regimes(&macro_rows, &cn_anchor, &hk_anchor);
+        let regime_rows = build_market_regimes(&all_macro_rows, &cn_anchor, &hk_anchor)
+            .into_iter()
+            .filter(|row| row.date >= from && row.date <= to)
+            .collect::<Vec<_>>();
         if let Err(error) = market_store::insert_market_regimes(&self.storage, &regime_rows) {
             failed_items.push(format!("market_regime: {}", format_error_chain(&error)));
         }
