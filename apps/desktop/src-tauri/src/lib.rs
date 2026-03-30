@@ -23,6 +23,7 @@ struct DashboardBundlePayload {
     available_dates: Vec<String>,
     snapshot: Option<report_engine::DashboardSnapshot>,
     recent_reports: Vec<app_service::RecentReportItem>,
+    pipeline_dates: app_service::PipelineDateDiagnostics,
     refresh_status: DashboardRefreshStatus,
 }
 
@@ -93,6 +94,7 @@ async fn dashboard_bundle(
         available_dates: bundle.available_dates,
         snapshot: bundle.snapshot,
         recent_reports: bundle.recent_reports,
+        pipeline_dates: bundle.pipeline_dates,
         refresh_status,
     })
 }

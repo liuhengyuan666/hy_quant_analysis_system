@@ -21,6 +21,7 @@ const state = {
   exportResult: null,
   dataHealthExportResult: null,
   status: null,
+  pipelineDates: null,
   snapshot: null,
   dataHealth: null,
   dataHealthFetchedAt: null,
@@ -631,6 +632,59 @@ function renderMetricCard(label, value, meta, tone = 'neutral') {
   `;
 }
 
+function renderPipelineDateDiagnostics(pipelineDates) {
+  if (!pipelineDates?.stages?.length) {
+    return `
+      <section>
+        <div class="panel__subheader">
+          <p class="panel__section-title">Pipeline freshness</p>
+          <span class="panel__meta">No diagnostics yet</span>
+        </div>
+        <div class="empty-state empty-state--compact">
+          <p>No stage freshness diagnostics are available.</p>
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <section>
+      <div class="panel__subheader">
+        <p class="panel__section-title">Pipeline freshness</p>
+        <span class="panel__meta">Freshest market date · ${escapeHtml(formatDate(pipelineDates.freshest_market_date))}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table data-table--compact">
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Latest date</th>
+              <th>Lag</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pipelineDates.stages.map((item) => {
+              const lagDays = getFiniteNumber(item?.lag_days);
+              const isLatest = Boolean(item?.is_latest);
+              const tone = isLatest ? 'positive' : (lagDays !== null && lagDays > 0 ? 'warning' : 'outline');
+              const statusLabel = isLatest ? 'Fresh' : (lagDays !== null ? `${formatInteger(lagDays)}d behind` : 'Unknown');
+              return `
+                <tr>
+                  <td class="data-table__symbol">${escapeHtml(prettifyToken(item?.stage || 'unknown'))}</td>
+                  <td>${escapeHtml(item?.latest_date ? formatDate(item.latest_date) : 'Unavailable')}</td>
+                  <td>${escapeHtml(lagDays === null ? '—' : `${formatInteger(lagDays)}d`)}</td>
+                  <td><span class="pill pill--${tone}">${escapeHtml(statusLabel)}</span></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 function renderTimeContext(snapshot) {
   const selectedDate = snapshot?.report_date || state.selectedReportDate || '';
   const latestAvailableDate = getLatestAvailableDate(snapshot);
@@ -732,7 +786,7 @@ function renderHealthStrip(status, snapshot, dataHealth) {
   `;
 }
 
-function renderStatusPanel(status) {
+function renderStatusPanel(status, pipelineDates) {
   if (!status) {
     return `
       <article class="panel panel--soft">
@@ -781,6 +835,7 @@ function renderStatusPanel(status) {
           <dd><code>${escapeHtml(status.universe_path)}</code></dd>
         </div>
       </dl>
+      ${renderPipelineDateDiagnostics(pipelineDates)}
     </article>
   `;
 }
@@ -1757,7 +1812,7 @@ function commitRender() {
       ${state.loading ? renderSkeleton() : ''}
 
       <section class="dashboard-grid ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'dashboard-grid--dimmed' : ''}">
-        <div class="dashboard-grid__status">${renderStatusPanel(status)}</div>
+        <div class="dashboard-grid__status">${renderStatusPanel(status, state.pipelineDates)}</div>
         <div class="dashboard-grid__regime">${renderRegimePanel(snapshot)}</div>
         <div class="dashboard-grid__breadth">${renderWatchlistBreadthPanel(snapshot)}</div>
         <div class="dashboard-grid__rotation">${renderRotationPanel(snapshot)}</div>
@@ -1982,6 +2037,7 @@ async function loadDashboard() {
 
     if (bundleResult) {
       state.status = bundleResult.status || null;
+      state.pipelineDates = bundleResult.pipeline_dates || null;
       state.availableDates = normalizeAvailableDates(bundleResult.available_dates);
       state.recentReports = normalizeRecentReports(bundleResult.recent_reports);
       state.snapshot = bundleResult.snapshot || null;
