@@ -33,6 +33,7 @@ enum Command {
     ComputeRotation,
     ComputeStrategyPreferences,
     ComputeSignals,
+    PipelineDates,
     CheckDataHealth,
     RunBacktest {
         #[arg(long, default_value_t = 1000000.0)]
@@ -96,6 +97,10 @@ fn main() -> Result<()> {
         }
         Command::ComputeSignals => {
             let result = context.compute_signals()?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::PipelineDates => {
+            let result = context.pipeline_date_diagnostics()?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::CheckDataHealth => {

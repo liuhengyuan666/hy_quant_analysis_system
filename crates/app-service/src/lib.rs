@@ -129,6 +129,22 @@ pub struct DashboardLoadBundle {
     pub available_dates: Vec<String>,
     pub snapshot: Option<DashboardSnapshot>,
     pub recent_reports: Vec<RecentReportItem>,
+    pub pipeline_dates: PipelineDateDiagnostics,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PipelineStageDateStatus {
+    pub stage: String,
+    pub latest_date: Option<String>,
+    pub lag_days: Option<i64>,
+    pub is_latest: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PipelineDateDiagnostics {
+    pub freshest_market_date: Option<String>,
+    pub dashboard_latest_date: Option<String>,
+    pub stages: Vec<PipelineStageDateStatus>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -700,6 +716,8 @@ impl AppContext {
         let (snapshot, mut metrics) =
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates)?;
         let recent_reports = self.recent_reports(recent_report_limit)?;
+        let pipeline_dates =
+            self.pipeline_date_diagnostics_from_available_dates(&available_dates)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
         let snapshot = snapshot.map(|mut snapshot| {
@@ -715,7 +733,13 @@ impl AppContext {
                 .collect(),
             snapshot,
             recent_reports,
+            pipeline_dates,
         })
+    }
+
+    pub fn pipeline_date_diagnostics(&self) -> Result<PipelineDateDiagnostics> {
+        let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
+        self.pipeline_date_diagnostics_from_available_dates(&available_dates)
     }
 
     fn dashboard_snapshot_from_available_dates(
@@ -795,6 +819,58 @@ impl AppContext {
                 .map(|date| date.to_string())
                 .collect(),
         )
+    }
+
+    fn pipeline_date_diagnostics_from_available_dates(
+        &self,
+        available_dates: &[NaiveDate],
+    ) -> Result<PipelineDateDiagnostics> {
+        let freshest_market_date =
+            market_store::fetch_latest_table_date(&self.storage, "daily_bar")?;
+        let dashboard_latest_date = available_dates.first().copied();
+        let stage_rows = [
+            ("daily_bar", freshest_market_date),
+            (
+                "indicator_snapshot",
+                market_store::fetch_latest_table_date(&self.storage, "indicator_snapshot")?,
+            ),
+            (
+                "market_regime",
+                market_store::fetch_latest_table_date(&self.storage, "market_regime")?,
+            ),
+            (
+                "rotation_rank",
+                market_store::fetch_latest_table_date(&self.storage, "rotation_rank")?,
+            ),
+            (
+                "strategy_preference",
+                market_store::fetch_latest_table_date(&self.storage, "strategy_preference")?,
+            ),
+            (
+                "signal_snapshot",
+                market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?,
+            ),
+            ("dashboard_available", dashboard_latest_date),
+        ];
+
+        let stages = stage_rows
+            .into_iter()
+            .map(|(stage, latest_date)| PipelineStageDateStatus {
+                stage: stage.to_string(),
+                latest_date: latest_date.map(|date| date.to_string()),
+                lag_days: match (freshest_market_date, latest_date) {
+                    (Some(reference), Some(stage_date)) => Some((reference - stage_date).num_days()),
+                    _ => None,
+                },
+                is_latest: matches!((freshest_market_date, latest_date), (Some(reference), Some(stage_date)) if reference == stage_date),
+            })
+            .collect();
+
+        Ok(PipelineDateDiagnostics {
+            freshest_market_date: freshest_market_date.map(|date| date.to_string()),
+            dashboard_latest_date: dashboard_latest_date.map(|date| date.to_string()),
+            stages,
+        })
     }
 
     fn compute_watchlist_breadth_snapshot(

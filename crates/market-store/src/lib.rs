@@ -115,6 +115,23 @@ fn encode_symbol_list(symbols: &[String]) -> String {
         .join(",")
 }
 
+fn fetch_max_date_for_table(config: &StorageConfig, table_name: &str) -> Result<Option<NaiveDate>> {
+    let query = format!(
+        "SELECT max(date) AS max_date FROM quant.{} FORMAT JSONEachRow",
+        table_name
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse max date row")?;
+    let Some(text) = row.get("max_date").and_then(|value| value.as_str()) else {
+        return Ok(None);
+    };
+    Ok(Some(NaiveDate::parse_from_str(text, "%Y-%m-%d")?))
+}
+
 fn decode_signal_snapshot_row(mut row: serde_json::Value) -> Result<SignalSnapshot> {
     if let Some(signal_label) = row.get("signal_label").and_then(|value| value.as_str()) {
         row["signal_label"] = match signal_label {
@@ -746,6 +763,13 @@ pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<Nai
         }
     }
     Ok(dates)
+}
+
+pub fn fetch_latest_table_date(
+    config: &StorageConfig,
+    table_name: &str,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table(config, table_name)
 }
 
 pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSnapshot>> {
