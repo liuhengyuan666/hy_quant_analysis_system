@@ -240,7 +240,7 @@ cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-03-06
+cargo run -p quant-cli -- export-report --date 2026-03-27
 ```
 
 说明：
@@ -336,9 +336,9 @@ cargo run -p quant-desktop
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-03-16 --to 2026-03-19
+cargo run -p quant-cli -- ingest-daily --from 2026-03-16 --to 2026-03-27
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-03-16 --to 2026-03-19
+cargo run -p quant-cli -- compute-macro --from 2026-03-16 --to 2026-03-27
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
