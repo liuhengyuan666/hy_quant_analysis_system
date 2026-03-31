@@ -99,6 +99,10 @@ pub struct DataHealthMacroSourceSummary {
 pub struct DataHealthSummary {
     pub generated_at: String,
     pub canonical_adjustment: String,
+    pub freshest_market_date: Option<NaiveDate>,
+    pub symbols_on_freshest_market_date: usize,
+    pub symbols_missing_freshest_market_date: usize,
+    pub freshest_market_date_complete: bool,
     pub checked_symbols: usize,
     pub healthy_symbols: usize,
     pub review_symbols: usize,
@@ -429,8 +433,15 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
     ));
     output.push_str("## Summary\n\n");
     output.push_str(&format!(
-        "- Canonical Adjustment: {}\n- Checked Symbols: {}\n- Healthy Symbols: {}\n- Review Symbols: {}\n- Critical Symbols: {}\n- Healthy Macro Sources: {}\n- Review Macro Sources: {}\n- Critical Macro Sources: {}\n\n",
+        "- Canonical Adjustment: {}\n- Freshest Market Date: {}\n- Latest-Day Coverage: {}/{}\n- Latest-Day Complete: {}\n- Checked Symbols: {}\n- Healthy Symbols: {}\n- Review Symbols: {}\n- Critical Symbols: {}\n- Healthy Macro Sources: {}\n- Review Macro Sources: {}\n- Critical Macro Sources: {}\n\n",
         summary.canonical_adjustment,
+        summary
+            .freshest_market_date
+            .map(|date| date.to_string())
+            .unwrap_or_else(|| "N/A".to_string()),
+        summary.symbols_on_freshest_market_date,
+        summary.checked_symbols,
+        if summary.freshest_market_date_complete { "yes" } else { "no" },
         summary.checked_symbols,
         summary.healthy_symbols,
         summary.review_symbols,
@@ -534,5 +545,33 @@ mod tests {
         assert!(rendered.contains("Proxy only; not full-market stock breadth."));
         assert!(rendered.contains("CN tracked universe | breadth=75.00% | above=3/4"));
         assert!(rendered.contains("status=near_local_high"));
+    }
+
+    #[test]
+    fn render_data_health_report_includes_latest_day_coverage_summary() {
+        let summary = DataHealthSummary {
+            generated_at: "2026-03-30T12:00:00+00:00".to_string(),
+            canonical_adjustment: "forward-adjusted daily bars (Eastmoney fqt=1, Tencent qfq)"
+                .to_string(),
+            freshest_market_date: Some(NaiveDate::from_ymd_opt(2026, 3, 30).unwrap()),
+            symbols_on_freshest_market_date: 20,
+            symbols_missing_freshest_market_date: 2,
+            freshest_market_date_complete: false,
+            checked_symbols: 22,
+            healthy_symbols: 14,
+            review_symbols: 8,
+            critical_symbols: 0,
+            healthy_macro_sources: 0,
+            review_macro_sources: 4,
+            critical_macro_sources: 0,
+            macro_sources: Vec::new(),
+            symbols: Vec::new(),
+        };
+
+        let rendered = render_data_health_report(&summary);
+
+        assert!(rendered.contains("Freshest Market Date: 2026-03-30"));
+        assert!(rendered.contains("Latest-Day Coverage: 20/22"));
+        assert!(rendered.contains("Latest-Day Complete: no"));
     }
 }

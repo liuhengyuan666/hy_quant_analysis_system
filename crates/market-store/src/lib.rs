@@ -782,6 +782,24 @@ pub fn fetch_latest_table_date(
     fetch_max_date_for_table(config, table_name)
 }
 
+pub fn fetch_distinct_entity_count_for_date(
+    config: &StorageConfig,
+    table_name: &str,
+    entity_column: &str,
+    date: NaiveDate,
+) -> Result<usize> {
+    let query = format!(
+        "SELECT count(DISTINCT {entity_column}) AS entities FROM quant.{table_name} WHERE date = '{date}' FORMAT JSONEachRow"
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(0);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse distinct entity count row")?;
+    Ok(json_u64(row.get("entities")).unwrap_or(0) as usize)
+}
+
 pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSnapshot>> {
     let query = "SELECT date,symbol,rs_20,rs_60,rs_120,momentum_score,rank FROM quant.rotation_rank ORDER BY date,symbol FORMAT JSONEachRow";
     let url = format!(

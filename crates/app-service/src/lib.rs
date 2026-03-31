@@ -138,6 +138,9 @@ pub struct PipelineStageDateStatus {
     pub latest_date: Option<String>,
     pub lag_days: Option<i64>,
     pub is_latest: bool,
+    pub latest_entities: Option<usize>,
+    pub expected_entities: Option<usize>,
+    pub is_complete: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -837,6 +840,10 @@ impl AppContext {
         let freshest_market_date =
             market_store::fetch_latest_table_date(&self.storage, "daily_bar")?;
         let dashboard_latest_date = available_dates.first().copied();
+        let expected_symbol_count = load_universe(&self.storage.universe_abspath()?)?
+            .into_iter()
+            .filter(|instrument| instrument.enabled)
+            .count();
         let stage_rows = [
             ("daily_bar", freshest_market_date),
             (
@@ -864,16 +871,84 @@ impl AppContext {
 
         let stages = stage_rows
             .into_iter()
-            .map(|(stage, latest_date)| PipelineStageDateStatus {
-                stage: stage.to_string(),
-                latest_date: latest_date.map(|date| date.to_string()),
-                lag_days: match (freshest_market_date, latest_date) {
-                    (Some(reference), Some(stage_date)) => Some((reference - stage_date).num_days()),
-                    _ => None,
-                },
-                is_latest: matches!((freshest_market_date, latest_date), (Some(reference), Some(stage_date)) if reference == stage_date),
+            .map(|(stage, latest_date)| {
+                let (latest_entities, expected_entities) = match (stage, latest_date) {
+                    ("daily_bar", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "daily_bar",
+                            "symbol",
+                            date,
+                        )?),
+                        Some(expected_symbol_count),
+                    ),
+                    ("indicator_snapshot", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "indicator_snapshot",
+                            "symbol",
+                            date,
+                        )?),
+                        Some(expected_symbol_count),
+                    ),
+                    ("rotation_rank", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "rotation_rank",
+                            "symbol",
+                            date,
+                        )?),
+                        Some(expected_symbol_count),
+                    ),
+                    ("strategy_preference", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "strategy_preference",
+                            "symbol",
+                            date,
+                        )?),
+                        Some(expected_symbol_count),
+                    ),
+                    ("signal_snapshot", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "signal_snapshot",
+                            "symbol",
+                            date,
+                        )?),
+                        Some(expected_symbol_count),
+                    ),
+                    ("market_regime", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date(
+                            &self.storage,
+                            "market_regime",
+                            "market",
+                            date,
+                        )?),
+                        Some(1),
+                    ),
+                    _ => (None, None),
+                };
+
+                Ok(PipelineStageDateStatus {
+                    stage: stage.to_string(),
+                    latest_date: latest_date.map(|date| date.to_string()),
+                    lag_days: match (freshest_market_date, latest_date) {
+                        (Some(reference), Some(stage_date)) => {
+                            Some((reference - stage_date).num_days())
+                        }
+                        _ => None,
+                    },
+                    is_latest: matches!((freshest_market_date, latest_date), (Some(reference), Some(stage_date)) if reference == stage_date),
+                    latest_entities,
+                    expected_entities,
+                    is_complete: match (latest_entities, expected_entities) {
+                        (Some(actual), Some(expected)) if expected > 0 => Some(actual >= expected),
+                        _ => None,
+                    },
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(PipelineDateDiagnostics {
             freshest_market_date: freshest_market_date.map(|date| date.to_string()),
@@ -1157,11 +1232,29 @@ impl AppContext {
             .iter()
             .filter(|row| row.status == "critical")
             .count();
+        let freshest_market_date = summaries.iter().filter_map(|row| row.last_date).max();
+        let symbols_on_freshest_market_date = freshest_market_date
+            .map(|date| {
+                summaries
+                    .iter()
+                    .filter(|row| row.last_date == Some(date))
+                    .count()
+            })
+            .unwrap_or(0);
+        let symbols_missing_freshest_market_date = summaries
+            .len()
+            .saturating_sub(symbols_on_freshest_market_date);
+        let freshest_market_date_complete =
+            freshest_market_date.is_some() && symbols_missing_freshest_market_date == 0;
 
         Ok(DataHealthSummary {
             generated_at: Utc::now().to_rfc3339(),
             canonical_adjustment: "forward-adjusted daily bars (Eastmoney fqt=1, Tencent qfq)"
                 .to_string(),
+            freshest_market_date,
+            symbols_on_freshest_market_date,
+            symbols_missing_freshest_market_date,
+            freshest_market_date_complete,
             checked_symbols: summaries.len(),
             healthy_symbols,
             review_symbols,
@@ -1214,7 +1307,13 @@ impl AppContext {
                 report_dir.display()
             )
         })?;
-        let report_date = Utc::now().date_naive().to_string();
+        let report_date = summary
+            .symbols
+            .iter()
+            .filter_map(|row| row.last_date)
+            .max()
+            .unwrap_or_else(|| Utc::now().date_naive())
+            .to_string();
         let output_path = report_dir.join(format!("data-health-{}.md", report_date));
         fs::write(&output_path, markdown)
             .with_context(|| format!("failed to write report file: {}", output_path.display()))?;
