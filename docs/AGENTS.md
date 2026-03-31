@@ -12,6 +12,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 | Module responsibilities | `功能模块与处理逻辑.md` | per-module inputs, outputs, source logic |
 | Breadth planning | `市场广度指标-MA30规划.md` | true market breadth planning |
 | Breadth V1 plan | `市场广度指标-MA30-V1实施计划.md` | watchlist breadth proxy rollout |
+| Scoped reporting semantics | `README.md` + `系统架构与数据流.md` | GLOBAL vs CN vs HK reporting behavior |
 
 ## CONVENTIONS
 - User-facing docs stay in Chinese unless there is a strong reason otherwise.
@@ -20,6 +21,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - If dashboard behavior changes, update both user docs and architecture docs.
 - Desktop Help/Usage viewer reads markdown from this directory; docs should remain renderable as standalone markdown.
 - If freshness/debug workflows change, update docs to mention `pipeline-dates` and the distinction between market freshness and macro as-of dates.
+- If scoped reporting changes, document whether a section is truly market-scoped or still global (for example, current regime semantics).
 
 ## ANTI-PATTERNS
 - Do **not** document outdated date semantics (`report_date` only) without `regime_as_of_date` context.
@@ -27,6 +29,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - Do **not** add commands to docs before verifying they still compile/run.
 - Do **not** describe health-report filenames as export-time dates; they now track the freshest checked market date.
 - Do **not** describe watchlist breadth proxy as stock-universe breadth.
+- Do **not** imply CN/HK scoped reports have per-market regime unless code actually supports it.
 
 ## NOTES
 - Desktop Help/Usage viewer reads markdown from this directory.
