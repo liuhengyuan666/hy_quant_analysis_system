@@ -28,6 +28,7 @@ const state = {
   recentReports: [],
   usageGuides: [],
   availableDates: [],
+  selectedScope: 'global',
   selectedReportDate: '',
   selectedUsageGuideId: '',
   lastUpdatedAt: null,
@@ -335,6 +336,8 @@ function formatReportType(value) {
   const normalized = String(value ?? '').trim().toUpperCase();
 
   if (normalized === 'DAILY_REPORT') return 'Daily report';
+  if (normalized === 'DAILY_REPORT_CN') return 'Daily report (CN)';
+  if (normalized === 'DAILY_REPORT_HK') return 'Daily report (HK)';
   if (normalized === 'DATA_HEALTH_REPORT') return 'Data health';
 
   return prettifyToken(value);
@@ -355,6 +358,19 @@ function parseDateValue(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.getTime();
+}
+
+function normalizeScope(value) {
+  const normalized = String(value ?? 'global').trim().toLowerCase();
+  if (normalized === 'cn' || normalized === 'hk') return normalized;
+  return 'global';
+}
+
+function formatScopeLabel(value) {
+  const normalized = normalizeScope(value);
+  if (normalized === 'cn') return 'CN';
+  if (normalized === 'hk') return 'HK';
+  return 'GLOBAL';
 }
 
 function isDataHealthCacheFresh() {
@@ -1334,7 +1350,7 @@ function renderDateSelector() {
     <div class="hero__control">
       <div class="control-field">
         <div class="control-field__header">
-          <label class="control-field__label" for="reportDateSelect">Analysis date</label>
+          <label class="control-field__label" for="scopeSelect">Scope & analysis date</label>
           <button
             id="jumpToLatestButton"
             class="button button--secondary button--compact"
@@ -1343,6 +1359,15 @@ function renderDateSelector() {
             ${isLatestSelected ? 'Latest selected' : 'Jump to latest'}
           </button>
         </div>
+        <select
+          id="scopeSelect"
+          class="select-control"
+          ${controlsDisabled ? 'disabled' : ''}
+        >
+          <option value="global" ${state.selectedScope === 'global' ? 'selected' : ''}>GLOBAL · Shared latest date</option>
+          <option value="cn" ${state.selectedScope === 'cn' ? 'selected' : ''}>CN · A-share complete latest date</option>
+          <option value="hk" ${state.selectedScope === 'hk' ? 'selected' : ''}>HK · Hong Kong complete latest date</option>
+        </select>
         <select
           id="reportDateSelect"
           class="select-control"
@@ -1361,11 +1386,12 @@ function renderDateSelector() {
             : '<option value="">No analysis dates available</option>'}
         </select>
         <div class="control-field__toolbar">
+          <span class="panel__meta">Scope · ${escapeHtml(formatScopeLabel(state.selectedScope))}</span>
           <span class="panel__meta">${latestAvailableDate ? `Latest available · ${escapeHtml(formatDate(latestAvailableDate))}` : 'Latest available date unavailable'}</span>
         </div>
         <span class="control-field__hint">
           ${hasDates
-            ? `Selected analysis date drives every panel below. Latest available analysis loads by default; change the date to inspect historical snapshots and export that same report. Regime as-of date shows when macro posture inputs were last refreshed. ${escapeHtml(optionCountLabel)}.`
+            ? `Scope controls which market set defines the latest complete report date. Selected analysis date drives every panel below. Latest available analysis loads by default; change the date to inspect historical snapshots and export that same report. Regime as-of date shows when macro posture inputs were last refreshed. ${escapeHtml(optionCountLabel)}.`
             : 'No dashboard analysis dates are available yet.'}
         </span>
       </div>
@@ -1866,6 +1892,17 @@ function commitRender() {
     loadSelectedSnapshot();
   };
 
+  document.querySelector('#scopeSelect').onchange = (event) => {
+    const nextScope = normalizeScope(event.target.value);
+    if (nextScope === state.selectedScope || state.loading) return;
+
+    state.selectedScope = nextScope;
+    state.selectedReportDate = '';
+    state.snapshot = null;
+    state.exportResult = null;
+    loadDashboard();
+  };
+
   document.querySelector('#jumpToLatestButton').onclick = () => {
     const latestAvailableDate = getLatestAvailableDate(state.snapshot);
     if (!latestAvailableDate || latestAvailableDate === getActiveReportDate() || state.loading) return;
@@ -2050,8 +2087,10 @@ async function loadDashboard() {
 
   try {
     const previousSelectedReportDate = state.selectedReportDate;
+    const activeScope = normalizeScope(state.selectedScope);
     const bundleResult = await invoke(COMMANDS.dashboardBundle, {
       reportDate: previousSelectedReportDate || null,
+      scope: activeScope,
       recentReportLimit: RECENT_REPORT_LIMIT,
     });
 
@@ -2063,6 +2102,7 @@ async function loadDashboard() {
       state.availableDates = normalizeAvailableDates(bundleResult.available_dates);
       state.recentReports = normalizeRecentReports(bundleResult.recent_reports);
       state.snapshot = bundleResult.snapshot || null;
+      state.selectedScope = normalizeScope(state.snapshot?.scope || activeScope);
       state.selectedReportDate = state.snapshot?.report_date
         || resolveSelectedReportDate(state.availableDates, previousSelectedReportDate);
       state.refreshStatus = normalizeRefreshStatus(bundleResult.refresh_status);
@@ -2105,12 +2145,14 @@ async function loadSelectedSnapshot() {
 
   try {
     const activeReportDate = getActiveReportDate();
+    const activeScope = normalizeScope(state.selectedScope);
     state.snapshot = await invoke(
       COMMANDS.snapshot,
-      activeReportDate ? { reportDate: activeReportDate } : {},
+      activeReportDate ? { reportDate: activeReportDate, scope: activeScope } : { scope: activeScope },
     );
 
     if (state.snapshot?.report_date) {
+      state.selectedScope = normalizeScope(state.snapshot.scope || activeScope);
       state.selectedReportDate = state.snapshot.report_date;
     }
 
@@ -2127,13 +2169,14 @@ async function loadSelectedSnapshot() {
 async function exportReport() {
   const activeReportDate = getActiveReportDate();
   if (!state.snapshot || !activeReportDate || state.exporting) return;
+  const activeScope = normalizeScope(state.selectedScope);
 
   state.exporting = true;
   state.exportResult = null;
   render();
 
   try {
-    const result = await invoke(COMMANDS.exportReport, { reportDate: activeReportDate });
+    const result = await invoke(COMMANDS.exportReport, { reportDate: activeReportDate, scope: activeScope });
     const exportedReportDate = result.report_date || activeReportDate;
     state.exportResult = {
       kind: 'success',
@@ -2143,7 +2186,12 @@ async function exportReport() {
       failed_items: Array.isArray(result.failed_items) ? result.failed_items : [],
     };
     if (result.output_path) {
-      pushRecentReport('DAILY_REPORT', exportedReportDate, result.output_path);
+      const reportType = activeScope === 'cn'
+        ? 'DAILY_REPORT_CN'
+        : activeScope === 'hk'
+          ? 'DAILY_REPORT_HK'
+          : 'DAILY_REPORT';
+      pushRecentReport(reportType, exportedReportDate, result.output_path);
     }
   } catch (error) {
     state.exportResult = {

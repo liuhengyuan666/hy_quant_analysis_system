@@ -67,6 +67,7 @@ fn app_status() -> Result<app_service::AppStatus, String> {
 async fn dashboard_bundle(
     refresh: tauri::State<'_, RefreshCoordinator>,
     report_date: Option<String>,
+    scope: Option<String>,
     recent_report_limit: Option<usize>,
 ) -> Result<DashboardBundlePayload, String> {
     let parsed_date = report_date
@@ -75,9 +76,15 @@ async fn dashboard_bundle(
         .transpose()
         .map_err(|error| error.to_string())?;
     let limit = recent_report_limit.unwrap_or(10);
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
     let bundle = tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
-        context.dashboard_bundle(parsed_date, limit)
+        context.dashboard_bundle_with_scope(parsed_date, parsed_scope, limit)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -102,15 +109,22 @@ async fn dashboard_bundle(
 #[tauri::command]
 async fn dashboard_snapshot(
     report_date: Option<String>,
+    scope: Option<String>,
 ) -> Result<Option<report_engine::DashboardSnapshot>, String> {
     let parsed_date = report_date
         .as_deref()
         .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
         .transpose()
         .map_err(|error| error.to_string())?;
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
     tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
-        context.dashboard_snapshot(parsed_date)
+        context.dashboard_snapshot_with_scope(parsed_date, parsed_scope)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -118,10 +132,16 @@ async fn dashboard_snapshot(
 }
 
 #[tauri::command]
-async fn dashboard_available_dates() -> Result<Vec<String>, String> {
+async fn dashboard_available_dates(scope: Option<String>) -> Result<Vec<String>, String> {
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
     tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
-        context.dashboard_available_dates()
+        context.dashboard_available_dates_with_scope(parsed_scope)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -129,15 +149,24 @@ async fn dashboard_available_dates() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn export_report(report_date: Option<String>) -> Result<app_service::ReportSummary, String> {
+async fn export_report(
+    report_date: Option<String>,
+    scope: Option<String>,
+) -> Result<app_service::ReportSummary, String> {
     let parsed_date = report_date
         .as_deref()
         .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
         .transpose()
         .map_err(|error| error.to_string())?;
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
     tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
-        context.export_report(parsed_date)
+        context.export_report_with_scope(parsed_date, parsed_scope)
     })
     .await
     .map_err(|error| error.to_string())?
