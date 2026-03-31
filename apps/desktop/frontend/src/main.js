@@ -659,6 +659,7 @@ function renderPipelineDateDiagnostics(pipelineDates) {
             <tr>
               <th>Stage</th>
               <th>Latest date</th>
+              <th>Coverage</th>
               <th>Lag</th>
               <th>Status</th>
             </tr>
@@ -667,12 +668,25 @@ function renderPipelineDateDiagnostics(pipelineDates) {
             ${pipelineDates.stages.map((item) => {
               const lagDays = getFiniteNumber(item?.lag_days);
               const isLatest = Boolean(item?.is_latest);
-              const tone = isLatest ? 'positive' : (lagDays !== null && lagDays > 0 ? 'warning' : 'outline');
-              const statusLabel = isLatest ? 'Fresh' : (lagDays !== null ? `${formatInteger(lagDays)}d behind` : 'Unknown');
+              const isComplete = item?.is_complete;
+              const coverageText = Number.isFinite(Number(item?.latest_entities)) && Number.isFinite(Number(item?.expected_entities))
+                ? `${formatInteger(item.latest_entities)}/${formatInteger(item.expected_entities)}`
+                : '—';
+              const tone = isLatest
+                ? isComplete === false
+                  ? 'warning'
+                  : 'positive'
+                : (lagDays !== null && lagDays > 0 ? 'warning' : 'outline');
+              const statusLabel = isLatest
+                ? isComplete === false
+                  ? 'Partial latest'
+                  : 'Fresh'
+                : (lagDays !== null ? `${formatInteger(lagDays)}d behind` : 'Unknown');
               return `
                 <tr>
                   <td class="data-table__symbol">${escapeHtml(prettifyToken(item?.stage || 'unknown'))}</td>
                   <td>${escapeHtml(item?.latest_date ? formatDate(item.latest_date) : 'Unavailable')}</td>
+                  <td>${escapeHtml(coverageText)}</td>
                   <td>${escapeHtml(lagDays === null ? '—' : `${formatInteger(lagDays)}d`)}</td>
                   <td><span class="pill pill--${tone}">${escapeHtml(statusLabel)}</span></td>
                 </tr>
@@ -1606,6 +1620,7 @@ function renderDataHealthPanel(summary) {
       <div class="panel__meta-row">
         <span class="panel__meta">${escapeHtml(healthStatusMeta)}</span>
         <span class="panel__meta">${escapeHtml(formatInteger(summary.checked_symbols))} symbols checked</span>
+        <span class="panel__meta">Freshest market date · ${escapeHtml(formatDate(summary.freshest_market_date))}</span>
       </div>
 
       <div class="mini-metrics">
@@ -1613,6 +1628,13 @@ function renderDataHealthPanel(summary) {
         ${renderMetricCard('Review', formatInteger(summary.review_symbols), 'Needs analyst review', Number(summary.review_symbols) > 0 ? 'neutral' : 'positive')}
         ${renderMetricCard('Critical', formatInteger(summary.critical_symbols), 'Needs immediate follow-up', Number(summary.critical_symbols) > 0 ? 'negative' : 'neutral')}
         ${renderMetricCard('Checked', formatInteger(summary.checked_symbols), 'Universe coverage', 'neutral')}
+      </div>
+
+      <div class="mini-metrics">
+        ${renderMetricCard('Latest-day coverage', `${formatInteger(summary.symbols_on_freshest_market_date)}/${formatInteger(summary.checked_symbols)}`, 'Symbols with bars on the freshest stored market date', summary.freshest_market_date_complete ? 'positive' : 'warning')}
+        ${renderMetricCard('Missing latest-day', formatInteger(summary.symbols_missing_freshest_market_date), 'Symbols not updated on the freshest stored market date', Number(summary.symbols_missing_freshest_market_date) > 0 ? 'warning' : 'positive')}
+        ${renderMetricCard('Freshest date complete', summary.freshest_market_date_complete ? 'Yes' : 'No', 'Latest stored market date has full symbol coverage', summary.freshest_market_date_complete ? 'positive' : 'warning')}
+        ${renderMetricCard('Freshest date', formatDate(summary.freshest_market_date), 'Reference date for latest-day coverage checks', 'neutral')}
       </div>
 
       <div class="mini-metrics">
