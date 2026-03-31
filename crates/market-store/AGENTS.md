@@ -29,6 +29,7 @@ crates/market-store/
 - Delete mutations for correctness-critical refresh paths now run with `mutations_sync = 1`.
 - `instrument` sync is now full refresh style to avoid stale symbol drift.
 - Dashboard hot path now has scoped helpers (`fetch_dashboard_available_dates`, `fetch_latest_market_regime_on_or_before`, date-scoped rotation/signal fetches, symbol-range bar/indicator fetches).
+- Scope-aware completeness checks now rely on `fetch_distinct_entity_count_for_date_in_symbols` for per-market symbol coverage.
 
 ## ANTI-PATTERNS
 - Do **not** add scoring, ranking, or label-selection logic here.
@@ -37,6 +38,7 @@ crates/market-store/
 - Do **not** assume ClickHouse numeric JSON always arrives as numeric type; some counters arrive as strings.
 - Do **not** send dashboard/report paths back to whole-table fetch helpers when scoped helpers exist.
 - Do **not** add new `ALTER TABLE ... DELETE` refresh paths without deciding whether they also require synchronous mutation semantics.
+- Do **not** fake scoped coverage in app-service without a storage-level symbol filter; use the scoped distinct-count helper.
 
 ## REVIEW NOTES
 - This file is now a god-module; split by domain (`bars`, `signals`, `backtest`, `reports`) before much more growth.
