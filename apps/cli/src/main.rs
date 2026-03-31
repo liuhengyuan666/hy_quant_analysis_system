@@ -1,8 +1,25 @@
 use anyhow::Result;
-use app_service::AppContext;
+use app_service::{AppContext, ReportScope};
 use chrono::NaiveDate;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use market_store::StorageConfig;
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum ReportScopeArg {
+    Global,
+    Cn,
+    Hk,
+}
+
+impl From<ReportScopeArg> for ReportScope {
+    fn from(value: ReportScopeArg) -> Self {
+        match value {
+            ReportScopeArg::Global => ReportScope::Global,
+            ReportScopeArg::Cn => ReportScope::Cn,
+            ReportScopeArg::Hk => ReportScope::Hk,
+        }
+    }
+}
 
 #[derive(Debug, Parser)]
 #[command(name = "quant-cli")]
@@ -48,11 +65,18 @@ enum Command {
     DashboardSnapshot {
         #[arg(long)]
         date: Option<NaiveDate>,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
     },
-    DashboardDates,
+    DashboardDates {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     ExportReport {
         #[arg(long)]
         date: Option<NaiveDate>,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
     },
     ExportDataHealthReport,
 }
@@ -117,16 +141,16 @@ fn main() -> Result<()> {
                 context.run_backtest(initial_capital, max_holdings, fee_rate, slippage_rate)?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::DashboardSnapshot { date } => {
-            let result = context.dashboard_snapshot(date)?;
+        Command::DashboardSnapshot { date, scope } => {
+            let result = context.dashboard_snapshot_with_scope(date, scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::DashboardDates => {
-            let result = context.dashboard_available_dates()?;
+        Command::DashboardDates { scope } => {
+            let result = context.dashboard_available_dates_with_scope(scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::ExportReport { date } => {
-            let result = context.export_report(date)?;
+        Command::ExportReport { date, scope } => {
+            let result = context.export_report_with_scope(date, scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ExportDataHealthReport => {

@@ -12,6 +12,7 @@ pub struct ReportArtifact {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardSnapshot {
+    pub scope: String,
     pub report_date: String,
     pub latest_available_date: String,
     pub regime_as_of_date: String,
@@ -206,6 +207,7 @@ pub fn build_dashboard_snapshot(
     top_signals.truncate(5);
 
     Some(DashboardSnapshot {
+        scope: "GLOBAL".to_string(),
         report_date: report_date.to_string(),
         latest_available_date: latest_available_date.to_string(),
         regime_as_of_date: regime.macro_as_of_date.to_string(),
@@ -232,6 +234,7 @@ pub fn build_dashboard_snapshot_for_date(
     latest_backtest: Option<BacktestSummary>,
     report_date: NaiveDate,
     latest_available_date: NaiveDate,
+    scope: &str,
 ) -> DashboardSnapshot {
     let mut top_rotation = rotations.to_vec();
     top_rotation.sort_by(|left, right| left.rank.cmp(&right.rank));
@@ -279,6 +282,7 @@ pub fn build_dashboard_snapshot_for_date(
     top_signals.truncate(5);
 
     DashboardSnapshot {
+        scope: scope.to_string(),
         report_date: report_date.to_string(),
         latest_available_date: latest_available_date.to_string(),
         regime_as_of_date: regime.macro_as_of_date.to_string(),
@@ -313,8 +317,8 @@ fn format_optional_delta(value: Option<f64>) -> String {
 pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     let mut output = String::new();
     output.push_str(&format!(
-        "# Daily Quant Report\n\nDate: {}\n\n",
-        snapshot.report_date
+        "# Daily Quant Report\n\nScope: {}\nDate: {}\n\n",
+        snapshot.scope, snapshot.report_date
     ));
     output.push_str("## Market Regime\n\n");
     output.push_str(&format!(
@@ -505,6 +509,7 @@ mod tests {
     #[test]
     fn render_markdown_report_includes_watchlist_breadth_section() {
         let snapshot = DashboardSnapshot {
+            scope: "GLOBAL".to_string(),
             report_date: "2026-03-20".to_string(),
             latest_available_date: "2026-03-20".to_string(),
             regime_as_of_date: "2026-03-19".to_string(),
