@@ -26,6 +26,7 @@ Thin clap-based operational shell over `AppContext`.
 cargo run -p quant-cli -- status
 cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
+cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- dashboard-dates
 cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-18
 cargo run -p quant-cli -- export-report
@@ -33,3 +34,4 @@ cargo run -p quant-cli -- export-report
 
 ## NOTES
 - There is no separate CLI crate logic beyond `src/main.rs`; if complexity grows, extract flags/parsing helpers before bloating dispatch.
+- `pipeline-dates` is the first diagnostic to run when dashboard freshness and stage freshness disagree.

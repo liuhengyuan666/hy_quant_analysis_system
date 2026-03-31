@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-26 13:54:04 +08:00
-**Commit:** 9642e84
+**Generated:** 2026-03-31 00:50:00 +08:00
+**Commit:** ddc54b5
 **Branch:** main
 
 ## OVERVIEW
@@ -33,6 +33,7 @@ rust-quant-analysis-system/
 | Architecture docs | `docs/系统架构与数据流.md` | system flow, date semantics, health flow |
 | Module docs | `docs/功能模块与处理逻辑.md` | per-module IO, source, processing logic |
 | Breadth planning | `docs/市场广度指标-MA30规划.md` | true stock breadth vs. V1 proxy boundary |
+| Freshness diagnostics | `crates/app-service/src/lib.rs` + `apps/cli/src/main.rs` | `pipeline_date_diagnostics`, `pipeline-dates` |
 
 ## CODE MAP
 | Symbol | Type | Location | Role |
@@ -40,8 +41,10 @@ rust-quant-analysis-system/
 | `AppContext` | struct | `crates/app-service/src/lib.rs` | orchestration facade |
 | `dashboard_bundle` | method | `crates/app-service/src/lib.rs` | bundled dashboard bootstrap payload |
 | `compute_watchlist_breadth_snapshot` | method | `crates/app-service/src/lib.rs` | V1 watchlist breadth proxy |
+| `pipeline_date_diagnostics` | method | `crates/app-service/src/lib.rs` | stage freshness summary |
 | `StorageConfig` | struct | `crates/market-store/src/lib.rs` | runtime paths + DB endpoints |
 | `fetch_dashboard_available_dates` | function | `crates/market-store/src/lib.rs` | scoped dashboard date helper |
+| `fetch_latest_table_date` | function | `crates/market-store/src/lib.rs` | generic table max-date probe |
 | `DashboardSnapshot` | struct | `crates/report-engine/src/lib.rs` | selected-date dashboard payload |
 | `DashboardLoadMetrics` | struct | `crates/report-engine/src/lib.rs` | per-stage snapshot timing |
 | `start_dashboard_refresh` | command | `apps/desktop/src-tauri/src/lib.rs` | background refresh entrypoint |
@@ -52,6 +55,7 @@ rust-quant-analysis-system/
 - `app-service` orchestrates phases; engine crates compute; `market-store` persists.
 - CLI mirrors `AppContext` closely; desktop commands stay thin and call into `app-service` only.
 - ClickHouse transport stays raw HTTP + `JSONEachRow`; scoped helpers beat whole-table reads on hot paths.
+- Macro regime computation requires buffered FRED history; narrow `[from,to]` windows alone are not enough for forward-filled regime dates.
 - Daily bars are canonicalized as **forward-adjusted** (`Eastmoney fqt=1`, `Tencent qfq`).
 - Desktop startup now prefers a bundled payload (`dashboard_bundle`) over many small invokes.
 - Historical dashboard date changes use snapshot-only reads; startup and date switching are intentionally different paths.
@@ -63,6 +67,7 @@ rust-quant-analysis-system/
 - Do **not** reintroduce whole-table or per-symbol full-history reads on dashboard/report hot paths.
 - Do **not** duplicate enum/string conversions across crates.
 - Do **not** treat ClickHouse delete+insert mutations as cheap; acceptable for V1 scale only.
+- Do **not** rely on async ClickHouse delete mutations for correctness-critical refreshes; current delete path is synchronized intentionally.
 - Do **not** label watchlist breadth proxy as true full-market stock breadth.
 
 ## UNIQUE STYLES
@@ -70,6 +75,8 @@ rust-quant-analysis-system/
 - Current V1 is a complete chain: data -> indicators -> macro -> rotation -> strategy -> signal -> backtest -> report -> desktop.
 - Dashboard/report reads are derived from persisted snapshots and latest-on-or-before date semantics, not live provider calls.
 - `report_date` and `regime_as_of_date` are intentionally separate semantics.
+- `pipeline-dates` is the fastest truth source for stale-stage diagnosis; use it before assuming dashboard bugs.
+- Data-health export is dated by the freshest checked market date, not by wall-clock export time.
 - Watchlist breadth is a V1 proxy over enabled INDEX/ETF instruments, not a stock-universe breadth metric.
 
 ## COMMANDS
@@ -84,9 +91,11 @@ cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
 cargo run -p quant-cli -- check-data-health
+cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- dashboard-dates
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- export-report
+cargo run -p quant-cli -- export-data-health-report
 cargo test -p app-service -p report-engine -p market-store
 cargo check --workspace
 ```

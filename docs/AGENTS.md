@@ -19,11 +19,13 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - Keep command examples aligned with actual CLI names and current date semantics.
 - If dashboard behavior changes, update both user docs and architecture docs.
 - Desktop Help/Usage viewer reads markdown from this directory; docs should remain renderable as standalone markdown.
+- If freshness/debug workflows change, update docs to mention `pipeline-dates` and the distinction between market freshness and macro as-of dates.
 
 ## ANTI-PATTERNS
 - Do **not** document outdated date semantics (`report_date` only) without `regime_as_of_date` context.
 - Do **not** describe Yahoo/Tushare as default runtime dependencies.
 - Do **not** add commands to docs before verifying they still compile/run.
+- Do **not** describe health-report filenames as export-time dates; they now track the freshest checked market date.
 - Do **not** describe watchlist breadth proxy as stock-universe breadth.
 
 ## NOTES
