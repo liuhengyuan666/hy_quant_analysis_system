@@ -328,24 +328,33 @@ cargo run -p quant-desktop
 
 1. 更新日线数据
 2. 跑指标 / 宏观 / 轮动 / 信号
-3. 跑一次数据健康检查
-4. 查看 dashboard
-5. 导出日报
-6. 有需要时再跑回测
+3. 先看一次 pipeline freshness / completeness
+4. 再跑一次数据健康检查
+5. 查看 dashboard
+6. 导出日报
+7. 有需要时再跑回测
 
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-03-23 --to 2026-03-30
+cargo run -p quant-cli -- ingest-daily --from 2026-03-30 --to 2026-03-31
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-03-23 --to 2026-03-30
+cargo run -p quant-cli -- compute-macro --from 2026-03-30 --to 2026-03-31
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
+cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- check-data-health
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- export-report
 ```
+
+补充说明：
+
+- `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
+- `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
+- 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
+- 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
 
 ---
 
@@ -372,6 +381,7 @@ cargo run -p quant-cli -- compute-macro --from 2025-01-01 --to 2025-01-31
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
+cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- check-data-health
 cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- dashboard-snapshot
