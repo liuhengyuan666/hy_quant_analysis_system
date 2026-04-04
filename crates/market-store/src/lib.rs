@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use backtest_engine::{BacktestEquityPoint, BacktestSummary, BacktestTrade};
 use chrono::NaiveDate;
 use core_domain::{
-    DailyBar, IndicatorSnapshot, Instrument, MacroSnapshot, MarketRegimeSnapshot,
-    RotationRankSnapshot, SignalSnapshot, StrategyPreferenceSnapshot,
+    AnalysisScope, DailyBar, EnvironmentSnapshot, IndicatorSnapshot, Instrument, MacroSnapshot,
+    MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot, StrategyPreferenceSnapshot,
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
@@ -115,9 +115,62 @@ fn encode_symbol_list(symbols: &[String]) -> String {
         .join(",")
 }
 
+fn ensure_environment_snapshot_table(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "CREATE TABLE IF NOT EXISTS quant.environment_snapshot (date Date,scope LowCardinality(String),regime_as_of_date Date,breadth_as_of_date Date,stress_as_of_date Date,breadth_eligible_count UInt32,breadth_above_count UInt32,breadth_pct Float64,breadth_pct_sma5 Nullable(Float64),breadth_5d_delta Nullable(Float64),breadth_state LowCardinality(String),volume_expansion_pct Nullable(Float64),turnover_coverage_pct Nullable(Float64),liquidity_proxy_score Float64,stress_proxy_score Float64,environment_score Float64,environment_label LowCardinality(String),updated_at DateTime DEFAULT now()) ENGINE = MergeTree PARTITION BY toYYYYMM(date) ORDER BY (scope, date)",
+    )
+}
+
+fn fetch_max_date_for_table_with_filter(
+    config: &StorageConfig,
+    table_name: &str,
+    filter_column: &str,
+    filter_value: &str,
+) -> Result<Option<NaiveDate>> {
+    let query = format!(
+        "SELECT count() AS row_count, max(date) AS max_date FROM quant.{table_name} WHERE {filter_column} = '{}' FORMAT JSONEachRow",
+        escape_sql_string(filter_value)
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse scoped max date row")?;
+    if json_u64(row.get("row_count")).unwrap_or(0) == 0 {
+        return Ok(None);
+    }
+    let Some(text) = row.get("max_date").and_then(|value| value.as_str()) else {
+        return Ok(None);
+    };
+    Ok(Some(NaiveDate::parse_from_str(text, "%Y-%m-%d")?))
+}
+
+pub fn fetch_distinct_entity_count_for_date_with_filter(
+    config: &StorageConfig,
+    table_name: &str,
+    entity_column: &str,
+    filter_column: &str,
+    filter_value: &str,
+    date: NaiveDate,
+) -> Result<usize> {
+    let query = format!(
+        "SELECT count(DISTINCT {entity_column}) AS entities FROM quant.{table_name} WHERE date = '{date}' AND {filter_column} = '{}' FORMAT JSONEachRow",
+        escape_sql_string(filter_value)
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(0);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse filtered distinct entity row")?;
+    Ok(json_u64(row.get("entities")).unwrap_or(0) as usize)
+}
+
 fn fetch_max_date_for_table(config: &StorageConfig, table_name: &str) -> Result<Option<NaiveDate>> {
     let query = format!(
-        "SELECT max(date) AS max_date FROM quant.{} FORMAT JSONEachRow",
+        "SELECT count() AS row_count, max(date) AS max_date FROM quant.{} FORMAT JSONEachRow",
         table_name
     );
     let body = fetch_clickhouse_text(config, &query)?;
@@ -126,6 +179,9 @@ fn fetch_max_date_for_table(config: &StorageConfig, table_name: &str) -> Result<
     };
     let row: serde_json::Value =
         serde_json::from_str(line).context("failed to parse max date row")?;
+    if json_u64(row.get("row_count")).unwrap_or(0) == 0 {
+        return Ok(None);
+    }
     let Some(text) = row.get("max_date").and_then(|value| value.as_str()) else {
         return Ok(None);
     };
@@ -211,6 +267,7 @@ pub fn init_clickhouse(config: &StorageConfig) -> Result<()> {
     for statement in split_sql_statements(&sql) {
         execute_clickhouse_query(config, &statement)?;
     }
+    ensure_environment_snapshot_table(config)?;
     Ok(())
 }
 
@@ -481,11 +538,19 @@ pub fn insert_macro_snapshots(config: &StorageConfig, rows: &[MacroSnapshot]) ->
         .map(|row| row.date)
         .max()
         .context("missing max macro date")?;
+    let factors = rows
+        .iter()
+        .map(|row| row.factor_name.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|factor| format!("'{}'", escape_sql_string(&factor)))
+        .collect::<Vec<_>>()
+        .join(",");
     execute_clickhouse_query(
         config,
         &format!(
-            "ALTER TABLE quant.macro_snapshot DELETE WHERE date BETWEEN '{}' AND '{}'",
-            min_date, max_date
+            "ALTER TABLE quant.macro_snapshot DELETE WHERE factor_name IN ({}) AND date BETWEEN '{}' AND '{}'",
+            factors, min_date, max_date
         ),
     )?;
 
@@ -526,6 +591,19 @@ pub fn insert_macro_snapshots(config: &StorageConfig, rows: &[MacroSnapshot]) ->
     Ok(())
 }
 
+pub fn fetch_macro_snapshots_in_range(
+    config: &StorageConfig,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<MacroSnapshot>> {
+    let query = format!(
+        "SELECT date,factor_name,factor_value,factor_score,factor_source FROM quant.macro_snapshot WHERE date BETWEEN '{}' AND '{}' ORDER BY factor_name,date FORMAT JSONEachRow",
+        from, to
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse macro snapshot row")
+}
+
 pub fn insert_market_regimes(config: &StorageConfig, rows: &[MarketRegimeSnapshot]) -> Result<()> {
     if rows.is_empty() {
         return Ok(());
@@ -544,11 +622,19 @@ pub fn insert_market_regimes(config: &StorageConfig, rows: &[MarketRegimeSnapsho
         .map(|row| row.date)
         .max()
         .context("missing max regime date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.market.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
     execute_clickhouse_query(
         config,
         &format!(
-            "ALTER TABLE quant.market_regime DELETE WHERE market = 'GLOBAL' AND date BETWEEN '{}' AND '{}'",
-            min_date, max_date
+            "ALTER TABLE quant.market_regime DELETE WHERE market IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
         ),
     )?;
 
@@ -585,6 +671,89 @@ pub fn insert_market_regimes(config: &StorageConfig, rows: &[MarketRegimeSnapsho
     if !response.status().is_success() {
         anyhow::bail!(
             "market regime insert failed with status {}",
+            response.status()
+        );
+    }
+    Ok(())
+}
+
+pub fn insert_environment_snapshots(
+    config: &StorageConfig,
+    rows: &[EnvironmentSnapshot],
+) -> Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    ensure_environment_snapshot_table(config)?;
+    let min_date = rows
+        .iter()
+        .map(|row| row.date)
+        .min()
+        .context("missing min environment date")?;
+    let max_date = rows
+        .iter()
+        .map(|row| row.date)
+        .max()
+        .context("missing max environment date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.scope.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
+    execute_clickhouse_query(
+        config,
+        &format!(
+            "ALTER TABLE quant.environment_snapshot DELETE WHERE scope IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
+        ),
+    )?;
+
+    let payload = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "date": row.date.to_string(),
+                "scope": row.scope,
+                "regime_as_of_date": row.regime_as_of_date.to_string(),
+                "breadth_as_of_date": row.breadth_as_of_date.to_string(),
+                "stress_as_of_date": row.stress_as_of_date.to_string(),
+                "breadth_eligible_count": row.breadth_eligible_count,
+                "breadth_above_count": row.breadth_above_count,
+                "breadth_pct": row.breadth_pct,
+                "breadth_pct_sma5": row.breadth_pct_sma5,
+                "breadth_5d_delta": row.breadth_5d_delta,
+                "breadth_state": row.breadth_state,
+                "volume_expansion_pct": row.volume_expansion_pct,
+                "turnover_coverage_pct": row.turnover_coverage_pct,
+                "liquidity_proxy_score": row.liquidity_proxy_score,
+                "stress_proxy_score": row.stress_proxy_score,
+                "environment_score": row.environment_score,
+                "environment_label": row.environment_label,
+            })
+        })
+        .map(|row| serde_json::to_string(&row))
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .join("\n");
+
+    let query = "INSERT INTO quant.environment_snapshot FORMAT JSONEachRow";
+    let url = format!(
+        "{}?database={}&query={}",
+        config.clickhouse_url,
+        config.clickhouse_database,
+        urlencoding::encode(query)
+    );
+    let response = clickhouse_client()
+        .post(url)
+        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
+        .body(payload)
+        .send()
+        .context("failed to insert environment snapshots")?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "environment snapshot insert failed with status {}",
             response.status()
         );
     }
@@ -711,7 +880,7 @@ pub fn fetch_indicator_snapshots_for_symbols_in_range(
 }
 
 pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSnapshot>> {
-    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime ORDER BY date FORMAT JSONEachRow";
+    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE market = 'GLOBAL' ORDER BY date FORMAT JSONEachRow";
     let url = format!(
         "{}?database={}&query={}",
         config.clickhouse_url,
@@ -746,10 +915,11 @@ pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSn
 pub fn fetch_latest_market_regime_on_or_before(
     config: &StorageConfig,
     report_date: NaiveDate,
+    scope: AnalysisScope,
 ) -> Result<Option<MarketRegimeSnapshot>> {
     let query = format!(
-        "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
-        report_date
+        "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE market = '{}' AND date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+        scope.as_str(), report_date
     );
     let body = fetch_clickhouse_text(config, &query)?;
     let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
@@ -761,8 +931,44 @@ pub fn fetch_latest_market_regime_on_or_before(
     ))
 }
 
+pub fn fetch_latest_market_regime_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table_with_filter(config, "market_regime", "market", scope.as_str())
+}
+
+pub fn fetch_latest_environment_on_or_before(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+    scope: AnalysisScope,
+) -> Result<Option<EnvironmentSnapshot>> {
+    ensure_environment_snapshot_table(config)?;
+    let query = format!(
+        "SELECT date,scope,regime_as_of_date,breadth_as_of_date,stress_as_of_date,breadth_eligible_count,breadth_above_count,breadth_pct,breadth_pct_sma5,breadth_5d_delta,breadth_state,volume_expansion_pct,turnover_coverage_pct,liquidity_proxy_score,stress_proxy_score,environment_score,environment_label FROM quant.environment_snapshot WHERE scope = '{}' AND date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+        scope.as_str(), report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    Ok(Some(
+        serde_json::from_str::<EnvironmentSnapshot>(line)
+            .context("failed to parse environment snapshot row")?,
+    ))
+}
+
+pub fn fetch_latest_environment_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    ensure_environment_snapshot_table(config)?;
+    fetch_max_date_for_table_with_filter(config, "environment_snapshot", "scope", scope.as_str())
+}
+
 pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<NaiveDate>> {
-    let query = "SELECT DISTINCT date FROM quant.signal_snapshot WHERE date IN (SELECT DISTINCT date FROM quant.rotation_rank) AND date >= (SELECT min(date) FROM quant.market_regime) ORDER BY date DESC FORMAT JSONEachRow";
+    ensure_environment_snapshot_table(config)?;
+    let query = "SELECT DISTINCT date FROM quant.signal_snapshot WHERE date IN (SELECT DISTINCT date FROM quant.rotation_rank) AND date >= greatest((SELECT min(date) FROM quant.market_regime WHERE market = 'GLOBAL'), (SELECT min(date) FROM quant.environment_snapshot WHERE scope = 'GLOBAL')) ORDER BY date DESC FORMAT JSONEachRow";
     let body = fetch_clickhouse_text(config, query)?;
     let mut dates = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
