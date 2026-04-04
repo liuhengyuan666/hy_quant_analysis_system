@@ -1,6 +1,8 @@
 use backtest_engine::BacktestSummary;
 use chrono::NaiveDate;
-use core_domain::{MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot};
+use core_domain::{
+    EnvironmentSnapshot, MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -26,6 +28,7 @@ pub struct DashboardSnapshot {
     pub top_signals: Vec<SignalSnapshot>,
     pub bullish_signals: Vec<SignalSnapshot>,
     pub defensive_signals: Vec<SignalSnapshot>,
+    pub environment: Option<EnvironmentSnapshot>,
     pub watchlist_breadth: Option<WatchlistBreadthSnapshot>,
     pub latest_backtest: Option<BacktestSummary>,
     pub load_metrics: Option<DashboardLoadMetrics>,
@@ -35,6 +38,7 @@ pub struct DashboardSnapshot {
 pub struct DashboardLoadMetrics {
     pub available_dates_ms: u64,
     pub regime_ms: u64,
+    pub environment_ms: u64,
     pub rotations_ms: u64,
     pub signals_ms: u64,
     pub backtest_ms: u64,
@@ -221,6 +225,7 @@ pub fn build_dashboard_snapshot(
         top_signals,
         bullish_signals,
         defensive_signals,
+        environment: None,
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
@@ -296,6 +301,7 @@ pub fn build_dashboard_snapshot_for_date(
         top_signals,
         bullish_signals,
         defensive_signals,
+        environment: None,
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
@@ -330,6 +336,30 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
         snapshot.liquidity_score,
         snapshot.risk_score
     ));
+    output.push_str("## Environment Layer\n\n");
+    if let Some(environment) = &snapshot.environment {
+        output.push_str(&format!(
+            "- Label: {}\n- Environment Score: {:.2}\n- Scope: {}\n- Regime As Of: {}\n- Breadth As Of: {}\n- Stress As Of: {}\n- Breadth: {:.2}% ({}/{})\n- Breadth SMA5: {}\n- Breadth 5d Delta: {}\n- Breadth State: {}\n- Liquidity Proxy Score: {:.2}\n- Stress Proxy Score: {:.2}\n- Volume Expansion: {}\n- Turnover Coverage: {}\n\n",
+            environment.environment_label,
+            environment.environment_score,
+            environment.scope,
+            environment.regime_as_of_date,
+            environment.breadth_as_of_date,
+            environment.stress_as_of_date,
+            environment.breadth_pct,
+            environment.breadth_above_count,
+            environment.breadth_eligible_count,
+            format_optional_pct(environment.breadth_pct_sma5),
+            format_optional_delta(environment.breadth_5d_delta),
+            environment.breadth_state,
+            environment.liquidity_proxy_score,
+            environment.stress_proxy_score,
+            format_optional_pct(environment.volume_expansion_pct),
+            format_optional_pct(environment.turnover_coverage_pct),
+        ));
+    } else {
+        output.push_str("- Environment snapshot is unavailable for this report date\n\n");
+    }
     output.push_str("## Watchlist Breadth (MA30)\n\n");
     if let Some(breadth) = &snapshot.watchlist_breadth {
         output.push_str(&format!("- Methodology: {}\n", breadth.methodology_note));
@@ -523,6 +553,25 @@ mod tests {
             top_signals: Vec::new(),
             bullish_signals: Vec::new(),
             defensive_signals: Vec::new(),
+            environment: Some(EnvironmentSnapshot {
+                date: NaiveDate::from_ymd_opt(2026, 3, 20).unwrap(),
+                scope: "GLOBAL".to_string(),
+                regime_as_of_date: NaiveDate::from_ymd_opt(2026, 3, 19).unwrap(),
+                breadth_as_of_date: NaiveDate::from_ymd_opt(2026, 3, 20).unwrap(),
+                stress_as_of_date: NaiveDate::from_ymd_opt(2026, 3, 19).unwrap(),
+                breadth_eligible_count: 8,
+                breadth_above_count: 6,
+                breadth_pct: 75.0,
+                breadth_pct_sma5: Some(66.0),
+                breadth_5d_delta: Some(12.0),
+                breadth_state: "near_local_high".to_string(),
+                volume_expansion_pct: Some(62.5),
+                turnover_coverage_pct: Some(87.5),
+                liquidity_proxy_score: 70.0,
+                stress_proxy_score: 55.0,
+                environment_score: 68.0,
+                environment_label: "constructive".to_string(),
+            }),
             watchlist_breadth: Some(WatchlistBreadthSnapshot {
                 report_date: "2026-03-20".to_string(),
                 methodology_note: "Proxy only; not full-market stock breadth.".to_string(),
@@ -547,6 +596,8 @@ mod tests {
         let rendered = render_markdown_report(&snapshot);
 
         assert!(rendered.contains("## Watchlist Breadth (MA30)"));
+        assert!(rendered.contains("## Environment Layer"));
+        assert!(rendered.contains("Environment Score: 68.00"));
         assert!(rendered.contains("Proxy only; not full-market stock breadth."));
         assert!(rendered.contains("CN tracked universe | breadth=75.00% | above=3/4"));
         assert!(rendered.contains("status=near_local_high"));

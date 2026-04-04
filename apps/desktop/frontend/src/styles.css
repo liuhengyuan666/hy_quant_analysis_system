@@ -726,8 +726,12 @@ code {
   grid-column: span 7;
 }
 
-.dashboard-grid__breadth {
+.dashboard-grid__environment {
   grid-column: span 5;
+}
+
+.dashboard-grid__breadth {
+  grid-column: span 7;
 }
 
 .dashboard-grid__rotation,
@@ -1252,6 +1256,7 @@ code {
 
   .dashboard-grid__status,
   .dashboard-grid__regime,
+  .dashboard-grid__environment,
   .dashboard-grid__breadth,
   .dashboard-grid__rotation,
   .dashboard-grid__reports,
@@ -1310,6 +1315,7 @@ code {
 
   .dashboard-grid__status,
   .dashboard-grid__regime,
+  .dashboard-grid__environment,
   .dashboard-grid__breadth,
   .dashboard-grid__rotation,
   .dashboard-grid__reports,
