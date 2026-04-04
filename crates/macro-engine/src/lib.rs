@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use chrono::NaiveDate;
-use core_domain::{DailyBar, MacroSnapshot, MarketRegimeSnapshot};
+use core_domain::{AnalysisScope, DailyBar, MacroSnapshot, MarketRegimeSnapshot};
 
 #[derive(Debug, Clone)]
 pub struct MacroFactorSeries {
@@ -108,54 +108,159 @@ pub fn build_market_regimes(
         .copied()
         .collect::<BTreeSet<_>>();
 
-    let required_factors = ["vix", "dollar_index", "us10y", "fed_funds"];
-
-    all_dates
-        .into_iter()
-        .filter_map(|date| {
-            let mut factor_values = HashMap::new();
+    let mut rows = Vec::new();
+    for date in all_dates {
+        let Some((macro_as_of_date, macro_risk_score, macro_liquidity_score)) = (|| {
             let mut factor_dates = Vec::new();
 
-            for factor_name in required_factors {
-                let history = factor_history.get(factor_name)?;
-                let (as_of_date, score) = history.range(..=date).next_back()?;
-                factor_values.insert(factor_name, *score);
-                factor_dates.push(*as_of_date);
+            let resolve_group = |names: &[&str], factor_dates: &mut Vec<NaiveDate>| {
+                let values = names
+                    .iter()
+                    .filter_map(|factor_name| {
+                        let history = factor_history.get(*factor_name)?;
+                        let (as_of_date, score) = history.range(..=date).next_back()?;
+                        factor_dates.push(*as_of_date);
+                        Some(*score)
+                    })
+                    .collect::<Vec<_>>();
+                (!values.is_empty()).then(|| values.iter().sum::<f64>() / values.len() as f64)
+            };
+
+            let macro_risk_score =
+                resolve_group(&["vix", "dollar_index"], &mut factor_dates).unwrap_or(50.0);
+            let macro_liquidity_score =
+                resolve_group(&["us10y", "fed_funds"], &mut factor_dates).unwrap_or(50.0);
+
+            if factor_dates.is_empty() {
+                return None;
             }
 
-            let macro_as_of_date = factor_dates.into_iter().min()?;
-            let vix = *factor_values.get("vix")?;
-            let dollar = *factor_values.get("dollar_index")?;
-            let us10y = *factor_values.get("us10y")?;
-            let fed_funds = *factor_values.get("fed_funds")?;
-            let trend_components = [cn_trend.get(&date).copied(), hk_trend.get(&date).copied()]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>();
-            let trend_score = if trend_components.is_empty() {
-                50.0
-            } else {
-                trend_components.iter().sum::<f64>() / trend_components.len() as f64
+            Some((
+                factor_dates.into_iter().min()?,
+                macro_risk_score,
+                macro_liquidity_score,
+            ))
+        })() else {
+            continue;
+        };
+
+        for scope in [AnalysisScope::Global, AnalysisScope::Cn, AnalysisScope::Hk] {
+            let trend_score = match scope {
+                AnalysisScope::Global => {
+                    let trend_components =
+                        [cn_trend.get(&date).copied(), hk_trend.get(&date).copied()]
+                            .into_iter()
+                            .flatten()
+                            .collect::<Vec<_>>();
+                    if trend_components.is_empty() {
+                        50.0
+                    } else {
+                        trend_components.iter().sum::<f64>() / trend_components.len() as f64
+                    }
+                }
+                AnalysisScope::Cn => cn_trend.get(&date).copied().unwrap_or(50.0),
+                AnalysisScope::Hk => hk_trend.get(&date).copied().unwrap_or(50.0),
             };
-            let liquidity_score = (us10y + fed_funds) / 2.0;
-            let risk_score = (vix + dollar) / 2.0;
             let regime_label =
-                if trend_score >= 60.0 && liquidity_score >= 50.0 && risk_score >= 55.0 {
+                if trend_score >= 60.0 && macro_liquidity_score >= 50.0 && macro_risk_score >= 55.0
+                {
                     "risk_on"
-                } else if trend_score < 40.0 || risk_score < 40.0 {
+                } else if trend_score < 40.0 || macro_risk_score < 40.0 {
                     "risk_off"
                 } else {
                     "neutral"
                 };
-            Some(MarketRegimeSnapshot {
+            rows.push(MarketRegimeSnapshot {
                 date,
                 macro_as_of_date,
-                market: "GLOBAL".to_string(),
+                market: scope.as_str().to_string(),
                 trend_score,
-                liquidity_score,
-                risk_score,
+                liquidity_score: macro_liquidity_score,
+                risk_score: macro_risk_score,
                 regime_label: regime_label.to_string(),
+            });
+        }
+    }
+    rows
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn build_anchor(symbol: &str, closes: &[f64]) -> Vec<DailyBar> {
+        let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        closes
+            .iter()
+            .enumerate()
+            .map(|(index, close)| DailyBar {
+                date: start + chrono::Duration::days(index as i64),
+                symbol: symbol.to_string(),
+                open: *close,
+                high: *close,
+                low: *close,
+                close: *close,
+                volume: 1_000.0,
+                turnover: Some(10_000.0),
             })
-        })
-        .collect()
+            .collect()
+    }
+
+    #[test]
+    fn build_market_regimes_outputs_global_cn_hk_rows() {
+        let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let dates = (0..65)
+            .map(|offset| start + chrono::Duration::days(offset))
+            .collect::<Vec<_>>();
+        let macro_snapshots = dates
+            .iter()
+            .flat_map(|date| {
+                [
+                    ("vix", 80.0),
+                    ("dollar_index", 80.0),
+                    ("us10y", 80.0),
+                    ("fed_funds", 80.0),
+                ]
+                .into_iter()
+                .map(move |(factor_name, factor_score)| MacroSnapshot {
+                    date: *date,
+                    factor_name: factor_name.to_string(),
+                    factor_value: factor_score,
+                    factor_score,
+                    factor_source: "test".to_string(),
+                })
+            })
+            .collect::<Vec<_>>();
+        let cn_anchor = build_anchor(
+            "000300",
+            &(1..=65).map(|value| value as f64).collect::<Vec<_>>(),
+        );
+        let hk_anchor = build_anchor(
+            "HSI",
+            &(1..=65).rev().map(|value| value as f64).collect::<Vec<_>>(),
+        );
+
+        let rows = build_market_regimes(&macro_snapshots, &cn_anchor, &hk_anchor);
+        let latest_date = *dates.last().unwrap();
+        let latest_rows = rows
+            .iter()
+            .filter(|row| row.date == latest_date)
+            .collect::<Vec<_>>();
+
+        assert_eq!(latest_rows.len(), 3);
+        let by_scope = latest_rows
+            .into_iter()
+            .map(|row| (row.market.as_str(), row))
+            .collect::<std::collections::BTreeMap<_, _>>();
+
+        assert_eq!(by_scope.get("CN").unwrap().regime_label, "risk_on");
+        assert_eq!(by_scope.get("HK").unwrap().regime_label, "risk_off");
+        assert_eq!(by_scope.get("GLOBAL").unwrap().regime_label, "neutral");
+        assert!(
+            by_scope.get("CN").unwrap().trend_score > by_scope.get("GLOBAL").unwrap().trend_score
+        );
+        assert!(
+            by_scope.get("HK").unwrap().trend_score < by_scope.get("GLOBAL").unwrap().trend_score
+        );
+    }
 }
