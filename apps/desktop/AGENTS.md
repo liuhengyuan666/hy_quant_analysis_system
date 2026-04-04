@@ -41,5 +41,5 @@ apps/desktop/
 - `frontend/node_modules/` and `frontend/dist/` are generated artifacts.
 - If UI scope grows, decide deliberately: stay plain JS or migrate fully to Vue components.
 - Help / Usage docs are in-app, loaded from project markdown files through Tauri.
-- Scoped desktop views still use the shared global regime snapshot; only symbols/date availability are market-scoped.
+- Scoped desktop views now use scoped regime + scoped environment, and the frontend exposes a dedicated Environment Layer panel; only strategy/signal scoring upstream still stays on GLOBAL regime in Phase 1.
 - `apps/desktop/frontend/AGENTS.md` now covers frontend-only rules; keep this file focused on cross-boundary desktop behavior.

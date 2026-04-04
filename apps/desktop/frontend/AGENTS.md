@@ -10,6 +10,7 @@ Plain-JS dashboard frontend. Single root render, Tauri invoke bridge, no active 
 | Startup flow | `src/main.js::loadDashboard` | bundled bootstrap path with `selectedScope` |
 | Historical date flow | `src/main.js::loadSelectedSnapshot` | lighter snapshot-only path |
 | Scope control | `src/main.js::renderDateSelector` | scope selector + date selector share one control card |
+| Environment panel | `src/main.js::renderEnvironmentPanel` | scope-aware environment layer UI |
 | Render pipeline | `src/main.js::render` + `commitRender` | rAF-coalesced DOM writes |
 | Health cache flow | `src/main.js::loadDataHealthSummary` | 5-minute session cache + manual refresh |
 | Visual system | `src/styles.css` | panel/grid/pill/score styles |
@@ -20,6 +21,7 @@ Plain-JS dashboard frontend. Single root render, Tauri invoke bridge, no active 
 - Scope changes should trigger a full bundle reload; date changes stay on the snapshot-only path.
 - Historical date changes should stay on `dashboard_snapshot` unless bundle semantics truly need expansion.
 - `render()` schedules; `commitRender()` mutates the DOM.
+- Environment UI should read the persisted snapshot contract directly; do not invent derived regime semantics in frontend.
 - Data health is intentionally decoupled from normal dashboard correctness and may be stale-cached.
 - Usage guides load on demand; keep docs rendering isolated from dashboard hot paths.
 
@@ -29,8 +31,10 @@ Plain-JS dashboard frontend. Single root render, Tauri invoke bridge, no active 
 - Do **not** reintroduce root-level startup fan-out when `dashboard_bundle` already returns the bootstrap payload.
 - Do **not** let export/snapshot calls ignore `selectedScope`; scope must flow through bundle, snapshot, and export consistently.
 - Do **not** assume data health must refresh every dashboard load.
+- Do **not** label Environment Layer as stock-market breadth; it is tracked-universe proxy + liquidity/stress decomposition.
 
 ## NOTES
 - `src/main.js` is large and central; if it grows further, split by area (`snapshot`, `health`, `guides`, `render`) before behavior drifts.
 - Recent report labels now encode scope (`DAILY_REPORT_CN`, `DAILY_REPORT_HK`); keep UI formatting aligned with backend report types.
+- `renderEnvironmentPanel` and watchlist breadth panel intentionally coexist: environment = explanation layer, breadth panel = raw proxy breakdown.
 - `node_modules/` and `dist/` are generated artifacts.
