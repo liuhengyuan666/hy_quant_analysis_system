@@ -9,7 +9,7 @@ crates/
 ├── core-domain/      # shared models + enums
 ├── data-ingestion/   # external market/macro fetch + canonical adjustment rules
 ├── indicator-engine/ # technical indicators
-├── macro-engine/     # macro snapshots + regime
+├── macro-engine/     # macro snapshots + per-scope regime scoring
 ├── rotation-engine/  # RS / momentum ranking
 ├── strategy-engine/  # four-strategy scoring
 ├── signal-engine/    # final action labels
@@ -38,6 +38,7 @@ crates/
 - `app-service` is orchestration, not a dumping ground for scoring formulas or SQL.
 - `report-engine` stays pure shaping/rendering: snapshot structs, markdown rendering, dashboard-date semantics.
 - Dashboard hot paths should use scoped store helpers, not whole-table fetches.
+- Phase 1 semantics are split deliberately: dashboard/report/diagnostics are scope-aware, while strategy/signal/backtest still intentionally consume GLOBAL regime.
 
 ## ANTI-PATTERNS
 - Do **not** fetch HTTP data from `strategy-engine`, `signal-engine`, or `backtest-engine`.
@@ -50,6 +51,7 @@ crates/
 - `market-store/src/lib.rs` = largest, most coupled crate file.
 - `app-service/src/lib.rs` = orchestration monolith; review before adding more flows.
 - `data-ingestion/src/lib.rs` = source semantics matter here; forward-adjustment + validation live there.
+- `macro-engine/src/lib.rs` = per-scope regime logic; app-service layers environment persistence on top.
 - `report-engine/src/lib.rs` = dashboard/report payload contract; field drift breaks CLI/Tauri/frontend together.
 
 ## NOTES

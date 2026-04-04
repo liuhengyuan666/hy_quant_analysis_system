@@ -21,7 +21,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - If dashboard behavior changes, update both user docs and architecture docs.
 - Desktop Help/Usage viewer reads markdown from this directory; docs should remain renderable as standalone markdown.
 - If freshness/debug workflows change, update docs to mention `pipeline-dates` and the distinction between market freshness and macro as-of dates.
-- If scoped reporting changes, document whether a section is truly market-scoped or still global (for example, current regime semantics).
+- If scoped reporting changes, document which layers are scope-aware and which still intentionally stay global (for example, strategy/signal/backtest still use GLOBAL regime in Phase 1).
 
 ## ANTI-PATTERNS
 - Do **not** document outdated date semantics (`report_date` only) without `regime_as_of_date` context.
@@ -29,7 +29,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - Do **not** add commands to docs before verifying they still compile/run.
 - Do **not** describe health-report filenames as export-time dates; they now track the freshest checked market date.
 - Do **not** describe watchlist breadth proxy as stock-universe breadth.
-- Do **not** imply CN/HK scoped reports have per-market regime unless code actually supports it.
+- Do **not** document scoped strategy/signal/backtest as CN/HK-aware until code actually stops using GLOBAL regime there.
 
 ## NOTES
 - Desktop Help/Usage viewer reads markdown from this directory.
