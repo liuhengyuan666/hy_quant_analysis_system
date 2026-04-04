@@ -319,6 +319,22 @@ pub fn fetch_fred_series_with_status(
         Some("text/csv,*/*;q=0.1"),
         Some("https://fred.stlouisfed.org/"),
     )?;
+    let expected_headers = [
+        format!("DATE,{series_id}"),
+        format!("observation_date,{series_id}"),
+    ];
+    let actual_header = response
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    anyhow::ensure!(
+        expected_headers
+            .iter()
+            .any(|expected| actual_header.eq_ignore_ascii_case(expected)),
+        "unexpected FRED response header for {series_id}: {actual_header}"
+    );
     let mut observations = Vec::new();
     for line in response.lines().skip(1) {
         let mut parts = line.split(',');
@@ -338,6 +354,10 @@ pub fn fetch_fred_series_with_status(
         }
         observations.push((date, value_raw.parse()?));
     }
+    anyhow::ensure!(
+        !observations.is_empty(),
+        "no FRED observations available for {series_id} in range {from}..={to}"
+    );
     Ok(MacroFetchOutcome {
         series: MacroFactorSeries {
             factor_name,
