@@ -19,7 +19,7 @@ Orchestration facade for the entire analysis chain. Highest-coupling crate in th
 - Orchestrate only: fetch through `market-store`, compute through engine crates, render through `report-engine`.
 - Every public workflow returns a summary DTO or snapshot rather than leaking internal structs casually.
 - Dashboard hot path must stay on scoped reads; timing instrumentation now lives in `load_metrics`.
-- `ReportScope` is explicit routing, not a hidden heuristic: `Global`, `Cn`, and `Hk` must stay behaviorally distinct.
+- `ReportScope` is a thin alias over shared `AnalysisScope`; `Global`, `Cn`, and `Hk` must stay behaviorally distinct.
 - Macro regime refreshes must fetch lookback history before filtering to the requested write window, otherwise forward-fill semantics break.
 - Breadth proxy is derived from persisted bars + MA30 only; no provider calls here.
 
@@ -35,4 +35,4 @@ Orchestration facade for the entire analysis chain. Highest-coupling crate in th
 - `src/lib.rs` is already monolithic; prefer internal helper extraction before adding more long methods.
 - Timing data on `DashboardSnapshot.load_metrics` is now the first place to check when dashboard performance regresses.
 - `export_data_health_report` now uses the freshest checked market date for artifact naming; keep that aligned with health semantics.
-- Scoped reports intentionally keep the current global regime; if per-market regime is ever added, it must be a separate semantic change.
+- Scoped reports now read scoped regime + scoped environment. Strategy/signal/backtest still intentionally stay on GLOBAL regime until a later semantic change.
