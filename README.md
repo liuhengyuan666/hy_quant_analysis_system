@@ -6,7 +6,8 @@
 - `docs/分析使用手册.md`：适合趋势 / 长线分析时理解 MA20 / MA60 / MACD / regime / rotation / signal
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
-- 这两份文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
+- `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
+- 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
 
@@ -27,13 +28,13 @@
 
 - 日线行情拉取与入库
 - MA / EMA / MACD / RSI / ATR / VOL_MA
-- 宏观因子与 market regime
+- 宏观因子、per-scope market regime 与 environment layer
 - 相对强弱与轮动排名
 - 四类策略偏好评分
 - 最终信号生成
 - 基础回测
 - Markdown 报告导出
-- Tauri 桌面 Dashboard
+- Tauri 桌面 Dashboard（支持 `GLOBAL / CN / HK` scope）
 
 ### 当前适用场景
 
@@ -66,7 +67,7 @@
 
 - **CN 指数 / ETF**：Eastmoney 主源，Tencent 兜底
 - **HK 指数**：Eastmoney / Tencent 低成本组合
-- **宏观因子**：FRED
+- **宏观因子**：FRED（运行时支持已持久化 `macro_snapshot` 历史回退）
 
 ### 暂不作为默认主源
 
@@ -198,6 +199,12 @@ cargo run -p quant-cli -- compute-indicators
 cargo run -p quant-cli -- compute-macro --from 2024-01-01 --to 2026-03-16
 ```
 
+说明：
+
+- `compute-macro` 会同时重建 `macro_snapshot / market_regime / environment_snapshot`
+- 若部分 FRED 因子短时异常，系统会优先复用库里已有的 `macro_snapshot` 历史，继续按 as-of 语义构建 scoped regime / environment
+- 若某次 provider 返回异常 HTML/非 CSV 响应，失败项会进入 `failed_items`，不再静默产出空结果
+
 ### 8.4 计算轮动强弱
 
 ```bash
@@ -228,6 +235,8 @@ cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- dashboard-dates
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
+cargo run -p quant-cli -- dashboard-dates --scope cn
+cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 ```
 
 说明：
@@ -235,18 +244,23 @@ cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
 - `dashboard-snapshot` 不带参数时，默认返回**最新可分析日期**
 - `dashboard-dates` 返回当前可选的历史分析日期列表
 - `dashboard-snapshot --date YYYY-MM-DD` 可回看某一历史日期的分析结果
+- `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
+- `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
+- 当前 Phase 1 下，`strategy_preference / signal / backtest` 仍沿用 `GLOBAL` regime 评分；scope-aware 的 regime / environment 先用于 dashboard、report 与 diagnostics
 
 ### 8.9 导出日报
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-03-27
+cargo run -p quant-cli -- export-report --date 2026-04-02
+cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
 ```
 
 说明：
 
 - `export-report` 不带参数时，默认导出当前最新分析日期的日报
 - `export-report --date YYYY-MM-DD` 可导出指定历史日期的日报
+- `export-report --scope ...` 会导出对应 scope 的日报
 
 ---
 
@@ -305,8 +319,10 @@ cargo run -p quant-desktop
 桌面端会展示：
 
 - App status
+- Scope selector（`GLOBAL / CN / HK`）
 - Analysis date selector
 - Market regime
+- Environment layer
 - Top rotation
 - Top signals
 - Latest backtest
@@ -337,9 +353,9 @@ cargo run -p quant-desktop
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-03-30 --to 2026-03-31
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-03
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-03-30 --to 2026-03-31
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-03
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
@@ -355,6 +371,7 @@ cargo run -p quant-cli -- export-report
 - `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
 - 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 - 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
+- `GLOBAL / CN / HK` 的 dashboard/report 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化
 
 ---
 
@@ -385,6 +402,8 @@ cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- check-data-health
 cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- dashboard-snapshot
+cargo run -p quant-cli -- dashboard-snapshot --scope cn
 cargo run -p quant-cli -- export-report
+cargo run -p quant-cli -- export-report --scope hk
 cargo run -p quant-cli -- export-data-health-report
 ```
