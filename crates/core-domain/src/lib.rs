@@ -13,6 +13,37 @@ pub enum Market {
     Hk,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AnalysisScope {
+    Global,
+    Cn,
+    Hk,
+}
+
+impl AnalysisScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Global => "GLOBAL",
+            Self::Cn => "CN",
+            Self::Hk => "HK",
+        }
+    }
+
+    pub fn matches_market(self, market: &Market) -> bool {
+        match self {
+            Self::Global => true,
+            Self::Cn => market == &Market::Cn,
+            Self::Hk => market == &Market::Hk,
+        }
+    }
+}
+
+impl std::fmt::Display for AnalysisScope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str((*self).as_str())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StrategyKind {
     ValueLeft,
@@ -84,6 +115,27 @@ pub struct MarketRegimeSnapshot {
     pub liquidity_score: f64,
     pub risk_score: f64,
     pub regime_label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentSnapshot {
+    pub date: NaiveDate,
+    pub scope: String,
+    pub regime_as_of_date: NaiveDate,
+    pub breadth_as_of_date: NaiveDate,
+    pub stress_as_of_date: NaiveDate,
+    pub breadth_eligible_count: usize,
+    pub breadth_above_count: usize,
+    pub breadth_pct: f64,
+    pub breadth_pct_sma5: Option<f64>,
+    pub breadth_5d_delta: Option<f64>,
+    pub breadth_state: String,
+    pub volume_expansion_pct: Option<f64>,
+    pub turnover_coverage_pct: Option<f64>,
+    pub liquidity_proxy_score: f64,
+    pub stress_proxy_score: f64,
+    pub environment_score: f64,
+    pub environment_label: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

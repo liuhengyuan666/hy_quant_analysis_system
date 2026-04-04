@@ -81,6 +81,31 @@ ENGINE = MergeTree
 PARTITION BY toYYYYMM(date)
 ORDER BY (market, date);
 
+CREATE TABLE IF NOT EXISTS quant.environment_snapshot
+(
+    date Date,
+    scope LowCardinality(String),
+    regime_as_of_date Date,
+    breadth_as_of_date Date,
+    stress_as_of_date Date,
+    breadth_eligible_count UInt32,
+    breadth_above_count UInt32,
+    breadth_pct Float64,
+    breadth_pct_sma5 Nullable(Float64),
+    breadth_5d_delta Nullable(Float64),
+    breadth_state LowCardinality(String),
+    volume_expansion_pct Nullable(Float64),
+    turnover_coverage_pct Nullable(Float64),
+    liquidity_proxy_score Float64,
+    stress_proxy_score Float64,
+    environment_score Float64,
+    environment_label LowCardinality(String),
+    updated_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(date)
+ORDER BY (scope, date);
+
 CREATE TABLE IF NOT EXISTS quant.rotation_rank
 (
     date Date,
