@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
-use core_domain::{Instrument, InstrumentType, Market};
+use core_domain::{EnvironmentSnapshot, Instrument, InstrumentType, Market};
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
@@ -21,6 +21,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
+
+pub use core_domain::AnalysisScope as ReportScope;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 
@@ -73,6 +75,7 @@ pub struct MacroSummary {
     pub factors: usize,
     pub macro_rows: usize,
     pub regime_rows: usize,
+    pub environment_rows: usize,
     pub failed_items: Vec<String>,
 }
 
@@ -148,13 +151,6 @@ pub struct PipelineDateDiagnostics {
     pub freshest_market_date: Option<String>,
     pub dashboard_latest_date: Option<String>,
     pub stages: Vec<PipelineStageDateStatus>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReportScope {
-    Global,
-    Cn,
-    Hk,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -237,49 +233,65 @@ fn classify_health(
 #[derive(Debug, Clone)]
 struct TrackedInstrumentSeries {
     close_by_date: BTreeMap<NaiveDate, f64>,
+    volume_by_date: BTreeMap<NaiveDate, f64>,
+    turnover_present_by_date: BTreeMap<NaiveDate, bool>,
     ma30_by_date: BTreeMap<NaiveDate, f64>,
+    vol_ma20_by_date: BTreeMap<NaiveDate, f64>,
 }
 
 #[derive(Debug, Clone)]
-struct BreadthPoint {
+struct ParticipationPoint {
     breadth_pct: f64,
     eligible_count: usize,
     above_count: usize,
+    volume_expansion_pct: Option<f64>,
+    turnover_coverage_pct: Option<f64>,
+    liquidity_proxy_score: f64,
 }
 
-fn market_code(market: &Market) -> &'static str {
-    match market {
-        Market::Cn => "CN",
-        Market::Hk => "HK",
-    }
+#[derive(Debug, Clone)]
+struct ParticipationMetrics {
+    current: ParticipationPoint,
+    breadth_pct_sma5: Option<f64>,
+    breadth_5d_delta: Option<f64>,
+    range_low_60d: Option<f64>,
+    range_high_60d: Option<f64>,
+    range_position_60d: Option<f64>,
+    breadth_state: String,
+}
+
+#[derive(Debug, Clone)]
+struct TrackedUniverseWindow {
+    relevant_dates: Vec<NaiveDate>,
+    cn_series: Vec<TrackedInstrumentSeries>,
+    hk_series: Vec<TrackedInstrumentSeries>,
 }
 
 fn scope_label(scope: ReportScope) -> &'static str {
-    match scope {
-        ReportScope::Global => "GLOBAL",
-        ReportScope::Cn => "CN",
-        ReportScope::Hk => "HK",
-    }
+    scope.as_str()
 }
 
 fn instrument_in_scope(instrument: &Instrument, scope: ReportScope) -> bool {
+    scope.matches_market(&instrument.market)
+}
+
+fn scope_universe_label(scope: ReportScope) -> &'static str {
     match scope {
-        ReportScope::Global => true,
-        ReportScope::Cn => instrument.market == Market::Cn,
-        ReportScope::Hk => instrument.market == Market::Hk,
+        ReportScope::Global => "Global tracked universe",
+        ReportScope::Cn => "CN tracked universe",
+        ReportScope::Hk => "HK tracked universe",
     }
 }
 
-fn market_universe_label(market: &Market) -> &'static str {
-    match market {
-        Market::Cn => "CN tracked universe",
-        Market::Hk => "HK tracked universe",
-    }
-}
-
-fn compute_breadth_point(series: &[TrackedInstrumentSeries], date: NaiveDate) -> BreadthPoint {
+fn compute_participation_point(
+    series: &[TrackedInstrumentSeries],
+    date: NaiveDate,
+) -> ParticipationPoint {
     let mut eligible_count = 0usize;
     let mut above_count = 0usize;
+    let mut liquidity_eligible_count = 0usize;
+    let mut volume_expansion_count = 0usize;
+    let mut turnover_present_count = 0usize;
 
     for item in series {
         let Some(close) = item.close_by_date.get(&date).copied() else {
@@ -293,6 +305,23 @@ fn compute_breadth_point(series: &[TrackedInstrumentSeries], date: NaiveDate) ->
         if close > ma30 {
             above_count += 1;
         }
+        if let (Some(volume), Some(vol_ma20)) = (
+            item.volume_by_date.get(&date).copied(),
+            item.vol_ma20_by_date.get(&date).copied(),
+        ) {
+            liquidity_eligible_count += 1;
+            if volume > vol_ma20 {
+                volume_expansion_count += 1;
+            }
+        }
+        if item
+            .turnover_present_by_date
+            .get(&date)
+            .copied()
+            .unwrap_or(false)
+        {
+            turnover_present_count += 1;
+        }
     }
 
     let breadth_pct = if eligible_count > 0 {
@@ -301,10 +330,24 @@ fn compute_breadth_point(series: &[TrackedInstrumentSeries], date: NaiveDate) ->
         0.0
     };
 
-    BreadthPoint {
+    let volume_expansion_pct = (liquidity_eligible_count > 0)
+        .then(|| volume_expansion_count as f64 / liquidity_eligible_count as f64 * 100.0);
+    let turnover_coverage_pct =
+        (eligible_count > 0).then(|| turnover_present_count as f64 / eligible_count as f64 * 100.0);
+    let liquidity_proxy_score = match (volume_expansion_pct, turnover_coverage_pct) {
+        (Some(volume_pct), Some(turnover_pct)) => volume_pct * 0.7 + turnover_pct * 0.3,
+        (Some(volume_pct), None) => volume_pct,
+        (None, Some(turnover_pct)) => turnover_pct,
+        (None, None) => 50.0,
+    };
+
+    ParticipationPoint {
         breadth_pct,
         eligible_count,
         above_count,
+        volume_expansion_pct,
+        turnover_coverage_pct,
+        liquidity_proxy_score,
     }
 }
 
@@ -343,18 +386,40 @@ fn compute_watchlist_breadth_status(
 }
 
 fn build_market_watchlist_breadth_snapshot(
-    market: Market,
+    scope: ReportScope,
     series: &[TrackedInstrumentSeries],
     report_date: NaiveDate,
-    dashboard_dates: &[NaiveDate],
+    relevant_dates: &[NaiveDate],
 ) -> WatchlistBreadthMarketSnapshot {
-    let current = compute_breadth_point(series, report_date);
-    let history = dashboard_dates
+    let metrics = compute_participation_metrics(series, report_date, relevant_dates);
+
+    WatchlistBreadthMarketSnapshot {
+        market: scope_label(scope).to_string(),
+        universe_label: scope_universe_label(scope).to_string(),
+        eligible_count: metrics.current.eligible_count,
+        above_count: metrics.current.above_count,
+        breadth_pct: metrics.current.breadth_pct,
+        breadth_pct_sma5: metrics.breadth_pct_sma5,
+        breadth_5d_delta: metrics.breadth_5d_delta,
+        range_low_60d: metrics.range_low_60d,
+        range_high_60d: metrics.range_high_60d,
+        range_position_60d: metrics.range_position_60d,
+        status_label: metrics.breadth_state,
+    }
+}
+
+fn compute_participation_metrics(
+    series: &[TrackedInstrumentSeries],
+    report_date: NaiveDate,
+    relevant_dates: &[NaiveDate],
+) -> ParticipationMetrics {
+    let current = compute_participation_point(series, report_date);
+    let history = relevant_dates
         .iter()
         .copied()
         .filter(|date| *date <= report_date)
         .filter_map(|date| {
-            let point = compute_breadth_point(series, date);
+            let point = compute_participation_point(series, date);
             (point.eligible_count > 0).then_some(point)
         })
         .collect::<Vec<_>>();
@@ -388,25 +453,21 @@ fn build_market_watchlist_breadth_snapshot(
         (None, None, None)
     };
 
-    let status_label = compute_watchlist_breadth_status(
+    let breadth_state = compute_watchlist_breadth_status(
         current.eligible_count,
         current.breadth_pct,
         range_position_60d,
         breadth_5d_delta,
     );
 
-    WatchlistBreadthMarketSnapshot {
-        market: market_code(&market).to_string(),
-        universe_label: market_universe_label(&market).to_string(),
-        eligible_count: current.eligible_count,
-        above_count: current.above_count,
-        breadth_pct: current.breadth_pct,
+    ParticipationMetrics {
+        current,
         breadth_pct_sma5,
         breadth_5d_delta,
         range_low_60d,
         range_high_60d,
         range_position_60d,
-        status_label,
+        breadth_state,
     }
 }
 
@@ -478,6 +539,214 @@ impl AppContext {
         })
     }
 
+    fn build_tracked_universe_window(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<TrackedUniverseWindow> {
+        let instruments = load_universe(&self.storage.universe_abspath()?)?;
+        let tracked_instruments = instruments
+            .into_iter()
+            .filter(|instrument| {
+                instrument.enabled
+                    && matches!(
+                        instrument.instrument_type,
+                        InstrumentType::Index | InstrumentType::Etf
+                    )
+            })
+            .collect::<Vec<_>>();
+
+        if tracked_instruments.is_empty() {
+            return Ok(TrackedUniverseWindow {
+                relevant_dates: Vec::new(),
+                cn_series: Vec::new(),
+                hk_series: Vec::new(),
+            });
+        }
+
+        let tracked_symbols = tracked_instruments
+            .iter()
+            .map(|instrument| instrument.symbol.clone())
+            .collect::<Vec<_>>();
+        let bars = market_store::fetch_daily_bars_for_symbols_in_range(
+            &self.storage,
+            &tracked_symbols,
+            from,
+            to,
+        )?;
+        let indicators = market_store::fetch_indicator_snapshots_for_symbols_in_range(
+            &self.storage,
+            &tracked_symbols,
+            from,
+            to,
+        )?;
+
+        let mut relevant_dates = bars
+            .iter()
+            .map(|row| row.date)
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut series_by_symbol = tracked_instruments
+            .iter()
+            .map(|instrument| {
+                (
+                    instrument.symbol.clone(),
+                    TrackedInstrumentSeries {
+                        close_by_date: BTreeMap::new(),
+                        volume_by_date: BTreeMap::new(),
+                        turnover_present_by_date: BTreeMap::new(),
+                        ma30_by_date: BTreeMap::new(),
+                        vol_ma20_by_date: BTreeMap::new(),
+                    },
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for row in bars {
+            if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
+                relevant_dates.insert(row.date);
+                series.close_by_date.insert(row.date, row.close);
+                series.volume_by_date.insert(row.date, row.volume);
+                series
+                    .turnover_present_by_date
+                    .insert(row.date, row.turnover.is_some());
+            }
+        }
+        for row in indicators {
+            if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
+                if let Some(ma30) = row.ma30 {
+                    series.ma30_by_date.insert(row.date, ma30);
+                }
+                if let Some(vol_ma20) = row.vol_ma20 {
+                    series.vol_ma20_by_date.insert(row.date, vol_ma20);
+                }
+            }
+        }
+
+        let mut cn_series = Vec::new();
+        let mut hk_series = Vec::new();
+        for instrument in tracked_instruments {
+            let Some(series) = series_by_symbol.remove(&instrument.symbol) else {
+                continue;
+            };
+            match instrument.market {
+                Market::Cn => cn_series.push(series),
+                Market::Hk => hk_series.push(series),
+            }
+        }
+
+        Ok(TrackedUniverseWindow {
+            relevant_dates: relevant_dates.into_iter().collect(),
+            cn_series,
+            hk_series,
+        })
+    }
+
+    fn series_for_scope(
+        window: &TrackedUniverseWindow,
+        scope: ReportScope,
+    ) -> Vec<TrackedInstrumentSeries> {
+        match scope {
+            ReportScope::Global => window
+                .cn_series
+                .iter()
+                .chain(window.hk_series.iter())
+                .cloned()
+                .collect(),
+            ReportScope::Cn => window.cn_series.clone(),
+            ReportScope::Hk => window.hk_series.clone(),
+        }
+    }
+
+    fn breadth_momentum_score(delta: Option<f64>) -> f64 {
+        match delta {
+            Some(value) if value >= 10.0 => 70.0,
+            Some(value) if value >= 3.0 => 60.0,
+            Some(value) if value <= -10.0 => 25.0,
+            Some(value) if value <= -3.0 => 40.0,
+            Some(_) => 50.0,
+            None => 45.0,
+        }
+    }
+
+    fn environment_label(score: f64) -> &'static str {
+        if score >= 70.0 {
+            "supportive"
+        } else if score >= 55.0 {
+            "constructive"
+        } else if score >= 40.0 {
+            "mixed"
+        } else if score >= 25.0 {
+            "fragile"
+        } else {
+            "stressed"
+        }
+    }
+
+    fn build_environment_snapshots(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        regimes: &[core_domain::MarketRegimeSnapshot],
+    ) -> Result<Vec<EnvironmentSnapshot>> {
+        let history_start = from - Duration::days(180);
+        let window = self.build_tracked_universe_window(history_start, to)?;
+        let regime_by_key = regimes
+            .iter()
+            .map(|row| ((row.market.clone(), row.date), row))
+            .collect::<BTreeMap<_, _>>();
+        let mut rows = Vec::new();
+
+        for scope in [ReportScope::Global, ReportScope::Cn, ReportScope::Hk] {
+            let scoped_series = Self::series_for_scope(&window, scope);
+            if scoped_series.is_empty() {
+                continue;
+            }
+            for date in window
+                .relevant_dates
+                .iter()
+                .copied()
+                .filter(|date| *date >= from && *date <= to)
+            {
+                let Some(regime) = regime_by_key
+                    .get(&(scope_label(scope).to_string(), date))
+                    .copied()
+                else {
+                    continue;
+                };
+                let metrics =
+                    compute_participation_metrics(&scoped_series, date, &window.relevant_dates);
+                let breadth_momentum_score = Self::breadth_momentum_score(metrics.breadth_5d_delta);
+                let environment_score = (regime.trend_score * 0.35
+                    + metrics.current.breadth_pct * 0.25
+                    + breadth_momentum_score * 0.15
+                    + metrics.current.liquidity_proxy_score * 0.15
+                    + regime.risk_score * 0.10)
+                    .clamp(0.0, 100.0);
+                rows.push(EnvironmentSnapshot {
+                    date,
+                    scope: scope_label(scope).to_string(),
+                    regime_as_of_date: regime.macro_as_of_date,
+                    breadth_as_of_date: date,
+                    stress_as_of_date: regime.macro_as_of_date,
+                    breadth_eligible_count: metrics.current.eligible_count,
+                    breadth_above_count: metrics.current.above_count,
+                    breadth_pct: metrics.current.breadth_pct,
+                    breadth_pct_sma5: metrics.breadth_pct_sma5,
+                    breadth_5d_delta: metrics.breadth_5d_delta,
+                    breadth_state: metrics.breadth_state,
+                    volume_expansion_pct: metrics.current.volume_expansion_pct,
+                    turnover_coverage_pct: metrics.current.turnover_coverage_pct,
+                    liquidity_proxy_score: metrics.current.liquidity_proxy_score,
+                    stress_proxy_score: regime.risk_score,
+                    environment_score,
+                    environment_label: Self::environment_label(environment_score).to_string(),
+                });
+            }
+        }
+
+        Ok(rows)
+    }
+
     pub fn compute_indicators(&self) -> Result<IndicatorSummary> {
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
         let mut total_snapshots = 0usize;
@@ -527,13 +796,32 @@ impl AppContext {
             }
         }
 
-        let all_macro_rows = build_macro_snapshots(&factors, 20);
+        let fetched_macro_rows = build_macro_snapshots(&factors, 20);
+        let persisted_macro_rows =
+            market_store::fetch_macro_snapshots_in_range(&self.storage, macro_fetch_from, to)
+                .unwrap_or_default();
+        let mut all_macro_rows_by_key = persisted_macro_rows
+            .into_iter()
+            .map(|row| ((row.date, row.factor_name.clone()), row))
+            .collect::<BTreeMap<_, _>>();
+        for row in fetched_macro_rows {
+            all_macro_rows_by_key.insert((row.date, row.factor_name.clone()), row);
+        }
+        let all_macro_rows = all_macro_rows_by_key.into_values().collect::<Vec<_>>();
+
         let macro_rows = all_macro_rows
             .iter()
             .filter(|row| row.date >= from && row.date <= to)
             .cloned()
             .collect::<Vec<_>>();
-        if let Err(error) = market_store::insert_macro_snapshots(&self.storage, &macro_rows) {
+        let fetched_macro_rows_in_range = factors
+            .iter()
+            .flat_map(|factor| build_macro_snapshots(std::slice::from_ref(factor), 20))
+            .filter(|row| row.date >= from && row.date <= to)
+            .collect::<Vec<_>>();
+        if let Err(error) =
+            market_store::insert_macro_snapshots(&self.storage, &fetched_macro_rows_in_range)
+        {
             failed_items.push(format!("macro_snapshot: {}", format_error_chain(&error)));
         }
 
@@ -548,11 +836,21 @@ impl AppContext {
         if let Err(error) = market_store::insert_market_regimes(&self.storage, &regime_rows) {
             failed_items.push(format!("market_regime: {}", format_error_chain(&error)));
         }
+        let environment_rows = self.build_environment_snapshots(from, to, &regime_rows)?;
+        if let Err(error) =
+            market_store::insert_environment_snapshots(&self.storage, &environment_rows)
+        {
+            failed_items.push(format!(
+                "environment_snapshot: {}",
+                format_error_chain(&error)
+            ));
+        }
 
         Ok(MacroSummary {
             factors: factors.len(),
             macro_rows: macro_rows.len(),
             regime_rows: regime_rows.len(),
+            environment_rows: environment_rows.len(),
             failed_items,
         })
     }
@@ -768,11 +1066,7 @@ impl AppContext {
         let (snapshot, mut metrics) =
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         let recent_reports = self.recent_reports(recent_report_limit)?;
-        let pipeline_dates = if scope == ReportScope::Global {
-            self.pipeline_date_diagnostics_from_available_dates(&available_dates)?
-        } else {
-            self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?
-        };
+        let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
         let snapshot = snapshot.map(|mut snapshot| {
@@ -794,7 +1088,7 @@ impl AppContext {
 
     pub fn pipeline_date_diagnostics(&self) -> Result<PipelineDateDiagnostics> {
         let available_dates = self.dashboard_available_dates_for_scope(ReportScope::Global)?;
-        self.pipeline_date_diagnostics_from_available_dates(&available_dates)
+        self.pipeline_date_diagnostics_for_scope(ReportScope::Global, &available_dates)
     }
 
     fn pipeline_date_diagnostics_for_scope(
@@ -802,9 +1096,6 @@ impl AppContext {
         scope: ReportScope,
         available_dates: &[NaiveDate],
     ) -> Result<PipelineDateDiagnostics> {
-        if scope == ReportScope::Global {
-            return self.pipeline_date_diagnostics_from_available_dates(available_dates);
-        }
         let scoped_symbols = self
             .instruments_for_scope(scope)?
             .into_iter()
@@ -822,7 +1113,11 @@ impl AppContext {
             ),
             (
                 "market_regime",
-                market_store::fetch_latest_table_date(&self.storage, "market_regime")?,
+                market_store::fetch_latest_market_regime_date_for_scope(&self.storage, scope)?,
+            ),
+            (
+                "environment_snapshot",
+                market_store::fetch_latest_environment_date_for_scope(&self.storage, scope)?,
             ),
             (
                 "rotation_rank",
@@ -893,10 +1188,23 @@ impl AppContext {
                         Some(expected_symbol_count),
                     ),
                     ("market_regime", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
+                        Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
                             &self.storage,
                             "market_regime",
                             "market",
+                            "market",
+                            scope_label(scope),
+                            date,
+                        )?),
+                        Some(1),
+                    ),
+                    ("environment_snapshot", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
+                            &self.storage,
+                            "environment_snapshot",
+                            "scope",
+                            "scope",
+                            scope_label(scope),
                             date,
                         )?),
                         Some(1),
@@ -938,6 +1246,7 @@ impl AppContext {
         let zero_metrics = DashboardLoadMetrics {
             available_dates_ms: 0,
             regime_ms: 0,
+            environment_ms: 0,
             rotations_ms: 0,
             signals_ms: 0,
             backtest_ms: 0,
@@ -958,10 +1267,17 @@ impl AppContext {
             latest_available_date
         };
         let regime_started_at = Instant::now();
-        let regime =
-            market_store::fetch_latest_market_regime_on_or_before(&self.storage, report_date)?
-                .context("no market regime available for dashboard snapshot")?;
+        let regime = market_store::fetch_latest_market_regime_on_or_before(
+            &self.storage,
+            report_date,
+            scope,
+        )?
+        .context("no market regime available for dashboard snapshot")?;
         let regime_ms = elapsed_ms(regime_started_at);
+        let environment_started_at = Instant::now();
+        let environment =
+            market_store::fetch_latest_environment_on_or_before(&self.storage, report_date, scope)?;
+        let environment_ms = elapsed_ms(environment_started_at);
         let rotations_started_at = Instant::now();
         let scoped_instruments = self.instruments_for_scope(scope)?;
         let scoped_symbols = scoped_instruments
@@ -996,16 +1312,17 @@ impl AppContext {
             latest_available_date,
             scope_label(scope),
         );
+        snapshot.environment = environment;
         let assembly_ms = elapsed_ms(assembly_started_at);
         let breadth_started_at = Instant::now();
-        snapshot.watchlist_breadth =
-            self.compute_watchlist_breadth_snapshot(report_date, &available_dates, scope)?;
+        snapshot.watchlist_breadth = self.compute_watchlist_breadth_snapshot(report_date, scope)?;
         let breadth_ms = elapsed_ms(breadth_started_at);
         Ok((
             Some(snapshot),
             DashboardLoadMetrics {
                 available_dates_ms: 0,
                 regime_ms,
+                environment_ms,
                 rotations_ms,
                 signals_ms,
                 backtest_ms,
@@ -1030,9 +1347,6 @@ impl AppContext {
 
     fn dashboard_available_dates_for_scope(&self, scope: ReportScope) -> Result<Vec<NaiveDate>> {
         let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
-        if scope == ReportScope::Global {
-            return Ok(available_dates);
-        }
         let scoped_symbols = self
             .instruments_for_scope(scope)?
             .into_iter()
@@ -1058,7 +1372,17 @@ impl AppContext {
                 &scoped_symbols,
                 date,
             )?;
-            if signal_count >= expected_count && rotation_count >= expected_count {
+            let has_regime =
+                market_store::fetch_latest_market_regime_on_or_before(&self.storage, date, scope)?
+                    .is_some();
+            let has_environment =
+                market_store::fetch_latest_environment_on_or_before(&self.storage, date, scope)?
+                    .is_some();
+            if signal_count >= expected_count
+                && rotation_count >= expected_count
+                && has_regime
+                && has_environment
+            {
                 scoped_dates.push(date);
             }
         }
@@ -1072,221 +1396,15 @@ impl AppContext {
             .collect())
     }
 
-    fn pipeline_date_diagnostics_from_available_dates(
-        &self,
-        available_dates: &[NaiveDate],
-    ) -> Result<PipelineDateDiagnostics> {
-        let freshest_market_date =
-            market_store::fetch_latest_table_date(&self.storage, "daily_bar")?;
-        let dashboard_latest_date = available_dates.first().copied();
-        let expected_symbol_count = load_universe(&self.storage.universe_abspath()?)?
-            .into_iter()
-            .filter(|instrument| instrument.enabled)
-            .count();
-        let stage_rows = [
-            ("daily_bar", freshest_market_date),
-            (
-                "indicator_snapshot",
-                market_store::fetch_latest_table_date(&self.storage, "indicator_snapshot")?,
-            ),
-            (
-                "market_regime",
-                market_store::fetch_latest_table_date(&self.storage, "market_regime")?,
-            ),
-            (
-                "rotation_rank",
-                market_store::fetch_latest_table_date(&self.storage, "rotation_rank")?,
-            ),
-            (
-                "strategy_preference",
-                market_store::fetch_latest_table_date(&self.storage, "strategy_preference")?,
-            ),
-            (
-                "signal_snapshot",
-                market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?,
-            ),
-            ("dashboard_available", dashboard_latest_date),
-        ];
-
-        let stages = stage_rows
-            .into_iter()
-            .map(|(stage, latest_date)| {
-                let (latest_entities, expected_entities) = match (stage, latest_date) {
-                    ("daily_bar", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "daily_bar",
-                            "symbol",
-                            date,
-                        )?),
-                        Some(expected_symbol_count),
-                    ),
-                    ("indicator_snapshot", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "indicator_snapshot",
-                            "symbol",
-                            date,
-                        )?),
-                        Some(expected_symbol_count),
-                    ),
-                    ("rotation_rank", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "rotation_rank",
-                            "symbol",
-                            date,
-                        )?),
-                        Some(expected_symbol_count),
-                    ),
-                    ("strategy_preference", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "strategy_preference",
-                            "symbol",
-                            date,
-                        )?),
-                        Some(expected_symbol_count),
-                    ),
-                    ("signal_snapshot", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "signal_snapshot",
-                            "symbol",
-                            date,
-                        )?),
-                        Some(expected_symbol_count),
-                    ),
-                    ("market_regime", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date(
-                            &self.storage,
-                            "market_regime",
-                            "market",
-                            date,
-                        )?),
-                        Some(1),
-                    ),
-                    _ => (None, None),
-                };
-
-                Ok(PipelineStageDateStatus {
-                    stage: stage.to_string(),
-                    latest_date: latest_date.map(|date| date.to_string()),
-                    lag_days: match (freshest_market_date, latest_date) {
-                        (Some(reference), Some(stage_date)) => {
-                            Some((reference - stage_date).num_days())
-                        }
-                        _ => None,
-                    },
-                    is_latest: matches!((freshest_market_date, latest_date), (Some(reference), Some(stage_date)) if reference == stage_date),
-                    latest_entities,
-                    expected_entities,
-                    is_complete: match (latest_entities, expected_entities) {
-                        (Some(actual), Some(expected)) if expected > 0 => Some(actual >= expected),
-                        _ => None,
-                    },
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(PipelineDateDiagnostics {
-            freshest_market_date: freshest_market_date.map(|date| date.to_string()),
-            dashboard_latest_date: dashboard_latest_date.map(|date| date.to_string()),
-            stages,
-        })
-    }
-
     fn compute_watchlist_breadth_snapshot(
         &self,
         report_date: NaiveDate,
-        dashboard_dates: &[NaiveDate],
         scope: ReportScope,
     ) -> Result<Option<WatchlistBreadthSnapshot>> {
-        let instruments = load_universe(&self.storage.universe_abspath()?)?;
-        let tracked_instruments = instruments
-            .into_iter()
-            .filter(|instrument| {
-                instrument.enabled
-                    && instrument_in_scope(instrument, scope)
-                    && matches!(
-                        instrument.instrument_type,
-                        InstrumentType::Index | InstrumentType::Etf
-                    )
-            })
-            .collect::<Vec<_>>();
-
-        if tracked_instruments.is_empty() {
+        let history_start = report_date - Duration::days(180);
+        let window = self.build_tracked_universe_window(history_start, report_date)?;
+        if window.relevant_dates.is_empty() {
             return Ok(None);
-        }
-
-        let mut relevant_dates = dashboard_dates
-            .iter()
-            .copied()
-            .filter(|date| *date <= report_date)
-            .collect::<Vec<_>>();
-        if relevant_dates.is_empty() {
-            return Ok(None);
-        }
-        relevant_dates.sort_unstable();
-        if relevant_dates.len() > 60 {
-            relevant_dates = relevant_dates[relevant_dates.len() - 60..].to_vec();
-        }
-        let history_window_start = relevant_dates[0];
-        let tracked_symbols = tracked_instruments
-            .iter()
-            .map(|instrument| instrument.symbol.clone())
-            .collect::<Vec<_>>();
-        let bars = market_store::fetch_daily_bars_for_symbols_in_range(
-            &self.storage,
-            &tracked_symbols,
-            history_window_start,
-            report_date,
-        )?;
-        let indicators = market_store::fetch_indicator_snapshots_for_symbols_in_range(
-            &self.storage,
-            &tracked_symbols,
-            history_window_start,
-            report_date,
-        )?;
-
-        let mut series_by_symbol = tracked_instruments
-            .iter()
-            .map(|instrument| {
-                (
-                    instrument.symbol.clone(),
-                    TrackedInstrumentSeries {
-                        close_by_date: BTreeMap::new(),
-                        ma30_by_date: BTreeMap::new(),
-                    },
-                )
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        for row in bars {
-            if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
-                series.close_by_date.insert(row.date, row.close);
-            }
-        }
-        for row in indicators {
-            if let Some(ma30) = row.ma30 {
-                if let Some(series) = series_by_symbol.get_mut(&row.symbol) {
-                    series.ma30_by_date.insert(row.date, ma30);
-                }
-            }
-        }
-
-        let mut cn_series = Vec::new();
-        let mut hk_series = Vec::new();
-
-        for instrument in tracked_instruments {
-            let Some(series) = series_by_symbol.remove(&instrument.symbol) else {
-                continue;
-            };
-
-            match instrument.market {
-                Market::Cn => cn_series.push(series),
-                Market::Hk => hk_series.push(series),
-            }
         }
 
         let methodology_note = "Eligible tracked instruments must be enabled INDEX/ETF universe members with both close and MA30 available on the selected date. Proxy only; not full-market stock breadth.".to_string();
@@ -1294,29 +1412,29 @@ impl AppContext {
         let markets = match scope {
             ReportScope::Global => vec![
                 build_market_watchlist_breadth_snapshot(
-                    Market::Cn,
-                    &cn_series,
+                    ReportScope::Cn,
+                    &window.cn_series,
                     report_date,
-                    &relevant_dates,
+                    &window.relevant_dates,
                 ),
                 build_market_watchlist_breadth_snapshot(
-                    Market::Hk,
-                    &hk_series,
+                    ReportScope::Hk,
+                    &window.hk_series,
                     report_date,
-                    &relevant_dates,
+                    &window.relevant_dates,
                 ),
             ],
             ReportScope::Cn => vec![build_market_watchlist_breadth_snapshot(
-                Market::Cn,
-                &cn_series,
+                ReportScope::Cn,
+                &window.cn_series,
                 report_date,
-                &relevant_dates,
+                &window.relevant_dates,
             )],
             ReportScope::Hk => vec![build_market_watchlist_breadth_snapshot(
-                Market::Hk,
-                &hk_series,
+                ReportScope::Hk,
+                &window.hk_series,
                 report_date,
-                &relevant_dates,
+                &window.relevant_dates,
             )],
         };
 
@@ -1660,9 +1778,21 @@ mod tests {
                 .iter()
                 .map(|(date, close, _)| (*date, *close))
                 .collect::<BTreeMap<_, _>>(),
+            volume_by_date: points
+                .iter()
+                .map(|(date, _, _)| (*date, 1000.0))
+                .collect::<BTreeMap<_, _>>(),
+            turnover_present_by_date: points
+                .iter()
+                .map(|(date, _, _)| (*date, true))
+                .collect::<BTreeMap<_, _>>(),
             ma30_by_date: points
                 .iter()
                 .map(|(date, _, ma30)| (*date, *ma30))
+                .collect::<BTreeMap<_, _>>(),
+            vol_ma20_by_date: points
+                .iter()
+                .map(|(date, _, _)| (*date, 900.0))
                 .collect::<BTreeMap<_, _>>(),
         }
     }
@@ -1701,7 +1831,7 @@ mod tests {
         ]);
 
         let snapshot = build_market_watchlist_breadth_snapshot(
-            Market::Cn,
+            ReportScope::Cn,
             &[always_above, recovering],
             dates[5],
             &dates,
@@ -1720,5 +1850,33 @@ mod tests {
         assert!((sma5 - 60.0).abs() < 1e-9);
         let delta = snapshot.breadth_5d_delta.unwrap();
         assert!((delta - 50.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn participation_metrics_compute_liquidity_proxy_fields() {
+        let date = NaiveDate::from_ymd_opt(2026, 2, 2).unwrap();
+        let strong = TrackedInstrumentSeries {
+            close_by_date: BTreeMap::from([(date, 110.0)]),
+            volume_by_date: BTreeMap::from([(date, 1500.0)]),
+            turnover_present_by_date: BTreeMap::from([(date, true)]),
+            ma30_by_date: BTreeMap::from([(date, 100.0)]),
+            vol_ma20_by_date: BTreeMap::from([(date, 1000.0)]),
+        };
+        let weak = TrackedInstrumentSeries {
+            close_by_date: BTreeMap::from([(date, 90.0)]),
+            volume_by_date: BTreeMap::from([(date, 800.0)]),
+            turnover_present_by_date: BTreeMap::from([(date, false)]),
+            ma30_by_date: BTreeMap::from([(date, 100.0)]),
+            vol_ma20_by_date: BTreeMap::from([(date, 1000.0)]),
+        };
+
+        let metrics = compute_participation_metrics(&[strong, weak], date, &[date]);
+
+        assert_eq!(metrics.current.eligible_count, 2);
+        assert_eq!(metrics.current.above_count, 1);
+        assert_eq!(metrics.current.volume_expansion_pct, Some(50.0));
+        assert_eq!(metrics.current.turnover_coverage_pct, Some(50.0));
+        assert!((metrics.current.liquidity_proxy_score - 50.0).abs() < 1e-9);
+        assert_eq!(metrics.breadth_state, "neutral");
     }
 }
