@@ -151,6 +151,7 @@ pub struct PipelineStageDateStatus {
 pub struct PipelineDateDiagnostics {
     pub freshest_market_date: Option<String>,
     pub dashboard_latest_date: Option<String>,
+    pub alerts: Vec<String>,
     pub stages: Vec<PipelineStageDateStatus>,
 }
 
@@ -273,6 +274,7 @@ fn build_trust_summary(
             "One or more decision stages are lagging behind the freshest market date.".to_string(),
         );
     }
+    notes.extend(pipeline_dates.alerts.iter().cloned());
     if let (Some(signal_scope), Some(regime_scope)) = (
         signal_analysis_scope.as_ref(),
         signal_regime_basis_scope.as_ref(),
@@ -341,6 +343,72 @@ fn build_trust_summary(
         signal_regime_basis_scope,
         backtest_matches_snapshot,
         notes,
+    }
+}
+
+fn pipeline_date_alerts(stages: &[PipelineStageDateStatus]) -> Vec<String> {
+    let strategy_latest_date = stages
+        .iter()
+        .find(|stage| stage.stage == "strategy_preference")
+        .and_then(|stage| stage.latest_date.clone());
+    let signal_latest_date = stages
+        .iter()
+        .find(|stage| stage.stage == "signal_snapshot")
+        .and_then(|stage| stage.latest_date.clone());
+
+    let mut alerts = Vec::new();
+    if let Some(issue) = build_signal_alignment_issue_for_dates(
+        ReportScope::Global,
+        strategy_latest_date
+            .as_ref()
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+        signal_latest_date
+            .as_ref()
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+    ) {
+        alerts.push(issue);
+    }
+    if let Some(issue) = build_signal_completeness_issue(stages) {
+        alerts.push(issue);
+    }
+    alerts
+}
+
+fn build_signal_alignment_issue_for_dates(
+    scope: ReportScope,
+    strategy_latest: Option<NaiveDate>,
+    signal_latest: Option<NaiveDate>,
+) -> Option<String> {
+    match (strategy_latest, signal_latest) {
+        (Some(strategy_latest), Some(signal_latest)) if strategy_latest > signal_latest => Some(
+            format!(
+                "Signal snapshot for scope {} is lagging behind strategy preferences (signal={}, strategy={}). Rerun `compute-signals` before trusting dashboard/export defaults.",
+                scope_label(scope), signal_latest, strategy_latest
+            ),
+        ),
+        (Some(strategy_latest), None) => Some(format!(
+            "Signal snapshot for scope {} is missing while strategy preferences already exist through {}. Rerun `compute-signals` before trusting dashboard/export defaults.",
+            scope_label(scope), strategy_latest
+        )),
+        _ => None,
+    }
+}
+
+fn build_signal_completeness_issue(stages: &[PipelineStageDateStatus]) -> Option<String> {
+    let signal_stage = stages.iter().find(|stage| stage.stage == "signal_snapshot")?;
+    match (
+        signal_stage.latest_date.as_ref(),
+        signal_stage.latest_entities,
+        signal_stage.expected_entities,
+        signal_stage.is_complete,
+    ) {
+        (Some(latest_date), Some(actual), Some(expected), Some(false)) if expected > 0 => Some(
+            format!(
+                "Signal snapshot is incomplete on its latest date {} ({}/{} symbols). Rerun `compute-signals` before trusting dashboard/export defaults.",
+                latest_date, actual, expected
+            ),
+        ),
+        _ => None,
     }
 }
 
@@ -1135,7 +1203,7 @@ impl AppContext {
 
         let rows = build_strategy_preferences(&contexts);
         if let Err(error) = market_store::insert_strategy_preferences(&self.storage, &rows) {
-            failed_symbols.push(format!("strategy_preference: {error}"));
+            anyhow::bail!("strategy_preference insert failed: {error}");
         }
 
         Ok(StrategySummary {
@@ -1150,14 +1218,42 @@ impl AppContext {
         let regimes = market_store::fetch_market_regimes(&self.storage)?;
         let rotations = market_store::fetch_rotation_ranks(&self.storage)?;
         let rows = build_signal_snapshots(&strategies, &regimes, &rotations);
-        let mut failed_items = Vec::new();
         if let Err(error) = market_store::insert_signal_snapshots(&self.storage, &rows) {
-            failed_items.push(format!("signal_snapshot: {error}"));
+            anyhow::bail!("signal_snapshot insert failed: {error}");
+        }
+        let alignment_issues = self.signal_alignment_issues([
+            ReportScope::Global,
+            ReportScope::Cn,
+            ReportScope::Hk,
+        ])?;
+        if !alignment_issues.is_empty() {
+            anyhow::bail!(alignment_issues.join(" | "));
         }
         Ok(SignalSummary {
             rows: rows.len(),
-            failed_items,
+            failed_items: Vec::new(),
         })
+    }
+
+    fn signal_alignment_issues(
+        &self,
+        scopes: impl IntoIterator<Item = ReportScope>,
+    ) -> Result<Vec<String>> {
+        let mut issues = Vec::new();
+        for scope in scopes {
+            let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+            let diagnostics = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
+            issues.extend(diagnostics.alerts);
+        }
+        Ok(issues)
+    }
+
+    pub fn refresh_consistency_alerts(&self) -> Result<Vec<String>> {
+        self.signal_alignment_issues([
+            ReportScope::Global,
+            ReportScope::Cn,
+            ReportScope::Hk,
+        ])
     }
 
     pub fn run_backtest(
@@ -1475,9 +1571,12 @@ impl AppContext {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let alerts = pipeline_date_alerts(&stages);
+
         Ok(PipelineDateDiagnostics {
             freshest_market_date: freshest_market_date.map(|date| date.to_string()),
             dashboard_latest_date: dashboard_latest_date.map(|date| date.to_string()),
+            alerts,
             stages,
         })
     }
@@ -2146,5 +2245,81 @@ mod tests {
         assert_eq!(metrics.current.turnover_coverage_pct, Some(50.0));
         assert!((metrics.current.liquidity_proxy_score - 50.0).abs() < 1e-9);
         assert_eq!(metrics.breadth_state, "neutral");
+    }
+
+    #[test]
+    fn pipeline_date_alerts_warn_when_signal_lags_strategy() {
+        let stages = vec![
+            PipelineStageDateStatus {
+                stage: "strategy_preference".to_string(),
+                latest_date: Some("2026-04-24".to_string()),
+                lag_days: Some(0),
+                is_latest: true,
+                latest_entities: Some(21),
+                expected_entities: Some(21),
+                is_complete: Some(true),
+            },
+            PipelineStageDateStatus {
+                stage: "signal_snapshot".to_string(),
+                latest_date: Some("2026-04-09".to_string()),
+                lag_days: Some(15),
+                is_latest: false,
+                latest_entities: Some(21),
+                expected_entities: Some(21),
+                is_complete: Some(true),
+            },
+        ];
+
+        let alerts = pipeline_date_alerts(&stages);
+
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].contains("Rerun `compute-signals`"));
+        assert!(alerts[0].contains("signal=2026-04-09"));
+        assert!(alerts[0].contains("strategy=2026-04-24"));
+    }
+
+    #[test]
+    fn build_signal_alignment_issue_for_dates_warns_when_signal_missing() {
+        let issue = build_signal_alignment_issue_for_dates(
+            ReportScope::Global,
+            Some(NaiveDate::from_ymd_opt(2026, 4, 24).unwrap()),
+            None,
+        );
+
+        let issue = issue.expect("expected missing-signal warning");
+        assert!(issue.contains("scope GLOBAL"));
+        assert!(issue.contains("missing"));
+        assert!(issue.contains("2026-04-24"));
+    }
+
+    #[test]
+    fn pipeline_date_alerts_warn_when_signal_latest_day_is_incomplete() {
+        let stages = vec![
+            PipelineStageDateStatus {
+                stage: "strategy_preference".to_string(),
+                latest_date: Some("2026-04-24".to_string()),
+                lag_days: Some(0),
+                is_latest: true,
+                latest_entities: Some(21),
+                expected_entities: Some(21),
+                is_complete: Some(true),
+            },
+            PipelineStageDateStatus {
+                stage: "signal_snapshot".to_string(),
+                latest_date: Some("2026-04-24".to_string()),
+                lag_days: Some(0),
+                is_latest: true,
+                latest_entities: Some(18),
+                expected_entities: Some(21),
+                is_complete: Some(false),
+            },
+        ];
+
+        let alerts = pipeline_date_alerts(&stages);
+
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].contains("Signal snapshot is incomplete"));
+        assert!(alerts[0].contains("2026-04-24"));
+        assert!(alerts[0].contains("18/21"));
     }
 }
