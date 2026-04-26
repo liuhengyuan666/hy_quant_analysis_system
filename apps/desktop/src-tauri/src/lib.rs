@@ -13,6 +13,9 @@ struct DashboardRefreshStatus {
     status: String,
     progress_pct: u8,
     stage: String,
+    current_stage: Option<String>,
+    start_stage: String,
+    retry_from_stage: Option<String>,
     refresh_from: Option<String>,
     refresh_to: Option<String>,
     started_at: Option<String>,
@@ -37,6 +40,9 @@ impl Default for DashboardRefreshStatus {
             status: "idle".to_string(),
             progress_pct: 0,
             stage: "Idle".to_string(),
+            current_stage: None,
+            start_stage: "full".to_string(),
+            retry_from_stage: None,
             refresh_from: None,
             refresh_to: None,
             started_at: None,
@@ -124,6 +130,260 @@ fn open_file_in_os(path: &Path) -> Result<(), String> {
         }
         return Err(format!("artifact opener exited with status: {status}"));
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RefreshStartStage {
+    Ingest,
+    Indicators,
+    Macro,
+    Rotation,
+    Strategy,
+    Signals,
+    Backtests,
+}
+
+impl RefreshStartStage {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Ingest => "ingest",
+            Self::Indicators => "indicators",
+            Self::Macro => "macro",
+            Self::Rotation => "rotation",
+            Self::Strategy => "strategy",
+            Self::Signals => "signals",
+            Self::Backtests => "backtests",
+        }
+    }
+
+    fn display_label(self) -> &'static str {
+        match self {
+            Self::Ingest => "Daily bars",
+            Self::Indicators => "Indicators",
+            Self::Macro => "Macro regime",
+            Self::Rotation => "Rotation",
+            Self::Strategy => "Strategy preferences",
+            Self::Signals => "Signals",
+            Self::Backtests => "Backtests",
+        }
+    }
+
+    fn progress_after(self) -> u8 {
+        match self {
+            Self::Ingest => 20,
+            Self::Indicators => 40,
+            Self::Macro => 60,
+            Self::Rotation => 75,
+            Self::Strategy => 88,
+            Self::Signals => 92,
+            Self::Backtests => 96,
+        }
+    }
+
+    fn order(self) -> u8 {
+        match self {
+            Self::Ingest => 0,
+            Self::Indicators => 1,
+            Self::Macro => 2,
+            Self::Rotation => 3,
+            Self::Strategy => 4,
+            Self::Signals => 5,
+            Self::Backtests => 6,
+        }
+    }
+
+    fn should_run(self, start_stage: Option<Self>) -> bool {
+        start_stage
+            .map(|start| self.order() >= start.order())
+            .unwrap_or(true)
+    }
+}
+
+fn parse_refresh_start_stage(stage: Option<&str>) -> Result<Option<RefreshStartStage>, String> {
+    match stage.unwrap_or("full") {
+        "full" => Ok(None),
+        "ingest" => Ok(Some(RefreshStartStage::Ingest)),
+        "indicators" => Ok(Some(RefreshStartStage::Indicators)),
+        "macro" => Ok(Some(RefreshStartStage::Macro)),
+        "rotation" => Ok(Some(RefreshStartStage::Rotation)),
+        "strategy" => Ok(Some(RefreshStartStage::Strategy)),
+        "signals" => Ok(Some(RefreshStartStage::Signals)),
+        "backtests" => Ok(Some(RefreshStartStage::Backtests)),
+        other => Err(format!("unsupported refresh start stage: {other}")),
+    }
+}
+
+fn start_stage_value(start_stage: Option<RefreshStartStage>) -> String {
+    start_stage
+        .map(RefreshStartStage::as_str)
+        .unwrap_or("full")
+        .to_string()
+}
+
+fn stage_label_from_key(stage_key: &str) -> &'static str {
+    match stage_key {
+        "ingest" => "Daily bars",
+        "indicators" => "Indicators",
+        "macro" => "Macro regime",
+        "rotation" => "Rotation",
+        "strategy" => "Strategy preferences",
+        "signals" => "Signals",
+        "backtests" => "Backtests",
+        _ => "Refresh",
+    }
+}
+
+fn spawn_dashboard_refresh(
+    coordinator: RefreshCoordinator,
+    start_stage: Option<RefreshStartStage>,
+) -> Result<DashboardRefreshStatus, String> {
+    {
+        let current = coordinator
+            .status
+            .lock()
+            .map_err(|error| error.to_string())?
+            .clone();
+        if current.running {
+            return Ok(current);
+        }
+    }
+
+    let started_at = Local::now().to_rfc3339();
+    let start_stage_value = start_stage_value(start_stage);
+    let prep_label = start_stage
+        .map(|stage| format!("Preparing rerun from {}", stage.display_label()))
+        .unwrap_or_else(|| "Preparing refresh window".to_string());
+    set_refresh_status(&coordinator, |status| {
+        *status = DashboardRefreshStatus {
+            running: true,
+            status: "running".to_string(),
+            progress_pct: 0,
+            stage: prep_label,
+            current_stage: None,
+            start_stage: start_stage_value.clone(),
+            retry_from_stage: None,
+            refresh_from: None,
+            refresh_to: None,
+            started_at: Some(started_at.clone()),
+            finished_at: None,
+            error: None,
+        };
+    });
+
+    let worker = coordinator.clone();
+    std::thread::spawn(move || {
+        let context = AppContext::new(StorageConfig::default());
+        let today = Local::now().date_naive();
+
+        let result = (|| -> Result<(), anyhow::Error> {
+            let plan = context.build_refresh_plan(today)?;
+            let refresh_from = NaiveDate::parse_from_str(&plan.refresh_from, "%Y-%m-%d")?;
+            let refresh_to = NaiveDate::parse_from_str(&plan.refresh_to, "%Y-%m-%d")?;
+            let macro_from = NaiveDate::parse_from_str(&plan.macro_from, "%Y-%m-%d")?;
+            let macro_to = NaiveDate::parse_from_str(&plan.macro_to, "%Y-%m-%d")?;
+
+            set_refresh_status(&worker, |status| {
+                status.progress_pct = 5;
+                status.stage = "Prepared refresh window".to_string();
+                status.refresh_from = Some(plan.refresh_from.clone());
+                status.refresh_to = Some(plan.refresh_to.clone());
+            });
+
+            let run_stage = |worker: &RefreshCoordinator,
+                             stage: RefreshStartStage,
+                             action: &mut dyn FnMut() -> Result<(), anyhow::Error>| -> Result<(), anyhow::Error> {
+                if !stage.should_run(start_stage) {
+                    return Ok(());
+                }
+                set_refresh_status(worker, |status| {
+                    status.current_stage = Some(stage.as_str().to_string());
+                    status.stage = format!("Running {}", stage.display_label());
+                });
+                action()?;
+                set_refresh_status(worker, |status| {
+                    status.progress_pct = stage.progress_after();
+                    status.stage = format!("{} refreshed", stage.display_label());
+                });
+                Ok(())
+            };
+
+            run_stage(&worker, RefreshStartStage::Ingest, &mut || {
+                context.ingest_daily(refresh_from, refresh_to).map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Indicators, &mut || {
+                context.compute_indicators().map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Macro, &mut || {
+                context.compute_macro_regime(macro_from, macro_to).map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Rotation, &mut || {
+                context.compute_rotation().map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Strategy, &mut || {
+                context.compute_strategy_preferences().map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Signals, &mut || {
+                context.compute_signals().map(|_| ())
+            })?;
+            run_stage(&worker, RefreshStartStage::Backtests, &mut || {
+                context.refresh_backtests_for_standard_scopes().map(|_| ())
+            })?;
+
+            let alerts = context.refresh_consistency_alerts()?;
+            if !alerts.is_empty() {
+                set_refresh_status(&worker, |status| {
+                    status.current_stage = None;
+                    status.retry_from_stage = None;
+                    status.stage = "Refresh consistency validation failed".to_string();
+                });
+                anyhow::bail!(alerts.join(" | "));
+            }
+            set_refresh_status(&worker, |status| {
+                status.progress_pct = 100;
+                status.current_stage = None;
+                status.stage = "Refresh consistency verified".to_string();
+                status.retry_from_stage = None;
+            });
+
+            Ok(())
+        })();
+
+        match result {
+            Ok(()) => {
+                let finished_at = Local::now().to_rfc3339();
+                set_refresh_status(&worker, |status| {
+                    status.running = false;
+                    status.status = "success".to_string();
+                    status.finished_at = Some(finished_at);
+                    status.error = None;
+                    status.current_stage = None;
+                    status.retry_from_stage = None;
+                });
+            }
+            Err(error) => {
+                let finished_at = Local::now().to_rfc3339();
+                set_refresh_status(&worker, |status| {
+                    let retry_from_stage = status.retry_from_stage.clone();
+                    let stage_label = retry_from_stage
+                        .as_deref()
+                        .map(stage_label_from_key)
+                        .unwrap_or("Refresh consistency validation");
+                    status.running = false;
+                    status.status = "error".to_string();
+                    status.stage = format!("{} failed", stage_label);
+                    status.finished_at = Some(finished_at);
+                    status.error = Some(error.to_string());
+                    status.retry_from_stage = retry_from_stage;
+                });
+            }
+        }
+    });
+
+    coordinator
+        .status
+        .lock()
+        .map(|status| status.clone())
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -306,125 +566,26 @@ fn dashboard_refresh_status(
 #[tauri::command]
 fn start_dashboard_refresh(
     refresh: tauri::State<RefreshCoordinator>,
+    start_stage: Option<String>,
 ) -> Result<DashboardRefreshStatus, String> {
-    let coordinator = refresh.inner().clone();
-    {
-        let current = coordinator
+    let parsed_start_stage = parse_refresh_start_stage(start_stage.as_deref())?;
+    spawn_dashboard_refresh(refresh.inner().clone(), parsed_start_stage)
+}
+
+#[tauri::command]
+fn retry_dashboard_refresh(
+    refresh: tauri::State<RefreshCoordinator>,
+) -> Result<DashboardRefreshStatus, String> {
+    let retry_stage = {
+        let status = refresh
             .status
             .lock()
             .map_err(|error| error.to_string())?
             .clone();
-        if current.running {
-            return Ok(current);
-        }
-    }
-
-    let started_at = Local::now().to_rfc3339();
-    set_refresh_status(&coordinator, |status| {
-        *status = DashboardRefreshStatus {
-            running: true,
-            status: "running".to_string(),
-            progress_pct: 0,
-            stage: "Preparing refresh window".to_string(),
-            refresh_from: None,
-            refresh_to: None,
-            started_at: Some(started_at.clone()),
-            finished_at: None,
-            error: None,
-        };
-    });
-
-    let worker = coordinator.clone();
-    std::thread::spawn(move || {
-        let context = AppContext::new(StorageConfig::default());
-        let today = Local::now().date_naive();
-
-        let result = (|| -> Result<(), anyhow::Error> {
-            let plan = context.build_refresh_plan(today)?;
-            let refresh_from = NaiveDate::parse_from_str(&plan.refresh_from, "%Y-%m-%d")?;
-            let refresh_to = NaiveDate::parse_from_str(&plan.refresh_to, "%Y-%m-%d")?;
-            let macro_from = NaiveDate::parse_from_str(&plan.macro_from, "%Y-%m-%d")?;
-            let macro_to = NaiveDate::parse_from_str(&plan.macro_to, "%Y-%m-%d")?;
-
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 5;
-                status.stage = "Prepared refresh window".to_string();
-                status.refresh_from = Some(plan.refresh_from.clone());
-                status.refresh_to = Some(plan.refresh_to.clone());
-            });
-
-            context.ingest_daily(refresh_from, refresh_to)?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 20;
-                status.stage = "Daily bars updated".to_string();
-            });
-
-            context.compute_indicators()?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 40;
-                status.stage = "Indicators recomputed".to_string();
-            });
-
-            context.compute_macro_regime(macro_from, macro_to)?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 60;
-                status.stage = "Macro regime recomputed".to_string();
-            });
-
-            context.compute_rotation()?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 75;
-                status.stage = "Rotation updated".to_string();
-            });
-
-            context.compute_strategy_preferences()?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 88;
-                status.stage = "Strategy preferences updated".to_string();
-            });
-
-            context.compute_signals()?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 92;
-                status.stage = "Signals refreshed".to_string();
-            });
-
-            context.refresh_backtests_for_standard_scopes()?;
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 100;
-                status.stage = "Backtests refreshed".to_string();
-            });
-
-            Ok(())
-        })();
-
-        match result {
-            Ok(()) => {
-                let finished_at = Local::now().to_rfc3339();
-                set_refresh_status(&worker, |status| {
-                    status.running = false;
-                    status.status = "success".to_string();
-                    status.finished_at = Some(finished_at);
-                    status.error = None;
-                });
-            }
-            Err(error) => {
-                let finished_at = Local::now().to_rfc3339();
-                set_refresh_status(&worker, |status| {
-                    status.running = false;
-                    status.status = "error".to_string();
-                    status.finished_at = Some(finished_at);
-                    status.error = Some(error.to_string());
-                });
-            }
-        }
-    });
-
-    coordinator
-        .status
-        .lock()
-        .map(|status| status.clone())
-        .map_err(|error| error.to_string())
+        parse_refresh_start_stage(status.retry_from_stage.as_deref())?
+            .ok_or_else(|| "no failed stage is available to retry".to_string())?
+    };
+    spawn_dashboard_refresh(refresh.inner().clone(), Some(retry_stage))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -443,7 +604,8 @@ pub fn run() {
             open_report_artifact,
             usage_guides,
             dashboard_refresh_status,
-            start_dashboard_refresh
+            start_dashboard_refresh,
+            retry_dashboard_refresh
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
