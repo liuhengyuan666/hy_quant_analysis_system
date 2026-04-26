@@ -108,6 +108,61 @@
 - 影响：后续如果继续做 deeper refactor，应围绕 trust contract 和 transport/API 统一推进，而不是再回到纯展示修补。
 - 状态：进行中
 
+## [2026-04-26] 当 latest available date 被 signal 层卡住时，优先提示重跑 `compute-signals`
+
+- 背景：排查 `export-report` 默认停在 `2026-04-09` 的问题时，确认根因并不在 export 逻辑，而是当时 `signal_snapshot` 仍停在旧日期。
+- 备选方案：
+  - 深挖并立即重构 signal/backend 流程。
+  - 先增加明确的诊断提示，让用户在 `strategy_preference` 比 `signal_snapshot` 更新时直接知道该重跑哪一步。
+- 决策：先在 `PipelineDateDiagnostics` 增加 `alerts`，并在桌面端/文档中明确提示：当 `strategy_preference` 比 `signal_snapshot` 更新时，优先重跑 `compute-signals`。
+- 原因：当前最需要的是降低排障成本，而不是先做更大的 backend 改造。
+- 影响：CLI、桌面端和文档会对 signal 落后问题给出同一条排障路径；后续若继续深挖 sequencing 问题，再考虑更深入修复。
+- 状态：进行中
+
+## [2026-04-26] `compute-signals` 与 refresh 对 signal-vs-strategy 落后关系 fail loud
+
+- 背景：继续深挖后确认，4/9 的导出问题更像一次 sequencing / stale-input 问题，而不是 export 本身的 bug。
+- 备选方案：
+  - 只保留提示，让用户手工补跑 `compute-signals`。
+  - 在 `compute-signals` 和 refresh 末尾加入一致性校验，让系统对 `strategy_preference` 新于 `signal_snapshot` 的状态直接失败。
+- 决策：在 backend 增加 signal-vs-strategy 对齐校验 helper，并让 `compute-signals` 与桌面 refresh 在发现落后时 fail loud。
+- 原因：当前系统已经允许通过提示降低排障成本，下一步最有价值的是阻止“看起来成功但默认日期仍然落后”的假成功态。
+- 影响：后续如果 sequencing 问题再次出现，CLI 和桌面 refresh 会更早失败，而不是把 stale signal 继续传播到 dashboard/export 默认日期。
+- 状态：进行中
+
+## [2026-04-26] signal alignment guard 也覆盖 latest-day incompleteness
+
+- 背景：进一步复核后确认，只检查 `strategy_latest > signal_latest` 还不够；如果 `signal_snapshot` 最新日期已经追平，但最新日 coverage 不完整，`dashboard_available` 同样可能被卡住。
+- 备选方案：
+  - 保持现有 date-lag guard，不处理 incomplete latest day。
+  - 复用 `PipelineDateDiagnostics` 已有的 `is_complete` 信息，把 signal 最新日 coverage 不完整也纳入同一条 fail-loud 机制。
+- 决策：让 `pipeline_date_alerts()` 同时在“signal 最新日不完整”时发出同类告警，并让 `compute-signals` / refresh 末尾一致性校验同样对此失败。
+- 原因：这是和原始问题同一族的错误状态，继续只提示日期滞后会留下明显漏网场景。
+- 影响：当前 guard 不仅能防住 signal 日期落后，也能防住 signal 最新日 rows 不完整导致的假成功态。
+- 状态：进行中
+
+## [2026-04-26] signal guard 最终统一到 scoped diagnostics alerts
+
+- 背景：进一步复核后发现，只在 `compute-signals` 中做 date-based helper 校验、并只在 refresh 末尾检查 `GLOBAL` scope，还会留下 CN/HK 或 latest-day incompleteness 的漏网情况。
+- 备选方案：
+  - 保持 `compute-signals` 的局部 helper 校验，refresh 继续只看 Global。
+  - 直接复用 `PipelineDateDiagnostics.alerts` 作为 signal guard 的单一事实来源，并让 refresh 检查 `GLOBAL / CN / HK` 三个 scope。
+- 决策：让 `compute-signals` 与 refresh 一致地复用 scoped diagnostics alerts；refresh 末尾不再只校验 `GLOBAL`，而校验全部标准 scope。
+- 原因：这样可以避免 guard 逻辑在多个地方分叉，减少“日期问题修了但 completeness 或局部 scope 还漏掉”的情况。
+- 影响：当前 signal guard 的判断标准已统一到同一套 diagnostics 语义上，后续若再增强，只需要在 diagnostics/alerts 一处扩展。
+- 状态：进行中
+
+## [2026-04-26] refresh stage control 先做 suffix-run，不做 stop-at-stage 或持久化 job model
+
+- 背景：在 trust 和 signal guard 都收口后，下一步确认方向是补 `retry failed stage / partial rerun`，但不引入更重的 job-state 或 staging redesign。
+- 备选方案：
+  - 直接设计复杂的 cancel/resume/stop-at-stage 流程。
+  - 先在 Tauri refresh coordinator 层支持 `Retry failed stage` 和 `Run from stage`，并保持后端阶段方法不拆。
+- 决策：先实现 suffix-run 语义：用户只能从某个阶段开始并一直跑到结尾；失败后可直接 `Retry failed stage`。当前阶段名集合包含 `ingest`、`indicators`、`macro`、`rotation`、`strategy`、`signals`、`backtests`。
+- 原因：这是最小侵入、最不容易破坏现有桌面默认路径的实现，同时能覆盖最常见的恢复场景。
+- 影响：当前 refresh 已从“单一按钮”升级成“默认完整刷新 + 轻量阶段控制”。后续若继续增强，再考虑 cancel/resume 或独立 job-state。
+- 状态：进行中
+
 ## [2026-04-25] `Recent reports` 先升级成可操作入口，不先做 schema/API 大改
 
 - 背景：功能设计复盘已确认 `Recent reports` 不应继续停留在导出路径列表，而应向研究结果管理入口演进。
@@ -129,3 +184,15 @@
 - 原因：这是最小侵入、最可控的下一步，不需要立刻把工作升级成 schema/API 或插件治理问题。
 - 影响：`Recent reports` 现在对 daily reports 和 data-health reports 都有直接可用的 artifact 动作；后续若继续增强，再考虑 reveal/opener plugin 或 first-class metadata。
 - 状态：进行中
+
+## [2026-04-26] `/init-deep` 先补边界最强的 AGENTS 层级，而不是平均铺满所有目录
+
+- 背景：trust / recent reports / signal guard / refresh stage control 连续落地后，现有 root / desktop / crates guidance 已明显落后，而 `src-tauri`、`core-domain`、`macro-engine` 又缺少就近约束。
+- 备选方案：
+  - 继续只维护 root 层 AGENTS。
+  - 为更多子目录平均生成 AGENTS。
+  - 优先刷新 root / crates / apps/desktop / apps/desktop/frontend，并补齐 `apps/desktop/src-tauri`、`crates/core-domain`、`crates/macro-engine`。
+- 决策：本轮 `/init-deep` 采用第三种，先把最容易发生语义漂移、又最常被后续 agent 直接触达的边界刷新到位。
+- 原因：这些位置承载了默认用户路径、跨层责任边界、共享 contract 和纯计算语义，是后续最容易因为旧心智而走偏的地方。
+- 影响：未来修改 desktop refresh、trust / recent reports、shared DTO 或 macro regime 逻辑时，应先读最近一层 AGENTS，而不是只依赖 root 层印象。
+- 状态：完成

@@ -4,24 +4,24 @@
 
 - 阶段：执行模式
 - 当前目标：
-  - 进行第一轮清理与归档。
-  - 在不做顶层目录迁移的前提下提升代码库可读性。
-  - 为后续热点文件拆分做准备。
+  - 收口阶段性文档与 knowledge base。
+  - 完成 `/init-deep`，让 root / desktop / shared-contract / macro 边界与当前实现一致。
+  - 为 `Recent reports -> compare previous` 保留清晰的下一步实现入口。
 - 关键任务：
-  - 统一文档状态说明，区分当前事实、活跃设计、历史归档与运行产物。
-  - 移除前端未使用依赖与明显陈旧项。
-  - 记录下一轮可执行的热点拆分目标。
+  - 刷新根/desktop/crates 层 AGENTS，并补齐缺失子层级文件。
+  - 把 trust / recent-reports / signal guard / refresh stage control 的当前语义写回阶段总结与 memory。
+  - 在继续 `compare previous` 之前，先把 desktop 默认刷新路径与研究结果入口心智固定下来。
 
 ## 当前约束
 
-- 时间：当前轮次以低风险清理与归档为主，不直接进行大规模重构。
-- 技术限制：需要兼顾 Rust workspace、Tauri 目录约定与现有文档/脚本路径。
+- 当前轮次以知识库 / 文档收口为主，不引入新的重型后端重构。
+- 需要保持 desktop 默认路径、scope/provenance 语义、signal fail-loud guard 与 refresh suffix-run 语义一致。
 
 ## 当前风险
 
-- 规划文档较多，可能存在口径陈旧或重复。
-- 生成产物与源码并存，容易混淆“应清理”与“应保留”的边界。
-- 顶层目录重组可能影响 Cargo workspace、Tauri 配置、文档路径与脚本命令。
+- 根层/父层 AGENTS 若继续陈旧，会让后续 agent 沿旧的 `main.js` 单文件心智和旧 refresh 语义行动。
+- `compare previous` 仍未实现，recent reports 的结果管理入口还差一步闭环。
+- 当前仍有一批本地未提交变更，若知识库不先同步，后续提交说明会继续和真实边界脱节。
 
 ## 当前发现
 
@@ -56,3 +56,10 @@
 - `TrustSummary` 现已补充 freshness/data-health 结构化 digest，用于承载更明确的证据层摘要。
 - 桌面端现在以 `renderTrustSummaryPanel()` 作为主可信度入口区块，而不再只把 trust summary 当成单行 notice。
 - `Pipeline freshness` 与 `Data health` 继续保留为证据层 / drilldown，而不是再与 trust summary 并列竞争主入口地位。
+- 当 `strategy_preference` 比 `signal_snapshot` 更新时，`PipelineDateDiagnostics` 现在会给出明确提示：先重跑 `compute-signals`，再信任 dashboard/export 默认日期。
+- 对 2026-04-09 导出问题的进一步结论是：当前更像一次运行时序/执行顺序问题，而不是稳定复现的持久写入 bug。
+- 当前最新修复方向已经从“提示排障”推进到“机制性 fail loud”：当 `strategy_preference` 新于 `signal_snapshot` 时，`compute-signals` 和 desktop refresh 会直接失败，而不是继续产生看似成功的 stale 状态。
+- 当前 latest-date guard 也已经覆盖 `signal_snapshot` 最新日 coverage 不完整的情况，不再只检查日期是否落后。
+- 当前 signal guard 已统一复用 `PipelineDateDiagnostics.alerts`，并覆盖 `GLOBAL / CN / HK` 三个标准 scope，而不再只做 Global-only 校验。
+- refresh 现在支持 `Retry failed stage` 与 `Run from stage`，并保持 suffix-run 语义：从 `ingest / indicators / macro / rotation / strategy / signals / backtests` 中的指定阶段继续，一直跑到最终一致性校验完成。
+- `/init-deep` 当前已完成 root / crates / apps/desktop knowledge-base 刷新，并补齐 `apps/desktop/src-tauri`、`crates/core-domain`、`crates/macro-engine` 的局部 AGENTS，后续 agent 可以在最近边界文件就近获取约束。
