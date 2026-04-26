@@ -1,118 +1,57 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-04-05 +08:00
-**Commit:** 9060e50
-**Branch:** main
-
 ## OVERVIEW
-Local desktop quant research system. Rust workspace core, Tauri desktop shell, ClickHouse analytics store, SQLite local state, plain-JS dashboard frontend, and V2 Phase 1 scoped regime/environment semantics.
+Local desktop quant research system. The Rust workspace owns the ingestion-to-report pipeline, the Tauri desktop app is the default operator surface, and `docs/` plus `memory/` are part of the working system rather than side notes.
 
 ## STRUCTURE
 ```text
 rust-quant-analysis-system/
-├── apps/          # CLI + desktop shell
-├── crates/        # domain, engines, storage, orchestration
-├── config/        # instrument universe
-├── docs/          # user guides + architecture + breadth planning
+├── apps/          # CLI + desktop delivery surfaces
+├── crates/        # contracts, engines, persistence, orchestration
+├── config/        # instrument universe + runtime inputs
+├── docs/          # truth sources, operator guides, active design
 ├── infra/         # Docker / ClickHouse bootstrap
-├── reports/       # exported markdown reports
-└── sql/           # ClickHouse / SQLite init DDL
+├── memory/        # durable project context, decisions, history
+├── reports/       # exported artifacts; desktop open-file support stays here only
+├── runtime/       # agent workflow and memory rules
+└── sql/           # storage bootstrap DDL
 ```
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| End-to-end orchestration | `crates/app-service/src/lib.rs` | `AppContext`; refresh plan, pipeline, dashboard bundle/snapshot, health, export |
-| Shared types | `crates/core-domain/src/lib.rs` | canonical DTOs / enums |
-| Market data fetch | `crates/data-ingestion/src/lib.rs` | Eastmoney first, Tencent fallback, FRED macro, forward-adjusted bars |
-| DB read/write | `crates/market-store/src/lib.rs` | raw ClickHouse/SQLite boundary; scoped dashboard reads live here |
-| Reports + dashboard shapes | `crates/report-engine/src/lib.rs` | `DashboardSnapshot`, `DashboardLoadMetrics`, markdown rendering |
-| Desktop bridge | `apps/desktop/src-tauri/src/lib.rs` | thin async command surface, refresh coordinator |
-| Desktop UI | `apps/desktop/frontend/src/main.js` | single-page dashboard, bundled bootstrap, rAF render scheduling |
-| CLI surface | `apps/cli/src/main.rs` | clap commands mirror `AppContext` |
-| Scoped CN/HK reporting | `crates/app-service/src/lib.rs` + `apps/cli/src/main.rs` | `AnalysisScope`-backed dashboard/export flows |
-| Environment persistence | `crates/market-store/src/lib.rs` + `crates/report-engine/src/lib.rs` | `environment_snapshot` IO + payload/render contract |
-| Architecture docs | `docs/系统架构与数据流.md` | system flow, date semantics, health flow |
-| Module docs | `docs/功能模块与处理逻辑.md` | per-module IO, source, processing logic |
-| Breadth planning | `docs/市场广度指标-MA30规划.md` | true stock breadth vs. V1 proxy boundary |
-| Freshness diagnostics | `crates/app-service/src/lib.rs` + `apps/cli/src/main.rs` | `pipeline_date_diagnostics`, `pipeline-dates` |
-
-## CODE MAP
-| Symbol | Type | Location | Role |
-|--------|------|----------|------|
-| `AppContext` | struct | `crates/app-service/src/lib.rs` | orchestration facade |
-| `dashboard_bundle` | method | `crates/app-service/src/lib.rs` | bundled dashboard bootstrap payload |
-| `AnalysisScope` | enum | `crates/core-domain/src/lib.rs` | canonical `Global` / `Cn` / `Hk` scope routing |
-| `compute_watchlist_breadth_snapshot` | method | `crates/app-service/src/lib.rs` | V1 watchlist breadth proxy |
-| `pipeline_date_diagnostics` | method | `crates/app-service/src/lib.rs` | stage freshness summary |
-| `StorageConfig` | struct | `crates/market-store/src/lib.rs` | runtime paths + DB endpoints |
-| `fetch_dashboard_available_dates` | function | `crates/market-store/src/lib.rs` | scoped dashboard date helper |
-| `fetch_latest_table_date` | function | `crates/market-store/src/lib.rs` | generic table max-date probe |
-| `DashboardSnapshot` | struct | `crates/report-engine/src/lib.rs` | selected-date dashboard payload |
-| `EnvironmentSnapshot` | struct | `crates/core-domain/src/lib.rs` | persisted scope-aware environment contract |
-| `DashboardLoadMetrics` | struct | `crates/report-engine/src/lib.rs` | per-stage snapshot timing |
-| `start_dashboard_refresh` | command | `apps/desktop/src-tauri/src/lib.rs` | background refresh entrypoint |
-| `loadDashboard` | function | `apps/desktop/frontend/src/main.js` | single bundled startup flow |
-| `commitRender` | function | `apps/desktop/frontend/src/main.js` | actual DOM write pass |
+| Agent rules + memory workflow | `TOOLS.md` + `runtime/memory.md` | highest-priority collaboration rules |
+| Current repo truth source | `README.md` + `docs/文档状态说明.md` | start here before old planning docs |
+| Orchestration / trust / freshness guards | `crates/app-service/src/lib.rs` | `AppContext`, `build_trust_summary`, `dashboard_bundle_with_scope`, `refresh_consistency_alerts` |
+| Shared contracts | `crates/core-domain/src/lib.rs` | `AnalysisScope`, shared snapshot DTOs, provenance fields |
+| Persistence boundary | `crates/market-store/src/lib.rs` | all ClickHouse / SQLite IO and latest-date gating |
+| Pure macro regime logic | `crates/macro-engine/src/lib.rs` | factor normalization + `GLOBAL/CN/HK` regime rows |
+| Report contract | `crates/report-engine/src/lib.rs` | `DashboardSnapshot`, `TrustSummary`, markdown report rendering |
+| Desktop shell / refresh bridge | `apps/desktop/src-tauri/src/lib.rs` | command boundary, refresh coordinator, safe artifact opening |
+| Frontend composition | `apps/desktop/frontend/src/main.js` | root state, scope/date flow, refresh UI, top-level render |
+| Frontend feature slices | `apps/desktop/frontend/src/features/*.js` | recent reports, data health, usage guides |
+| Environment + breadth UI | `apps/desktop/frontend/src/renderers/environment-breadth.js` | paired explanation layer + proxy view |
+| Current phase memory | `docs/阶段性更新-2026-04-26.md` + `memory/context.md` + `memory/decisions.md` | latest intent, decisions, and next seam |
 
 ## CONVENTIONS
-- `app-service` orchestrates phases; engine crates compute; `market-store` persists.
-- CLI mirrors `AppContext` closely; desktop commands stay thin and call into `app-service` only.
-- ClickHouse transport stays raw HTTP + `JSONEachRow`; scoped helpers beat whole-table reads on hot paths.
-- Macro regime computation requires buffered FRED history; narrow `[from,to]` windows alone are not enough for forward-filled regime dates.
-- Daily bars are canonicalized as **forward-adjusted** (`Eastmoney fqt=1`, `Tencent qfq`).
-- Desktop startup now prefers a bundled payload (`dashboard_bundle`) over many small invokes.
-- Dashboard/report selection is now explicitly scope-aware: `global`, `cn`, and `hk` each read their own regime/environment plus scoped dates/symbols.
-- `compute-macro` rebuilds `macro_snapshot`, `market_regime`, and `environment_snapshot`; partial FRED failures should reuse persisted macro history rather than zeroing the environment layer.
-- Historical dashboard date changes use snapshot-only reads; startup and date switching are intentionally different paths.
-- Data health is async + session-cached in the desktop UI; it is not part of normal snapshot correctness.
-- Any non-trivial code change in this repo (feature development, optimization, bug fix, or semantic refactor) must receive an Oracle review before it is considered done.
+- Read `TOOLS.md`, `memory/context.md`, and `memory/decisions.md` before deep edits.
+- Desktop `Refresh data` is the default user path. CLI full-chain runs remain explicit engineering / advanced-user paths.
+- Startup and scope reloads use `dashboard_bundle`; historical date changes use `dashboard_snapshot`.
+- `Trust summary` is the primary trust verdict. `Pipeline freshness` and `Data health` stay as evidence / drilldown layers beneath it.
+- `Recent reports` is a research-results entry point: `DAILY_REPORT*` items can reopen matching snapshots, and all artifacts can open or copy paths from desktop.
+- Signal freshness / completeness guards are centralized in pipeline diagnostics alerts and enforced by `compute_signals` plus desktop refresh across `GLOBAL`, `CN`, and `HK`.
+- `app-service` orchestrates, engine crates compute, and `market-store` persists. CLI, Tauri, and frontend must not own quant logic.
+- Scoped dashboard/report semantics and signal/backtest provenance are intentionally explicit; read `analysis_scope`, `regime_basis_scope`, and snapshot scope together.
 
-## ANTI-PATTERNS (THIS PROJECT)
-- Do **not** add direct DB access outside `crates/market-store`.
-- Do **not** put analytics/scoring logic into `src-tauri`, CLI glue, or frontend.
-- Do **not** reintroduce whole-table or per-symbol full-history reads on dashboard/report hot paths.
-- Do **not** duplicate enum/string conversions across crates.
-- Do **not** treat ClickHouse delete+insert mutations as cheap; acceptable for V1 scale only.
-- Do **not** rely on async ClickHouse delete mutations for correctness-critical refreshes; current delete path is synchronized intentionally.
-- Do **not** label watchlist breadth proxy as true full-market stock breadth.
-- Do **not** silently replace global report semantics with CN-only logic; use explicit scope.
-- Do **not** treat code as complete before Oracle has reviewed the implementation slice and its semantic risks.
-
-## UNIQUE STYLES
-- External data is source-layer only: Eastmoney / Tencent / FRED stay in `data-ingestion`.
-- Current V1 is a complete chain: data -> indicators -> macro -> rotation -> strategy -> signal -> backtest -> report -> desktop.
-- Dashboard/report reads are derived from persisted snapshots and latest-on-or-before date semantics, not live provider calls.
-- `report_date` and `regime_as_of_date` are intentionally separate semantics.
-- `pipeline-dates` is the fastest truth source for stale-stage diagnosis; use it before assuming dashboard bugs.
-- Data-health export is dated by the freshest checked market date, not by wall-clock export time.
-- Dashboard/report now use scoped regime + scoped environment; strategy/signal/backtest still intentionally consume GLOBAL regime in Phase 1.
-- `environment_snapshot` is now a first-class persistence/output layer, not a dashboard-only assembled view.
-- Watchlist breadth is a V1 proxy over enabled INDEX/ETF instruments, not a stock-universe breadth metric.
-
-## COMMANDS
-```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-cargo run -p quant-cli -- init-storage
-cargo run -p quant-cli -- seed-universe
-cargo run -p quant-cli -- ingest-daily --from 2026-03-01 --to 2026-03-18
-cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2024-01-01 --to 2026-03-18
-cargo run -p quant-cli -- compute-rotation
-cargo run -p quant-cli -- compute-strategy-preferences
-cargo run -p quant-cli -- compute-signals
-cargo run -p quant-cli -- check-data-health
-cargo run -p quant-cli -- pipeline-dates
-cargo run -p quant-cli -- dashboard-dates --scope cn
-cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-04-01
-cargo run -p quant-cli -- export-report --scope cn
-cargo run -p quant-cli -- export-data-health-report
-cargo test -p app-service -p report-engine -p market-store
-cargo check --workspace
-```
+## ANTI-PATTERNS
+- Do **not** access ClickHouse or SQLite outside `crates/market-store`.
+- Do **not** move scoring, freshness, or trust logic into Tauri commands or frontend slices.
+- Do **not** describe CLI full-chain execution as the default operator workflow in docs or UI.
+- Do **not** collapse `dashboard_bundle` and `dashboard_snapshot` back into one path without a measured reason.
+- Do **not** widen desktop artifact opening beyond canonical files under `reports/`.
+- Do **not** treat the latest available date as trustworthy when diagnostics still report stale or partial decision stages.
 
 ## NOTES
-- No CI workflow present; validation is cargo check/test plus live CLI flows and data-health checks.
-- `README.md` is the landing page; detailed architecture and module docs live in `docs/`.
-- `apps/desktop/frontend/node_modules/`, `dist/`, `target/`, and `reports/` are generated/runtime artifacts, not source of truth.
-- Root planning docs (`设计规划.md`, `实施路径-v1.md`, `数据源方案评审.md`) still matter for architectural intent even though the active reference set is under `docs/`.
+- No CI workflow is present; validation is cargo check/test, frontend build, and live CLI/desktop flows.
+- `reports/`, `target/`, `apps/desktop/frontend/node_modules/`, and `apps/desktop/frontend/dist/` are generated/runtime artifacts.
+- Root planning docs are archive/reference material unless `docs/文档状态说明.md` says they are current.
