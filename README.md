@@ -7,6 +7,7 @@
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
 - `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
+- `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
@@ -246,13 +247,14 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 - `dashboard-snapshot --date YYYY-MM-DD` 可回看某一历史日期的分析结果
 - `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
 - `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
-- 当前 Phase 1 下，`strategy_preference / signal / backtest` 仍沿用 `GLOBAL` regime 评分；scope-aware 的 regime / environment 先用于 dashboard、report 与 diagnostics
+- `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
+- signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
 
 ### 8.9 导出日报
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-04-02
+cargo run -p quant-cli -- export-report --date 2026-04-07
 cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
 ```
 
@@ -323,10 +325,12 @@ cargo run -p quant-desktop
 - Analysis date selector
 - Market regime
 - Environment layer
+- Trust summary
 - Top rotation
 - Top signals
 - Latest backtest
 - Data health summary
+- Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
 
 ---
@@ -340,22 +344,36 @@ cargo run -p quant-desktop
 - 低频操作
 - 手动 / 低频刷新
 
+当前默认用户路径建议是：
+
+> **优先使用桌面端的 `Refresh data` 作为默认刷新入口；CLI 全链路命令继续保留为显式工程/高级用户路径。**
+
 推荐日常流程：
 
 1. 更新日线数据
 2. 跑指标 / 宏观 / 轮动 / 信号
-3. 先看一次 pipeline freshness / completeness
-4. 再跑一次数据健康检查
-5. 查看 dashboard
-6. 导出日报
-7. 有需要时再跑回测
+3. 先看一次 trust summary
+4. 再下钻 pipeline freshness / completeness
+5. 再跑一次数据健康检查
+6. 查看 dashboard
+7. 导出日报
+8. 有需要时再跑回测
+
+如果你日常主要使用桌面端，更推荐的实际顺序是：
+
+1. 打开桌面端
+2. 点击 `Refresh data`
+3. 先看 `Trust summary`
+4. 再下钻 `Pipeline freshness` 与 `Data health`
+5. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
+6. 需要留档时再导出 report
 
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-03
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-09
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-03
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-09
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals

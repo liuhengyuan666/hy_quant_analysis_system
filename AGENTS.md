@@ -66,6 +66,7 @@ rust-quant-analysis-system/
 - `compute-macro` rebuilds `macro_snapshot`, `market_regime`, and `environment_snapshot`; partial FRED failures should reuse persisted macro history rather than zeroing the environment layer.
 - Historical dashboard date changes use snapshot-only reads; startup and date switching are intentionally different paths.
 - Data health is async + session-cached in the desktop UI; it is not part of normal snapshot correctness.
+- Any non-trivial code change in this repo (feature development, optimization, bug fix, or semantic refactor) must receive an Oracle review before it is considered done.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Do **not** add direct DB access outside `crates/market-store`.
@@ -76,6 +77,7 @@ rust-quant-analysis-system/
 - Do **not** rely on async ClickHouse delete mutations for correctness-critical refreshes; current delete path is synchronized intentionally.
 - Do **not** label watchlist breadth proxy as true full-market stock breadth.
 - Do **not** silently replace global report semantics with CN-only logic; use explicit scope.
+- Do **not** treat code as complete before Oracle has reviewed the implementation slice and its semantic risks.
 
 ## UNIQUE STYLES
 - External data is source-layer only: Eastmoney / Tencent / FRED stay in `data-ingestion`.
