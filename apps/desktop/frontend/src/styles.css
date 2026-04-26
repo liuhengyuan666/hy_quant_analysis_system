@@ -1154,6 +1154,15 @@ code {
   font-size: var(--font-size-meta);
 }
 
+.report-history__meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
 .report-history__path {
   margin: 0;
   color: var(--color-text-muted);
@@ -1162,6 +1171,13 @@ code {
 
 .report-history__path code {
   display: block;
+}
+
+.report-history__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
 }
 
 .signal-card {

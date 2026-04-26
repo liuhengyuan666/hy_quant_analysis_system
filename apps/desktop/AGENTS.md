@@ -33,7 +33,7 @@ apps/desktop/
 - Do **not** move analytics/business logic into frontend.
 - Do **not** let `src-tauri` duplicate orchestration already in `app-service`.
 - Do **not** expose new native commands broadly without checking least-privilege intent.
-- Do **not** assume Vue is the active UI runtime; current implementation is plain JS despite Vue dependency present.
+- Do **not** assume Vue is the active UI runtime; current implementation is plain JS and no longer carries a direct Vue dependency.
 - Do **not** split startup back into many small invokes unless the bundle path proves insufficient.
 - Do **not** hide scope changes behind date changes; scope is a first-class dashboard control now.
 

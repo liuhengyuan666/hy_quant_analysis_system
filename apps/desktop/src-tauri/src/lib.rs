@@ -2,6 +2,9 @@ use app_service::AppContext;
 use chrono::{Local, NaiveDate};
 use market_store::StorageConfig;
 use serde::Serialize;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize)]
@@ -54,6 +57,72 @@ where
 {
     if let Ok(mut status) = coordinator.status.lock() {
         update(&mut status);
+    }
+}
+
+fn validate_report_artifact_path(artifact_path: &str) -> Result<PathBuf, String> {
+    let requested = PathBuf::from(artifact_path);
+    if requested.as_os_str().is_empty() {
+        return Err("artifact path is empty".to_string());
+    }
+
+    let artifact = fs::canonicalize(&requested)
+        .map_err(|error| format!("failed to resolve artifact path: {error}"))?;
+    if !artifact.is_file() {
+        return Err("artifact path does not point to a file".to_string());
+    }
+
+    let report_dir = StorageConfig::project_root()
+        .map_err(|error| error.to_string())?
+        .join("reports");
+    let report_dir = fs::canonicalize(&report_dir)
+        .map_err(|error| format!("failed to resolve reports directory: {error}"))?;
+
+    if !artifact.starts_with(&report_dir) {
+        return Err(format!(
+            "artifact path is outside the managed reports directory: {}",
+            report_dir.display()
+        ));
+    }
+
+    Ok(artifact)
+}
+
+fn open_file_in_os(path: &Path) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let status = Command::new("cmd")
+            .args(["/C", "start", "", &path.to_string_lossy()])
+            .status()
+            .map_err(|error| format!("failed to launch artifact: {error}"))?;
+        if status.success() {
+            return Ok(());
+        }
+        return Err(format!("artifact opener exited with status: {status}"));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let status = Command::new("open")
+            .arg(path)
+            .status()
+            .map_err(|error| format!("failed to launch artifact: {error}"))?;
+        if status.success() {
+            return Ok(());
+        }
+        return Err(format!("artifact opener exited with status: {status}"));
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        let status = Command::new("xdg-open")
+            .arg(path)
+            .status()
+            .map_err(|error| format!("failed to launch artifact: {error}"))?;
+        if status.success() {
+            return Ok(());
+        }
+        return Err(format!("artifact opener exited with status: {status}"));
     }
 }
 
@@ -207,6 +276,12 @@ async fn recent_reports(limit: Option<usize>) -> Result<Vec<app_service::RecentR
 }
 
 #[tauri::command]
+fn open_report_artifact(artifact_path: String) -> Result<(), String> {
+    let artifact = validate_report_artifact_path(&artifact_path)?;
+    open_file_in_os(&artifact)
+}
+
+#[tauri::command]
 async fn usage_guides() -> Result<Vec<app_service::UsageGuide>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
@@ -310,8 +385,14 @@ fn start_dashboard_refresh(
 
             context.compute_signals()?;
             set_refresh_status(&worker, |status| {
-                status.progress_pct = 100;
+                status.progress_pct = 92;
                 status.stage = "Signals refreshed".to_string();
+            });
+
+            context.refresh_backtests_for_standard_scopes()?;
+            set_refresh_status(&worker, |status| {
+                status.progress_pct = 100;
+                status.stage = "Backtests refreshed".to_string();
             });
 
             Ok(())
@@ -359,6 +440,7 @@ pub fn run() {
             data_health_summary,
             export_data_health_report,
             recent_reports,
+            open_report_artifact,
             usage_guides,
             dashboard_refresh_status,
             start_dashboard_refresh
