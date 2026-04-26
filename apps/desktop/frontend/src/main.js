@@ -42,6 +42,16 @@ const app = document.querySelector('#app');
 
 const RECENT_REPORT_LIMIT = 8;
 const DATA_HEALTH_CACHE_MS = 5 * 60 * 1000;
+const REFRESH_START_STAGE_OPTIONS = [
+  { value: 'full', label: 'Full refresh' },
+  { value: 'ingest', label: 'From daily bars' },
+  { value: 'indicators', label: 'From indicators' },
+  { value: 'macro', label: 'From macro' },
+  { value: 'rotation', label: 'From rotation' },
+  { value: 'strategy', label: 'From strategy' },
+  { value: 'signals', label: 'From signals' },
+  { value: 'backtests', label: 'From backtests' },
+];
 
 const state = {
   loading: true,
@@ -68,6 +78,7 @@ const state = {
   availableDates: [],
   selectedScope: 'global',
   selectedReportDate: '',
+  selectedRefreshStartStage: 'full',
   selectedUsageGuideId: '',
   lastUpdatedAt: null,
   refreshStatus: {
@@ -75,6 +86,9 @@ const state = {
     status: 'idle',
     progress_pct: 0,
     stage: 'Idle',
+    current_stage: null,
+    start_stage: 'full',
+    retry_from_stage: null,
     refresh_from: null,
     refresh_to: null,
     started_at: null,
@@ -97,6 +111,7 @@ const COMMANDS = {
   recentReports: 'recent_reports',
   usageGuides: 'usage_guides',
   startRefresh: 'start_dashboard_refresh',
+  retryRefresh: 'retry_dashboard_refresh',
   refreshStatus: 'dashboard_refresh_status',
   openReportArtifact: 'open_report_artifact',
 };
@@ -246,6 +261,11 @@ function getViewModeSummary(selectedDate, latestAvailableDate) {
   };
 }
 
+function formatRefreshStageLabel(value) {
+  const normalized = String(value ?? 'full').trim().toLowerCase();
+  return REFRESH_START_STAGE_OPTIONS.find((option) => option.value === normalized)?.label || 'Full refresh';
+}
+
 
 function renderMetricCard(label, value, meta, tone = 'neutral') {
   return `
@@ -278,6 +298,12 @@ function renderPipelineDateDiagnostics(pipelineDates) {
         <p class="panel__section-title">Pipeline freshness</p>
         <span class="panel__meta">Freshest market date · ${escapeHtml(formatDate(pipelineDates.freshest_market_date))}</span>
       </div>
+      ${Array.isArray(pipelineDates.alerts) && pipelineDates.alerts.length ? `
+        <section class="staleness-banner staleness-banner--warning" aria-label="Pipeline freshness alerts">
+          <strong>Action required before trusting latest defaults</strong>
+          <ul class="note-list">${pipelineDates.alerts.map((alert) => `<li>${escapeHtml(alert)}</li>`).join('')}</ul>
+        </section>
+      ` : ''}
       <div class="table-wrap">
         <table class="data-table data-table--compact">
           <thead>
@@ -1008,6 +1034,7 @@ function renderRefreshProgress() {
     : refresh.finished_at
       ? `Finished ${formatDateTime(refresh.finished_at)}`
       : 'Waiting to start';
+  const retryDisabled = state.loading || state.refreshing || state.refreshStatus.running || !refresh.retry_from_stage;
 
   return `
     <section class="refresh-progress refresh-progress--${tone}" aria-live="polite">
@@ -1017,7 +1044,11 @@ function renderRefreshProgress() {
           <h2>${escapeHtml(refresh.running ? 'Refreshing analysis pipeline' : refresh.status === 'error' ? 'Refresh failed' : 'Refresh completed')}</h2>
           <p class="panel__lede">${escapeHtml(refresh.stage || 'Waiting')}</p>
         </div>
-        <span class="pill pill--${tone}">${escapeHtml(`${formatInteger(progress)}%`)}</span>
+        <div class="panel__actions">
+          <span class="pill pill--outline">Run from · ${escapeHtml(formatRefreshStageLabel(refresh.start_stage))}</span>
+          ${refresh.retry_from_stage ? `<span class="pill pill--warning">Retry from · ${escapeHtml(formatRefreshStageLabel(refresh.retry_from_stage))}</span>` : ''}
+          <span class="pill pill--${tone}">${escapeHtml(`${formatInteger(progress)}%`)}</span>
+        </div>
       </div>
       <div class="refresh-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${escapeHtml(progress)}">
         <span class="refresh-progress__fill" style="width: ${progress}%"></span>
@@ -1026,6 +1057,17 @@ function renderRefreshProgress() {
         <span>${escapeHtml(rangeText)}</span>
         <span>${escapeHtml(timingText)}</span>
       </div>
+      ${refresh.status === 'error' ? `
+        <div class="refresh-progress__meta-row">
+          <button
+            id="retryRefreshButton"
+            class="button button--secondary button--compact"
+            ${retryDisabled ? 'disabled' : ''}
+          >
+            Retry failed stage
+          </button>
+        </div>
+      ` : ''}
       ${refresh.error ? `<p class="refresh-progress__error">${escapeHtml(refresh.error)}</p>` : ''}
       ${refresh.status === 'success' ? renderTrustSummaryNotice(state.snapshot, true) : ''}
     </section>
@@ -1128,8 +1170,19 @@ function commitRender() {
             ${renderDateSelector()}
             ${usageGuides.renderUsageEntry()}
             <div class="hero__action-row">
+              <select
+                id="refreshStageSelect"
+                class="select-control select-control--compact"
+                ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'disabled' : ''}
+              >
+                ${REFRESH_START_STAGE_OPTIONS
+                  .map(
+                    (option) => `<option value="${escapeHtml(option.value)}" ${state.selectedRefreshStartStage === option.value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`,
+                  )
+                  .join('')}
+              </select>
               <button id="refreshButton" class="button button--secondary" ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'disabled' : ''}>
-                ${(state.refreshing || state.refreshStatus.running) ? 'Refreshing…' : 'Refresh data'}
+                ${(state.refreshing || state.refreshStatus.running) ? 'Refreshing…' : state.selectedRefreshStartStage === 'full' ? 'Refresh data' : `Run from ${formatRefreshStageLabel(state.selectedRefreshStartStage)}`}
               </button>
               <button
                 id="exportButton"
@@ -1174,7 +1227,12 @@ function commitRender() {
   document.body.classList.toggle('body--guide-viewer-open', state.isUsageGuideOpen);
 
   document.querySelector('#refreshButton').onclick = () => {
-    startRefreshJob();
+    startRefreshJob(state.selectedRefreshStartStage);
+  };
+
+  document.querySelector('#refreshStageSelect').onchange = (event) => {
+    state.selectedRefreshStartStage = String(event.target.value || 'full');
+    render();
   };
 
   document.querySelector('#reportDateSelect').onchange = (event) => {
@@ -1209,6 +1267,13 @@ function commitRender() {
   document.querySelector('#exportButton').onclick = () => {
     exportReport();
   };
+
+  const retryRefreshButton = document.querySelector('#retryRefreshButton');
+  if (retryRefreshButton) {
+    retryRefreshButton.onclick = () => {
+      retryFailedRefresh();
+    };
+  }
 
   dataHealth.bindEvents(document);
   recentReports.bindEvents(document);
@@ -1266,7 +1331,7 @@ async function pollRefreshStatus() {
   }
 }
 
-async function startRefreshJob() {
+async function startRefreshJob(startStage = 'full') {
   if (state.refreshing || state.refreshStatus.running) return;
 
   state.error = '';
@@ -1274,7 +1339,33 @@ async function startRefreshJob() {
   render();
 
   try {
-    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.startRefresh));
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.startRefresh, {
+      startStage: startStage === 'full' ? null : startStage,
+    }));
+    state.refreshing = state.refreshStatus.running;
+    render();
+    scheduleRefreshPoll(500);
+  } catch (error) {
+    state.refreshing = false;
+    state.refreshStatus = {
+      ...state.refreshStatus,
+      running: false,
+      status: 'error',
+      error: getErrorMessage(error),
+    };
+    render();
+  }
+}
+
+async function retryFailedRefresh() {
+  if (state.refreshing || state.refreshStatus.running || !state.refreshStatus.retry_from_stage) return;
+
+  state.error = '';
+  state.refreshing = true;
+  render();
+
+  try {
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.retryRefresh));
     state.refreshing = state.refreshStatus.running;
     render();
     scheduleRefreshPoll(500);

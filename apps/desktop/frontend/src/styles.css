@@ -261,6 +261,10 @@ code {
   cursor: wait;
 }
 
+.select-control--compact {
+  min-height: calc(var(--control-height) - var(--space-2));
+}
+
 .hero__action-row {
   display: flex;
   gap: var(--space-3);
@@ -896,6 +900,10 @@ code {
   margin-top: var(--space-3);
   color: var(--color-text-soft);
   font-size: var(--font-size-meta);
+}
+
+.refresh-progress__actions {
+  margin-top: var(--space-3);
 }
 
 .refresh-progress__error {
