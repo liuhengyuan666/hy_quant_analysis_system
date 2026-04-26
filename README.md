@@ -8,6 +8,7 @@
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
 - `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
 - `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
+- `docs/阶段性更新-2026-04-26.md`：汇总这轮阶段性成果与当前仍待继续推进的方向
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
@@ -371,9 +372,9 @@ cargo run -p quant-desktop
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-09
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-26
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-09
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-26
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
@@ -386,6 +387,7 @@ cargo run -p quant-cli -- export-report
 补充说明：
 
 - `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
+- 如果 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，优先单独重跑一次 `compute-signals`
 - `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
 - 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 - 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
