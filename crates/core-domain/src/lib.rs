@@ -63,6 +63,7 @@ pub struct Instrument {
     pub eastmoney_secid: String,
     pub tencent_symbol: Option<String>,
     pub enabled: bool,
+    pub latest_gate_required: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,6 +154,8 @@ pub struct RotationRankSnapshot {
 pub struct StrategyPreferenceSnapshot {
     pub date: NaiveDate,
     pub symbol: String,
+    pub analysis_scope: String,
+    pub regime_basis_scope: String,
     pub value_left_score: f64,
     pub trend_pullback_score: f64,
     pub trend_breakout_score: f64,
@@ -178,5 +181,7 @@ pub struct SignalSnapshot {
     pub symbol: String,
     pub final_score: f64,
     pub signal_label: SignalLabel,
+    pub analysis_scope: String,
+    pub regime_basis_scope: String,
     pub explanation: String,
 }

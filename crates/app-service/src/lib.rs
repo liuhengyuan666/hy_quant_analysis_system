@@ -12,7 +12,8 @@ use market_store::StorageConfig;
 use report_engine::{
     build_dashboard_snapshot_for_date, render_data_health_report, render_markdown_report,
     DashboardLoadMetrics, DashboardSnapshot, DataHealthMacroSourceSummary, DataHealthSummary,
-    DataHealthSymbolSummary, WatchlistBreadthMarketSnapshot, WatchlistBreadthSnapshot,
+    DataHealthSymbolSummary, TrustSummary, WatchlistBreadthMarketSnapshot,
+    WatchlistBreadthSnapshot,
 };
 use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
@@ -168,6 +169,181 @@ pub struct RefreshPlan {
     pub macro_to: String,
 }
 
+fn build_trust_summary(
+    scoped_symbols: &std::collections::BTreeSet<String>,
+    snapshot: &DashboardSnapshot,
+    pipeline_dates: &PipelineDateDiagnostics,
+    data_health: &DataHealthSummary,
+) -> TrustSummary {
+    let scoped_symbols_expected = scoped_symbols.len();
+    let scoped_symbols_on_freshest_market_date = data_health
+        .freshest_market_date
+        .map(|date| {
+            data_health
+                .symbols
+                .iter()
+                .filter(|row| scoped_symbols.contains(&row.symbol) && row.last_date == Some(date))
+                .count()
+        })
+        .unwrap_or(0);
+    let latest_day_complete = scoped_symbols_expected > 0
+        && scoped_symbols_on_freshest_market_date == scoped_symbols_expected;
+    let macro_status = if data_health.critical_macro_sources > 0 {
+        "critical"
+    } else if data_health.review_macro_sources > 0 {
+        "review"
+    } else {
+        "healthy"
+    }
+    .to_string();
+
+    let signal_analysis_scope = snapshot
+        .top_signals
+        .first()
+        .map(|row| row.analysis_scope.clone());
+    let signal_regime_basis_scope = snapshot
+        .top_signals
+        .first()
+        .map(|row| row.regime_basis_scope.clone());
+    let backtest_matches_snapshot = snapshot.latest_backtest.as_ref().map(|backtest| {
+        backtest
+            .analysis_scope
+            .eq_ignore_ascii_case(&snapshot.scope)
+            && backtest.signal_scope.eq_ignore_ascii_case(&snapshot.scope)
+            && backtest
+                .signal_end_date
+                .map(|date| date.to_string())
+                .as_deref()
+                == Some(snapshot.report_date.as_str())
+    });
+
+    let pipeline_partial_latest = pipeline_dates
+        .stages
+        .iter()
+        .any(|stage| stage.is_latest && stage.is_complete == Some(false));
+    let pipeline_partial_latest_stage_count = pipeline_dates
+        .stages
+        .iter()
+        .filter(|stage| stage.is_latest && stage.is_complete == Some(false))
+        .count();
+    let pipeline_stale = pipeline_dates.stages.iter().any(|stage| {
+        matches!(stage.lag_days, Some(lag) if lag > 0)
+            && matches!(
+                stage.stage.as_str(),
+                "market_regime"
+                    | "environment_snapshot"
+                    | "strategy_preference"
+                    | "signal_snapshot"
+            )
+    });
+    let pipeline_stale_stage_count = pipeline_dates
+        .stages
+        .iter()
+        .filter(|stage| {
+            matches!(stage.lag_days, Some(lag) if lag > 0)
+                && matches!(
+                    stage.stage.as_str(),
+                    "market_regime"
+                        | "environment_snapshot"
+                        | "strategy_preference"
+                        | "signal_snapshot"
+                )
+        })
+        .count();
+
+    let mut notes = Vec::new();
+    if !latest_day_complete {
+        notes.push(
+            "Latest market date is not fully covered across the active universe.".to_string(),
+        );
+    }
+    if data_health.review_macro_sources > 0 {
+        notes.push(
+            "One or more macro sources are currently using review/fallback transport.".to_string(),
+        );
+    }
+    if data_health.critical_macro_sources > 0 {
+        notes.push("One or more macro sources are currently unavailable.".to_string());
+    }
+    if pipeline_partial_latest {
+        notes.push("At least one pipeline stage is only partially complete on the freshest available date.".to_string());
+    }
+    if pipeline_stale {
+        notes.push(
+            "One or more decision stages are lagging behind the freshest market date.".to_string(),
+        );
+    }
+    if let (Some(signal_scope), Some(regime_scope)) = (
+        signal_analysis_scope.as_ref(),
+        signal_regime_basis_scope.as_ref(),
+    ) {
+        if !signal_scope.eq_ignore_ascii_case(&snapshot.scope)
+            || !regime_scope.eq_ignore_ascii_case(&snapshot.scope)
+        {
+            notes.push(format!(
+                "Signal analysis/regime basis still points to {} / {} while dashboard scope is {}.",
+                signal_scope, regime_scope, snapshot.scope
+            ));
+        }
+    }
+    if backtest_matches_snapshot == Some(false) {
+        notes.push(
+            "Latest backtest does not match the current dashboard snapshot scope/date.".to_string(),
+        );
+    }
+
+    let (level, headline, message) = if data_health.critical_macro_sources > 0 || pipeline_stale {
+        (
+            "degraded",
+            "Use with caution",
+            "The current research view is usable, but freshness or macro availability issues reduce trust in the latest outputs.",
+        )
+    } else if !latest_day_complete
+        || data_health.review_macro_sources > 0
+        || pipeline_partial_latest
+        || backtest_matches_snapshot == Some(false)
+    {
+        (
+            "review",
+            "Review before acting",
+            "The pipeline completed, but coverage/provenance caveats should be reviewed before treating this as a clean research snapshot.",
+        )
+    } else {
+        (
+            "trusted",
+            "Ready for analysis",
+            "Freshness, provenance, and macro transport checks currently look healthy for this snapshot.",
+        )
+    };
+
+    TrustSummary {
+        level: level.to_string(),
+        headline: headline.to_string(),
+        message: message.to_string(),
+        pipeline_has_partial_latest: pipeline_partial_latest,
+        pipeline_has_stale_stage: pipeline_stale,
+        pipeline_partial_latest_stage_count,
+        pipeline_stale_stage_count,
+        freshest_market_date: data_health
+            .freshest_market_date
+            .map(|date| date.to_string()),
+        latest_available_date: Some(snapshot.latest_available_date.clone()),
+        latest_day_complete,
+        scoped_symbols_expected,
+        scoped_symbols_on_freshest_market_date,
+        macro_status,
+        data_health_generated_at: Some(data_health.generated_at.clone()),
+        data_health_review_symbols: data_health.review_symbols,
+        data_health_critical_symbols: data_health.critical_symbols,
+        data_health_review_macro_sources: data_health.review_macro_sources,
+        data_health_critical_macro_sources: data_health.critical_macro_sources,
+        signal_analysis_scope,
+        signal_regime_basis_scope,
+        backtest_matches_snapshot,
+        notes,
+    }
+}
+
 fn analyze_gap_metrics(bars: &[core_domain::DailyBar]) -> (usize, i64) {
     let mut gap_count = 0usize;
     let mut max_gap_days = 0i64;
@@ -273,6 +449,10 @@ fn scope_label(scope: ReportScope) -> &'static str {
 
 fn instrument_in_scope(instrument: &Instrument, scope: ReportScope) -> bool {
     scope.matches_market(&instrument.market)
+}
+
+fn instrument_in_latest_gate_scope(instrument: &Instrument, scope: ReportScope) -> bool {
+    instrument.enabled && instrument.latest_gate_required && instrument_in_scope(instrument, scope)
 }
 
 fn scope_universe_label(scope: ReportScope) -> &'static str {
@@ -537,6 +717,13 @@ impl AppContext {
             macro_from: macro_from.to_string(),
             macro_to: to.to_string(),
         })
+    }
+
+    fn latest_gate_instruments_for_scope(&self, scope: ReportScope) -> Result<Vec<Instrument>> {
+        Ok(load_universe(&self.storage.universe_abspath()?)?
+            .into_iter()
+            .filter(|instrument| instrument_in_latest_gate_scope(instrument, scope))
+            .collect())
     }
 
     fn build_tracked_universe_window(
@@ -889,7 +1076,7 @@ impl AppContext {
         let rotation_rows = market_store::fetch_rotation_ranks(&self.storage)?;
         let regime_by_date = market_regimes
             .into_iter()
-            .map(|row| (row.date, row))
+            .map(|row| ((row.date, row.market.clone()), row))
             .collect::<BTreeMap<_, _>>();
         let rotation_by_key = rotation_rows
             .into_iter()
@@ -920,20 +1107,29 @@ impl AppContext {
                 .map(|row| (row.date, row))
                 .collect::<BTreeMap<_, _>>();
 
-            for bar in bars {
-                let Some(indicators) = indicator_by_date.get(&bar.date).cloned() else {
+            for scope in [ReportScope::Global, ReportScope::Cn, ReportScope::Hk] {
+                if !instrument_in_scope(instrument, scope) {
                     continue;
-                };
-                let regime = regime_by_date.get(&bar.date).cloned();
-                let rotation = rotation_by_key
-                    .get(&(bar.date, instrument.symbol.clone()))
-                    .cloned();
-                contexts.push(AnalysisContext {
-                    bar,
-                    indicators,
-                    regime,
-                    rotation,
-                });
+                }
+                for bar in &bars {
+                    let Some(indicators) = indicator_by_date.get(&bar.date).cloned() else {
+                        continue;
+                    };
+                    let regime = regime_by_date
+                        .get(&(bar.date, scope_label(scope).to_string()))
+                        .cloned();
+                    let rotation = rotation_by_key
+                        .get(&(bar.date, instrument.symbol.clone()))
+                        .cloned();
+                    contexts.push(AnalysisContext {
+                        bar: bar.clone(),
+                        indicators,
+                        regime,
+                        rotation,
+                        analysis_scope: scope_label(scope).to_string(),
+                        regime_basis_scope: scope_label(scope).to_string(),
+                    });
+                }
             }
         }
 
@@ -970,9 +1166,10 @@ impl AppContext {
         max_holdings: usize,
         fee_rate: f64,
         slippage_rate: f64,
+        scope: ReportScope,
     ) -> Result<BacktestRunSummary> {
-        let instruments = load_universe(&self.storage.universe_abspath()?)?;
-        let signals = market_store::fetch_signal_snapshots(&self.storage)?;
+        let instruments = self.instruments_for_scope(scope)?;
+        let signals = market_store::fetch_signal_snapshots_with_scope(&self.storage, scope)?;
         let mut bars_by_symbol = BTreeMap::new();
         let mut failed_items = Vec::new();
 
@@ -994,6 +1191,9 @@ impl AppContext {
             max_holdings,
             fee_rate,
             slippage_rate,
+            analysis_scope: scope.to_string(),
+            signal_scope: scope.to_string(),
+            regime_basis_scope: scope.to_string(),
         };
         let result = run_signal_backtest(&run_id, &config, &signals, &bars_by_symbol);
         if let Err(error) = market_store::insert_backtest_result(
@@ -1018,6 +1218,13 @@ impl AppContext {
         })
     }
 
+    pub fn refresh_backtests_for_standard_scopes(&self) -> Result<Vec<BacktestRunSummary>> {
+        [ReportScope::Global, ReportScope::Cn, ReportScope::Hk]
+            .into_iter()
+            .map(|scope| self.run_backtest(1_000_000.0, 3, 0.001, 0.0005, scope))
+            .collect()
+    }
+
     pub fn dashboard_snapshot(
         &self,
         report_date: Option<NaiveDate>,
@@ -1038,8 +1245,21 @@ impl AppContext {
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
+        let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
+        let data_health = self.check_data_health()?;
+        let scoped_symbols = self
+            .latest_gate_instruments_for_scope(scope)?
+            .into_iter()
+            .map(|instrument| instrument.symbol)
+            .collect::<std::collections::BTreeSet<_>>();
         Ok(snapshot.map(|mut snapshot| {
             snapshot.load_metrics = Some(metrics);
+            snapshot.trust_summary = Some(build_trust_summary(
+                &scoped_symbols,
+                &snapshot,
+                &pipeline_dates,
+                &data_health,
+            ));
             snapshot
         }))
     }
@@ -1067,10 +1287,22 @@ impl AppContext {
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         let recent_reports = self.recent_reports(recent_report_limit)?;
         let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
+        let data_health = self.check_data_health()?;
+        let scoped_symbols = self
+            .latest_gate_instruments_for_scope(scope)?
+            .into_iter()
+            .map(|instrument| instrument.symbol)
+            .collect::<std::collections::BTreeSet<_>>();
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
         let snapshot = snapshot.map(|mut snapshot| {
             snapshot.load_metrics = Some(metrics);
+            snapshot.trust_summary = Some(build_trust_summary(
+                &scoped_symbols,
+                &snapshot,
+                &pipeline_dates,
+                &data_health,
+            ));
             snapshot
         });
 
@@ -1091,13 +1323,21 @@ impl AppContext {
         self.pipeline_date_diagnostics_for_scope(ReportScope::Global, &available_dates)
     }
 
+    pub fn pipeline_date_diagnostics_with_scope(
+        &self,
+        scope: ReportScope,
+    ) -> Result<PipelineDateDiagnostics> {
+        let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+        self.pipeline_date_diagnostics_for_scope(scope, &available_dates)
+    }
+
     fn pipeline_date_diagnostics_for_scope(
         &self,
         scope: ReportScope,
         available_dates: &[NaiveDate],
     ) -> Result<PipelineDateDiagnostics> {
         let scoped_symbols = self
-            .instruments_for_scope(scope)?
+            .latest_gate_instruments_for_scope(scope)?
             .into_iter()
             .map(|instrument| instrument.symbol)
             .collect::<Vec<_>>();
@@ -1125,11 +1365,14 @@ impl AppContext {
             ),
             (
                 "strategy_preference",
-                market_store::fetch_latest_table_date(&self.storage, "strategy_preference")?,
+                market_store::fetch_latest_strategy_preference_date_for_scope(
+                    &self.storage,
+                    scope,
+                )?,
             ),
             (
                 "signal_snapshot",
-                market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?,
+                market_store::fetch_latest_signal_snapshot_date_for_scope(&self.storage, scope)?,
             ),
             ("dashboard_available", dashboard_latest_date),
         ];
@@ -1168,21 +1411,23 @@ impl AppContext {
                         Some(expected_symbol_count),
                     ),
                     ("strategy_preference", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                        Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
                             &self.storage,
                             "strategy_preference",
                             "symbol",
-                            &scoped_symbols,
+                            "analysis_scope",
+                            scope_label(scope),
                             date,
                         )?),
                         Some(expected_symbol_count),
                     ),
                     ("signal_snapshot", Some(date)) => (
-                        Some(market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                        Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
                             &self.storage,
                             "signal_snapshot",
                             "symbol",
-                            &scoped_symbols,
+                            "analysis_scope",
+                            scope_label(scope),
                             date,
                         )?),
                         Some(expected_symbol_count),
@@ -1290,17 +1535,18 @@ impl AppContext {
             .collect::<Vec<_>>();
         let rotations_ms = elapsed_ms(rotations_started_at);
         let signals_started_at = Instant::now();
-        let signals = market_store::fetch_signal_snapshots_for_date(&self.storage, report_date)?
-            .into_iter()
-            .filter(|row| scoped_symbols.contains(&row.symbol))
-            .collect::<Vec<_>>();
+        let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+            &self.storage,
+            report_date,
+            scope,
+        )?
+        .into_iter()
+        .filter(|row| scoped_symbols.contains(&row.symbol))
+        .collect::<Vec<_>>();
         let signals_ms = elapsed_ms(signals_started_at);
         let backtest_started_at = Instant::now();
-        let latest_backtest = if scope == ReportScope::Global {
-            market_store::fetch_latest_backtest_run(&self.storage)?
-        } else {
-            None
-        };
+        let latest_backtest =
+            market_store::fetch_latest_backtest_run_for_scope(&self.storage, scope)?;
         let backtest_ms = elapsed_ms(backtest_started_at);
         let assembly_started_at = Instant::now();
         let mut snapshot = build_dashboard_snapshot_for_date(
@@ -1348,7 +1594,7 @@ impl AppContext {
     fn dashboard_available_dates_for_scope(&self, scope: ReportScope) -> Result<Vec<NaiveDate>> {
         let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
         let scoped_symbols = self
-            .instruments_for_scope(scope)?
+            .latest_gate_instruments_for_scope(scope)?
             .into_iter()
             .map(|instrument| instrument.symbol)
             .collect::<Vec<_>>();
@@ -1358,11 +1604,12 @@ impl AppContext {
         }
         let mut scoped_dates = Vec::new();
         for date in available_dates {
-            let signal_count = market_store::fetch_distinct_entity_count_for_date_in_symbols(
+            let signal_count = market_store::fetch_distinct_entity_count_for_date_with_filter(
                 &self.storage,
                 "signal_snapshot",
                 "symbol",
-                &scoped_symbols,
+                "analysis_scope",
+                scope_label(scope),
                 date,
             )?;
             let rotation_count = market_store::fetch_distinct_entity_count_for_date_in_symbols(
@@ -1562,6 +1809,7 @@ impl AppContext {
                 symbol: instrument.symbol.clone(),
                 name: instrument.name.clone(),
                 display_symbol: instrument.display_symbol.clone(),
+                latest_gate_required: instrument.latest_gate_required,
                 rows: bars.len(),
                 first_date: bars.first().map(|bar| bar.date),
                 last_date: bars.last().map(|bar| bar.date),
@@ -1621,6 +1869,22 @@ impl AppContext {
             .saturating_sub(symbols_on_freshest_market_date);
         let freshest_market_date_complete =
             freshest_market_date.is_some() && symbols_missing_freshest_market_date == 0;
+        let latest_gate_checked_symbols = summaries
+            .iter()
+            .filter(|row| row.latest_gate_required)
+            .count();
+        let latest_gate_symbols_on_freshest_market_date = freshest_market_date
+            .map(|date| {
+                summaries
+                    .iter()
+                    .filter(|row| row.latest_gate_required && row.last_date == Some(date))
+                    .count()
+            })
+            .unwrap_or(0);
+        let latest_gate_symbols_missing_freshest_market_date =
+            latest_gate_checked_symbols.saturating_sub(latest_gate_symbols_on_freshest_market_date);
+        let latest_gate_freshest_market_date_complete =
+            freshest_market_date.is_some() && latest_gate_symbols_missing_freshest_market_date == 0;
 
         Ok(DataHealthSummary {
             generated_at: Utc::now().to_rfc3339(),
@@ -1630,6 +1894,10 @@ impl AppContext {
             symbols_on_freshest_market_date,
             symbols_missing_freshest_market_date,
             freshest_market_date_complete,
+            latest_gate_checked_symbols,
+            latest_gate_symbols_on_freshest_market_date,
+            latest_gate_symbols_missing_freshest_market_date,
+            latest_gate_freshest_market_date_complete,
             checked_symbols: summaries.len(),
             healthy_symbols,
             review_symbols,

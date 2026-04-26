@@ -39,7 +39,7 @@ pub fn build_signal_snapshots(
 ) -> Vec<SignalSnapshot> {
     let regime_by_date = regimes
         .iter()
-        .map(|row| (row.date, row))
+        .map(|row| ((row.date, row.market.clone()), row))
         .collect::<std::collections::BTreeMap<_, _>>();
     let rotation_by_key = rotations
         .iter()
@@ -50,7 +50,9 @@ pub fn build_signal_snapshots(
         .iter()
         .map(|row| {
             let strategy_score = best_strategy_score(row);
-            let regime = regime_by_date.get(&row.date).copied();
+            let regime = regime_by_date
+                .get(&(row.date, row.regime_basis_scope.clone()))
+                .copied();
             let rotation = rotation_by_key
                 .get(&(row.date, row.symbol.clone()))
                 .copied();
@@ -89,6 +91,8 @@ pub fn build_signal_snapshots(
                 symbol: row.symbol.clone(),
                 final_score,
                 signal_label: label,
+                analysis_scope: row.analysis_scope.clone(),
+                regime_basis_scope: row.regime_basis_scope.clone(),
                 explanation,
             }
         })

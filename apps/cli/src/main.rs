@@ -50,7 +50,10 @@ enum Command {
     ComputeRotation,
     ComputeStrategyPreferences,
     ComputeSignals,
-    PipelineDates,
+    PipelineDates {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     CheckDataHealth,
     RunBacktest {
         #[arg(long, default_value_t = 1000000.0)]
@@ -61,6 +64,8 @@ enum Command {
         fee_rate: f64,
         #[arg(long, default_value_t = 0.0005)]
         slippage_rate: f64,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
     },
     DashboardSnapshot {
         #[arg(long)]
@@ -123,8 +128,8 @@ fn main() -> Result<()> {
             let result = context.compute_signals()?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::PipelineDates => {
-            let result = context.pipeline_date_diagnostics()?;
+        Command::PipelineDates { scope } => {
+            let result = context.pipeline_date_diagnostics_with_scope(scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::CheckDataHealth => {
@@ -136,9 +141,15 @@ fn main() -> Result<()> {
             max_holdings,
             fee_rate,
             slippage_rate,
+            scope,
         } => {
-            let result =
-                context.run_backtest(initial_capital, max_holdings, fee_rate, slippage_rate)?;
+            let result = context.run_backtest(
+                initial_capital,
+                max_holdings,
+                fee_rate,
+                slippage_rate,
+                scope.into(),
+            )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::DashboardSnapshot { date, scope } => {

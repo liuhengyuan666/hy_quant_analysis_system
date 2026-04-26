@@ -119,7 +119,8 @@
       "category": "OVERSEAS_LINK",
       "eastmoney_secid": "100.HSAHP",
       "tencent_symbol": null,
-      "enabled": true
+      "enabled": true,
+      "latest_gate_required": false
     },
     {
       "symbol": "HSTECH",

@@ -11,6 +11,9 @@ pub struct BacktestConfig {
     pub max_holdings: usize,
     pub fee_rate: f64,
     pub slippage_rate: f64,
+    pub analysis_scope: String,
+    pub signal_scope: String,
+    pub regime_basis_scope: String,
 }
 
 impl Default for BacktestConfig {
@@ -21,6 +24,9 @@ impl Default for BacktestConfig {
             max_holdings: 3,
             fee_rate: 0.001,
             slippage_rate: 0.0005,
+            analysis_scope: "GLOBAL".to_string(),
+            signal_scope: "GLOBAL".to_string(),
+            regime_basis_scope: "GLOBAL".to_string(),
         }
     }
 }
@@ -48,6 +54,12 @@ pub struct BacktestEquityPoint {
 pub struct BacktestSummary {
     pub run_id: String,
     pub strategy_name: String,
+    pub analysis_scope: String,
+    pub signal_scope: String,
+    pub regime_basis_scope: String,
+    pub signal_start_date: Option<NaiveDate>,
+    pub signal_end_date: Option<NaiveDate>,
+    pub config_summary: String,
     pub cagr: f64,
     pub max_drawdown: f64,
     pub sharpe: f64,
@@ -130,6 +142,13 @@ fn exit_signal(label: &SignalLabel) -> bool {
     matches!(label, SignalLabel::Reduce | SignalLabel::Sell)
 }
 
+fn format_config_summary(config: &BacktestConfig) -> String {
+    format!(
+        "initial_capital={:.0}, max_holdings={}, fee_rate={:.4}, slippage_rate={:.4}",
+        config.initial_capital, config.max_holdings, config.fee_rate, config.slippage_rate
+    )
+}
+
 pub fn run_signal_backtest(
     run_id: &str,
     config: &BacktestConfig,
@@ -173,6 +192,12 @@ pub fn run_signal_backtest(
             summary: BacktestSummary {
                 run_id: run_id.to_string(),
                 strategy_name: config.strategy_name.clone(),
+                analysis_scope: config.analysis_scope.clone(),
+                signal_scope: config.signal_scope.clone(),
+                regime_basis_scope: config.regime_basis_scope.clone(),
+                signal_start_date: None,
+                signal_end_date: None,
+                config_summary: format_config_summary(config),
                 cagr: 0.0,
                 max_drawdown: 0.0,
                 sharpe: 0.0,
@@ -341,6 +366,12 @@ pub fn run_signal_backtest(
         summary: BacktestSummary {
             run_id: run_id.to_string(),
             strategy_name: config.strategy_name.clone(),
+            analysis_scope: config.analysis_scope.clone(),
+            signal_scope: config.signal_scope.clone(),
+            regime_basis_scope: config.regime_basis_scope.clone(),
+            signal_start_date: signal_dates.first().copied(),
+            signal_end_date: signal_dates.last().copied(),
+            config_summary: format_config_summary(config),
             cagr,
             max_drawdown: mdd,
             sharpe,
