@@ -256,3 +256,21 @@
   - 默认 `cargo run -p quant-cli -- export-report` 不再静默产出旧日期报告。
   - 用户需要先根据 `explain-latest-gate` / `pipeline-dates` 补跑缺失阶段，或明确使用 `--date` 表示导出历史日报。
 - 状态：完成
+
+## [2026-05-08] 规划文档审查与精简
+
+- 背景：v2-roadmap、设计规划-v2、README 及多个 AGENTS.md 中关于 strategy/signal/backtest "仍使用 GLOBAL regime" 的表述与代码实现严重脱节。
+- 发现：
+  - `compute_strategy_preferences` 已遍历 `[Global, CN, Hk]` 并写入 scoped rows
+  - `signal-engine` 已按 `regime_basis_scope` 查找 regime
+  - `run_backtest` 已接受 `scope` 参数
+  - `TrustSummary` / `report-engine` / frontend 已完整展示 provenance
+  - Phase 2 checklist（P0-A, P0-B, P1）实际已完成约 85%，但 roadmap 仍标记为"未做"
+- 决策：
+  - 修正所有文档中的过时 GLOBAL-only 表述
+  - 更新 v2-roadmap Phase 2 checklist 以反映真实完成状态
+  - 为部分过时的设计文档（V2-Phase1 详细设计、MA30-V1 实施计划、流水线优化方案）添加实现状态标注
+  - 不删除任何文档，只做标注和修正
+- 原因：文档与代码不一致会导致用户和维护者持续被误导，削弱 Phase 2 已完成的用户价值。
+- 影响：后续开发者阅读规划文档时，能准确判断哪些功能已实现、哪些仍待推进。
+- 状态：已完成
