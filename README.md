@@ -225,6 +225,33 @@ cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
 ```
 
+### 8.6A 一次执行完整刷新（工程 / 高级用户路径）
+
+```bash
+cargo run -p quant-cli -- refresh-all
+cargo run -p quant-cli -- refresh-all --to 2026-04-26
+```
+
+说明：
+
+- 该命令会按当前 desktop refresh 相同顺序依次执行：
+  - `ingest -> indicators -> macro -> rotation -> strategy -> signals -> backtests`
+- `--scope` 用于选择**latest-date diagnostics / gate explanation** 的解释 scope，
+  - 不表示只刷新某个 scope 的底层数据链路
+- `--run-backtests` 当前默认为 `true`，与 desktop 完整 refresh 的语义一致
+- 结束后会返回结构化 JSON，总结：
+  - refresh window
+  - latest daily date / latest gated dashboard date
+  - refresh reason / repair window days
+  - 各阶段执行结果
+  - 各 scope 的 `pipeline_diagnostics`
+  - default latest-date 是否推进
+  - latest-gate / consistency 阻塞提示
+- 当前 refresh window 不再只锚定 `latest_daily_date - 7d`；
+  - 如果某个 scope 的 gated latest 落后，或仍没有 gated latest，
+  - 系统会自动扩到一个保守的 repair window 来修复被 gate 卡住的较早日期
+- 这条命令更适合作为 **显式工程路径 / 高级用户路径**；默认用户路径仍然优先推荐桌面端 `Refresh data`
+
 ### 8.7 跑回测
 
 ```bash
@@ -237,6 +264,7 @@ cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- dashboard-dates
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
+cargo run -p quant-cli -- explain-latest-gate
 cargo run -p quant-cli -- dashboard-dates --scope cn
 cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 ```
@@ -250,6 +278,7 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 - `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
 - `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
 - signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
+- `explain-latest-gate` 会专门解释：为什么默认最新日期还没有推进到 freshest market date，以及卡在 signal / rotation / regime / environment 哪一层
 
 ### 8.9 导出日报
 
@@ -372,9 +401,9 @@ cargo run -p quant-desktop
 也就是：
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-26
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-07
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-26
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-07
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals

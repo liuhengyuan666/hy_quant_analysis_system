@@ -1,6 +1,6 @@
 use anyhow::Result;
 use app_service::{AppContext, ReportScope};
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand, ValueEnum};
 use market_store::StorageConfig;
 
@@ -50,6 +50,20 @@ enum Command {
     ComputeRotation,
     ComputeStrategyPreferences,
     ComputeSignals,
+    RefreshAll {
+        #[arg(long)]
+        to: Option<NaiveDate>,
+        #[arg(long, help = "Scope used for latest-date diagnostics and gate explanation only")]
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, default_value_t = true, help = "Whether to include standard-scope backtests in the aggregate refresh (default: true)")]
+        #[arg(long, default_value_t = true)]
+        run_backtests: bool,
+    },
+    ExplainLatestGate {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     PipelineDates {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
@@ -126,6 +140,25 @@ fn main() -> Result<()> {
         }
         Command::ComputeSignals => {
             let result = context.compute_signals()?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::RefreshAll {
+            to,
+            scope,
+            run_backtests,
+        } => {
+            let result = context.refresh_pipeline(
+                to.unwrap_or_else(|| Local::now().date_naive()),
+                scope.into(),
+                run_backtests,
+            )?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+            if !result.success {
+                std::process::exit(1);
+            }
+        }
+        Command::ExplainLatestGate { scope } => {
+            let result = context.explain_latest_gate(scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::PipelineDates { scope } => {
