@@ -2650,6 +2650,24 @@ impl AppContext {
         report_date: Option<NaiveDate>,
         scope: ReportScope,
     ) -> Result<ReportSummary> {
+        if report_date.is_none() {
+            let gate = self.explain_latest_gate(scope)?;
+            if gate.latest_gate_advanced == Some(false) {
+                let details = if gate.alerts.is_empty() {
+                    "no latest-gate details available".to_string()
+                } else {
+                    gate.alerts.join(" | ")
+                };
+                anyhow::bail!(
+                    "default report export refused because latest dashboard date ({}) is behind freshest market date ({}). Run the missing pipeline stage(s), or pass --date explicitly to export a historical report. Details: {}",
+                    gate.latest_available_dashboard_date
+                        .as_deref()
+                        .unwrap_or("none"),
+                    gate.freshest_market_date.as_deref().unwrap_or("none"),
+                    details
+                );
+            }
+        }
         let snapshot = self
             .dashboard_snapshot_with_scope(report_date, scope)?
             .context("no dashboard snapshot available for report export")?;
