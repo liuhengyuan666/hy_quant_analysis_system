@@ -26,6 +26,50 @@ use strategy_engine::{build_strategy_preferences, AnalysisContext};
 pub use core_domain::AnalysisScope as ReportScope;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
+const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
+const REFRESH_GATE_REPAIR_WINDOW_DAYS: i64 = 30;
+const REFRESH_BOOTSTRAP_LOOKBACK_DAYS: i64 = 730;
+const REFRESH_MACRO_LOOKBACK_DAYS: i64 = 550;
+
+fn load_calendar_from_config(dir: &std::path::Path) -> core_domain::calendar::TradingCalendar {
+    use chrono::NaiveDate;
+    use std::collections::HashSet;
+    use std::fs;
+
+    let mut cn_holidays = HashSet::new();
+    let mut hk_holidays = HashSet::new();
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let (Some(market), Some(holidays)) = (
+                        config.get("market").and_then(|m| m.as_str()),
+                        config.get("holidays").and_then(|h| h.as_array()),
+                    ) {
+                        for holiday in holidays {
+                            if let Some(date_str) = holiday.as_str() {
+                                if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                                    match market {
+                                        "CN" => cn_holidays.insert(date),
+                                        "HK" => hk_holidays.insert(date),
+                                        _ => false,
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    core_domain::calendar::TradingCalendar::new(cn_holidays, hk_holidays)
+}
 
 fn format_error_chain(error: &anyhow::Error) -> String {
     let mut parts = vec![error.to_string()];
@@ -44,6 +88,7 @@ fn elapsed_ms(started_at: Instant) -> u64 {
 #[derive(Debug, Clone)]
 pub struct AppContext {
     pub storage: StorageConfig,
+    pub calendar: core_domain::calendar::TradingCalendar,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -98,6 +143,8 @@ pub struct StrategySummary {
 pub struct SignalSummary {
     pub rows: usize,
     pub failed_items: Vec<String>,
+    pub data_starved_count: usize,
+    pub data_starved_warning: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -168,22 +215,115 @@ pub struct RefreshPlan {
     pub refresh_to: String,
     pub macro_from: String,
     pub macro_to: String,
+    pub latest_daily_date: Option<String>,
+    pub latest_gated_dashboard_date: Option<String>,
+    pub refresh_reason: String,
+    pub repair_window_days: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshLatestDateStatus {
+    pub scope: String,
+    pub freshest_market_date: Option<String>,
+    pub dashboard_latest_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScopedPipelineDiagnostics {
+    pub scope: String,
+    pub diagnostics: PipelineDateDiagnostics,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", content = "data")]
+pub enum RefreshStageSummary {
+    Ingest(IngestSummary),
+    Indicators(IndicatorSummary),
+    Macro(MacroSummary),
+    Rotation(RotationSummary),
+    Strategy(StrategySummary),
+    Signals(SignalSummary),
+    Backtests(Vec<BacktestRunSummary>),
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshStageExecution {
+    pub name: String,
+    pub status: String,
+    pub summary: Option<RefreshStageSummary>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshPipelineAlerts {
+    pub consistency: Vec<String>,
+    pub blocking: Vec<String>,
+    pub latest_gate: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshPipelineSummary {
+    pub success: bool,
+    pub diagnostics_scope: String,
+    pub refresh_window: RefreshPlan,
+    pub backtests_requested: bool,
+    pub latest_dates_before: Vec<RefreshLatestDateStatus>,
+    pub latest_dates_after: Vec<RefreshLatestDateStatus>,
+    pub advanced: bool,
+    pub stages: Vec<RefreshStageExecution>,
+    pub pipeline_diagnostics_by_scope: Vec<ScopedPipelineDiagnostics>,
+    pub alerts: RefreshPipelineAlerts,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LatestGateStageExplanation {
+    pub stage: String,
+    pub latest_date: Option<String>,
+    pub lag_days: Option<i64>,
+    pub is_latest: bool,
+    pub latest_entities: Option<usize>,
+    pub expected_entities: Option<usize>,
+    pub is_complete: Option<bool>,
+    pub blocking: bool,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LatestGateExplanation {
+    pub scope: String,
+    pub freshest_market_date: Option<String>,
+    pub latest_available_dashboard_date: Option<String>,
+    pub latest_gate_advanced: Option<bool>,
+    pub alerts: Vec<String>,
+    pub stages: Vec<LatestGateStageExplanation>,
 }
 
 fn build_trust_summary(
-    scoped_symbols: &std::collections::BTreeSet<String>,
+    scoped_instruments: &[Instrument],
     snapshot: &DashboardSnapshot,
     pipeline_dates: &PipelineDateDiagnostics,
     data_health: &DataHealthSummary,
+    calendar: &core_domain::calendar::TradingCalendar,
 ) -> TrustSummary {
-    let scoped_symbols_expected = scoped_symbols.len();
-    let scoped_symbols_on_freshest_market_date = data_health
-        .freshest_market_date
+    let freshest_market_date = data_health.freshest_market_date;
+    let trading_instruments: Vec<_> = match freshest_market_date {
+        Some(date) => scoped_instruments
+            .iter()
+            .filter(|i| calendar.is_trading_day(&i.market, date))
+            .collect(),
+        None => Vec::new(),
+    };
+    let non_trading_count = scoped_instruments.len().saturating_sub(trading_instruments.len());
+    let scoped_symbols_expected = trading_instruments.len();
+    let scoped_symbols_on_freshest_market_date = freshest_market_date
         .map(|date| {
             data_health
                 .symbols
                 .iter()
-                .filter(|row| scoped_symbols.contains(&row.symbol) && row.last_date == Some(date))
+                .filter(|row| {
+                    trading_instruments.iter().any(|i| i.symbol == row.symbol)
+                        && row.last_date == Some(date)
+                })
                 .count()
         })
         .unwrap_or(0);
@@ -253,9 +393,15 @@ fn build_trust_summary(
         .count();
 
     let mut notes = Vec::new();
+    if non_trading_count > 0 {
+        notes.push(format!(
+            "{} symbol(s) were on non-trading markets on the freshest market date and were excluded from coverage checks.",
+            non_trading_count
+        ));
+    }
     if !latest_day_complete {
         notes.push(
-            "Latest market date is not fully covered across the active universe.".to_string(),
+            "Latest market date is not fully covered across the active trading universe.".to_string(),
         );
     }
     if data_health.review_macro_sources > 0 {
@@ -346,7 +492,7 @@ fn build_trust_summary(
     }
 }
 
-fn pipeline_date_alerts(stages: &[PipelineStageDateStatus]) -> Vec<String> {
+fn pipeline_date_alerts(scope: ReportScope, stages: &[PipelineStageDateStatus]) -> Vec<String> {
     let strategy_latest_date = stages
         .iter()
         .find(|stage| stage.stage == "strategy_preference")
@@ -358,7 +504,7 @@ fn pipeline_date_alerts(stages: &[PipelineStageDateStatus]) -> Vec<String> {
 
     let mut alerts = Vec::new();
     if let Some(issue) = build_signal_alignment_issue_for_dates(
-        ReportScope::Global,
+        scope,
         strategy_latest_date
             .as_ref()
             .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
@@ -372,6 +518,148 @@ fn pipeline_date_alerts(stages: &[PipelineStageDateStatus]) -> Vec<String> {
         alerts.push(issue);
     }
     alerts
+}
+
+fn latest_gate_alerts_for_scope(
+    scope: ReportScope,
+    before: &PipelineDateDiagnostics,
+    after: &PipelineDateDiagnostics,
+) -> Vec<String> {
+    let mut alerts = Vec::new();
+    let scope_name = scope_label(scope);
+    let before_latest = before.dashboard_latest_date.as_deref();
+    let after_latest = after.dashboard_latest_date.as_deref();
+    let freshest_market_date = after.freshest_market_date.as_deref();
+
+    if before_latest == after_latest {
+        match (after_latest, freshest_market_date) {
+            (Some(latest), Some(freshest)) if freshest > latest => alerts.push(format!(
+                "Latest available dashboard date for scope {} did not advance (still {}, freshest market date is {}).",
+                scope_name, latest, freshest
+            )),
+            (None, Some(freshest)) => alerts.push(format!(
+                "Scope {} still has no qualified dashboard date even though freshest market date is {}.",
+                scope_name, freshest
+            )),
+            _ => {}
+        }
+    }
+
+    for stage in after.stages.iter().filter(|stage| {
+        stage.stage != "daily_bar"
+            && stage.stage != "dashboard_available"
+            && stage.is_latest
+            && stage.is_complete == Some(false)
+    }) {
+        alerts.push(format!(
+            "Stage {} is incomplete on the freshest available date for scope {} (actual {:?} / expected {:?}).",
+            stage.stage, scope_name, stage.latest_entities, stage.expected_entities
+        ));
+    }
+
+    for stage in after.stages.iter().filter(|stage| {
+        stage.stage != "daily_bar"
+            && stage.stage != "dashboard_available"
+            && matches!(stage.lag_days, Some(lag) if lag > 0)
+    }) {
+        alerts.push(format!(
+            "Stage {} is lagging by {} day(s) for scope {} (latest {}).",
+            stage.stage,
+            stage.lag_days.unwrap_or_default(),
+            scope_name,
+            stage.latest_date.as_deref().unwrap_or("N/A")
+        ));
+    }
+
+    alerts
+}
+
+fn latest_gate_stage_explanations(
+    diagnostics: &PipelineDateDiagnostics,
+) -> Vec<LatestGateStageExplanation> {
+    diagnostics
+        .stages
+        .iter()
+        .map(|stage| {
+            let reason = if stage.stage == "dashboard_available" {
+                None
+            } else if stage.is_latest && stage.is_complete == Some(false) {
+                Some(format!(
+                    "{} is incomplete on the freshest market date.",
+                    stage.stage
+                ))
+            } else if matches!(stage.lag_days, Some(lag) if lag > 0) {
+                Some(format!(
+                    "{} is lagging behind the freshest market date by {} day(s).",
+                    stage.stage,
+                    stage.lag_days.unwrap_or_default()
+                ))
+            } else if stage.latest_date.is_none() {
+                Some(format!("{} has no available rows yet.", stage.stage))
+            } else {
+                None
+            };
+
+            LatestGateStageExplanation {
+                stage: stage.stage.clone(),
+                latest_date: stage.latest_date.clone(),
+                lag_days: stage.lag_days,
+                is_latest: stage.is_latest,
+                latest_entities: stage.latest_entities,
+                expected_entities: stage.expected_entities,
+                is_complete: stage.is_complete,
+                blocking: reason.is_some() && stage.stage != "daily_bar",
+                reason,
+            }
+        })
+        .collect()
+}
+
+fn derive_refresh_window(
+    to: NaiveDate,
+    latest_daily_date: Option<NaiveDate>,
+    latest_gated_dashboard_date: Option<NaiveDate>,
+    has_missing_gated_scope: bool,
+) -> (NaiveDate, String, i64) {
+    let bootstrap_from = to - Duration::days(REFRESH_BOOTSTRAP_LOOKBACK_DAYS);
+
+    match latest_daily_date {
+        None => (
+            bootstrap_from,
+            "bootstrap".to_string(),
+            REFRESH_GATE_REPAIR_WINDOW_DAYS,
+        ),
+        Some(latest_daily) => {
+            let effective_to = std::cmp::max(to, latest_daily);
+            let source_from = latest_daily - Duration::days(REFRESH_SOURCE_LOOKBACK_DAYS);
+            let gated_repair_from = if has_missing_gated_scope {
+                Some(effective_to - Duration::days(REFRESH_GATE_REPAIR_WINDOW_DAYS))
+            } else {
+                latest_gated_dashboard_date
+                    .filter(|gated_latest| *gated_latest < latest_daily)
+                    .map(|gated_latest| {
+                        gated_latest - Duration::days(REFRESH_GATE_REPAIR_WINDOW_DAYS)
+                    })
+            };
+
+            match gated_repair_from {
+                Some(repair_from) => (
+                    std::cmp::min(source_from, repair_from).max(bootstrap_from),
+                    if has_missing_gated_scope {
+                        "missing-gated-scope-repair".to_string()
+                    } else {
+                        "latest-gate-repair".to_string()
+                    },
+                    REFRESH_GATE_REPAIR_WINDOW_DAYS,
+                ),
+                None => (
+                    source_from.max(bootstrap_from),
+                    "source-lookback".to_string(),
+                    REFRESH_GATE_REPAIR_WINDOW_DAYS,
+                ),
+            }
+        }
+    }
 }
 
 fn build_signal_alignment_issue_for_dates(
@@ -412,12 +700,23 @@ fn build_signal_completeness_issue(stages: &[PipelineStageDateStatus]) -> Option
     }
 }
 
-fn analyze_gap_metrics(bars: &[core_domain::DailyBar]) -> (usize, i64) {
+fn analyze_gap_metrics(
+    bars: &[core_domain::DailyBar],
+    instrument: &Instrument,
+    calendar: &core_domain::calendar::TradingCalendar,
+) -> (usize, i64) {
     let mut gap_count = 0usize;
     let mut max_gap_days = 0i64;
     for window in bars.windows(2) {
         let gap = (window[1].date - window[0].date).num_days();
-        if gap > CALENDAR_GAP_REVIEW_THRESHOLD_DAYS {
+        if gap <= 1 {
+            continue;
+        }
+        let all_holidays = (1..gap).all(|offset| {
+            let date = window[0].date + chrono::Duration::days(offset);
+            !calendar.is_trading_day(&instrument.market, date)
+        });
+        if !all_holidays && gap > CALENDAR_GAP_REVIEW_THRESHOLD_DAYS {
             gap_count += 1;
             max_gap_days = max_gap_days.max(gap);
         }
@@ -721,7 +1020,11 @@ fn compute_participation_metrics(
 
 impl AppContext {
     pub fn new(storage: StorageConfig) -> Self {
-        Self { storage }
+        let calendar = match StorageConfig::project_root() {
+            Ok(root) => load_calendar_from_config(&root.join("config/calendars")),
+            Err(_) => core_domain::calendar::TradingCalendar::default(),
+        };
+        Self { storage, calendar }
     }
 
     pub fn status(&self) -> Result<AppStatus> {
@@ -774,16 +1077,324 @@ impl AppContext {
 
     pub fn build_refresh_plan(&self, to: NaiveDate) -> Result<RefreshPlan> {
         let latest_daily_date = market_store::fetch_latest_daily_bar_date(&self.storage)?;
-        let refresh_from = latest_daily_date
-            .map(|date| date - Duration::days(7))
-            .unwrap_or(to - Duration::days(730));
-        let macro_from = to - Duration::days(550);
+
+        let gated_latest_dates = [ReportScope::Global, ReportScope::Cn, ReportScope::Hk]
+            .into_iter()
+            .map(|scope| {
+                Ok(self
+                    .dashboard_available_dates_for_scope(scope)?
+                    .first()
+                    .copied())
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let latest_gated_dashboard_date = gated_latest_dates.iter().flatten().min().copied();
+        let has_missing_gated_scope = gated_latest_dates.iter().any(|date| date.is_none());
+        let effective_to = std::cmp::max(to, latest_daily_date.unwrap_or(to));
+        let (refresh_from, refresh_reason, repair_window_days) = derive_refresh_window(
+            to,
+            latest_daily_date,
+            latest_gated_dashboard_date,
+            has_missing_gated_scope,
+        );
+
+        let macro_from = effective_to - Duration::days(REFRESH_MACRO_LOOKBACK_DAYS);
 
         Ok(RefreshPlan {
             refresh_from: refresh_from.to_string(),
-            refresh_to: to.to_string(),
+            refresh_to: effective_to.to_string(),
             macro_from: macro_from.to_string(),
-            macro_to: to.to_string(),
+            macro_to: effective_to.to_string(),
+            latest_daily_date: latest_daily_date.map(|date| date.to_string()),
+            latest_gated_dashboard_date: latest_gated_dashboard_date.map(|date| date.to_string()),
+            refresh_reason,
+            repair_window_days,
+        })
+    }
+
+    fn collect_pipeline_diagnostics_for_standard_scopes(
+        &self,
+    ) -> Result<Vec<ScopedPipelineDiagnostics>> {
+        [ReportScope::Global, ReportScope::Cn, ReportScope::Hk]
+            .into_iter()
+            .map(|scope| {
+                Ok(ScopedPipelineDiagnostics {
+                    scope: scope_label(scope).to_string(),
+                    diagnostics: self.pipeline_date_diagnostics_with_scope(scope)?,
+                })
+            })
+            .collect()
+    }
+
+    fn summarize_latest_dates(
+        diagnostics: &[ScopedPipelineDiagnostics],
+    ) -> Vec<RefreshLatestDateStatus> {
+        diagnostics
+            .iter()
+            .map(|item| RefreshLatestDateStatus {
+                scope: item.scope.clone(),
+                freshest_market_date: item.diagnostics.freshest_market_date.clone(),
+                dashboard_latest_date: item.diagnostics.dashboard_latest_date.clone(),
+            })
+            .collect()
+    }
+
+    pub fn refresh_pipeline(
+        &self,
+        to: NaiveDate,
+        diagnostics_scope: ReportScope,
+        run_backtests: bool,
+    ) -> Result<RefreshPipelineSummary> {
+        let before_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
+        let latest_dates_before = Self::summarize_latest_dates(&before_diagnostics);
+        let plan = self.build_refresh_plan(to)?;
+        let refresh_from = NaiveDate::parse_from_str(&plan.refresh_from, "%Y-%m-%d")?;
+        let refresh_to = NaiveDate::parse_from_str(&plan.refresh_to, "%Y-%m-%d")?;
+        let macro_from = NaiveDate::parse_from_str(&plan.macro_from, "%Y-%m-%d")?;
+        let macro_to = NaiveDate::parse_from_str(&plan.macro_to, "%Y-%m-%d")?;
+
+        let mut stages = Vec::new();
+        let mut blocking = Vec::new();
+        let mut success = true;
+
+        let ingest = match self.ingest_daily(refresh_from, refresh_to) {
+            Ok(summary) => {
+                stages.push(RefreshStageExecution {
+                    name: "ingest".to_string(),
+                    status: "success".to_string(),
+                    summary: Some(RefreshStageSummary::Ingest(summary)),
+                    error: None,
+                });
+                None
+            }
+            Err(error) => Some(("ingest", error)),
+        };
+        if let Some((stage_name, error)) = ingest {
+            let message = format_error_chain(&error);
+            stages.push(RefreshStageExecution {
+                name: stage_name.to_string(),
+                status: "error".to_string(),
+                summary: None,
+                error: Some(message.clone()),
+            });
+            blocking.push(message);
+            success = false;
+        } else {
+            let indicators = match self.compute_indicators() {
+                Ok(summary) => {
+                    stages.push(RefreshStageExecution {
+                        name: "indicators".to_string(),
+                        status: "success".to_string(),
+                        summary: Some(RefreshStageSummary::Indicators(summary)),
+                        error: None,
+                    });
+                    None
+                }
+                Err(error) => Some(("indicators", error)),
+            };
+            if let Some((stage_name, error)) = indicators {
+                let message = format_error_chain(&error);
+                stages.push(RefreshStageExecution {
+                    name: stage_name.to_string(),
+                    status: "error".to_string(),
+                    summary: None,
+                    error: Some(message.clone()),
+                });
+                blocking.push(message);
+                success = false;
+            } else {
+                let macro_stage = match self.compute_macro_regime(macro_from, macro_to) {
+                    Ok(summary) => {
+                        stages.push(RefreshStageExecution {
+                            name: "macro".to_string(),
+                            status: "success".to_string(),
+                            summary: Some(RefreshStageSummary::Macro(summary)),
+                            error: None,
+                        });
+                        None
+                    }
+                    Err(error) => Some(("macro", error)),
+                };
+                if let Some((stage_name, error)) = macro_stage {
+                    let message = format_error_chain(&error);
+                    stages.push(RefreshStageExecution {
+                        name: stage_name.to_string(),
+                        status: "error".to_string(),
+                        summary: None,
+                        error: Some(message.clone()),
+                    });
+                    blocking.push(message);
+                    success = false;
+                } else {
+                    let rotation = match self.compute_rotation() {
+                        Ok(summary) => {
+                            stages.push(RefreshStageExecution {
+                                name: "rotation".to_string(),
+                                status: "success".to_string(),
+                                summary: Some(RefreshStageSummary::Rotation(summary)),
+                                error: None,
+                            });
+                            None
+                        }
+                        Err(error) => Some(("rotation", error)),
+                    };
+                    if let Some((stage_name, error)) = rotation {
+                        let message = format_error_chain(&error);
+                        stages.push(RefreshStageExecution {
+                            name: stage_name.to_string(),
+                            status: "error".to_string(),
+                            summary: None,
+                            error: Some(message.clone()),
+                        });
+                        blocking.push(message);
+                        success = false;
+                    } else {
+                        let strategy = match self.compute_strategy_preferences() {
+                            Ok(summary) => {
+                                stages.push(RefreshStageExecution {
+                                    name: "strategy".to_string(),
+                                    status: "success".to_string(),
+                                    summary: Some(RefreshStageSummary::Strategy(summary)),
+                                    error: None,
+                                });
+                                None
+                            }
+                            Err(error) => Some(("strategy", error)),
+                        };
+                        if let Some((stage_name, error)) = strategy {
+                            let message = format_error_chain(&error);
+                            stages.push(RefreshStageExecution {
+                                name: stage_name.to_string(),
+                                status: "error".to_string(),
+                                summary: None,
+                                error: Some(message.clone()),
+                            });
+                            blocking.push(message);
+                            success = false;
+                        } else {
+                            let signals = match self.compute_signals() {
+                                Ok(summary) => {
+                                    stages.push(RefreshStageExecution {
+                                        name: "signals".to_string(),
+                                        status: "success".to_string(),
+                                        summary: Some(RefreshStageSummary::Signals(summary)),
+                                        error: None,
+                                    });
+                                    None
+                                }
+                                Err(error) => Some(("signals", error)),
+                            };
+                            if let Some((stage_name, error)) = signals {
+                                let message = format_error_chain(&error);
+                                stages.push(RefreshStageExecution {
+                                    name: stage_name.to_string(),
+                                    status: "error".to_string(),
+                                    summary: None,
+                                    error: Some(message.clone()),
+                                });
+                                blocking.push(message);
+                                success = false;
+                            } else if run_backtests {
+                                match self.refresh_backtests_for_standard_scopes() {
+                                    Ok(summary) => stages.push(RefreshStageExecution {
+                                        name: "backtests".to_string(),
+                                        status: "success".to_string(),
+                                        summary: Some(RefreshStageSummary::Backtests(summary)),
+                                        error: None,
+                                    }),
+                                    Err(error) => {
+                                        let message = format_error_chain(&error);
+                                        stages.push(RefreshStageExecution {
+                                            name: "backtests".to_string(),
+                                            status: "error".to_string(),
+                                            summary: None,
+                                            error: Some(message.clone()),
+                                        });
+                                        blocking.push(message);
+                                        success = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let consistency = if success {
+            self.refresh_consistency_alerts()?
+        } else {
+            Vec::new()
+        };
+        if !consistency.is_empty() {
+            blocking.extend(consistency.iter().cloned());
+            success = false;
+        }
+
+        let after_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
+        let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
+        let before_scope = before_diagnostics
+            .iter()
+            .find(|item| item.scope.eq_ignore_ascii_case(scope_label(diagnostics_scope)))
+            .map(|item| &item.diagnostics)
+            .context("missing before diagnostics for requested scope")?;
+        let after_scope = after_diagnostics
+            .iter()
+            .find(|item| item.scope.eq_ignore_ascii_case(scope_label(diagnostics_scope)))
+            .map(|item| &item.diagnostics)
+            .context("missing after diagnostics for requested scope")?;
+
+        let before_latest = before_scope.dashboard_latest_date.as_deref();
+        let after_latest = after_scope.dashboard_latest_date.as_deref();
+        let advanced = match (before_latest, after_latest) {
+            (None, Some(_)) => true,
+            (Some(before), Some(after)) => after > before,
+            _ => false,
+        };
+
+        let latest_gate = latest_gate_alerts_for_scope(diagnostics_scope, before_scope, after_scope);
+
+        Ok(RefreshPipelineSummary {
+            success,
+            diagnostics_scope: scope_label(diagnostics_scope).to_string(),
+            refresh_window: plan,
+            backtests_requested: run_backtests,
+            latest_dates_before,
+            latest_dates_after,
+            advanced,
+            stages,
+            pipeline_diagnostics_by_scope: after_diagnostics,
+            alerts: RefreshPipelineAlerts {
+                consistency,
+                blocking,
+                latest_gate,
+            },
+        })
+    }
+
+    pub fn explain_latest_gate(&self, scope: ReportScope) -> Result<LatestGateExplanation> {
+        let diagnostics = self.pipeline_date_diagnostics_with_scope(scope)?;
+        let alerts = latest_gate_alerts_for_scope(scope, &diagnostics, &diagnostics);
+        let latest_gate_advanced = match (
+            diagnostics.dashboard_latest_date.as_deref(),
+            diagnostics.freshest_market_date.as_deref(),
+        ) {
+            (Some(latest), Some(freshest)) => Some(latest >= freshest),
+            _ => None,
+        };
+
+        Ok(LatestGateExplanation {
+            scope: scope_label(scope).to_string(),
+            freshest_market_date: diagnostics.freshest_market_date.clone(),
+            latest_available_dashboard_date: diagnostics.dashboard_latest_date.clone(),
+            latest_gate_advanced,
+            alerts: diagnostics
+                .alerts
+                .iter()
+                .cloned()
+                .chain(alerts)
+                .collect(),
+            stages: latest_gate_stage_explanations(&diagnostics),
         })
     }
 
@@ -1217,7 +1828,7 @@ impl AppContext {
         let strategies = market_store::fetch_strategy_preferences(&self.storage)?;
         let regimes = market_store::fetch_market_regimes(&self.storage)?;
         let rotations = market_store::fetch_rotation_ranks(&self.storage)?;
-        let rows = build_signal_snapshots(&strategies, &regimes, &rotations);
+        let (rows, stats) = build_signal_snapshots(&strategies, &regimes, &rotations);
         if let Err(error) = market_store::insert_signal_snapshots(&self.storage, &rows) {
             anyhow::bail!("signal_snapshot insert failed: {error}");
         }
@@ -1229,9 +1840,24 @@ impl AppContext {
         if !alignment_issues.is_empty() {
             anyhow::bail!(alignment_issues.join(" | "));
         }
+        let data_starved_warning = if stats.regime_missing > 0 || stats.rotation_missing > 0 {
+            let msg = format!(
+                "Data-starved signals detected: {}/{} signals used fallback defaults (regime_missing={}, rotation_missing={}).",
+                stats.regime_missing + stats.rotation_missing,
+                stats.total,
+                stats.regime_missing,
+                stats.rotation_missing
+            );
+            eprintln!("WARN: {msg}");
+            Some(msg)
+        } else {
+            None
+        };
         Ok(SignalSummary {
             rows: rows.len(),
             failed_items: Vec::new(),
+            data_starved_count: stats.regime_missing + stats.rotation_missing,
+            data_starved_warning,
         })
     }
 
@@ -1343,18 +1969,15 @@ impl AppContext {
         metrics.total_ms = elapsed_ms(total_started_at);
         let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
         let data_health = self.check_data_health()?;
-        let scoped_symbols = self
-            .latest_gate_instruments_for_scope(scope)?
-            .into_iter()
-            .map(|instrument| instrument.symbol)
-            .collect::<std::collections::BTreeSet<_>>();
+        let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         Ok(snapshot.map(|mut snapshot| {
             snapshot.load_metrics = Some(metrics);
             snapshot.trust_summary = Some(build_trust_summary(
-                &scoped_symbols,
+                &scoped_instruments,
                 &snapshot,
                 &pipeline_dates,
                 &data_health,
+                &self.calendar,
             ));
             snapshot
         }))
@@ -1384,20 +2007,17 @@ impl AppContext {
         let recent_reports = self.recent_reports(recent_report_limit)?;
         let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
         let data_health = self.check_data_health()?;
-        let scoped_symbols = self
-            .latest_gate_instruments_for_scope(scope)?
-            .into_iter()
-            .map(|instrument| instrument.symbol)
-            .collect::<std::collections::BTreeSet<_>>();
+        let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
         let snapshot = snapshot.map(|mut snapshot| {
             snapshot.load_metrics = Some(metrics);
             snapshot.trust_summary = Some(build_trust_summary(
-                &scoped_symbols,
+                &scoped_instruments,
                 &snapshot,
                 &pipeline_dates,
                 &data_health,
+                &self.calendar,
             ));
             snapshot
         });
@@ -1432,15 +2052,10 @@ impl AppContext {
         scope: ReportScope,
         available_dates: &[NaiveDate],
     ) -> Result<PipelineDateDiagnostics> {
-        let scoped_symbols = self
-            .latest_gate_instruments_for_scope(scope)?
-            .into_iter()
-            .map(|instrument| instrument.symbol)
-            .collect::<Vec<_>>();
+        let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         let freshest_market_date =
             market_store::fetch_latest_table_date(&self.storage, "daily_bar")?;
         let dashboard_latest_date = available_dates.first().copied();
-        let expected_symbol_count = scoped_symbols.len();
         let stage_rows = [
             ("daily_bar", freshest_market_date),
             (
@@ -1475,36 +2090,45 @@ impl AppContext {
         let stages = stage_rows
             .into_iter()
             .map(|(stage, latest_date)| {
+                let trading_symbols: Vec<String> = match latest_date {
+                    Some(date) => scoped_instruments
+                        .iter()
+                        .filter(|i| self.calendar.is_trading_day(&i.market, date))
+                        .map(|i| i.symbol.clone())
+                        .collect(),
+                    None => Vec::new(),
+                };
+                let trading_count = trading_symbols.len();
                 let (latest_entities, expected_entities) = match (stage, latest_date) {
                     ("daily_bar", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_in_symbols(
                             &self.storage,
                             "daily_bar",
                             "symbol",
-                            &scoped_symbols,
+                            &trading_symbols,
                             date,
                         )?),
-                        Some(expected_symbol_count),
+                        Some(trading_count),
                     ),
                     ("indicator_snapshot", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_in_symbols(
                             &self.storage,
                             "indicator_snapshot",
                             "symbol",
-                            &scoped_symbols,
+                            &trading_symbols,
                             date,
                         )?),
-                        Some(expected_symbol_count),
+                        Some(trading_count),
                     ),
                     ("rotation_rank", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_in_symbols(
                             &self.storage,
                             "rotation_rank",
                             "symbol",
-                            &scoped_symbols,
+                            &trading_symbols,
                             date,
                         )?),
-                        Some(expected_symbol_count),
+                        Some(trading_count),
                     ),
                     ("strategy_preference", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
@@ -1515,7 +2139,7 @@ impl AppContext {
                             scope_label(scope),
                             date,
                         )?),
-                        Some(expected_symbol_count),
+                        Some(trading_count),
                     ),
                     ("signal_snapshot", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
@@ -1526,7 +2150,7 @@ impl AppContext {
                             scope_label(scope),
                             date,
                         )?),
-                        Some(expected_symbol_count),
+                        Some(trading_count),
                     ),
                     ("market_regime", Some(date)) => (
                         Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
@@ -1571,7 +2195,7 @@ impl AppContext {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let alerts = pipeline_date_alerts(&stages);
+        let alerts = pipeline_date_alerts(ReportScope::Global, &stages);
 
         Ok(PipelineDateDiagnostics {
             freshest_market_date: freshest_market_date.map(|date| date.to_string()),
@@ -1692,17 +2316,21 @@ impl AppContext {
 
     fn dashboard_available_dates_for_scope(&self, scope: ReportScope) -> Result<Vec<NaiveDate>> {
         let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
-        let scoped_symbols = self
-            .latest_gate_instruments_for_scope(scope)?
-            .into_iter()
-            .map(|instrument| instrument.symbol)
-            .collect::<Vec<_>>();
-        let expected_count = scoped_symbols.len();
-        if expected_count == 0 {
+        let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
+        if scoped_instruments.is_empty() {
             return Ok(Vec::new());
         }
         let mut scoped_dates = Vec::new();
         for date in available_dates {
+            let trading_symbols: Vec<String> = scoped_instruments
+                .iter()
+                .filter(|i| self.calendar.is_trading_day(&i.market, date))
+                .map(|i| i.symbol.clone())
+                .collect();
+            let expected_count = trading_symbols.len();
+            if expected_count == 0 {
+                continue;
+            }
             let signal_count = market_store::fetch_distinct_entity_count_for_date_with_filter(
                 &self.storage,
                 "signal_snapshot",
@@ -1711,13 +2339,17 @@ impl AppContext {
                 scope_label(scope),
                 date,
             )?;
-            let rotation_count = market_store::fetch_distinct_entity_count_for_date_in_symbols(
-                &self.storage,
-                "rotation_rank",
-                "symbol",
-                &scoped_symbols,
-                date,
-            )?;
+            let rotation_count = if trading_symbols.is_empty() {
+                0
+            } else {
+                market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                    &self.storage,
+                    "rotation_rank",
+                    "symbol",
+                    &trading_symbols,
+                    date,
+                )?
+            };
             let has_regime =
                 market_store::fetch_latest_market_regime_on_or_before(&self.storage, date, scope)?
                     .is_some();
@@ -1866,7 +2498,7 @@ impl AppContext {
                     .unwrap_or(false)
             });
 
-            let (gap_count, max_gap_days) = analyze_gap_metrics(&bars);
+            let (gap_count, max_gap_days) = analyze_gap_metrics(&bars, instrument, &self.calendar);
             let (suspicious_jump_count, max_abs_daily_return_pct) =
                 analyze_jump_metrics(instrument, &bars);
             let missing_turnover_rows = bars.iter().filter(|bar| bar.turnover.is_none()).count();
@@ -2270,7 +2902,7 @@ mod tests {
             },
         ];
 
-        let alerts = pipeline_date_alerts(&stages);
+        let alerts = pipeline_date_alerts(ReportScope::Global, &stages);
 
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].contains("Rerun `compute-signals`"));
@@ -2315,11 +2947,50 @@ mod tests {
             },
         ];
 
-        let alerts = pipeline_date_alerts(&stages);
+        let alerts = pipeline_date_alerts(ReportScope::Global, &stages);
 
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].contains("Signal snapshot is incomplete"));
         assert!(alerts[0].contains("2026-04-24"));
         assert!(alerts[0].contains("18/21"));
+    }
+
+    #[test]
+    fn derive_refresh_window_uses_source_lookback_when_gate_is_current() {
+        let to = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+        let latest_daily = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+        let latest_gated = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+
+        let (refresh_from, reason, repair_days) =
+            derive_refresh_window(to, Some(latest_daily), Some(latest_gated), false);
+
+        assert_eq!(refresh_from, NaiveDate::from_ymd_opt(2026, 4, 27).unwrap());
+        assert_eq!(reason, "source-lookback");
+        assert_eq!(repair_days, REFRESH_GATE_REPAIR_WINDOW_DAYS);
+    }
+
+    #[test]
+    fn derive_refresh_window_widens_when_gate_lags_source() {
+        let to = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+        let latest_daily = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+        let latest_gated = NaiveDate::from_ymd_opt(2026, 4, 20).unwrap();
+
+        let (refresh_from, reason, _) =
+            derive_refresh_window(to, Some(latest_daily), Some(latest_gated), false);
+
+        assert_eq!(refresh_from, NaiveDate::from_ymd_opt(2026, 3, 21).unwrap());
+        assert_eq!(reason, "latest-gate-repair");
+    }
+
+    #[test]
+    fn derive_refresh_window_clamps_when_to_is_behind_latest_daily() {
+        let to = NaiveDate::from_ymd_opt(2026, 4, 20).unwrap();
+        let latest_daily = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
+
+        let (refresh_from, reason, _) =
+            derive_refresh_window(to, Some(latest_daily), None, true);
+
+        assert!(refresh_from <= latest_daily);
+        assert_eq!(reason, "missing-gated-scope-repair");
     }
 }

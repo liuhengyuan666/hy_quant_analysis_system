@@ -1,6 +1,6 @@
 use core_domain::{
-    MarketRegimeSnapshot, RotationRankSnapshot, SignalLabel, SignalSnapshot, StrategyKind,
-    StrategyPreferenceSnapshot,
+    MarketRegimeSnapshot, RotationRankSnapshot, SignalBuildStats, SignalLabel, SignalSnapshot,
+    StrategyKind, StrategyPreferenceSnapshot,
 };
 
 fn clamp_score(value: f64) -> f64 {
@@ -36,7 +36,7 @@ pub fn build_signal_snapshots(
     strategies: &[StrategyPreferenceSnapshot],
     regimes: &[MarketRegimeSnapshot],
     rotations: &[RotationRankSnapshot],
-) -> Vec<SignalSnapshot> {
+) -> (Vec<SignalSnapshot>, SignalBuildStats) {
     let regime_by_date = regimes
         .iter()
         .map(|row| ((row.date, row.market.clone()), row))
@@ -46,9 +46,11 @@ pub fn build_signal_snapshots(
         .map(|row| ((row.date, row.symbol.clone()), row))
         .collect::<std::collections::BTreeMap<_, _>>();
 
-    strategies
+    let mut stats = SignalBuildStats::default();
+    let snapshots: Vec<SignalSnapshot> = strategies
         .iter()
         .map(|row| {
+            stats.total += 1;
             let strategy_score = best_strategy_score(row);
             let regime = regime_by_date
                 .get(&(row.date, row.regime_basis_scope.clone()))
@@ -58,16 +60,20 @@ pub fn build_signal_snapshots(
                 .copied();
 
             let alignment_score = row.alignment as f64 * 20.0;
-            let market_regime_score = regime
-                .map(|item| (item.trend_score + item.risk_score) / 2.0)
-                .unwrap_or(50.0);
-            let rotation_score = rotation
-                .map(|item| {
-                    clamp_score(
-                        item.momentum_score * 4.0 + (11_u32.saturating_sub(item.rank)) as f64 * 4.0,
-                    )
-                })
-                .unwrap_or(40.0);
+            let market_regime_score = if let Some(item) = regime {
+                (item.trend_score + item.risk_score) / 2.0
+            } else {
+                stats.regime_missing += 1;
+                50.0
+            };
+            let rotation_score = if let Some(item) = rotation {
+                clamp_score(
+                    item.momentum_score * 4.0 + (11_u32.saturating_sub(item.rank)) as f64 * 4.0,
+                )
+            } else {
+                stats.rotation_missing += 1;
+                40.0
+            };
 
             let final_score = clamp_score(
                 strategy_score * 0.45
@@ -96,5 +102,6 @@ pub fn build_signal_snapshots(
                 explanation,
             }
         })
-        .collect()
+        .collect();
+    (snapshots, stats)
 }
