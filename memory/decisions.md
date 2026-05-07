@@ -243,3 +243,16 @@
   - CLI 运行 `compute-signals` 时，如果有缺失 regime/rotation 会直接打印 warning。
   - `SignalSummary` 新增了 `data_starved_count` 和 `data_starved_warning` 字段，下游可以进一步展示或告警。
 - 状态：完成
+
+## [2026-05-08] 默认 `export-report` 在 latest gate 落后时 fail-loud，不再静默导出旧日报
+
+- 背景：复核日常 CLI 分步链路时，实测出现 `daily_bar` 已到 `2026-05-07`，但 `dashboard_available` 仍停在 `2026-04-30` 的状态；此时默认 `export-report` 会按旧的 dashboard latest 静默导出旧日报。
+- 备选方案：
+  - 保持当前行为，让用户事后通过 `pipeline-dates` 发现报告日期落后。
+  - 在默认导出前检查 latest gate，若 dashboard latest 落后于 freshest market date 则直接失败，并输出 gate alerts。
+- 决策：采用方案 B。`export_report_with_scope` 在 `report_date.is_none()` 时先调用 `explain_latest_gate(scope)`；若 `latest_gate_advanced == Some(false)`，拒绝默认导出并提示运行缺失 pipeline stage 或显式传 `--date` 导出历史报告。
+- 原因：默认导出代表“当前最新研究快照”，不应在上游 stage 未推进时生成看似成功的旧日报；显式 `--date` 仍然保留历史回看能力。
+- 影响：
+  - 默认 `cargo run -p quant-cli -- export-report` 不再静默产出旧日期报告。
+  - 用户需要先根据 `explain-latest-gate` / `pipeline-dates` 补跑缺失阶段，或明确使用 `--date` 表示导出历史日报。
+- 状态：完成
