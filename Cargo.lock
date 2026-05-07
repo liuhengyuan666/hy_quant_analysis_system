@@ -124,6 +124,7 @@ dependencies = [
  "report-engine",
  "rotation-engine",
  "serde",
+ "serde_json",
  "signal-engine",
  "strategy-engine",
 ]

@@ -1,3 +1,5 @@
+pub mod calendar;
+
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
@@ -184,4 +186,11 @@ pub struct SignalSnapshot {
     pub analysis_scope: String,
     pub regime_basis_scope: String,
     pub explanation: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SignalBuildStats {
+    pub total: usize,
+    pub regime_missing: usize,
+    pub rotation_missing: usize,
 }
