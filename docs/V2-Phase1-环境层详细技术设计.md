@@ -13,6 +13,16 @@
 >   - `docs/功能模块与处理逻辑.md`
 >   - `docs/分析使用手册.md`
 >   - `docs/日常操作手册.md`
+>
+> **Post-Phase-1 演进说明**：
+>
+> 以下功能在 Phase 1 基线之上已进一步演进，不再完全受本文档早期边界约束：
+> - `signal-engine` 已支持按 `regime_basis_scope` 查找 regime，信号生成不再仅限 GLOBAL
+> - `backtest-engine` 已支持按 scope 运行回测
+> - `TrustSummary` 已扩展 provenance 字段（`signal_analysis_scope`, `signal_regime_basis_scope`, `backtest_matches_snapshot`）
+> - 默认 `export-report` 已增加 fail-loud 保护（latest gate 落后时拒绝导出）
+> - 数据健康检查的 gap 告警已过滤全休市期间（通过 `TradingCalendar`）
+> - 桌面端 refresh 完成后自动展示 trust summary
 
 ## 1. 文档目标
 
