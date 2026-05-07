@@ -95,35 +95,38 @@ Turn the current V1 index/ETF research system into a more layered, explainable V
 
 ## Module-Level Execution Checklist
 
-### P0-A. Provenance contract and trust labeling
+### P0-A. Provenance contract and trust labeling — ✅ IMPLEMENTED
 - `crates/core-domain/src/lib.rs`: add provenance fields for strategy/signal/backtest outputs.
 - `crates/backtest-engine/src/lib.rs`: expose backtest run metadata and config summary.
 - `sql/clickhouse/001_init.sql` + `crates/market-store/src/lib.rs`: persist provenance columns and read helpers.
 - `crates/app-service/src/lib.rs`: aggregate provenance into dashboard/export payloads.
 - `crates/report-engine/src/lib.rs` + desktop/CLI surfaces: render regime-basis / scope-basis notices.
+- **Note**: DTOs, storage schema, trust summary aggregation, and report rendering all complete.
 
-### P0-B. Real scoped strategy / signal / backtest path
+### P0-B. Real scoped strategy / signal / backtest path — ✅ IMPLEMENTED
 - `crates/strategy-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: make strategy computation scope-aware.
 - `crates/signal-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: make signal generation scope-aware.
 - `crates/backtest-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: run backtests on scoped signal streams.
 - `apps/cli/src/main.rs` + `apps/desktop/src-tauri/src/lib.rs`: expose scope-compatible command/runtime paths.
+- **Note**: `compute_strategy_preferences` iterates Global/Cn/Hk; `signal-engine` uses `row.regime_basis_scope`; `run_backtest` takes scope param.
 
-### P1. Validated research cycle
+### P1. Validated research cycle — ✅ MOSTLY IMPLEMENTED
 - `crates/app-service/src/lib.rs`: build a unified trust summary from pipeline freshness + data health + provenance.
 - `apps/desktop/src-tauri/src/lib.rs` + `apps/desktop/frontend/src/main.js`: attach trust judgement to refresh completion.
 - `crates/report-engine/src/lib.rs`: add freshness / health / basis context to exports.
 - desktop backtest card: show scope/date/config/match-to-current-snapshot metadata.
+- **Note**: unified trust summary exists; refresh completion triggers dashboard reload with trust panel; exports carry context; backtest metadata includes scope/date/config/match.
 
-### P2. Structured explanation and drilldown
+### P2. Structured explanation and drilldown — NOT STARTED
 - `crates/core-domain/src/lib.rs` + `crates/signal-engine/src/lib.rs`: replace explanation-string-only flow with structured reason model.
 - `crates/app-service/src/lib.rs` + `crates/report-engine/src/lib.rs`: define symbol detail payload.
 - `apps/desktop/src-tauri/src/lib.rs` + `apps/desktop/frontend/src/main.js`: implement click-through symbol drilldown.
 - diagnostics presentation: keep provider health global, make symbol trust views scope-aware.
 
-### P3. Workflow efficiency
+### P3. Workflow efficiency — PARTIALLY DONE
 - SQLite preference path: persist scope/date/viewer state through market-store/app-service/Tauri/frontend.
-- Recent report actions: open artifact, copy path, compare previous.
-- Refresh controls: cancel, retry failed stage, partial rerun; likely requires real task orchestration instead of the current linear thread.
+- Recent report actions: open artifact, copy path, compare previous. **(done)**
+- Refresh controls: cancel, retry failed stage, partial rerun; likely requires real task orchestration instead of the current linear thread. **(not done)**
 
 ## Recommended Safe Order
 

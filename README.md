@@ -420,7 +420,7 @@ cargo run -p quant-cli -- export-report
 - `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
 - 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 - 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
-- `GLOBAL / CN / HK` 的 dashboard/report 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化
+- `GLOBAL / CN / HK` 的 dashboard/report/strategy/signal/backtest 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化；signal 和 backtest 均携带显式 provenance 字段（`analysis_scope`、`regime_basis_scope`、`matches current snapshot`）
 
 ---
 
