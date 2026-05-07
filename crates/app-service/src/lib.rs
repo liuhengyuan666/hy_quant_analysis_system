@@ -2195,7 +2195,7 @@ impl AppContext {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let alerts = pipeline_date_alerts(ReportScope::Global, &stages);
+        let alerts = pipeline_date_alerts(scope, &stages);
 
         Ok(PipelineDateDiagnostics {
             freshest_market_date: freshest_market_date.map(|date| date.to_string()),
