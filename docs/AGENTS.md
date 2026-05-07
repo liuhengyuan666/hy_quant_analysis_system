@@ -21,7 +21,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - If dashboard behavior changes, update both user docs and architecture docs.
 - Desktop Help/Usage viewer reads markdown from this directory; docs should remain renderable as standalone markdown.
 - If freshness/debug workflows change, update docs to mention `pipeline-dates` and the distinction between market freshness and macro as-of dates.
-- If scoped reporting changes, document which layers are scope-aware and which still intentionally stay global (for example, strategy/signal/backtest still use GLOBAL regime in Phase 1).
+- If scoped reporting changes, document which layers are scope-aware. All layers (regime, environment, strategy preference, signal, backtest) now support per-scope computation with explicit provenance fields.
 
 ## ANTI-PATTERNS
 - Do **not** document outdated date semantics (`report_date` only) without `regime_as_of_date` context.
@@ -29,7 +29,7 @@ Project-facing documentation lives here. Mix of user workflow guides and enginee
 - Do **not** add commands to docs before verifying they still compile/run.
 - Do **not** describe health-report filenames as export-time dates; they now track the freshest checked market date.
 - Do **not** describe watchlist breadth proxy as stock-universe breadth.
-- Do **not** document scoped strategy/signal/backtest as CN/HK-aware until code actually stops using GLOBAL regime there.
+- Do **not** omit provenance fields from documentation; strategy/signal/backtest now carry analysis_scope and regime_basis_scope.
 
 ## NOTES
 - Desktop Help/Usage viewer reads markdown from this directory.

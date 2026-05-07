@@ -36,7 +36,7 @@ crates/
 - `market-store` owns all SQL, ClickHouse/SQLite IO, and date-gating helpers.
 - `report-engine` shapes dashboard/report payloads; `app-service` injects trust summary, pipeline diagnostics, and recent reports.
 - Signal alignment and refresh consistency use diagnostics alerts as the single source of truth.
-- Dashboard/report are scope-aware; strategy/signal/backtest provenance must remain explicit in the data contract.
+- Dashboard/report are scope-aware; strategy/signal/backtest computations are also scope-aware with provenance fields (analysis_scope, regime_basis_scope, signal_scope) in the data contract.
 
 ## ANTI-PATTERNS
 - Do **not** fetch HTTP data from `strategy-engine`, `signal-engine`, `backtest-engine`, or `macro-engine`.
