@@ -196,3 +196,50 @@
 - 原因：这些位置承载了默认用户路径、跨层责任边界、共享 contract 和纯计算语义，是后续最容易因为旧心智而走偏的地方。
 - 影响：未来修改 desktop refresh、trust / recent reports、shared DTO 或 macro regime 逻辑时，应先读最近一层 AGENTS，而不是只依赖 root 层印象。
 - 状态：完成
+
+## [2026-05-04] 手动同步链路优化先做方案文档，不先直接改实现
+
+- 背景：当前 README 暴露的是一组 CLI 分步命令，但 `dashboard/export` 的默认最新日期由 `signal_snapshot + rotation_rank + market_regime + environment_snapshot` 的最终资格门控共同决定。用户在手动同步时出现了“需要连续跑 2-3 次才推进到较新日期”的体验问题。
+- 备选方案：
+  - 直接跳到实现，新增 CLI 聚合命令或重构流水线。
+  - 先把问题成因、短期优化点和中长期方向收敛成文档，再决定实现顺序。
+- 决策：先新增 `docs/手动同步流水线优化方案.md`，把当前问题定义、latest-date gate 逻辑、短期优先方案（CLI 聚合命令 + end-state explanation）和中长期 staging / promote 方向写清楚。
+- 原因：这个问题不是单点 bug，而是工程分步命令与产品级最终资格门控之间的抽象错位；先文档化可以避免后续直接进入实现时方向发散。
+- 影响：后续如果推进实现，优先级应是 `refresh-all / sync-and-compute` 聚合命令与 latest-gate explanation，而不是立刻做重型 run_id / staging 改造。
+- 状态：完成
+
+## [2026-05-07] 采用 Trading-Aware Partial Coverage + 静态 JSON 日历解决 CN/HK 跨市场休市差异
+
+- 背景：CN 与 HK 的法定节假日存在差异，导致 GLOBAL scope 的 dashboard 门控在 HK 休市、CN 开市时被卡住，无法推进到 CN 的最新交易日。数据健康检查也会把 HK 休市期间的 gap 误判为数据缺失。
+- 备选方案：
+  - 选项 A：在 `config/` 中维护静态 JSON 日历，系统自建 `TradingCalendar` 模块。
+  - 选项 B：引入外部交易日历 crate（如 `chrono-tz` + `holidays`）。
+  - 选项 C：让门控直接跳过缺失数据的 symbol（不区分休市 vs 缺失）。
+  - 选项 D：在 ingestion 层做按市场拆分、按交易日请求。
+- 决策：采用选项 A（静态 JSON 日历）+ 选项 C 的变体（Trading-Aware Partial Coverage）。
+  - `core-domain` 新增 `TradingCalendar` 模块，`config/calendars/*.json` 维护 CN/HK 休市日。
+  - 门控逻辑改为：只检查“该日期期望交易”的 symbol 是否有数据，休市 symbol 不计入 `expected_count`。
+  - `TrustSummary` 增加 `non_trading_count` 提示，让用户知道哪些市场因休市被排除。
+  - `analyze_gap_metrics` 过滤全休市期间的 gap，避免误告警。
+- 原因：
+  - 外部 crate 通常偏重欧美市场，CN/HK 覆盖不完整且会增加依赖。
+  - 静态 JSON 足够低频研究场景使用，且容易人工校对和补录。
+  - Partial Coverage 既解决了门控被卡住的问题，又不会把数据缺失误判为正常休市。
+- 影响：
+  - GLOBAL dashboard 在 CN 开市+HK 休市时不再被阻塞。
+  - 系统新增了跨市场交易日历概念，后续如果有更多市场（如 US）需要纳入，只需扩展 JSON 和 `Market` 枚举。
+  - `app-service` 的 `AppContext` 新增了 `calendar` 字段，所有门控/诊断/信任逻辑都需要考虑交易日历。
+- 状态：完成
+
+## [2026-05-07] signal-engine 增加 data-starved warning，避免静默 fallback 掩盖数据缺失
+
+- 背景：`build_signal_snapshots` 在缺失 `market_regime` 或 `rotation_rank` 时，静默使用 50.0 / 40.0 的 fallback 默认值。这会导致用户无法区分一个信号是真实计算得出的，还是在缺失关键输入的情况下生成的。
+- 备选方案：
+  - 保持静默 fallback，仅在文档中说明。
+  - 修改 `build_signal_snapshots` 返回 data-starved 统计，并在 `compute_signals` 中 fail loud 或显式 warning。
+- 决策：选择方案 B。`build_signal_snapshots` 现在返回 `(Vec<SignalSnapshot>, SignalBuildStats)`，统计 `regime_missing` 和 `rotation_missing`。`compute_signals` 在发现缺失时打印 warning 并将信息写入 `SignalSummary`。
+- 原因：数据缺失与休市不同，休市已被 TradingCalendar 过滤，剩下的缺失是真正的数据问题，不应该静默掩盖。
+- 影响：
+  - CLI 运行 `compute-signals` 时，如果有缺失 regime/rotation 会直接打印 warning。
+  - `SignalSummary` 新增了 `data_starved_count` 和 `data_starved_warning` 字段，下游可以进一步展示或告警。
+- 状态：完成
