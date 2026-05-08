@@ -369,6 +369,37 @@ fn first_signal(snapshot: &DashboardSnapshot) -> Option<&SignalSnapshot> {
         .or_else(|| snapshot.defensive_signals.first())
 }
 
+fn format_signal_breakdown(signal: &SignalSnapshot) -> String {
+    let reason = &signal.reason;
+    format!(
+        "{} | best={:?} strategy={:.2}/{:.2} | alignment={}/{} contrib={:.2} | regime trend={:.2} risk={:.2} combined={:.2} contrib={:.2} | rotation momentum={:.2} rank={} combined={:.2} contrib={:.2}",
+        reason.summary,
+        reason.best_strategy,
+        reason.strategy_score,
+        reason.strategy_contribution,
+        reason.alignment,
+        reason
+            .aligned_strategies
+            .iter()
+            .map(|strategy| format!("{:?}", strategy))
+            .collect::<Vec<_>>()
+            .join(","),
+        reason.alignment_contribution,
+        reason.regime.trend_score,
+        reason.regime.risk_score,
+        reason.regime.combined_score,
+        reason.regime.contribution,
+        reason.rotation.momentum_score,
+        reason
+            .rotation
+            .rank
+            .map(|rank| rank.to_string())
+            .unwrap_or_else(|| "N/A".to_string()),
+        reason.rotation.combined_score,
+        reason.rotation.contribution,
+    )
+}
+
 fn signal_basis_note(snapshot: &DashboardSnapshot) -> Option<String> {
     let signal = first_signal(snapshot)?;
     let analysis_scope = signal.analysis_scope.to_uppercase();
@@ -564,7 +595,10 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     for item in &snapshot.top_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
     }
     if let Some(note) = signal_basis_note(snapshot) {
@@ -574,14 +608,20 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     for item in &snapshot.bullish_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
     }
     output.push_str("\n## Defensive Signals\n\n");
     for item in &snapshot.defensive_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
     }
     output.push_str("\n## Latest Backtest\n\n");
@@ -725,7 +765,7 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
 mod tests {
     use super::*;
     use backtest_engine::BacktestSummary;
-    use core_domain::{SignalLabel, SignalSnapshot};
+    use core_domain::{RegimeReason, RotationReason, SignalLabel, SignalReason, SignalSnapshot, StrategyKind};
 
     #[test]
     fn render_markdown_report_includes_watchlist_breadth_section() {
@@ -748,8 +788,29 @@ mod tests {
                 signal_label: SignalLabel::StrongBuy,
                 analysis_scope: "GLOBAL".to_string(),
                 regime_basis_scope: "GLOBAL".to_string(),
-                explanation: "best=TrendBreakout(82.0), alignment=3, regime=60.0, rotation=78.0"
-                    .to_string(),
+                reason: SignalReason {
+                    best_strategy: StrategyKind::TrendBreakout,
+                    strategy_score: 82.0,
+                    strategy_contribution: 36.9,
+                    alignment: 3,
+                    aligned_strategies: vec![StrategyKind::TrendBreakout],
+                    alignment_contribution: 9.0,
+                    regime: RegimeReason {
+                        trend_score: 72.0,
+                        risk_score: 55.0,
+                        combined_score: 63.5,
+                        contribution: 12.7,
+                    },
+                    rotation: RotationReason {
+                        momentum_score: 78.0,
+                        rank: Some(1),
+                        combined_score: 78.0,
+                        contribution: 15.6,
+                    },
+                    final_score: 82.0,
+                    label: SignalLabel::StrongBuy,
+                    summary: "动量最强策略TrendBreakout得分82.0，趋势分63.5，轮动分78.0，最终信号StrongBuy".to_string(),
+                },
             }],
             bullish_signals: Vec::new(),
             defensive_signals: Vec::new(),

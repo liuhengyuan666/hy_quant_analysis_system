@@ -691,6 +691,27 @@ function getBacktestMatchInfo(snapshot, backtest) {
   };
 }
 
+function renderSignalReason(reason) {
+  if (!reason) return '';
+
+  const alignedStrategies = Array.isArray(reason.aligned_strategies) && reason.aligned_strategies.length
+    ? reason.aligned_strategies.map((strategy) => prettifyToken(strategy)).join(', ')
+    : 'None';
+  const rank = reason.rotation?.rank === null || reason.rotation?.rank === undefined
+    ? 'N/A'
+    : `#${formatInteger(reason.rotation.rank)}`;
+
+  return `
+    <p class="signal-card__text">${escapeHtml(reason.summary || '')}</p>
+    <div class="panel__meta-row">
+      <span class="panel__meta">Strategy · ${escapeHtml(prettifyToken(reason.best_strategy))} ${escapeHtml(formatNumber(reason.strategy_score, 1))} / contrib ${escapeHtml(formatNumber(reason.strategy_contribution, 1))}</span>
+      <span class="panel__meta">Alignment · ${escapeHtml(formatInteger(reason.alignment))} (${escapeHtml(alignedStrategies)}) / contrib ${escapeHtml(formatNumber(reason.alignment_contribution, 1))}</span>
+      <span class="panel__meta">Regime · trend ${escapeHtml(formatNumber(reason.regime?.trend_score, 1))} · risk ${escapeHtml(formatNumber(reason.regime?.risk_score, 1))} · contrib ${escapeHtml(formatNumber(reason.regime?.contribution, 1))}</span>
+      <span class="panel__meta">Rotation · momentum ${escapeHtml(formatNumber(reason.rotation?.momentum_score, 1))} · rank ${escapeHtml(rank)} · contrib ${escapeHtml(formatNumber(reason.rotation?.contribution, 1))}</span>
+    </div>
+  `;
+}
+
 function renderRotationPanel(snapshot) {
   if (!snapshot?.top_rotation?.length) {
     return `
@@ -862,7 +883,7 @@ function renderSignalsPanel(snapshot) {
                           </div>
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
-                        <p class="signal-card__text">${escapeHtml(item.explanation)}</p>
+                        ${renderSignalReason(item.reason)}
                       </article>
                     `,
                   )
@@ -888,7 +909,7 @@ function renderSignalsPanel(snapshot) {
                           </div>
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
-                        <p class="signal-card__text">${escapeHtml(item.explanation)}</p>
+                        ${renderSignalReason(item.reason)}
                       </article>
                     `,
                   )

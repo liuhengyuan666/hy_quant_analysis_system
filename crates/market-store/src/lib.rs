@@ -7,8 +7,8 @@ use backtest_engine::{BacktestEquityPoint, BacktestSummary, BacktestTrade};
 use chrono::NaiveDate;
 use core_domain::{
     AnalysisScope, DailyBar, EnvironmentSnapshot, IndicatorSnapshot, Instrument, MacroSnapshot,
-    MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot, StrategyPreferenceSnapshot,
-    StrategyStateSnapshot,
+    MarketRegimeSnapshot, RegimeReason, RotationRankSnapshot, RotationReason, SignalReason,
+    SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
@@ -263,7 +263,54 @@ fn decode_signal_snapshot_row(mut row: serde_json::Value) -> Result<SignalSnapsh
     if row.get("regime_basis_scope").is_none() {
         row["regime_basis_scope"] = serde_json::json!("GLOBAL");
     }
+    let explanation = row
+        .get("explanation")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    row["reason"] = match serde_json::from_str::<SignalReason>(&explanation) {
+        Ok(reason) => serde_json::to_value(reason)?,
+        Err(_) => serde_json::to_value(fallback_signal_reason(&row, &explanation))?,
+    };
+    if let Some(object) = row.as_object_mut() {
+        object.remove("explanation");
+    }
     serde_json::from_value::<SignalSnapshot>(row).context("failed to decode signal snapshot")
+}
+
+fn fallback_signal_reason(row: &serde_json::Value, summary: &str) -> SignalReason {
+    let final_score = row
+        .get("final_score")
+        .and_then(|value| value.as_f64())
+        .unwrap_or(0.0);
+    let label = row
+        .get("signal_label")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or(core_domain::SignalLabel::Hold);
+    SignalReason {
+        best_strategy: StrategyKind::ValueLeft,
+        strategy_score: 0.0,
+        strategy_contribution: 0.0,
+        alignment: 0,
+        aligned_strategies: Vec::new(),
+        alignment_contribution: 0.0,
+        regime: RegimeReason {
+            trend_score: 50.0,
+            risk_score: 50.0,
+            combined_score: 50.0,
+            contribution: 10.0,
+        },
+        rotation: RotationReason {
+            momentum_score: 40.0,
+            rank: None,
+            combined_score: 40.0,
+            contribution: 8.0,
+        },
+        final_score,
+        label,
+        summary: summary.to_string(),
+    }
 }
 
 fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> {
@@ -1715,8 +1762,9 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
 
     let payload = rows
         .iter()
-        .map(|row| {
-            serde_json::json!({
+        .map(|row| -> Result<String> {
+            let reason_json = serde_json::to_string(&row.reason)?;
+            Ok(serde_json::to_string(&serde_json::json!({
                 "date": row.date.to_string(),
                 "symbol": row.symbol,
                 "final_score": row.final_score,
@@ -1730,11 +1778,10 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
                 },
                 "analysis_scope": row.analysis_scope,
                 "regime_basis_scope": row.regime_basis_scope,
-                "explanation": row.explanation,
-            })
+                "explanation": reason_json,
+            }))?)
         })
-        .map(|row| serde_json::to_string(&row))
-        .collect::<std::result::Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<_>>>()?
         .join("\n");
 
     let query = "INSERT INTO quant.signal_snapshot FORMAT JSONEachRow";
