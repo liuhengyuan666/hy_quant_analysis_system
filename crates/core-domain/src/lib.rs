@@ -185,7 +185,7 @@ pub struct SignalSnapshot {
     pub signal_label: SignalLabel,
     pub analysis_scope: String,
     pub regime_basis_scope: String,
-    pub explanation: String,
+    pub reason: SignalReason,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -193,6 +193,38 @@ pub struct SignalBuildStats {
     pub total: usize,
     pub regime_missing: usize,
     pub rotation_missing: usize,
+}
+
+/// Structured breakdown of how a signal score was derived.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegimeReason {
+    pub trend_score: f64,
+    pub risk_score: f64,
+    pub combined_score: f64,
+    pub contribution: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RotationReason {
+    pub momentum_score: f64,
+    pub rank: Option<u32>,
+    pub combined_score: f64,
+    pub contribution: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignalReason {
+    pub best_strategy: StrategyKind,
+    pub strategy_score: f64,
+    pub strategy_contribution: f64,
+    pub alignment: u8,
+    pub aligned_strategies: Vec<StrategyKind>,
+    pub alignment_contribution: f64,
+    pub regime: RegimeReason,
+    pub rotation: RotationReason,
+    pub final_score: f64,
+    pub label: SignalLabel,
+    pub summary: String,
 }
 
 /// Strategy state machine: represents the current market-phase recommendation
