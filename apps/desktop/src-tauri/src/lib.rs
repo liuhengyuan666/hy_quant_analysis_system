@@ -1,6 +1,5 @@
 use app_service::AppContext;
 use chrono::{Local, NaiveDate};
-use core_domain::SignalSnapshot;
 use market_store::StorageConfig;
 use serde::Serialize;
 use std::fs;

@@ -627,7 +627,7 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     output.push_str("\n## Latest Backtest\n\n");
     if let Some(backtest) = &snapshot.latest_backtest {
         output.push_str(&format!(
-            "- Run ID: {}\n- Strategy: {}\n- Analysis Scope: {}\n- Signal Scope: {}\n- Regime Basis: {}\n- Signal Window: {} -> {}\n- Config: {}\n- Matches Current Snapshot: {}\n- CAGR: {:.4}\n- Max Drawdown: {:.4}\n- Sharpe: {:.4}\n- Final Equity: {:.2}\n- Trades: {}\n- Trading Days: {}\n",
+            "- Run ID: {}\n- Strategy: {}\n- Analysis Scope: {}\n- Signal Scope: {}\n- Regime Basis: {}\n- Signal Window: {} -> {}\n- Config: {}\n- Matches Current Snapshot: {}\n- CAGR: {:.4}\n- Max Drawdown: {:.4}\n- Drawdown Events: {}\n- Sharpe: {:.4}\n- Final Equity: {:.2}\n- Trades: {}\n- Trading Days: {}\n",
             backtest.run_id,
             backtest.strategy_name,
             backtest.analysis_scope,
@@ -649,11 +649,21 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
             },
             backtest.cagr,
             backtest.max_drawdown,
+            backtest.drawdown_events,
             backtest.sharpe,
             backtest.final_equity,
             backtest.trades,
             backtest.trading_days
         ));
+        if backtest.drawdown_events > 0 {
+            output.push_str("- Note: Drawdown limit protective actions were triggered during this run.\n");
+        }
+        if !backtest.state_trajectory.is_empty() {
+            output.push_str("\n## Strategy State Trajectory\n\n");
+            for (date, state) in &backtest.state_trajectory {
+                output.push_str(&format!("- {} | {}\n", date, state));
+            }
+        }
     } else {
         output.push_str("- No backtest result available\n");
     }
@@ -894,6 +904,8 @@ mod tests {
                 final_equity: 1_120_000.0,
                 trades: 14,
                 trading_days: 14,
+                drawdown_events: 0,
+                state_trajectory: Vec::new(),
             }),
             load_metrics: None,
         };

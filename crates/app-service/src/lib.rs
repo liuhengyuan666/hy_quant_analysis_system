@@ -158,6 +158,7 @@ pub struct BacktestRunSummary {
     pub final_equity: f64,
     pub trades: usize,
     pub trading_days: usize,
+    pub drawdown_events: usize,
     pub failed_items: Vec<String>,
 }
 
@@ -1929,6 +1930,8 @@ impl AppContext {
         fee_rate: f64,
         slippage_rate: f64,
         scope: ReportScope,
+        use_strategy_state: bool,
+        drawdown_limit_pct: Option<f64>,
     ) -> Result<BacktestRunSummary> {
         let instruments = self.instruments_for_scope(scope)?;
         let signals = market_store::fetch_signal_snapshots_with_scope(&self.storage, scope)?;
@@ -1956,8 +1959,21 @@ impl AppContext {
             analysis_scope: scope.to_string(),
             signal_scope: scope.to_string(),
             regime_basis_scope: scope.to_string(),
+            use_strategy_state,
+            drawdown_limit_pct,
         };
-        let result = run_signal_backtest(&run_id, &config, &signals, &bars_by_symbol);
+        let strategy_states = if config.use_strategy_state {
+            market_store::fetch_strategy_states_for_scope(&self.storage, scope)?
+        } else {
+            Vec::new()
+        };
+        let result = run_signal_backtest(
+            &run_id,
+            &config,
+            &signals,
+            &bars_by_symbol,
+            &strategy_states,
+        );
         if let Err(error) = market_store::insert_backtest_result(
             &self.storage,
             &result.summary,
@@ -1976,6 +1992,7 @@ impl AppContext {
             final_equity: result.summary.final_equity,
             trades: result.summary.trades,
             trading_days: result.summary.trading_days,
+            drawdown_events: result.summary.drawdown_events,
             failed_items,
         })
     }
@@ -1983,7 +2000,7 @@ impl AppContext {
     pub fn refresh_backtests_for_standard_scopes(&self) -> Result<Vec<BacktestRunSummary>> {
         [ReportScope::Global, ReportScope::Cn, ReportScope::Hk]
             .into_iter()
-            .map(|scope| self.run_backtest(1_000_000.0, 3, 0.001, 0.0005, scope))
+            .map(|scope| self.run_backtest(1_000_000.0, 3, 0.001, 0.0005, scope, false, None))
             .collect()
     }
 

@@ -176,6 +176,14 @@ fn ensure_backtest_run_provenance_columns(config: &StorageConfig) -> Result<()> 
     execute_clickhouse_query(
         config,
         "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS config_summary String DEFAULT ''",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS drawdown_events UInt64 DEFAULT 0",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS state_trajectory_json String DEFAULT ''",
     )
 }
 
@@ -311,6 +319,14 @@ fn fallback_signal_reason(row: &serde_json::Value, summary: &str) -> SignalReaso
         label,
         summary: summary.to_string(),
     }
+}
+
+fn parse_state_trajectory(value: Option<&serde_json::Value>) -> Vec<(NaiveDate, String)> {
+    value
+        .and_then(|value| value.as_str())
+        .filter(|text| !text.trim().is_empty())
+        .and_then(|text| serde_json::from_str::<Vec<(NaiveDate, String)>>(text).ok())
+        .unwrap_or_default()
 }
 
 fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> {
@@ -965,6 +981,19 @@ pub fn fetch_latest_strategy_state_on_or_before(
     ))
 }
 
+pub fn fetch_strategy_states_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Vec<StrategyStateSnapshot>> {
+    ensure_strategy_state_table(config)?;
+    let query = format!(
+        "SELECT date,scope,state,state_score,transition_reason,recommended_position_pct FROM quant.strategy_state WHERE scope = '{}' ORDER BY date FORMAT JSONEachRow",
+        escape_sql_string(scope.as_str())
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row::<StrategyStateSnapshot>(&body, "failed to parse strategy state row")
+}
+
 pub fn fetch_latest_strategy_state_date_for_scope(
     config: &StorageConfig,
     scope: AnalysisScope,
@@ -1372,7 +1401,7 @@ pub fn fetch_latest_backtest_run(
     config: &StorageConfig,
 ) -> Result<Option<backtest_engine::BacktestSummary>> {
     ensure_backtest_run_provenance_columns(config)?;
-    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,cagr,max_drawdown,sharpe FROM quant.backtest_run ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
+    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
     let body = fetch_clickhouse_text(config, query)?;
     let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
         return Ok(None);
@@ -1472,6 +1501,8 @@ pub fn fetch_latest_backtest_run(
         final_equity,
         trades,
         trading_days,
+        drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
+        state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
     }))
 }
 
@@ -1481,7 +1512,7 @@ pub fn fetch_latest_backtest_run_for_scope(
 ) -> Result<Option<backtest_engine::BacktestSummary>> {
     ensure_backtest_run_provenance_columns(config)?;
     let query = format!(
-        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,cagr,max_drawdown,sharpe FROM quant.backtest_run WHERE analysis_scope = '{}' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
+        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run WHERE analysis_scope = '{}' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
         scope.as_str()
     );
     let body = fetch_clickhouse_text(config, &query)?;
@@ -1583,6 +1614,8 @@ pub fn fetch_latest_backtest_run_for_scope(
         final_equity,
         trades,
         trading_days,
+        drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
+        state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
     }))
 }
 
@@ -1949,6 +1982,7 @@ pub fn insert_backtest_result(
         ),
     )?;
 
+    let state_trajectory_json = serde_json::to_string(&summary.state_trajectory)?;
     let run_payload = serde_json::to_string(&serde_json::json!({
         "run_id": summary.run_id,
         "strategy_name": summary.strategy_name,
@@ -1960,6 +1994,8 @@ pub fn insert_backtest_result(
         "config_summary": summary.config_summary,
         "started_at": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         "finished_at": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        "drawdown_events": summary.drawdown_events,
+        "state_trajectory_json": state_trajectory_json,
         "cagr": summary.cagr,
         "max_drawdown": summary.max_drawdown,
         "sharpe": summary.sharpe,

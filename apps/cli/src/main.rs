@@ -80,6 +80,10 @@ enum Command {
         slippage_rate: f64,
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
+        #[arg(long, default_value_t = false)]
+        use_state_sizing: bool,
+        #[arg(long)]
+        max_drawdown: Option<f64>,
     },
     DashboardSnapshot {
         #[arg(long)]
@@ -175,6 +179,8 @@ fn main() -> Result<()> {
             fee_rate,
             slippage_rate,
             scope,
+            use_state_sizing,
+            max_drawdown,
         } => {
             let result = context.run_backtest(
                 initial_capital,
@@ -182,6 +188,8 @@ fn main() -> Result<()> {
                 fee_rate,
                 slippage_rate,
                 scope.into(),
+                use_state_sizing,
+                max_drawdown,
             )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
