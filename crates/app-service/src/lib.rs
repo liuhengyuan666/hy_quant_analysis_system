@@ -7,7 +7,7 @@ use data_ingestion::{
     fetch_tencent_daily_bars, load_universe,
 };
 use indicator_engine::build_indicator_snapshots;
-use macro_engine::{build_macro_snapshots, build_market_regimes};
+use macro_engine::{build_macro_snapshots, build_market_regimes, build_strategy_state};
 use market_store::StorageConfig;
 use report_engine::{
     build_dashboard_snapshot_for_date, render_data_health_report, render_markdown_report,
@@ -122,6 +122,7 @@ pub struct MacroSummary {
     pub macro_rows: usize,
     pub regime_rows: usize,
     pub environment_rows: usize,
+    pub strategy_state_rows: usize,
     pub failed_items: Vec<String>,
 }
 
@@ -370,11 +371,12 @@ fn build_trust_summary(
     let pipeline_stale = pipeline_dates.stages.iter().any(|stage| {
         matches!(stage.lag_days, Some(lag) if lag > 0)
             && matches!(
-                stage.stage.as_str(),
-                "market_regime"
-                    | "environment_snapshot"
-                    | "strategy_preference"
-                    | "signal_snapshot"
+                    stage.stage.as_str(),
+                    "market_regime"
+                        | "environment_snapshot"
+                        | "strategy_state"
+                        | "strategy_preference"
+                        | "signal_snapshot"
             )
     });
     let pipeline_stale_stage_count = pipeline_dates
@@ -386,6 +388,7 @@ fn build_trust_summary(
                     stage.stage.as_str(),
                     "market_regime"
                         | "environment_snapshot"
+                        | "strategy_state"
                         | "strategy_preference"
                         | "signal_snapshot"
                 )
@@ -439,6 +442,15 @@ fn build_trust_summary(
             "Latest backtest does not match the current dashboard snapshot scope/date.".to_string(),
         );
     }
+    if let Some(strategy_state) = &snapshot.strategy_state {
+        notes.push(format!(
+            "Strategy state {} recommends {:.2}% position as of {} ({}).",
+            strategy_state.state,
+            strategy_state.recommended_position_pct,
+            strategy_state.date,
+            strategy_state.transition_reason
+        ));
+    }
 
     let (level, headline, message) = if data_health.critical_macro_sources > 0 || pipeline_stale {
         (
@@ -487,6 +499,14 @@ fn build_trust_summary(
         data_health_critical_macro_sources: data_health.critical_macro_sources,
         signal_analysis_scope,
         signal_regime_basis_scope,
+        strategy_state: snapshot
+            .strategy_state
+            .as_ref()
+            .map(|row| row.state.to_string()),
+        strategy_recommended_position_pct: snapshot
+            .strategy_state
+            .as_ref()
+            .map(|row| row.recommended_position_pct),
         backtest_matches_snapshot,
         notes,
     }
@@ -1711,12 +1731,32 @@ impl AppContext {
                 format_error_chain(&error)
             ));
         }
+        let environment_by_key = environment_rows
+            .iter()
+            .map(|row| ((row.scope.clone(), row.date), row))
+            .collect::<BTreeMap<_, _>>();
+        let strategy_state_rows = regime_rows
+            .iter()
+            .filter_map(|regime| {
+                environment_by_key
+                    .get(&(regime.market.clone(), regime.date))
+                    .map(|environment| build_strategy_state(regime, environment))
+            })
+            .collect::<Vec<_>>();
+        if let Err(error) = market_store::insert_strategy_states(&self.storage, &strategy_state_rows)
+        {
+            failed_items.push(format!(
+                "strategy_state: {}",
+                format_error_chain(&error)
+            ));
+        }
 
         Ok(MacroSummary {
             factors: factors.len(),
             macro_rows: macro_rows.len(),
             regime_rows: regime_rows.len(),
             environment_rows: environment_rows.len(),
+            strategy_state_rows: strategy_state_rows.len(),
             failed_items,
         })
     }
@@ -2071,6 +2111,10 @@ impl AppContext {
                 market_store::fetch_latest_environment_date_for_scope(&self.storage, scope)?,
             ),
             (
+                "strategy_state",
+                market_store::fetch_latest_strategy_state_date_for_scope(&self.storage, scope)?,
+            ),
+            (
                 "rotation_rank",
                 market_store::fetch_latest_table_date(&self.storage, "rotation_rank")?,
             ),
@@ -2174,6 +2218,17 @@ impl AppContext {
                         )?),
                         Some(1),
                     ),
+                    ("strategy_state", Some(date)) => (
+                        Some(market_store::fetch_distinct_entity_count_for_date_with_filter(
+                            &self.storage,
+                            "strategy_state",
+                            "scope",
+                            "scope",
+                            scope_label(scope),
+                            date,
+                        )?),
+                        Some(1),
+                    ),
                     _ => (None, None),
                 };
 
@@ -2245,6 +2300,11 @@ impl AppContext {
         let environment_started_at = Instant::now();
         let environment =
             market_store::fetch_latest_environment_on_or_before(&self.storage, report_date, scope)?;
+        let strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
+            &self.storage,
+            report_date,
+            scope,
+        )?;
         let environment_ms = elapsed_ms(environment_started_at);
         let rotations_started_at = Instant::now();
         let scoped_instruments = self.instruments_for_scope(scope)?;
@@ -2276,6 +2336,7 @@ impl AppContext {
             &regime,
             &rotations,
             &signals,
+            strategy_state,
             latest_backtest,
             report_date,
             latest_available_date,
@@ -2356,10 +2417,17 @@ impl AppContext {
             let has_environment =
                 market_store::fetch_latest_environment_on_or_before(&self.storage, date, scope)?
                     .is_some();
+            let has_strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
+                &self.storage,
+                date,
+                scope,
+            )?
+            .is_some();
             if signal_count >= expected_count
                 && rotation_count >= expected_count
                 && has_regime
                 && has_environment
+                && has_strategy_state
             {
                 scoped_dates.push(date);
             }

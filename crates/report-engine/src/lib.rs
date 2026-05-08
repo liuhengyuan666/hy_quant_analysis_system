@@ -2,6 +2,7 @@ use backtest_engine::BacktestSummary;
 use chrono::NaiveDate;
 use core_domain::{
     EnvironmentSnapshot, MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot,
+    StrategyStateSnapshot,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -29,6 +30,7 @@ pub struct DashboardSnapshot {
     pub bullish_signals: Vec<SignalSnapshot>,
     pub defensive_signals: Vec<SignalSnapshot>,
     pub environment: Option<EnvironmentSnapshot>,
+    pub strategy_state: Option<StrategyStateSnapshot>,
     pub trust_summary: Option<TrustSummary>,
     pub watchlist_breadth: Option<WatchlistBreadthSnapshot>,
     pub latest_backtest: Option<BacktestSummary>,
@@ -57,6 +59,8 @@ pub struct TrustSummary {
     pub data_health_critical_macro_sources: usize,
     pub signal_analysis_scope: Option<String>,
     pub signal_regime_basis_scope: Option<String>,
+    pub strategy_state: Option<String>,
+    pub strategy_recommended_position_pct: Option<f64>,
     pub backtest_matches_snapshot: Option<bool>,
     pub notes: Vec<String>,
 }
@@ -258,6 +262,7 @@ pub fn build_dashboard_snapshot(
         bullish_signals,
         defensive_signals,
         environment: None,
+        strategy_state: None,
         trust_summary: None,
         watchlist_breadth: None,
         latest_backtest,
@@ -269,6 +274,7 @@ pub fn build_dashboard_snapshot_for_date(
     regime: &MarketRegimeSnapshot,
     rotations: &[RotationRankSnapshot],
     signals: &[SignalSnapshot],
+    strategy_state: Option<StrategyStateSnapshot>,
     latest_backtest: Option<BacktestSummary>,
     report_date: NaiveDate,
     latest_available_date: NaiveDate,
@@ -335,6 +341,7 @@ pub fn build_dashboard_snapshot_for_date(
         bullish_signals,
         defensive_signals,
         environment: None,
+        strategy_state,
         trust_summary: None,
         watchlist_breadth: None,
         latest_backtest,
@@ -437,6 +444,16 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
                 None => "N/A",
             },
         ));
+        if let Some(state) = &trust.strategy_state {
+            output.push_str(&format!(
+                "- Strategy State: {}\n- Strategy Recommended Position: {}\n",
+                state,
+                trust
+                    .strategy_recommended_position_pct
+                    .map(|value| format!("{value:.2}%"))
+                    .unwrap_or_else(|| "N/A".to_string())
+            ));
+        }
         output.push_str(&format!(
             "- Scoped Latest-Day Coverage: {}/{}\n- Pipeline Partial Latest: {} ({})\n- Pipeline Stale Stage: {} ({})\n",
             trust.scoped_symbols_on_freshest_market_date,
@@ -459,6 +476,20 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
         output.push_str("\n");
     } else {
         output.push_str("- Trust summary is unavailable for this report export\n\n");
+    }
+    output.push_str("## Strategy State\n\n");
+    if let Some(strategy_state) = &snapshot.strategy_state {
+        output.push_str(&format!(
+            "- State: {}\n- State As Of: {}\n- Scope: {}\n- State Score: {:.2}\n- Recommended Position: {:.2}%\n- Transition Reason: {}\n\n",
+            strategy_state.state,
+            strategy_state.date,
+            strategy_state.scope,
+            strategy_state.state_score,
+            strategy_state.recommended_position_pct,
+            strategy_state.transition_reason,
+        ));
+    } else {
+        output.push_str("- Strategy state is unavailable for this report date\n\n");
     }
     output.push_str("## Market Regime\n\n");
     output.push_str(&format!(
@@ -741,6 +772,7 @@ mod tests {
                 environment_score: 68.0,
                 environment_label: "constructive".to_string(),
             }),
+            strategy_state: None,
             trust_summary: Some(TrustSummary {
                 level: "review".to_string(),
                 headline: "Use with review".to_string(),
@@ -762,6 +794,8 @@ mod tests {
                 data_health_critical_macro_sources: 0,
                 signal_analysis_scope: Some("GLOBAL".to_string()),
                 signal_regime_basis_scope: Some("GLOBAL".to_string()),
+                strategy_state: None,
+                strategy_recommended_position_pct: None,
                 backtest_matches_snapshot: Some(true),
                 notes: vec!["Macro transport is degraded to fallback path.".to_string()],
             }),
