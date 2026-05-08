@@ -8,6 +8,7 @@ use chrono::NaiveDate;
 use core_domain::{
     AnalysisScope, DailyBar, EnvironmentSnapshot, IndicatorSnapshot, Instrument, MacroSnapshot,
     MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot, StrategyPreferenceSnapshot,
+    StrategyStateSnapshot,
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
@@ -119,6 +120,13 @@ fn ensure_environment_snapshot_table(config: &StorageConfig) -> Result<()> {
     execute_clickhouse_query(
         config,
         "CREATE TABLE IF NOT EXISTS quant.environment_snapshot (date Date,scope LowCardinality(String),regime_as_of_date Date,breadth_as_of_date Date,stress_as_of_date Date,breadth_eligible_count UInt32,breadth_above_count UInt32,breadth_pct Float64,breadth_pct_sma5 Nullable(Float64),breadth_5d_delta Nullable(Float64),breadth_state LowCardinality(String),volume_expansion_pct Nullable(Float64),turnover_coverage_pct Nullable(Float64),liquidity_proxy_score Float64,stress_proxy_score Float64,environment_score Float64,environment_label LowCardinality(String),updated_at DateTime DEFAULT now()) ENGINE = MergeTree PARTITION BY toYYYYMM(date) ORDER BY (scope, date)",
+    )
+}
+
+fn ensure_strategy_state_table(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "CREATE TABLE IF NOT EXISTS quant.strategy_state (date Date,scope LowCardinality(String),state LowCardinality(String),state_score Float64,transition_reason String,recommended_position_pct Float64,updated_at DateTime DEFAULT now()) ENGINE = MergeTree PARTITION BY toYYYYMM(date) ORDER BY (scope, date)",
     )
 }
 
@@ -816,6 +824,105 @@ pub fn insert_environment_snapshots(
         );
     }
     Ok(())
+}
+
+pub fn insert_strategy_states(
+    config: &StorageConfig,
+    rows: &[StrategyStateSnapshot],
+) -> Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    ensure_strategy_state_table(config)?;
+    let min_date = rows
+        .iter()
+        .map(|row| row.date)
+        .min()
+        .context("missing min strategy state date")?;
+    let max_date = rows
+        .iter()
+        .map(|row| row.date)
+        .max()
+        .context("missing max strategy state date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.scope.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
+    execute_clickhouse_query(
+        config,
+        &format!(
+            "ALTER TABLE quant.strategy_state DELETE WHERE scope IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
+        ),
+    )?;
+
+    let payload = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "date": row.date.to_string(),
+                "scope": row.scope,
+                "state": row.state.as_str(),
+                "state_score": row.state_score,
+                "transition_reason": row.transition_reason,
+                "recommended_position_pct": row.recommended_position_pct,
+            })
+        })
+        .map(|row| serde_json::to_string(&row))
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .join("\n");
+
+    let query = "INSERT INTO quant.strategy_state FORMAT JSONEachRow";
+    let url = format!(
+        "{}?database={}&query={}",
+        config.clickhouse_url,
+        config.clickhouse_database,
+        urlencoding::encode(query)
+    );
+    let response = clickhouse_client()
+        .post(url)
+        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
+        .body(payload)
+        .send()
+        .context("failed to insert strategy states")?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "strategy state insert failed with status {}",
+            response.status()
+        );
+    }
+    Ok(())
+}
+
+pub fn fetch_latest_strategy_state_on_or_before(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+    scope: AnalysisScope,
+) -> Result<Option<StrategyStateSnapshot>> {
+    ensure_strategy_state_table(config)?;
+    let query = format!(
+        "SELECT date,scope,state,state_score,transition_reason,recommended_position_pct FROM quant.strategy_state WHERE scope = '{}' AND date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+        scope.as_str(), report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    Ok(Some(
+        serde_json::from_str::<StrategyStateSnapshot>(line)
+            .context("failed to parse strategy state row")?,
+    ))
+}
+
+pub fn fetch_latest_strategy_state_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table_with_filter(config, "strategy_state", "scope", scope.as_str())
 }
 
 pub fn insert_rotation_ranks(config: &StorageConfig, rows: &[RotationRankSnapshot]) -> Result<()> {
