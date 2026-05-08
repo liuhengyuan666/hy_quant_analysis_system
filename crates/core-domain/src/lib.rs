@@ -194,3 +194,63 @@ pub struct SignalBuildStats {
     pub regime_missing: usize,
     pub rotation_missing: usize,
 }
+
+/// Strategy state machine: represents the current market-phase recommendation
+/// for a given scope (GLOBAL / CN / HK).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StrategyState {
+    NoTrade,
+    LeftProbe,
+    ConfirmAdd,
+    FullTrend,
+    DeRisk,
+}
+
+impl StrategyState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NoTrade => "NO_TRADE",
+            Self::LeftProbe => "LEFT_PROBE",
+            Self::ConfirmAdd => "CONFIRM_ADD",
+            Self::FullTrend => "FULL_TREND",
+            Self::DeRisk => "DE_RISK",
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::NoTrade => "市场状态不明或风险极高，全面观望",
+            Self::LeftProbe => "市场可能触底，适合小仓位试探",
+            Self::ConfirmAdd => "趋势初步确认，可逐步加仓",
+            Self::FullTrend => "趋势明确，风险可控，满仓操作",
+            Self::DeRisk => "趋势减弱或风险上升，降低仓位",
+        }
+    }
+
+    pub fn recommended_position_pct(&self) -> f64 {
+        match self {
+            Self::NoTrade => 0.0,
+            Self::LeftProbe => 20.0,
+            Self::ConfirmAdd => 60.0,
+            Self::FullTrend => 100.0,
+            Self::DeRisk => 30.0,
+        }
+    }
+}
+
+impl std::fmt::Display for StrategyState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyStateSnapshot {
+    pub date: NaiveDate,
+    pub scope: String,
+    pub state: StrategyState,
+    pub state_score: f64,
+    pub transition_reason: String,
+    pub recommended_position_pct: f64,
+}

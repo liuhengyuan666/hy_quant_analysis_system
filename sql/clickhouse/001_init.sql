@@ -209,3 +209,17 @@ CREATE TABLE IF NOT EXISTS quant.report_snapshot
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(report_date)
 ORDER BY (report_type, report_date);
+
+CREATE TABLE IF NOT EXISTS quant.strategy_state
+(
+    date Date,
+    scope LowCardinality(String),
+    state LowCardinality(String),
+    state_score Float64,
+    transition_reason String,
+    recommended_position_pct Float64,
+    updated_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(date)
+ORDER BY (scope, date);
