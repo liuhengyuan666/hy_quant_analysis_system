@@ -7,8 +7,8 @@ use backtest_engine::{BacktestEquityPoint, BacktestSummary, BacktestTrade};
 use chrono::NaiveDate;
 use core_domain::{
     AnalysisScope, DailyBar, EnvironmentSnapshot, IndicatorSnapshot, Instrument, MacroSnapshot,
-    MarketRegimeSnapshot, RegimeReason, RotationRankSnapshot, RotationReason, SignalReason,
-    SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
+    MarketRegimeSnapshot, RefreshJobRecord, RegimeReason, RotationRankSnapshot, RotationReason,
+    SignalReason, SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
@@ -94,6 +94,124 @@ pub fn init_sqlite(config: &StorageConfig) -> Result<()> {
         .execute_batch(&schema)
         .context("failed to initialize sqlite schema")?;
     Ok(())
+}
+
+fn sqlite_connection(config: &StorageConfig) -> Result<Connection> {
+    let sqlite_path = config.sqlite_abspath()?;
+    if let Some(parent) = sqlite_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create sqlite directory: {}", parent.display()))?;
+    }
+    let connection = Connection::open(&sqlite_path)
+        .with_context(|| format!("failed to open sqlite database: {}", sqlite_path.display()))?;
+    ensure_refresh_jobs_table(&connection)?;
+    Ok(connection)
+}
+
+fn ensure_refresh_jobs_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS refresh_jobs (
+                id TEXT PRIMARY KEY,
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                status TEXT NOT NULL,
+                stages_json TEXT NOT NULL,
+                last_successful_stage TEXT,
+                error TEXT,
+                refresh_from TEXT,
+                refresh_to TEXT
+            );",
+        )
+        .context("failed to ensure refresh_jobs table")?;
+    Ok(())
+}
+
+pub fn insert_refresh_job(config: &StorageConfig, job: &RefreshJobRecord) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    connection
+        .execute(
+            "INSERT INTO refresh_jobs (id, started_at, finished_at, status, stages_json, last_successful_stage, error, refresh_from, refresh_to)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                &job.id,
+                &job.started_at,
+                &job.finished_at,
+                &job.status,
+                &job.stages_json,
+                &job.last_successful_stage,
+                &job.error,
+                &job.refresh_from,
+                &job.refresh_to,
+            ],
+        )
+        .context("failed to insert refresh job")?;
+    Ok(())
+}
+
+pub fn update_refresh_job(config: &StorageConfig, job: &RefreshJobRecord) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    connection
+        .execute(
+            "UPDATE refresh_jobs
+             SET started_at = ?2,
+                 finished_at = ?3,
+                 status = ?4,
+                 stages_json = ?5,
+                 last_successful_stage = ?6,
+                 error = ?7,
+                 refresh_from = ?8,
+                 refresh_to = ?9
+             WHERE id = ?1",
+            rusqlite::params![
+                &job.id,
+                &job.started_at,
+                &job.finished_at,
+                &job.status,
+                &job.stages_json,
+                &job.last_successful_stage,
+                &job.error,
+                &job.refresh_from,
+                &job.refresh_to,
+            ],
+        )
+        .context("failed to update refresh job")?;
+    Ok(())
+}
+
+pub fn fetch_latest_refresh_job(config: &StorageConfig) -> Result<Option<RefreshJobRecord>> {
+    let mut jobs = fetch_refresh_jobs(config, 1)?;
+    Ok(jobs.pop())
+}
+
+pub fn fetch_refresh_jobs(config: &StorageConfig, limit: usize) -> Result<Vec<RefreshJobRecord>> {
+    let connection = sqlite_connection(config)?;
+    let limit = i64::try_from(limit).unwrap_or(i64::MAX).max(0);
+    let mut statement = connection
+        .prepare(
+            "SELECT id, started_at, finished_at, status, stages_json, last_successful_stage, error, refresh_from, refresh_to
+             FROM refresh_jobs
+             ORDER BY started_at DESC
+             LIMIT ?1",
+        )
+        .context("failed to prepare refresh jobs query")?;
+    let rows = statement
+        .query_map([limit], |row| {
+            Ok(RefreshJobRecord {
+                id: row.get(0)?,
+                started_at: row.get(1)?,
+                finished_at: row.get(2)?,
+                status: row.get(3)?,
+                stages_json: row.get(4)?,
+                last_successful_stage: row.get(5)?,
+                error: row.get(6)?,
+                refresh_from: row.get(7)?,
+                refresh_to: row.get(8)?,
+            })
+        })
+        .context("failed to query refresh jobs")?;
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .context("failed to decode refresh jobs")
 }
 
 fn clickhouse_client() -> &'static Client {

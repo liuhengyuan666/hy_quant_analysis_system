@@ -20,4 +20,5 @@ core-domain = { path = "../../../crates/core-domain" }
 market-store = { path = "../../../crates/market-store" }
 report-engine = { path = "../../../crates/report-engine" }
 serde.workspace = true
+serde_json.workspace = true
 tauri = { version = "2", features = [] }

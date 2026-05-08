@@ -20,3 +20,4 @@ signal-engine = { path = "../signal-engine" }
 strategy-engine = { path = "../strategy-engine" }
 serde.workspace = true
 serde_json.workspace = true
+uuid.workspace = true

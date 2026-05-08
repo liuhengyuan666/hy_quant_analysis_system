@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
-use core_domain::{EnvironmentSnapshot, Instrument, InstrumentType, Market, SignalSnapshot};
+use core_domain::{
+    EnvironmentSnapshot, Instrument, InstrumentType, Market, RefreshJobRecord, SignalSnapshot,
+};
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
@@ -20,6 +22,7 @@ use serde::Serialize;
 use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
 use std::fs;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
 
@@ -83,6 +86,31 @@ fn format_error_chain(error: &anyhow::Error) -> String {
 
 fn elapsed_ms(started_at: Instant) -> u64 {
     started_at.elapsed().as_millis() as u64
+}
+
+fn new_refresh_job_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+fn last_successful_stage(stages: &[RefreshStageExecution]) -> Option<String> {
+    stages
+        .iter()
+        .rev()
+        .find(|stage| stage.status == "success")
+        .map(|stage| stage.name.clone())
+}
+
+fn refresh_stage_order(stage: &str) -> Option<u8> {
+    match stage {
+        "ingest" => Some(0),
+        "indicators" => Some(1),
+        "macro" => Some(2),
+        "rotation" => Some(3),
+        "strategy" => Some(4),
+        "signals" => Some(5),
+        "backtests" => Some(6),
+        _ => None,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -266,6 +294,8 @@ pub struct RefreshPipelineAlerts {
 #[derive(Debug, Clone, Serialize)]
 pub struct RefreshPipelineSummary {
     pub success: bool,
+    pub cancelled: bool,
+    pub job_id: String,
     pub diagnostics_scope: String,
     pub refresh_window: RefreshPlan,
     pub backtests_requested: bool,
@@ -1062,6 +1092,10 @@ impl AppContext {
         market_store::init_storage(&self.storage)
     }
 
+    pub fn latest_refresh_job(&self) -> Result<Option<RefreshJobRecord>> {
+        market_store::fetch_latest_refresh_job(&self.storage)
+    }
+
     pub fn seed_universe(&self) -> Result<Vec<Instrument>> {
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
         market_store::insert_instruments(&self.storage, &instruments)?;
@@ -1165,6 +1199,8 @@ impl AppContext {
         to: NaiveDate,
         diagnostics_scope: ReportScope,
         run_backtests: bool,
+        cancel_flag: Option<&AtomicBool>,
+        start_stage: Option<&str>,
     ) -> Result<RefreshPipelineSummary> {
         let before_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
         let latest_dates_before = Self::summarize_latest_dates(&before_diagnostics);
@@ -1174,172 +1210,167 @@ impl AppContext {
         let macro_from = NaiveDate::parse_from_str(&plan.macro_from, "%Y-%m-%d")?;
         let macro_to = NaiveDate::parse_from_str(&plan.macro_to, "%Y-%m-%d")?;
 
+        let start_order = start_stage.and_then(refresh_stage_order);
+        let should_run = |stage_name: &str| {
+            start_order
+                .map(|order| refresh_stage_order(stage_name).unwrap_or(u8::MAX) >= order)
+                .unwrap_or(true)
+        };
         let mut stages = Vec::new();
         let mut blocking = Vec::new();
         let mut success = true;
 
-        let ingest = match self.ingest_daily(refresh_from, refresh_to) {
-            Ok(summary) => {
-                stages.push(RefreshStageExecution {
-                    name: "ingest".to_string(),
-                    status: "success".to_string(),
-                    summary: Some(RefreshStageSummary::Ingest(summary)),
-                    error: None,
-                });
-                None
-            }
-            Err(error) => Some(("ingest", error)),
+        let mut job = RefreshJobRecord {
+            id: new_refresh_job_id(),
+            started_at: Utc::now().to_rfc3339(),
+            finished_at: None,
+            status: "running".to_string(),
+            stages_json: "[]".to_string(),
+            last_successful_stage: None,
+            error: None,
+            refresh_from: Some(plan.refresh_from.clone()),
+            refresh_to: Some(plan.refresh_to.clone()),
         };
-        if let Some((stage_name, error)) = ingest {
-            let message = format_error_chain(&error);
-            stages.push(RefreshStageExecution {
-                name: stage_name.to_string(),
-                status: "error".to_string(),
-                summary: None,
-                error: Some(message.clone()),
-            });
-            blocking.push(message);
-            success = false;
-        } else {
-            let indicators = match self.compute_indicators() {
-                Ok(summary) => {
-                    stages.push(RefreshStageExecution {
-                        name: "indicators".to_string(),
-                        status: "success".to_string(),
-                        summary: Some(RefreshStageSummary::Indicators(summary)),
-                        error: None,
-                    });
-                    None
-                }
-                Err(error) => Some(("indicators", error)),
-            };
-            if let Some((stage_name, error)) = indicators {
-                let message = format_error_chain(&error);
-                stages.push(RefreshStageExecution {
-                    name: stage_name.to_string(),
-                    status: "error".to_string(),
-                    summary: None,
-                    error: Some(message.clone()),
+        market_store::insert_refresh_job(&self.storage, &job)?;
+
+        let refresh_window = plan.clone();
+
+        let persist_job = |job: &mut RefreshJobRecord,
+                           stages: &[RefreshStageExecution],
+                           status: &str,
+                           finished_at: Option<String>,
+                           error: Option<String>|
+         -> Result<()> {
+            job.status = status.to_string();
+            job.finished_at = finished_at;
+            job.error = error;
+            job.stages_json = serde_json::to_string(stages)?;
+            job.last_successful_stage = last_successful_stage(stages);
+            market_store::update_refresh_job(&self.storage, job)
+        };
+
+        macro_rules! finish_summary {
+            ($status:expr, $cancelled:expr, $consistency:expr, $latest_gate:expr, $after_diagnostics:expr, $latest_dates_after:expr, $advanced:expr, $error:expr) => {{
+                let finished_at = Utc::now().to_rfc3339();
+                persist_job(
+                    &mut job,
+                    &stages,
+                    $status,
+                    Some(finished_at),
+                    $error.clone(),
+                )?;
+                return Ok(RefreshPipelineSummary {
+                    success,
+                    cancelled: $cancelled,
+                    job_id: job.id.clone(),
+                    diagnostics_scope: scope_label(diagnostics_scope).to_string(),
+                    refresh_window,
+                    backtests_requested: run_backtests,
+                    latest_dates_before,
+                    latest_dates_after: $latest_dates_after,
+                    advanced: $advanced,
+                    stages,
+                    pipeline_diagnostics_by_scope: $after_diagnostics,
+                    alerts: RefreshPipelineAlerts {
+                        consistency: $consistency,
+                        blocking,
+                        latest_gate: $latest_gate,
+                    },
                 });
-                blocking.push(message);
-                success = false;
-            } else {
-                let macro_stage = match self.compute_macro_regime(macro_from, macro_to) {
-                    Ok(summary) => {
-                        stages.push(RefreshStageExecution {
-                            name: "macro".to_string(),
-                            status: "success".to_string(),
-                            summary: Some(RefreshStageSummary::Macro(summary)),
-                            error: None,
-                        });
-                        None
-                    }
-                    Err(error) => Some(("macro", error)),
-                };
-                if let Some((stage_name, error)) = macro_stage {
-                    let message = format_error_chain(&error);
-                    stages.push(RefreshStageExecution {
-                        name: stage_name.to_string(),
-                        status: "error".to_string(),
-                        summary: None,
-                        error: Some(message.clone()),
-                    });
-                    blocking.push(message);
+            }};
+        }
+
+        macro_rules! check_cancel {
+            () => {
+                if cancel_flag
+                    .map(|flag| flag.load(Ordering::Relaxed))
+                    .unwrap_or(false)
+                {
                     success = false;
-                } else {
-                    let rotation = match self.compute_rotation() {
+                    let message = "Refresh cancelled by operator".to_string();
+                    blocking.push(message.clone());
+                    let after_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
+                    let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
+                    finish_summary!(
+                        "cancelled",
+                        true,
+                        Vec::new(),
+                        Vec::new(),
+                        after_diagnostics,
+                        latest_dates_after,
+                        false,
+                        Some(message)
+                    );
+                }
+            };
+        }
+
+        macro_rules! run_refresh_stage {
+            ($stage_name:literal, $summary_variant:path, $body:expr) => {
+                if success && should_run($stage_name) {
+                    check_cancel!();
+                    match $body {
                         Ok(summary) => {
                             stages.push(RefreshStageExecution {
-                                name: "rotation".to_string(),
+                                name: $stage_name.to_string(),
                                 status: "success".to_string(),
-                                summary: Some(RefreshStageSummary::Rotation(summary)),
+                                summary: Some($summary_variant(summary)),
                                 error: None,
                             });
-                            None
+                            persist_job(&mut job, &stages, "running", None, None)?;
                         }
-                        Err(error) => Some(("rotation", error)),
-                    };
-                    if let Some((stage_name, error)) = rotation {
-                        let message = format_error_chain(&error);
-                        stages.push(RefreshStageExecution {
-                            name: stage_name.to_string(),
-                            status: "error".to_string(),
-                            summary: None,
-                            error: Some(message.clone()),
-                        });
-                        blocking.push(message);
-                        success = false;
-                    } else {
-                        let strategy = match self.compute_strategy_preferences() {
-                            Ok(summary) => {
-                                stages.push(RefreshStageExecution {
-                                    name: "strategy".to_string(),
-                                    status: "success".to_string(),
-                                    summary: Some(RefreshStageSummary::Strategy(summary)),
-                                    error: None,
-                                });
-                                None
-                            }
-                            Err(error) => Some(("strategy", error)),
-                        };
-                        if let Some((stage_name, error)) = strategy {
+                        Err(error) => {
                             let message = format_error_chain(&error);
                             stages.push(RefreshStageExecution {
-                                name: stage_name.to_string(),
+                                name: $stage_name.to_string(),
                                 status: "error".to_string(),
                                 summary: None,
                                 error: Some(message.clone()),
                             });
-                            blocking.push(message);
+                            blocking.push(message.clone());
                             success = false;
-                        } else {
-                            let signals = match self.compute_signals() {
-                                Ok(summary) => {
-                                    stages.push(RefreshStageExecution {
-                                        name: "signals".to_string(),
-                                        status: "success".to_string(),
-                                        summary: Some(RefreshStageSummary::Signals(summary)),
-                                        error: None,
-                                    });
-                                    None
-                                }
-                                Err(error) => Some(("signals", error)),
-                            };
-                            if let Some((stage_name, error)) = signals {
-                                let message = format_error_chain(&error);
-                                stages.push(RefreshStageExecution {
-                                    name: stage_name.to_string(),
-                                    status: "error".to_string(),
-                                    summary: None,
-                                    error: Some(message.clone()),
-                                });
-                                blocking.push(message);
-                                success = false;
-                            } else if run_backtests {
-                                match self.refresh_backtests_for_standard_scopes() {
-                                    Ok(summary) => stages.push(RefreshStageExecution {
-                                        name: "backtests".to_string(),
-                                        status: "success".to_string(),
-                                        summary: Some(RefreshStageSummary::Backtests(summary)),
-                                        error: None,
-                                    }),
-                                    Err(error) => {
-                                        let message = format_error_chain(&error);
-                                        stages.push(RefreshStageExecution {
-                                            name: "backtests".to_string(),
-                                            status: "error".to_string(),
-                                            summary: None,
-                                            error: Some(message.clone()),
-                                        });
-                                        blocking.push(message);
-                                        success = false;
-                                    }
-                                }
-                            }
+                            persist_job(&mut job, &stages, "running", None, Some(message))?;
                         }
                     }
                 }
+            };
+        }
+
+        run_refresh_stage!("ingest", RefreshStageSummary::Ingest, self.ingest_daily(refresh_from, refresh_to));
+        run_refresh_stage!("indicators", RefreshStageSummary::Indicators, self.compute_indicators());
+        run_refresh_stage!("macro", RefreshStageSummary::Macro, self.compute_macro_regime(macro_from, macro_to));
+        run_refresh_stage!("rotation", RefreshStageSummary::Rotation, self.compute_rotation());
+        run_refresh_stage!("strategy", RefreshStageSummary::Strategy, self.compute_strategy_preferences());
+        run_refresh_stage!("signals", RefreshStageSummary::Signals, self.compute_signals());
+        if success && run_backtests && should_run("backtests") {
+            check_cancel!();
+            match self.refresh_backtests_for_standard_scopes() {
+                Ok(summary) => {
+                    stages.push(RefreshStageExecution {
+                        name: "backtests".to_string(),
+                        status: "success".to_string(),
+                        summary: Some(RefreshStageSummary::Backtests(summary)),
+                        error: None,
+                    });
+                    persist_job(&mut job, &stages, "running", None, None)?;
+                }
+                Err(error) => {
+                    let message = format_error_chain(&error);
+                    stages.push(RefreshStageExecution {
+                        name: "backtests".to_string(),
+                        status: "error".to_string(),
+                        summary: None,
+                        error: Some(message.clone()),
+                    });
+                    blocking.push(message.clone());
+                    success = false;
+                    persist_job(&mut job, &stages, "running", None, Some(message))?;
+                }
             }
+        }
+
+        if success {
+            check_cancel!();
         }
 
         let consistency = if success {
@@ -1375,10 +1406,22 @@ impl AppContext {
 
         let latest_gate = latest_gate_alerts_for_scope(diagnostics_scope, before_scope, after_scope);
 
+        let final_status = if success { "success" } else { "error" };
+        let final_error = (!blocking.is_empty()).then(|| blocking.join(" | "));
+        persist_job(
+            &mut job,
+            &stages,
+            final_status,
+            Some(Utc::now().to_rfc3339()),
+            final_error,
+        )?;
+
         Ok(RefreshPipelineSummary {
             success,
+            cancelled: false,
+            job_id: job.id,
             diagnostics_scope: scope_label(diagnostics_scope).to_string(),
-            refresh_window: plan,
+            refresh_window,
             backtests_requested: run_backtests,
             latest_dates_before,
             latest_dates_after,

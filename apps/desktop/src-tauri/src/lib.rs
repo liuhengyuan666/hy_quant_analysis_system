@@ -1,10 +1,11 @@
 use app_service::AppContext;
 use chrono::{Local, NaiveDate};
 use market_store::StorageConfig;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize)]
@@ -21,6 +22,9 @@ struct DashboardRefreshStatus {
     started_at: Option<String>,
     finished_at: Option<String>,
     error: Option<String>,
+    cancelling: bool,
+    job_id: Option<String>,
+    last_successful_stage: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -48,6 +52,9 @@ impl Default for DashboardRefreshStatus {
             started_at: None,
             finished_at: None,
             error: None,
+            cancelling: false,
+            job_id: None,
+            last_successful_stage: None,
         }
     }
 }
@@ -55,6 +62,8 @@ impl Default for DashboardRefreshStatus {
 #[derive(Clone, Default)]
 struct RefreshCoordinator {
     status: Arc<Mutex<DashboardRefreshStatus>>,
+    cancel_flag: Arc<AtomicBool>,
+    current_job_id: Arc<Mutex<Option<String>>>,
 }
 
 fn set_refresh_status<F>(coordinator: &RefreshCoordinator, update: F)
@@ -179,24 +188,6 @@ impl RefreshStartStage {
             Self::Backtests => 96,
         }
     }
-
-    fn order(self) -> u8 {
-        match self {
-            Self::Ingest => 0,
-            Self::Indicators => 1,
-            Self::Macro => 2,
-            Self::Rotation => 3,
-            Self::Strategy => 4,
-            Self::Signals => 5,
-            Self::Backtests => 6,
-        }
-    }
-
-    fn should_run(self, start_stage: Option<Self>) -> bool {
-        start_stage
-            .map(|start| self.order() >= start.order())
-            .unwrap_or(true)
-    }
 }
 
 fn parse_refresh_start_stage(stage: Option<&str>) -> Result<Option<RefreshStartStage>, String> {
@@ -233,6 +224,119 @@ fn stage_label_from_key(stage_key: &str) -> &'static str {
     }
 }
 
+fn next_stage_after(stage_key: &str) -> Option<RefreshStartStage> {
+    match stage_key {
+        "ingest" => Some(RefreshStartStage::Indicators),
+        "indicators" => Some(RefreshStartStage::Macro),
+        "macro" => Some(RefreshStartStage::Rotation),
+        "rotation" => Some(RefreshStartStage::Strategy),
+        "strategy" => Some(RefreshStartStage::Signals),
+        "signals" => Some(RefreshStartStage::Backtests),
+        "backtests" => None,
+        _ => Some(RefreshStartStage::Ingest),
+    }
+}
+
+fn retry_stage_from_last_successful(stage_key: Option<&str>) -> Option<RefreshStartStage> {
+    match stage_key {
+        Some(stage) => next_stage_after(stage),
+        None => Some(RefreshStartStage::Ingest),
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PersistedRefreshStage {
+    name: String,
+    status: String,
+}
+
+fn parse_refresh_stages(stages_json: &str) -> Vec<PersistedRefreshStage> {
+    serde_json::from_str(stages_json).unwrap_or_default()
+}
+
+fn last_successful_from_stages(stages: &[PersistedRefreshStage]) -> Option<String> {
+    stages
+        .iter()
+        .rev()
+        .find(|stage| stage.status == "success")
+        .map(|stage| stage.name.clone())
+}
+
+fn failed_stage_from_stages(stages: &[PersistedRefreshStage]) -> Option<String> {
+    stages
+        .iter()
+        .find(|stage| stage.status == "error")
+        .map(|stage| stage.name.clone())
+}
+
+fn recoverable_persisted_refresh_status() -> Option<DashboardRefreshStatus> {
+    let context = AppContext::new(StorageConfig::default());
+    let job = context.latest_refresh_job().ok().flatten()?;
+    if job.status != "cancelled" && job.status != "error" {
+        return None;
+    }
+
+    let persisted_stages = parse_refresh_stages(&job.stages_json);
+    let last_successful_stage = job
+        .last_successful_stage
+        .clone()
+        .or_else(|| last_successful_from_stages(&persisted_stages));
+    let retry_from_stage = if job.status == "error" {
+        failed_stage_from_stages(&persisted_stages)
+            .and_then(|stage| parse_refresh_start_stage(Some(&stage)).ok().flatten())
+    } else {
+        retry_stage_from_last_successful(last_successful_stage.as_deref())
+    }
+    .map(|stage| stage.as_str().to_string());
+    let progress_pct = last_successful_stage
+        .as_deref()
+        .and_then(|stage| parse_refresh_start_stage(Some(stage)).ok().flatten())
+        .map(RefreshStartStage::progress_after)
+        .unwrap_or(0);
+    let stage = if job.status == "cancelled" {
+        last_successful_stage
+            .as_deref()
+            .map(|stage| format!("Refresh cancelled after {}", stage_label_from_key(stage)))
+            .unwrap_or_else(|| "Refresh cancelled before any stage completed".to_string())
+    } else {
+        retry_from_stage
+            .as_deref()
+            .map(|stage| format!("{} failed", stage_label_from_key(stage)))
+            .unwrap_or_else(|| "Refresh failed".to_string())
+    };
+
+    Some(DashboardRefreshStatus {
+        running: false,
+        status: job.status,
+        progress_pct,
+        stage,
+        current_stage: None,
+        start_stage: "full".to_string(),
+        retry_from_stage,
+        refresh_from: job.refresh_from,
+        refresh_to: job.refresh_to,
+        started_at: Some(job.started_at),
+        finished_at: job.finished_at,
+        error: job.error,
+        cancelling: false,
+        job_id: Some(job.id),
+        last_successful_stage,
+    })
+}
+
+fn visible_refresh_status(coordinator: &RefreshCoordinator) -> Result<DashboardRefreshStatus, String> {
+    let status = coordinator
+        .status
+        .lock()
+        .map(|status| status.clone())
+        .map_err(|error| error.to_string())?;
+    if status.status == "idle" {
+        Ok(recoverable_persisted_refresh_status().unwrap_or(status))
+    } else {
+        Ok(status)
+    }
+}
+
 fn spawn_dashboard_refresh(
     coordinator: RefreshCoordinator,
     start_stage: Option<RefreshStartStage>,
@@ -250,6 +354,10 @@ fn spawn_dashboard_refresh(
 
     let started_at = Local::now().to_rfc3339();
     let start_stage_value = start_stage_value(start_stage);
+    coordinator.cancel_flag.store(false, Ordering::Relaxed);
+    if let Ok(mut current_job_id) = coordinator.current_job_id.lock() {
+        *current_job_id = None;
+    }
     let prep_label = start_stage
         .map(|stage| format!("Preparing rerun from {}", stage.display_label()))
         .unwrap_or_else(|| "Preparing refresh window".to_string());
@@ -267,6 +375,9 @@ fn spawn_dashboard_refresh(
             started_at: Some(started_at.clone()),
             finished_at: None,
             error: None,
+            cancelling: false,
+            job_id: None,
+            last_successful_stage: None,
         };
     });
 
@@ -275,89 +386,113 @@ fn spawn_dashboard_refresh(
         let context = AppContext::new(StorageConfig::default());
         let today = Local::now().date_naive();
 
-        let result = (|| -> Result<(), anyhow::Error> {
-            let plan = context.build_refresh_plan(today)?;
-            let refresh_from = NaiveDate::parse_from_str(&plan.refresh_from, "%Y-%m-%d")?;
-            let refresh_to = NaiveDate::parse_from_str(&plan.refresh_to, "%Y-%m-%d")?;
-            let macro_from = NaiveDate::parse_from_str(&plan.macro_from, "%Y-%m-%d")?;
-            let macro_to = NaiveDate::parse_from_str(&plan.macro_to, "%Y-%m-%d")?;
-
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 5;
-                status.stage = "Prepared refresh window".to_string();
-                status.refresh_from = Some(plan.refresh_from.clone());
-                status.refresh_to = Some(plan.refresh_to.clone());
-            });
-
-            let run_stage = |worker: &RefreshCoordinator,
-                             stage: RefreshStartStage,
-                             action: &mut dyn FnMut() -> Result<(), anyhow::Error>| -> Result<(), anyhow::Error> {
-                if !stage.should_run(start_stage) {
-                    return Ok(());
-                }
-                set_refresh_status(worker, |status| {
-                    status.current_stage = Some(stage.as_str().to_string());
-                    status.stage = format!("Running {}", stage.display_label());
-                });
-                action()?;
-                set_refresh_status(worker, |status| {
-                    status.progress_pct = stage.progress_after();
-                    status.stage = format!("{} refreshed", stage.display_label());
-                });
-                Ok(())
-            };
-
-            run_stage(&worker, RefreshStartStage::Ingest, &mut || {
-                context.ingest_daily(refresh_from, refresh_to).map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Indicators, &mut || {
-                context.compute_indicators().map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Macro, &mut || {
-                context.compute_macro_regime(macro_from, macro_to).map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Rotation, &mut || {
-                context.compute_rotation().map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Strategy, &mut || {
-                context.compute_strategy_preferences().map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Signals, &mut || {
-                context.compute_signals().map(|_| ())
-            })?;
-            run_stage(&worker, RefreshStartStage::Backtests, &mut || {
-                context.refresh_backtests_for_standard_scopes().map(|_| ())
-            })?;
-
-            let alerts = context.refresh_consistency_alerts()?;
-            if !alerts.is_empty() {
-                set_refresh_status(&worker, |status| {
-                    status.current_stage = None;
-                    status.retry_from_stage = None;
-                    status.stage = "Refresh consistency validation failed".to_string();
-                });
-                anyhow::bail!(alerts.join(" | "));
-            }
-            set_refresh_status(&worker, |status| {
-                status.progress_pct = 100;
-                status.current_stage = None;
-                status.stage = "Refresh consistency verified".to_string();
-                status.retry_from_stage = None;
-            });
-
-            Ok(())
-        })();
+        let result = context.refresh_pipeline(
+            today,
+            app_service::ReportScope::Global,
+            true,
+            Some(worker.cancel_flag.as_ref()),
+            start_stage.map(RefreshStartStage::as_str),
+        );
 
         match result {
-            Ok(()) => {
+            Ok(summary) if summary.cancelled => {
                 let finished_at = Local::now().to_rfc3339();
+                let last_successful_stage = summary
+                    .stages
+                    .iter()
+                    .rev()
+                    .find(|stage| stage.status == "success")
+                    .map(|stage| stage.name.clone());
+                let retry_from_stage = retry_stage_from_last_successful(last_successful_stage.as_deref())
+                    .map(|stage| stage.as_str().to_string());
+                if let Ok(mut current_job_id) = worker.current_job_id.lock() {
+                    *current_job_id = Some(summary.job_id.clone());
+                }
+                set_refresh_status(&worker, |status| {
+                    status.running = false;
+                    status.status = "cancelled".to_string();
+                    status.finished_at = Some(finished_at);
+                    status.error = summary.alerts.blocking.first().cloned();
+                    status.current_stage = None;
+                    status.stage = last_successful_stage
+                        .as_deref()
+                        .map(|stage| format!("Refresh cancelled after {}", stage_label_from_key(stage)))
+                        .unwrap_or_else(|| "Refresh cancelled before any stage completed".to_string());
+                    status.retry_from_stage = retry_from_stage;
+                    status.job_id = Some(summary.job_id.clone());
+                    status.last_successful_stage = last_successful_stage;
+                    status.cancelling = false;
+                    status.refresh_from = Some(summary.refresh_window.refresh_from.clone());
+                    status.refresh_to = Some(summary.refresh_window.refresh_to.clone());
+                });
+            }
+            Ok(summary) if summary.success => {
+                let finished_at = Local::now().to_rfc3339();
+                if let Ok(mut current_job_id) = worker.current_job_id.lock() {
+                    *current_job_id = Some(summary.job_id.clone());
+                }
                 set_refresh_status(&worker, |status| {
                     status.running = false;
                     status.status = "success".to_string();
+                    status.progress_pct = 100;
+                    status.stage = "Refresh consistency verified".to_string();
                     status.finished_at = Some(finished_at);
                     status.error = None;
                     status.current_stage = None;
                     status.retry_from_stage = None;
+                    status.job_id = Some(summary.job_id.clone());
+                    status.last_successful_stage = summary
+                        .stages
+                        .iter()
+                        .rev()
+                        .find(|stage| stage.status == "success")
+                        .map(|stage| stage.name.clone());
+                    status.cancelling = false;
+                    status.refresh_from = Some(summary.refresh_window.refresh_from.clone());
+                    status.refresh_to = Some(summary.refresh_window.refresh_to.clone());
+                });
+            }
+            Ok(summary) => {
+                let finished_at = Local::now().to_rfc3339();
+                let retry_from_stage = summary
+                    .stages
+                    .iter()
+                    .find(|stage| stage.status == "error")
+                    .map(|stage| stage.name.clone())
+                    .or_else(|| retry_stage_from_last_successful(
+                        summary
+                            .stages
+                            .iter()
+                            .rev()
+                            .find(|stage| stage.status == "success")
+                            .map(|stage| stage.name.as_str()),
+                    ).map(|stage| stage.as_str().to_string()));
+                let last_successful_stage = summary
+                    .stages
+                    .iter()
+                    .rev()
+                    .find(|stage| stage.status == "success")
+                    .map(|stage| stage.name.clone());
+                let error = summary.alerts.blocking.join(" | ");
+                if let Ok(mut current_job_id) = worker.current_job_id.lock() {
+                    *current_job_id = Some(summary.job_id.clone());
+                }
+                set_refresh_status(&worker, |status| {
+                    let stage_label = retry_from_stage
+                        .as_deref()
+                        .map(stage_label_from_key)
+                        .unwrap_or("Refresh consistency validation");
+                    status.running = false;
+                    status.status = "error".to_string();
+                    status.stage = format!("{} failed", stage_label);
+                    status.finished_at = Some(finished_at);
+                    status.error = Some(error);
+                    status.retry_from_stage = retry_from_stage;
+                    status.job_id = Some(summary.job_id.clone());
+                    status.last_successful_stage = last_successful_stage;
+                    status.cancelling = false;
+                    status.refresh_from = Some(summary.refresh_window.refresh_from.clone());
+                    status.refresh_to = Some(summary.refresh_window.refresh_to.clone());
                 });
             }
             Err(error) => {
@@ -367,13 +502,14 @@ fn spawn_dashboard_refresh(
                     let stage_label = retry_from_stage
                         .as_deref()
                         .map(stage_label_from_key)
-                        .unwrap_or("Refresh consistency validation");
+                        .unwrap_or("Refresh");
                     status.running = false;
                     status.status = "error".to_string();
                     status.stage = format!("{} failed", stage_label);
                     status.finished_at = Some(finished_at);
                     status.error = Some(error.to_string());
                     status.retry_from_stage = retry_from_stage;
+                    status.cancelling = false;
                 });
             }
         }
@@ -419,11 +555,7 @@ async fn dashboard_bundle(
     .map_err(|error| error.to_string())?
     .map_err(|error| error.to_string())?;
 
-    let refresh_status = refresh
-        .status
-        .lock()
-        .map(|status| status.clone())
-        .map_err(|error| error.to_string())?;
+    let refresh_status = visible_refresh_status(refresh.inner())?;
 
     Ok(DashboardBundlePayload {
         status: bundle.status,
@@ -582,11 +714,7 @@ async fn usage_guides() -> Result<Vec<app_service::UsageGuide>, String> {
 fn dashboard_refresh_status(
     refresh: tauri::State<RefreshCoordinator>,
 ) -> Result<DashboardRefreshStatus, String> {
-    refresh
-        .status
-        .lock()
-        .map(|status| status.clone())
-        .map_err(|error| error.to_string())
+    visible_refresh_status(refresh.inner())
 }
 
 #[tauri::command]
@@ -599,17 +727,52 @@ fn start_dashboard_refresh(
 }
 
 #[tauri::command]
+fn cancel_dashboard_refresh(
+    refresh: tauri::State<RefreshCoordinator>,
+) -> Result<(), String> {
+    refresh.cancel_flag.store(true, Ordering::Relaxed);
+    set_refresh_status(refresh.inner(), |status| {
+        if status.running {
+            status.cancelling = true;
+            status.stage = "Cancelling after current stage completes...".to_string();
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
 fn retry_dashboard_refresh(
     refresh: tauri::State<RefreshCoordinator>,
 ) -> Result<DashboardRefreshStatus, String> {
-    let retry_stage = {
+    let retry_stage = if let Some(stage) = {
         let status = refresh
             .status
             .lock()
             .map_err(|error| error.to_string())?
             .clone();
         parse_refresh_start_stage(status.retry_from_stage.as_deref())?
-            .ok_or_else(|| "no failed stage is available to retry".to_string())?
+    } {
+        stage
+    } else {
+        let context = AppContext::new(StorageConfig::default());
+        let job = context
+            .latest_refresh_job()
+            .map_err(|error| error.to_string())?
+            .filter(|job| job.status == "cancelled" || job.status == "error")
+            .ok_or_else(|| "no failed or cancelled refresh job is available to resume".to_string())?;
+        let persisted_stages = parse_refresh_stages(&job.stages_json);
+        let retry_stage = if job.status == "error" {
+            failed_stage_from_stages(&persisted_stages)
+                .and_then(|stage| parse_refresh_start_stage(Some(&stage)).ok().flatten())
+        } else {
+            let persisted_last_successful = last_successful_from_stages(&persisted_stages);
+            retry_stage_from_last_successful(
+                job.last_successful_stage
+                    .as_deref()
+                    .or(persisted_last_successful.as_deref()),
+            )
+        };
+        retry_stage.ok_or_else(|| "no resumable stage is available for the latest refresh job".to_string())?
     };
     spawn_dashboard_refresh(refresh.inner().clone(), Some(retry_stage))
 }
@@ -632,6 +795,7 @@ pub fn run() {
             usage_guides,
             dashboard_refresh_status,
             start_dashboard_refresh,
+            cancel_dashboard_refresh,
             retry_dashboard_refresh
         ])
         .run(tauri::generate_context!())

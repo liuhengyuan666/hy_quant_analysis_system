@@ -60,6 +60,9 @@ export function normalizeRefreshStatus(payload) {
     started_at: payload?.started_at ? String(payload.started_at) : null,
     finished_at: payload?.finished_at ? String(payload.finished_at) : null,
     error: payload?.error ? String(payload.error) : null,
+    cancelling: Boolean(payload?.cancelling),
+    job_id: payload?.job_id ? String(payload.job_id) : null,
+    last_successful_stage: payload?.last_successful_stage ? String(payload.last_successful_stage) : null,
   };
 }
 

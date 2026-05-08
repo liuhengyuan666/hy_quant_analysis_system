@@ -95,6 +95,9 @@ const state = {
     started_at: null,
     finished_at: null,
     error: null,
+    cancelling: false,
+    job_id: null,
+    last_successful_stage: null,
   },
 };
 
@@ -112,6 +115,7 @@ const COMMANDS = {
   recentReports: 'recent_reports',
   usageGuides: 'usage_guides',
   startRefresh: 'start_dashboard_refresh',
+  cancelRefresh: 'cancel_dashboard_refresh',
   retryRefresh: 'retry_dashboard_refresh',
   refreshStatus: 'dashboard_refresh_status',
   openReportArtifact: 'open_report_artifact',
@@ -1151,11 +1155,13 @@ function renderTrustSummaryNotice(snapshot, inline = false) {
 
 function renderRefreshProgress() {
   const refresh = state.refreshStatus;
-  const isVisible = state.refreshing || refresh.running || refresh.status === 'error' || refresh.status === 'success';
+  const isVisible = state.refreshing || refresh.running || ['error', 'success', 'cancelled'].includes(refresh.status);
   if (!isVisible) return '';
 
   const tone = refresh.status === 'error'
     ? 'negative'
+    : refresh.status === 'cancelled'
+      ? 'warning'
     : refresh.running
       ? 'neutral'
       : 'positive';
@@ -1169,19 +1175,34 @@ function renderRefreshProgress() {
     : refresh.finished_at
       ? `Finished ${formatDateTime(refresh.finished_at)}`
       : 'Waiting to start';
-  const retryDisabled = state.loading || state.refreshing || state.refreshStatus.running || !refresh.retry_from_stage;
+  const retryDisabled = state.loading || state.refreshing || state.refreshStatus.running;
+  const lastSuccessfulStage = refresh.last_successful_stage || refresh.retry_from_stage || '';
+  const lastSuccessfulLabel = lastSuccessfulStage ? formatRefreshStageLabel(lastSuccessfulStage) : 'none';
+  const retryLabel = refresh.status === 'cancelled'
+    ? 'Resume'
+    : lastSuccessfulStage
+      ? `Resume from ${formatRefreshStageLabel(lastSuccessfulStage)}`
+      : 'Retry failed stage';
+  const title = refresh.running
+    ? refresh.cancelling ? 'Cancelling refresh' : 'Refreshing analysis pipeline'
+    : refresh.status === 'error'
+      ? 'Refresh failed'
+      : refresh.status === 'cancelled'
+        ? 'Refresh cancelled'
+        : 'Refresh completed';
 
   return `
     <section class="refresh-progress refresh-progress--${tone}" aria-live="polite">
       <div class="refresh-progress__header">
         <div>
           <p class="eyebrow">Background refresh</p>
-          <h2>${escapeHtml(refresh.running ? 'Refreshing analysis pipeline' : refresh.status === 'error' ? 'Refresh failed' : 'Refresh completed')}</h2>
+          <h2>${escapeHtml(title)}</h2>
           <p class="panel__lede">${escapeHtml(refresh.stage || 'Waiting')}</p>
         </div>
         <div class="panel__actions">
           <span class="pill pill--outline">Run from · ${escapeHtml(formatRefreshStageLabel(refresh.start_stage))}</span>
           ${refresh.retry_from_stage ? `<span class="pill pill--warning">Retry from · ${escapeHtml(formatRefreshStageLabel(refresh.retry_from_stage))}</span>` : ''}
+          ${refresh.cancelling ? '<span class="pill pill--warning">Cancelling...</span>' : ''}
           <span class="pill pill--${tone}">${escapeHtml(`${formatInteger(progress)}%`)}</span>
         </div>
       </div>
@@ -1192,6 +1213,34 @@ function renderRefreshProgress() {
         <span>${escapeHtml(rangeText)}</span>
         <span>${escapeHtml(timingText)}</span>
       </div>
+      ${refresh.running && !refresh.cancelling ? `
+        <div class="refresh-progress__meta-row">
+          <button
+            id="cancelRefreshButton"
+            class="button button--secondary button--compact"
+            ${state.loading ? 'disabled' : ''}
+          >
+            Cancel
+          </button>
+        </div>
+      ` : ''}
+      ${refresh.status === 'cancelled' ? `
+        <section class="notice notice--warning notice--inline">
+          <div>
+            <strong>Refresh was cancelled</strong>
+            <p>${escapeHtml(`Refresh was cancelled. Last successful stage: ${lastSuccessfulLabel}.`)}</p>
+          </div>
+        </section>
+        <div class="refresh-progress__meta-row">
+          <button
+            id="resumeRefreshButton"
+            class="button button--secondary button--compact"
+            ${retryDisabled ? 'disabled' : ''}
+          >
+            Resume
+          </button>
+        </div>
+      ` : ''}
       ${refresh.status === 'error' ? `
         <div class="refresh-progress__meta-row">
           <button
@@ -1199,7 +1248,7 @@ function renderRefreshProgress() {
             class="button button--secondary button--compact"
             ${retryDisabled ? 'disabled' : ''}
           >
-            Retry failed stage
+            ${escapeHtml(retryLabel)}
           </button>
         </div>
       ` : ''}
@@ -1415,6 +1464,20 @@ function commitRender() {
     };
   }
 
+  const resumeRefreshButton = document.querySelector('#resumeRefreshButton');
+  if (resumeRefreshButton) {
+    resumeRefreshButton.onclick = () => {
+      retryFailedRefresh();
+    };
+  }
+
+  const cancelRefreshButton = document.querySelector('#cancelRefreshButton');
+  if (cancelRefreshButton) {
+    cancelRefreshButton.onclick = () => {
+      cancelRefreshJob();
+    };
+  }
+
   document.querySelectorAll('.signal-card--interactive').forEach((button) => {
     button.onclick = () => {
       const group = button.dataset.signalGroup;
@@ -1531,7 +1594,7 @@ async function startRefreshJob(startStage = 'full') {
 }
 
 async function retryFailedRefresh() {
-  if (state.refreshing || state.refreshStatus.running || !state.refreshStatus.retry_from_stage) return;
+  if (state.refreshing || state.refreshStatus.running) return;
 
   state.error = '';
   state.refreshing = true;
@@ -1549,6 +1612,32 @@ async function retryFailedRefresh() {
       ...state.refreshStatus,
       running: false,
       status: 'error',
+      error: getErrorMessage(error),
+    };
+    render();
+  }
+}
+
+async function cancelRefreshJob() {
+  if (!state.refreshStatus.running || state.refreshStatus.cancelling) return;
+
+  state.refreshStatus = {
+    ...state.refreshStatus,
+    cancelling: true,
+    stage: 'Cancelling after current stage completes...',
+  };
+  render();
+
+  try {
+    await invoke(COMMANDS.cancelRefresh);
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.refreshStatus));
+    state.refreshing = state.refreshStatus.running;
+    render();
+    scheduleRefreshPoll(500);
+  } catch (error) {
+    state.refreshStatus = {
+      ...state.refreshStatus,
+      cancelling: false,
       error: getErrorMessage(error),
     };
     render();

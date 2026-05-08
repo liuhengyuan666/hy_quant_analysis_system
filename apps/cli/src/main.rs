@@ -155,6 +155,8 @@ fn main() -> Result<()> {
                 to.unwrap_or_else(|| Local::now().date_naive()),
                 scope.into(),
                 run_backtests,
+                None,
+                None,
             )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
             if !result.success {

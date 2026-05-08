@@ -195,6 +195,19 @@ pub struct SignalBuildStats {
     pub rotation_missing: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RefreshJobRecord {
+    pub id: String,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+    pub status: String,
+    pub stages_json: String,
+    pub last_successful_stage: Option<String>,
+    pub error: Option<String>,
+    pub refresh_from: Option<String>,
+    pub refresh_to: Option<String>,
+}
+
 /// Structured breakdown of how a signal score was derived.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegimeReason {
