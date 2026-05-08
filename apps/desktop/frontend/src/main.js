@@ -80,6 +80,7 @@ const state = {
   selectedReportDate: '',
   selectedRefreshStartStage: 'full',
   selectedUsageGuideId: '',
+  selectedSignalDetail: null,
   lastUpdatedAt: null,
   refreshStatus: {
     running: false,
@@ -712,6 +713,92 @@ function renderSignalReason(reason) {
   `;
 }
 
+function renderSignalContributionSection(title, weight, valueRows) {
+  return `
+    <section class="signal-detail__section">
+      <div class="panel__subheader">
+        <p class="panel__section-title">${escapeHtml(title)}</p>
+        <span class="pill pill--outline">${escapeHtml(weight)}</span>
+      </div>
+      <dl class="detail-grid signal-detail__grid">
+        ${valueRows
+          .map(
+            ([label, value]) => `
+              <div class="detail-item">
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${value}</dd>
+              </div>
+            `,
+          )
+          .join('')}
+      </dl>
+    </section>
+  `;
+}
+
+function renderSignalDetailModal(signal) {
+  if (!signal) return '';
+
+  const reason = signal.reason || {};
+  const label = signal.signal_label || reason.label || 'N/A';
+  const finalScore = signal.final_score ?? reason.final_score;
+  const alignedStrategies = Array.isArray(reason.aligned_strategies) && reason.aligned_strategies.length
+    ? reason.aligned_strategies
+      .map((strategy) => `<span class="pill pill--neutral">${escapeHtml(prettifyToken(strategy))}</span>`)
+      .join('')
+    : '<span class="panel__meta">No aligned strategies</span>';
+  const alignmentCount = reason.alignment === null || reason.alignment === undefined
+    ? 'N/A'
+    : formatInteger(reason.alignment);
+  const rotationRank = reason.rotation?.rank === null || reason.rotation?.rank === undefined
+    ? 'N/A'
+    : `#${formatInteger(reason.rotation.rank)}`;
+
+  return `
+    <div class="signal-detail" role="dialog" aria-modal="true" aria-labelledby="signalDetailTitle">
+      <button class="signal-detail__backdrop" type="button" aria-label="Close signal detail"></button>
+      <article class="signal-detail__panel panel">
+        <div class="panel__header signal-detail__header">
+          <div>
+            <p class="eyebrow">Signal drilldown</p>
+            <h2 id="signalDetailTitle">${escapeHtml(signal.symbol || 'Unknown symbol')}</h2>
+            <p class="panel__lede">${escapeHtml(reason.summary || 'No structured summary is available for this signal.')}</p>
+          </div>
+          <div class="panel__actions signal-detail__actions">
+            <span class="pill pill--${signalTone(label)}">${escapeHtml(prettifyToken(label))}</span>
+            <span class="pill pill--outline">Score ${escapeHtml(formatNumber(finalScore, 2))}</span>
+            <button id="closeSignalDetailButton" class="signal-detail__close" type="button" aria-label="Close signal detail">×</button>
+          </div>
+        </div>
+        <div class="signal-detail__sections">
+          ${renderSignalContributionSection('Strategy', '45% weight', [
+            ['Best strategy', escapeHtml(prettifyToken(reason.best_strategy || 'N/A'))],
+            ['Strategy score', escapeHtml(formatNumber(reason.strategy_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.strategy_contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Alignment', '15% weight', [
+            ['Alignment count', escapeHtml(alignmentCount)],
+            ['Aligned strategies', `<div class="signal-detail__pill-row">${alignedStrategies}</div>`],
+            ['Contribution', escapeHtml(formatNumber(reason.alignment_contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Regime', '20% weight', [
+            ['Trend score', escapeHtml(formatNumber(reason.regime?.trend_score, 2))],
+            ['Risk score', escapeHtml(formatNumber(reason.regime?.risk_score, 2))],
+            ['Combined score', escapeHtml(formatNumber(reason.regime?.combined_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.regime?.contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Rotation', '20% weight', [
+            ['Momentum score', escapeHtml(formatNumber(reason.rotation?.momentum_score, 2))],
+            ['Rank', escapeHtml(rotationRank)],
+            ['Combined score', escapeHtml(formatNumber(reason.rotation?.combined_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.rotation?.contribution, 2))],
+          ])}
+        </div>
+      </article>
+    </div>
+  `;
+}
+
 function renderRotationPanel(snapshot) {
   if (!snapshot?.top_rotation?.length) {
     return `
@@ -818,10 +905,11 @@ function renderRotationPanel(snapshot) {
 }
 
 function renderSignalsPanel(snapshot) {
+  const topSignals = snapshot?.top_signals || [];
   const bullishSignals = snapshot?.bullish_signals || [];
   const defensiveSignals = snapshot?.defensive_signals || [];
 
-  if (!bullishSignals.length && !defensiveSignals.length) {
+  if (!topSignals.length && !bullishSignals.length && !defensiveSignals.length) {
     return `
       <article class="panel">
         <div class="panel__header">
@@ -864,6 +952,32 @@ function renderSignalsPanel(snapshot) {
           <p>${escapeHtml(`This ${signalBasis.snapshotScope} view is currently showing signals with analysis scope ${signalBasis.analysisScope} and regime basis ${signalBasis.regimeBasisScope}.`)}</p>
         </section>
       ` : ''}
+      ${topSignals.length ? `
+        <section class="signal-focus-section">
+          <div class="panel__subheader">
+            <p class="panel__section-title">Top signals</p>
+            <span class="panel__meta">Highest conviction across labels</span>
+          </div>
+          <div class="signal-list">
+            ${topSignals
+              .map(
+                (item, index) => `
+                  <button class="signal-card signal-card--top signal-card--interactive" type="button" data-signal-group="top" data-signal-index="${escapeHtml(index)}">
+                    <div class="signal-card__header">
+                      <div>
+                        <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
+                        <p class="signal-card__score">Score ${escapeHtml(formatNumber(item.final_score, 2))}</p>
+                      </div>
+                      <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
+                    </div>
+                    ${renderSignalReason(item.reason)}
+                  </button>
+                `,
+              )
+              .join('')}
+          </div>
+        </section>
+      ` : ''}
       <div class="signal-groups-grid">
         <section>
           <div class="panel__subheader">
@@ -874,8 +988,8 @@ function renderSignalsPanel(snapshot) {
             ? `<div class="signal-list">
                 ${bullishSignals
                   .map(
-                    (item) => `
-                      <article class="signal-card signal-card--bullish">
+                    (item, index) => `
+                      <button class="signal-card signal-card--bullish signal-card--interactive" type="button" data-signal-group="bullish" data-signal-index="${escapeHtml(index)}">
                         <div class="signal-card__header">
                           <div>
                             <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
@@ -884,7 +998,7 @@ function renderSignalsPanel(snapshot) {
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
                         ${renderSignalReason(item.reason)}
-                      </article>
+                      </button>
                     `,
                   )
                   .join('')}
@@ -900,8 +1014,8 @@ function renderSignalsPanel(snapshot) {
             ? `<div class="signal-list">
                 ${defensiveSignals
                   .map(
-                    (item) => `
-                      <article class="signal-card signal-card--defensive">
+                    (item, index) => `
+                      <button class="signal-card signal-card--defensive signal-card--interactive" type="button" data-signal-group="defensive" data-signal-index="${escapeHtml(index)}">
                         <div class="signal-card__header">
                           <div>
                             <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
@@ -910,7 +1024,7 @@ function renderSignalsPanel(snapshot) {
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
                         ${renderSignalReason(item.reason)}
-                      </article>
+                      </button>
                     `,
                   )
                   .join('')}
@@ -1243,9 +1357,11 @@ function commitRender() {
       </section>
     </main>
     ${usageGuides.renderUsageGuidesViewer()}
+    ${renderSignalDetailModal(state.selectedSignalDetail)}
   `;
 
   document.body.classList.toggle('body--guide-viewer-open', state.isUsageGuideOpen);
+  document.body.classList.toggle('body--signal-modal-open', Boolean(state.selectedSignalDetail));
 
   document.querySelector('#refreshButton').onclick = () => {
     startRefreshJob(state.selectedRefreshStartStage);
@@ -1262,6 +1378,7 @@ function commitRender() {
 
     state.selectedReportDate = nextDate;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
     loadSelectedSnapshot();
   };
 
@@ -1273,6 +1390,7 @@ function commitRender() {
     state.selectedReportDate = '';
     state.snapshot = null;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
     loadDashboard();
   };
 
@@ -1282,6 +1400,7 @@ function commitRender() {
 
     state.selectedReportDate = latestAvailableDate;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
     loadSelectedSnapshot();
   };
 
@@ -1294,6 +1413,38 @@ function commitRender() {
     retryRefreshButton.onclick = () => {
       retryFailedRefresh();
     };
+  }
+
+  document.querySelectorAll('.signal-card--interactive').forEach((button) => {
+    button.onclick = () => {
+      const group = button.dataset.signalGroup;
+      const index = Number(button.dataset.signalIndex);
+      const signals = group === 'bullish'
+        ? state.snapshot?.bullish_signals
+        : group === 'defensive'
+          ? state.snapshot?.defensive_signals
+          : state.snapshot?.top_signals;
+      const signal = Array.isArray(signals) ? signals[index] : null;
+      if (!signal) return;
+
+      state.selectedSignalDetail = signal;
+      render();
+    };
+  });
+
+  const closeSignalDetail = () => {
+    state.selectedSignalDetail = null;
+    render();
+  };
+
+  const signalDetailBackdrop = document.querySelector('.signal-detail__backdrop');
+  if (signalDetailBackdrop) {
+    signalDetailBackdrop.onclick = closeSignalDetail;
+  }
+
+  const closeSignalDetailButton = document.querySelector('#closeSignalDetailButton');
+  if (closeSignalDetailButton) {
+    closeSignalDetailButton.onclick = closeSignalDetail;
   }
 
   dataHealth.bindEvents(document);
@@ -1357,6 +1508,7 @@ async function startRefreshJob(startStage = 'full') {
 
   state.error = '';
   state.refreshing = true;
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -1383,6 +1535,7 @@ async function retryFailedRefresh() {
 
   state.error = '';
   state.refreshing = true;
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -1405,6 +1558,7 @@ async function retryFailedRefresh() {
 async function loadDashboard() {
   state.loading = true;
   state.error = '';
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -1463,6 +1617,7 @@ async function loadDashboard() {
 async function loadSelectedSnapshot() {
   state.loading = true;
   state.error = '';
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -1530,6 +1685,11 @@ async function exportReport() {
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && state.isUsageGuideOpen) {
     usageGuides.closeUsageGuides();
+  }
+
+  if (event.key === 'Escape' && state.selectedSignalDetail) {
+    state.selectedSignalDetail = null;
+    render();
   }
 });
 

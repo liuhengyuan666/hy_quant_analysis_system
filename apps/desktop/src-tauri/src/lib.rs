@@ -1,5 +1,6 @@
 use app_service::AppContext;
 use chrono::{Local, NaiveDate};
+use core_domain::SignalSnapshot;
 use market_store::StorageConfig;
 use serde::Serialize;
 use std::fs;
@@ -503,6 +504,32 @@ async fn export_report(
 }
 
 #[tauri::command]
+async fn get_signal_detail(
+    symbol: String,
+    scope: Option<String>,
+    date: Option<String>,
+) -> Result<Option<core_domain::SignalSnapshot>, String> {
+    let parsed_date = date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.get_signal_detail(parsed_scope, &symbol, parsed_date.unwrap_or_else(|| chrono::Utc::now().date_naive()))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 async fn data_health_summary() -> Result<report_engine::DataHealthSummary, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let context = AppContext::new(StorageConfig::default());
@@ -598,6 +625,7 @@ pub fn run() {
             dashboard_snapshot,
             dashboard_available_dates,
             export_report,
+            get_signal_detail,
             data_health_summary,
             export_data_health_report,
             recent_reports,

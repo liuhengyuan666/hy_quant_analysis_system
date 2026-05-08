@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
-use core_domain::{EnvironmentSnapshot, Instrument, InstrumentType, Market};
+use core_domain::{EnvironmentSnapshot, Instrument, InstrumentType, Market, SignalSnapshot};
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
@@ -2772,6 +2772,20 @@ impl AppContext {
             output_path: output_path.display().to_string(),
             failed_items: Vec::new(),
         })
+    }
+
+    pub fn get_signal_detail(
+        &self,
+        scope: ReportScope,
+        symbol: &str,
+        date: NaiveDate,
+    ) -> Result<Option<SignalSnapshot>> {
+        market_store::fetch_signal_snapshot_for_symbol(
+            &self.storage,
+            date,
+            symbol,
+            scope.into(),
+        )
     }
 
     pub fn export_data_health_report(&self) -> Result<ReportSummary> {

@@ -2842,6 +2842,7 @@ dependencies = [
  "anyhow",
  "app-service",
  "chrono",
+ "core-domain",
  "market-store",
  "report-engine",
  "serde",

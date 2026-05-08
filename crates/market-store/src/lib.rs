@@ -1898,6 +1898,28 @@ pub fn fetch_signal_snapshots_for_date_with_scope(
     Ok(rows)
 }
 
+pub fn fetch_signal_snapshot_for_symbol(
+    config: &StorageConfig,
+    date: NaiveDate,
+    symbol: &str,
+    scope: AnalysisScope,
+) -> Result<Option<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE date = '{}' AND symbol = '{}' AND analysis_scope = '{}' LIMIT 1 FORMAT JSONEachRow",
+        date,
+        escape_sql_string(symbol),
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse signal snapshot row")?;
+    Ok(Some(decode_signal_snapshot_row(row)?))
+}
+
 pub fn insert_backtest_result(
     config: &StorageConfig,
     summary: &BacktestSummary,
