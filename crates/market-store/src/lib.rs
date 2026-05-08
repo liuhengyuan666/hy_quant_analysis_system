@@ -105,6 +105,7 @@ fn sqlite_connection(config: &StorageConfig) -> Result<Connection> {
     let connection = Connection::open(&sqlite_path)
         .with_context(|| format!("failed to open sqlite database: {}", sqlite_path.display()))?;
     ensure_refresh_jobs_table(&connection)?;
+    ensure_user_preferences_table(&connection)?;
     Ok(connection)
 }
 
@@ -124,6 +125,19 @@ fn ensure_refresh_jobs_table(connection: &Connection) -> Result<()> {
             );",
         )
         .context("failed to ensure refresh_jobs table")?;
+    Ok(())
+}
+
+fn ensure_user_preferences_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS user_preferences (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );",
+        )
+        .context("failed to ensure user_preferences table")?;
     Ok(())
 }
 
@@ -212,6 +226,52 @@ pub fn fetch_refresh_jobs(config: &StorageConfig, limit: usize) -> Result<Vec<Re
         .context("failed to query refresh jobs")?;
     rows.collect::<std::result::Result<Vec<_>, _>>()
         .context("failed to decode refresh jobs")
+}
+
+pub fn get_user_preference(config: &StorageConfig, key: &str) -> Result<Option<String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT value FROM user_preferences WHERE key = ?1")
+        .context("failed to prepare get_user_preference query")?;
+    let mut rows = statement
+        .query_map([key], |row| row.get::<_, String>(0))
+        .context("failed to query user preference")?;
+    match rows.next() {
+        Some(Ok(value)) => Ok(Some(value)),
+        Some(Err(error)) => Err(error).context("failed to read user preference value"),
+        None => Ok(None),
+    }
+}
+
+pub fn set_user_preference(config: &StorageConfig, key: &str, value: &str) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    let now = chrono::Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO user_preferences (key, value, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = ?3",
+            rusqlite::params![key, value, now],
+        )
+        .context("failed to set user preference")?;
+    Ok(())
+}
+
+pub fn get_all_user_preferences(config: &StorageConfig) -> Result<std::collections::BTreeMap<String, String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT key, value FROM user_preferences")
+        .context("failed to prepare get_all_user_preferences query")?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .context("failed to query all user preferences")?;
+    let mut map = std::collections::BTreeMap::new();
+    for row in rows {
+        let (key, value) = row.context("failed to read user preference row")?;
+        map.insert(key, value);
+    }
+    Ok(map)
 }
 
 fn clickhouse_client() -> &'static Client {

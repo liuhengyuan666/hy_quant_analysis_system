@@ -119,7 +119,27 @@ const COMMANDS = {
   retryRefresh: 'retry_dashboard_refresh',
   refreshStatus: 'dashboard_refresh_status',
   openReportArtifact: 'open_report_artifact',
+  getUserPreferences: 'get_user_preferences',
+  setUserPreference: 'set_user_preference',
 };
+
+function savePreference(key, value) {
+  invoke(COMMANDS.setUserPreference, { key, value }).catch(() => {});
+}
+
+async function loadAndApplyPreferences() {
+  try {
+    const prefs = await invoke(COMMANDS.getUserPreferences);
+    if (prefs.default_scope && ['global', 'cn', 'hk'].includes(prefs.default_scope)) {
+      state.selectedScope = prefs.default_scope;
+    }
+    if (prefs.last_analysis_date) {
+      state.selectedReportDate = prefs.last_analysis_date;
+    }
+  } catch (_) {
+    // Silently ignore preference load errors
+  }
+}
 
 const usageGuides = createUsageGuidesSlice({
   state,
@@ -1428,6 +1448,7 @@ function commitRender() {
     state.selectedReportDate = nextDate;
     state.exportResult = null;
     state.selectedSignalDetail = null;
+    savePreference('last_analysis_date', nextDate);
     loadSelectedSnapshot();
   };
 
@@ -1440,6 +1461,7 @@ function commitRender() {
     state.snapshot = null;
     state.exportResult = null;
     state.selectedSignalDetail = null;
+    savePreference('default_scope', nextScope);
     loadDashboard();
   };
 
@@ -1450,6 +1472,7 @@ function commitRender() {
     state.selectedReportDate = latestAvailableDate;
     state.exportResult = null;
     state.selectedSignalDetail = null;
+    savePreference('last_analysis_date', latestAvailableDate);
     loadSelectedSnapshot();
   };
 
@@ -1783,4 +1806,4 @@ document.addEventListener('keydown', (event) => {
 });
 
 render();
-loadDashboard();
+loadAndApplyPreferences().then(() => loadDashboard());

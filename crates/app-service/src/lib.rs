@@ -1088,6 +1088,18 @@ impl AppContext {
         })
     }
 
+    pub fn get_user_preference(&self, key: &str) -> Result<Option<String>> {
+        market_store::get_user_preference(&self.storage, key)
+    }
+
+    pub fn set_user_preference(&self, key: &str, value: &str) -> Result<()> {
+        market_store::set_user_preference(&self.storage, key, value)
+    }
+
+    pub fn get_all_user_preferences(&self) -> Result<BTreeMap<String, String>> {
+        market_store::get_all_user_preferences(&self.storage)
+    }
+
     pub fn init_storage(&self) -> Result<()> {
         market_store::init_storage(&self.storage)
     }

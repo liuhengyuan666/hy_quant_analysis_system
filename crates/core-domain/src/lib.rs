@@ -299,3 +299,10 @@ pub struct StrategyStateSnapshot {
     pub transition_reason: String,
     pub recommended_position_pct: f64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UserPreference {
+    pub key: String,
+    pub value: String,
+    pub updated_at: String,
+}

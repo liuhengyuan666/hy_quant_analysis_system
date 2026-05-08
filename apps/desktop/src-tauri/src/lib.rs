@@ -2,6 +2,7 @@ use app_service::AppContext;
 use chrono::{Local, NaiveDate};
 use market_store::StorageConfig;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -741,6 +742,18 @@ fn cancel_dashboard_refresh(
 }
 
 #[tauri::command]
+fn get_user_preferences() -> Result<BTreeMap<String, String>, String> {
+    let context = AppContext::new(StorageConfig::default());
+    context.get_all_user_preferences().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn set_user_preference(key: String, value: String) -> Result<(), String> {
+    let context = AppContext::new(StorageConfig::default());
+    context.set_user_preference(&key, &value).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn retry_dashboard_refresh(
     refresh: tauri::State<RefreshCoordinator>,
 ) -> Result<DashboardRefreshStatus, String> {
@@ -796,7 +809,9 @@ pub fn run() {
             dashboard_refresh_status,
             start_dashboard_refresh,
             cancel_dashboard_refresh,
-            retry_dashboard_refresh
+            retry_dashboard_refresh,
+            get_user_preferences,
+            set_user_preference
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
