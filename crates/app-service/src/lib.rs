@@ -42,33 +42,87 @@ fn load_calendar_from_config(dir: &std::path::Path) -> core_domain::calendar::Tr
     let mut cn_holidays = HashSet::new();
     let mut hk_holidays = HashSet::new();
 
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("json") {
-                continue;
-            }
-            if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let (Some(market), Some(holidays)) = (
-                        config.get("market").and_then(|m| m.as_str()),
-                        config.get("holidays").and_then(|h| h.as_array()),
-                    ) {
-                        for holiday in holidays {
-                            if let Some(date_str) = holiday.as_str() {
-                                if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                                    match market {
-                                        "CN" => cn_holidays.insert(date),
-                                        "HK" => hk_holidays.insert(date),
-                                        _ => false,
-                                    };
-                                }
-                            }
+    match fs::read_dir(dir) {
+        Ok(entries) => {
+            for entry_result in entries {
+                let entry = match entry_result {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        eprintln!("failed to read calendar config directory entry: {error}");
+                        continue;
+                    }
+                };
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                    continue;
+                }
+                let content = match fs::read_to_string(&path) {
+                    Ok(content) => content,
+                    Err(error) => {
+                        eprintln!("failed to read calendar config {}: {error}", path.display());
+                        continue;
+                    }
+                };
+                let config = match serde_json::from_str::<serde_json::Value>(&content) {
+                    Ok(config) => config,
+                    Err(error) => {
+                        eprintln!(
+                            "failed to parse calendar config {}: {error}",
+                            path.display()
+                        );
+                        continue;
+                    }
+                };
+                let (market, holidays) = match (
+                    config.get("market").and_then(|m| m.as_str()),
+                    config.get("holidays").and_then(|h| h.as_array()),
+                ) {
+                    (Some(market), Some(holidays)) => (market, holidays),
+                    _ => {
+                        eprintln!(
+                            "calendar config {} is missing market or holidays",
+                            path.display()
+                        );
+                        continue;
+                    }
+                };
+                for holiday in holidays {
+                    let Some(date_str) = holiday.as_str() else {
+                        eprintln!(
+                            "calendar config {} contains a non-string holiday",
+                            path.display()
+                        );
+                        continue;
+                    };
+                    let date = match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                        Ok(date) => date,
+                        Err(error) => {
+                            eprintln!(
+                                "calendar config {} contains invalid holiday {date_str}: {error}",
+                                path.display()
+                            );
+                            continue;
                         }
+                    };
+                    match market {
+                        "CN" => {
+                            cn_holidays.insert(date);
+                        }
+                        "HK" => {
+                            hk_holidays.insert(date);
+                        }
+                        other => eprintln!(
+                            "calendar config {} uses unsupported market {other}",
+                            path.display()
+                        ),
                     }
                 }
             }
         }
+        Err(error) => eprintln!(
+            "failed to read calendar config directory {}: {error}",
+            dir.display()
+        ),
     }
 
     core_domain::calendar::TradingCalendar::new(cn_holidays, hk_holidays)
@@ -82,6 +136,26 @@ fn format_error_chain(error: &anyhow::Error) -> String {
         current = source.source();
     }
     parts.join(" | caused by: ")
+}
+
+fn validate_user_preference(key: &str, value: &str) -> Result<()> {
+    const MAX_PREFERENCE_VALUE_LEN: usize = 32;
+    if value.len() > MAX_PREFERENCE_VALUE_LEN {
+        anyhow::bail!("user preference value is too long: {key}");
+    }
+
+    match key {
+        "default_scope" => match value {
+            "global" | "cn" | "hk" => Ok(()),
+            _ => anyhow::bail!("unsupported default_scope preference value: {value}"),
+        },
+        "last_analysis_date" => {
+            NaiveDate::parse_from_str(value, "%Y-%m-%d")
+                .with_context(|| format!("invalid last_analysis_date preference value: {value}"))?;
+            Ok(())
+        }
+        _ => anyhow::bail!("unsupported user preference key: {key}"),
+    }
 }
 
 fn elapsed_ms(started_at: Instant) -> u64 {
@@ -345,7 +419,9 @@ fn build_trust_summary(
             .collect(),
         None => Vec::new(),
     };
-    let non_trading_count = scoped_instruments.len().saturating_sub(trading_instruments.len());
+    let non_trading_count = scoped_instruments
+        .len()
+        .saturating_sub(trading_instruments.len());
     let scoped_symbols_expected = trading_instruments.len();
     let scoped_symbols_on_freshest_market_date = freshest_market_date
         .map(|date| {
@@ -402,12 +478,12 @@ fn build_trust_summary(
     let pipeline_stale = pipeline_dates.stages.iter().any(|stage| {
         matches!(stage.lag_days, Some(lag) if lag > 0)
             && matches!(
-                    stage.stage.as_str(),
-                    "market_regime"
-                        | "environment_snapshot"
-                        | "strategy_state"
-                        | "strategy_preference"
-                        | "signal_snapshot"
+                stage.stage.as_str(),
+                "market_regime"
+                    | "environment_snapshot"
+                    | "strategy_state"
+                    | "strategy_preference"
+                    | "signal_snapshot"
             )
     });
     let pipeline_stale_stage_count = pipeline_dates
@@ -435,7 +511,8 @@ fn build_trust_summary(
     }
     if !latest_day_complete {
         notes.push(
-            "Latest market date is not fully covered across the active trading universe.".to_string(),
+            "Latest market date is not fully covered across the active trading universe."
+                .to_string(),
         );
     }
     if data_health.review_macro_sources > 0 {
@@ -734,7 +811,9 @@ fn build_signal_alignment_issue_for_dates(
 }
 
 fn build_signal_completeness_issue(stages: &[PipelineStageDateStatus]) -> Option<String> {
-    let signal_stage = stages.iter().find(|stage| stage.stage == "signal_snapshot")?;
+    let signal_stage = stages
+        .iter()
+        .find(|stage| stage.stage == "signal_snapshot")?;
     match (
         signal_stage.latest_date.as_ref(),
         signal_stage.latest_entities,
@@ -1093,6 +1172,7 @@ impl AppContext {
     }
 
     pub fn set_user_preference(&self, key: &str, value: &str) -> Result<()> {
+        validate_user_preference(key, value)?;
         market_store::set_user_preference(&self.storage, key, value)
     }
 
@@ -1301,7 +1381,8 @@ impl AppContext {
                     success = false;
                     let message = "Refresh cancelled by operator".to_string();
                     blocking.push(message.clone());
-                    let after_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
+                    let after_diagnostics =
+                        self.collect_pipeline_diagnostics_for_standard_scopes()?;
                     let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
                     finish_summary!(
                         "cancelled",
@@ -1348,12 +1429,36 @@ impl AppContext {
             };
         }
 
-        run_refresh_stage!("ingest", RefreshStageSummary::Ingest, self.ingest_daily(refresh_from, refresh_to));
-        run_refresh_stage!("indicators", RefreshStageSummary::Indicators, self.compute_indicators());
-        run_refresh_stage!("macro", RefreshStageSummary::Macro, self.compute_macro_regime(macro_from, macro_to));
-        run_refresh_stage!("rotation", RefreshStageSummary::Rotation, self.compute_rotation());
-        run_refresh_stage!("strategy", RefreshStageSummary::Strategy, self.compute_strategy_preferences());
-        run_refresh_stage!("signals", RefreshStageSummary::Signals, self.compute_signals());
+        run_refresh_stage!(
+            "ingest",
+            RefreshStageSummary::Ingest,
+            self.ingest_daily(refresh_from, refresh_to)
+        );
+        run_refresh_stage!(
+            "indicators",
+            RefreshStageSummary::Indicators,
+            self.compute_indicators()
+        );
+        run_refresh_stage!(
+            "macro",
+            RefreshStageSummary::Macro,
+            self.compute_macro_regime(macro_from, macro_to)
+        );
+        run_refresh_stage!(
+            "rotation",
+            RefreshStageSummary::Rotation,
+            self.compute_rotation()
+        );
+        run_refresh_stage!(
+            "strategy",
+            RefreshStageSummary::Strategy,
+            self.compute_strategy_preferences()
+        );
+        run_refresh_stage!(
+            "signals",
+            RefreshStageSummary::Signals,
+            self.compute_signals()
+        );
         if success && run_backtests && should_run("backtests") {
             check_cancel!();
             match self.refresh_backtests_for_standard_scopes() {
@@ -1399,12 +1504,18 @@ impl AppContext {
         let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
         let before_scope = before_diagnostics
             .iter()
-            .find(|item| item.scope.eq_ignore_ascii_case(scope_label(diagnostics_scope)))
+            .find(|item| {
+                item.scope
+                    .eq_ignore_ascii_case(scope_label(diagnostics_scope))
+            })
             .map(|item| &item.diagnostics)
             .context("missing before diagnostics for requested scope")?;
         let after_scope = after_diagnostics
             .iter()
-            .find(|item| item.scope.eq_ignore_ascii_case(scope_label(diagnostics_scope)))
+            .find(|item| {
+                item.scope
+                    .eq_ignore_ascii_case(scope_label(diagnostics_scope))
+            })
             .map(|item| &item.diagnostics)
             .context("missing after diagnostics for requested scope")?;
 
@@ -1416,7 +1527,8 @@ impl AppContext {
             _ => false,
         };
 
-        let latest_gate = latest_gate_alerts_for_scope(diagnostics_scope, before_scope, after_scope);
+        let latest_gate =
+            latest_gate_alerts_for_scope(diagnostics_scope, before_scope, after_scope);
 
         let final_status = if success { "success" } else { "error" };
         let final_error = (!blocking.is_empty()).then(|| blocking.join(" | "));
@@ -1464,12 +1576,7 @@ impl AppContext {
             freshest_market_date: diagnostics.freshest_market_date.clone(),
             latest_available_dashboard_date: diagnostics.dashboard_latest_date.clone(),
             latest_gate_advanced,
-            alerts: diagnostics
-                .alerts
-                .iter()
-                .cloned()
-                .chain(alerts)
-                .collect(),
+            alerts: diagnostics.alerts.iter().cloned().chain(alerts).collect(),
             stages: latest_gate_stage_explanations(&diagnostics),
         })
     }
@@ -1799,12 +1906,10 @@ impl AppContext {
                     .map(|environment| build_strategy_state(regime, environment))
             })
             .collect::<Vec<_>>();
-        if let Err(error) = market_store::insert_strategy_states(&self.storage, &strategy_state_rows)
+        if let Err(error) =
+            market_store::insert_strategy_states(&self.storage, &strategy_state_rows)
         {
-            failed_items.push(format!(
-                "strategy_state: {}",
-                format_error_chain(&error)
-            ));
+            failed_items.push(format!("strategy_state: {}", format_error_chain(&error)));
         }
 
         Ok(MacroSummary {
@@ -1928,11 +2033,8 @@ impl AppContext {
         if let Err(error) = market_store::insert_signal_snapshots(&self.storage, &rows) {
             anyhow::bail!("signal_snapshot insert failed: {error}");
         }
-        let alignment_issues = self.signal_alignment_issues([
-            ReportScope::Global,
-            ReportScope::Cn,
-            ReportScope::Hk,
-        ])?;
+        let alignment_issues =
+            self.signal_alignment_issues([ReportScope::Global, ReportScope::Cn, ReportScope::Hk])?;
         if !alignment_issues.is_empty() {
             anyhow::bail!(alignment_issues.join(" | "));
         }
@@ -1971,11 +2073,7 @@ impl AppContext {
     }
 
     pub fn refresh_consistency_alerts(&self) -> Result<Vec<String>> {
-        self.signal_alignment_issues([
-            ReportScope::Global,
-            ReportScope::Cn,
-            ReportScope::Hk,
-        ])
+        self.signal_alignment_issues([ReportScope::Global, ReportScope::Cn, ReportScope::Hk])
     }
 
     pub fn run_backtest(
@@ -2489,12 +2587,9 @@ impl AppContext {
             let has_environment =
                 market_store::fetch_latest_environment_on_or_before(&self.storage, date, scope)?
                     .is_some();
-            let has_strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
-                &self.storage,
-                date,
-                scope,
-            )?
-            .is_some();
+            let has_strategy_state =
+                market_store::fetch_latest_strategy_state_on_or_before(&self.storage, date, scope)?
+                    .is_some();
             if signal_count >= expected_count
                 && rotation_count >= expected_count
                 && has_regime
@@ -2852,12 +2947,7 @@ impl AppContext {
         symbol: &str,
         date: NaiveDate,
     ) -> Result<Option<SignalSnapshot>> {
-        market_store::fetch_signal_snapshot_for_symbol(
-            &self.storage,
-            date,
-            symbol,
-            scope.into(),
-        )
+        market_store::fetch_signal_snapshot_for_symbol(&self.storage, date, symbol, scope.into())
     }
 
     pub fn export_data_health_report(&self) -> Result<ReportSummary> {
@@ -3159,8 +3249,7 @@ mod tests {
         let to = NaiveDate::from_ymd_opt(2026, 4, 20).unwrap();
         let latest_daily = NaiveDate::from_ymd_opt(2026, 5, 4).unwrap();
 
-        let (refresh_from, reason, _) =
-            derive_refresh_window(to, Some(latest_daily), None, true);
+        let (refresh_from, reason, _) = derive_refresh_window(to, Some(latest_daily), None, true);
 
         assert!(refresh_from <= latest_daily);
         assert_eq!(reason, "missing-gated-scope-repair");
