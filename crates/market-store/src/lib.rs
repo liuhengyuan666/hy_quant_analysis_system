@@ -256,7 +256,9 @@ pub fn set_user_preference(config: &StorageConfig, key: &str, value: &str) -> Re
     Ok(())
 }
 
-pub fn get_all_user_preferences(config: &StorageConfig) -> Result<std::collections::BTreeMap<String, String>> {
+pub fn get_all_user_preferences(
+    config: &StorageConfig,
+) -> Result<std::collections::BTreeMap<String, String>> {
     let connection = sqlite_connection(config)?;
     let mut statement = connection
         .prepare("SELECT key, value FROM user_preferences")
@@ -454,8 +456,12 @@ fn decode_signal_snapshot_row(mut row: serde_json::Value) -> Result<SignalSnapsh
         .and_then(|value| value.as_str())
         .unwrap_or_default()
         .to_string();
+    let trimmed_explanation = explanation.trim_start();
     row["reason"] = match serde_json::from_str::<SignalReason>(&explanation) {
         Ok(reason) => serde_json::to_value(reason)?,
+        Err(error) if trimmed_explanation.starts_with('{') => {
+            anyhow::bail!("failed to parse structured signal reason JSON: {error}")
+        }
         Err(_) => serde_json::to_value(fallback_signal_reason(&row, &explanation))?,
     };
     if let Some(object) = row.as_object_mut() {
