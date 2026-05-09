@@ -53,10 +53,17 @@ enum Command {
     RefreshAll {
         #[arg(long)]
         to: Option<NaiveDate>,
-        #[arg(long, help = "Scope used for latest-date diagnostics and gate explanation only")]
+        #[arg(
+            long,
+            help = "Scope used for latest-date diagnostics and gate explanation only"
+        )]
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
-        #[arg(long, default_value_t = true, help = "Whether to include standard-scope backtests in the aggregate refresh (default: true)")]
+        #[arg(
+            long,
+            default_value_t = true,
+            help = "Whether to include standard-scope backtests in the aggregate refresh (default: true)"
+        )]
         #[arg(long, default_value_t = true)]
         run_backtests: bool,
     },

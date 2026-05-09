@@ -656,7 +656,9 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
             backtest.trading_days
         ));
         if backtest.drawdown_events > 0 {
-            output.push_str("- Note: Drawdown limit protective actions were triggered during this run.\n");
+            output.push_str(
+                "- Note: Drawdown limit protective actions were triggered during this run.\n",
+            );
         }
         if !backtest.state_trajectory.is_empty() {
             output.push_str("\n## Strategy State Trajectory\n\n");
@@ -775,7 +777,9 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
 mod tests {
     use super::*;
     use backtest_engine::BacktestSummary;
-    use core_domain::{RegimeReason, RotationReason, SignalLabel, SignalReason, SignalSnapshot, StrategyKind};
+    use core_domain::{
+        RegimeReason, RotationReason, SignalLabel, SignalReason, SignalSnapshot, StrategyKind,
+    };
 
     #[test]
     fn render_markdown_report_includes_watchlist_breadth_section() {

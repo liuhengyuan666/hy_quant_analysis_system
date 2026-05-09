@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use chrono::NaiveDate;
-use core_domain::{AnalysisScope, DailyBar, EnvironmentSnapshot, MacroSnapshot, MarketRegimeSnapshot, StrategyState, StrategyStateSnapshot};
+use core_domain::{
+    AnalysisScope, DailyBar, EnvironmentSnapshot, MacroSnapshot, MarketRegimeSnapshot,
+    StrategyState, StrategyStateSnapshot,
+};
 
 #[derive(Debug, Clone)]
 pub struct MacroFactorSeries {
@@ -204,56 +207,38 @@ pub fn build_strategy_state(
     let env_score = environment.environment_score;
     let stress = environment.stress_proxy_score;
 
-    let (state, reason, position_pct) =
-        if liquidity < 20.0 || (trend < 25.0 && risk > 75.0) {
-            (
-                StrategyState::NoTrade,
-                "流动性极度紧张或市场极度低迷，全面观望",
-                0.0,
-            )
-        } else if trend < 45.0
-            && breadth < 35.0
-            && env_score < 45.0
-            && risk < 65.0
-        {
-            (
-                StrategyState::LeftProbe,
-                "市场低迷但未到崩溃边缘，可能触底，小仓位试探",
-                20.0,
-            )
-        } else if trend > 70.0
-            && risk < 40.0
-            && breadth > 50.0
-            && env_score > 60.0
-            && stress < 60.0
-        {
-            (
-                StrategyState::FullTrend,
-                "趋势明确，风险可控，广度健康，满仓操作",
-                100.0,
-            )
-        } else if trend > 55.0 && env_score > 50.0 && breadth > 35.0 && risk < 55.0 {
-            (
-                StrategyState::ConfirmAdd,
-                "趋势初步确认，逐步加仓",
-                60.0,
-            )
-        } else if trend < 55.0 || risk > 60.0 || stress > 70.0 {
-            (
-                StrategyState::DeRisk,
-                "趋势减弱或风险/压力上升，降低仓位",
-                30.0,
-            )
-        } else {
-            (
-                StrategyState::NoTrade,
-                "市场状态不明确，保持观望",
-                0.0,
-            )
-        };
+    let (state, reason, position_pct) = if liquidity < 20.0 || (trend < 25.0 && risk > 75.0) {
+        (
+            StrategyState::NoTrade,
+            "流动性极度紧张或市场极度低迷，全面观望",
+            0.0,
+        )
+    } else if trend < 45.0 && breadth < 35.0 && env_score < 45.0 && risk < 65.0 {
+        (
+            StrategyState::LeftProbe,
+            "市场低迷但未到崩溃边缘，可能触底，小仓位试探",
+            20.0,
+        )
+    } else if trend > 70.0 && risk < 40.0 && breadth > 50.0 && env_score > 60.0 && stress < 60.0 {
+        (
+            StrategyState::FullTrend,
+            "趋势明确，风险可控，广度健康，满仓操作",
+            100.0,
+        )
+    } else if trend > 55.0 && env_score > 50.0 && breadth > 35.0 && risk < 55.0 {
+        (StrategyState::ConfirmAdd, "趋势初步确认，逐步加仓", 60.0)
+    } else if trend < 55.0 || risk > 60.0 || stress > 70.0 {
+        (
+            StrategyState::DeRisk,
+            "趋势减弱或风险/压力上升，降低仓位",
+            30.0,
+        )
+    } else {
+        (StrategyState::NoTrade, "市场状态不明确，保持观望", 0.0)
+    };
 
-    let state_score =
-        (trend * 0.35 + (100.0 - risk) * 0.25 + breadth * 0.20 + env_score * 0.20).clamp(0.0, 100.0);
+    let state_score = (trend * 0.35 + (100.0 - risk) * 0.25 + breadth * 0.20 + env_score * 0.20)
+        .clamp(0.0, 100.0);
 
     StrategyStateSnapshot {
         date: regime.date,
