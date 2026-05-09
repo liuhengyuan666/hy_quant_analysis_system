@@ -107,6 +107,8 @@ mod tests {
         cn.insert(NaiveDate::from_ymd_opt(2026, 5, 1).unwrap());
         cn.insert(NaiveDate::from_ymd_opt(2026, 5, 2).unwrap());
         cn.insert(NaiveDate::from_ymd_opt(2026, 5, 3).unwrap());
+        cn.insert(NaiveDate::from_ymd_opt(2026, 5, 4).unwrap());
+        cn.insert(NaiveDate::from_ymd_opt(2026, 5, 5).unwrap());
 
         let mut hk = HashSet::new();
         hk.insert(NaiveDate::from_ymd_opt(2026, 5, 1).unwrap());
@@ -147,7 +149,7 @@ mod tests {
         let from = NaiveDate::from_ymd_opt(2026, 4, 27).unwrap();
         let to = NaiveDate::from_ymd_opt(2026, 5, 6).unwrap();
         let cn_days = cal.trading_days_between(&super::super::Market::Cn, from, to);
-        assert_eq!(cn_days.len(), 4);
+        assert_eq!(cn_days.len(), 5);
     }
 
     #[test]
