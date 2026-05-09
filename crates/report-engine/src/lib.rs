@@ -2,6 +2,7 @@ use backtest_engine::BacktestSummary;
 use chrono::NaiveDate;
 use core_domain::{
     EnvironmentSnapshot, MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot,
+    StrategyStateSnapshot,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -29,9 +30,39 @@ pub struct DashboardSnapshot {
     pub bullish_signals: Vec<SignalSnapshot>,
     pub defensive_signals: Vec<SignalSnapshot>,
     pub environment: Option<EnvironmentSnapshot>,
+    pub strategy_state: Option<StrategyStateSnapshot>,
+    pub trust_summary: Option<TrustSummary>,
     pub watchlist_breadth: Option<WatchlistBreadthSnapshot>,
     pub latest_backtest: Option<BacktestSummary>,
     pub load_metrics: Option<DashboardLoadMetrics>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrustSummary {
+    pub level: String,
+    pub headline: String,
+    pub message: String,
+    pub pipeline_has_partial_latest: bool,
+    pub pipeline_has_stale_stage: bool,
+    pub pipeline_partial_latest_stage_count: usize,
+    pub pipeline_stale_stage_count: usize,
+    pub freshest_market_date: Option<String>,
+    pub latest_available_date: Option<String>,
+    pub latest_day_complete: bool,
+    pub scoped_symbols_expected: usize,
+    pub scoped_symbols_on_freshest_market_date: usize,
+    pub macro_status: String,
+    pub data_health_generated_at: Option<String>,
+    pub data_health_review_symbols: usize,
+    pub data_health_critical_symbols: usize,
+    pub data_health_review_macro_sources: usize,
+    pub data_health_critical_macro_sources: usize,
+    pub signal_analysis_scope: Option<String>,
+    pub signal_regime_basis_scope: Option<String>,
+    pub strategy_state: Option<String>,
+    pub strategy_recommended_position_pct: Option<f64>,
+    pub backtest_matches_snapshot: Option<bool>,
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +105,7 @@ pub struct DataHealthSymbolSummary {
     pub symbol: String,
     pub name: String,
     pub display_symbol: Option<String>,
+    pub latest_gate_required: bool,
     pub rows: usize,
     pub first_date: Option<NaiveDate>,
     pub last_date: Option<NaiveDate>,
@@ -108,6 +140,10 @@ pub struct DataHealthSummary {
     pub symbols_on_freshest_market_date: usize,
     pub symbols_missing_freshest_market_date: usize,
     pub freshest_market_date_complete: bool,
+    pub latest_gate_checked_symbols: usize,
+    pub latest_gate_symbols_on_freshest_market_date: usize,
+    pub latest_gate_symbols_missing_freshest_market_date: usize,
+    pub latest_gate_freshest_market_date_complete: bool,
     pub checked_symbols: usize,
     pub healthy_symbols: usize,
     pub review_symbols: usize,
@@ -226,6 +262,8 @@ pub fn build_dashboard_snapshot(
         bullish_signals,
         defensive_signals,
         environment: None,
+        strategy_state: None,
+        trust_summary: None,
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
@@ -236,6 +274,7 @@ pub fn build_dashboard_snapshot_for_date(
     regime: &MarketRegimeSnapshot,
     rotations: &[RotationRankSnapshot],
     signals: &[SignalSnapshot],
+    strategy_state: Option<StrategyStateSnapshot>,
     latest_backtest: Option<BacktestSummary>,
     report_date: NaiveDate,
     latest_available_date: NaiveDate,
@@ -302,6 +341,8 @@ pub fn build_dashboard_snapshot_for_date(
         bullish_signals,
         defensive_signals,
         environment: None,
+        strategy_state,
+        trust_summary: None,
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
@@ -320,12 +361,167 @@ fn format_optional_delta(value: Option<f64>) -> String {
         .unwrap_or_else(|| "N/A".to_string())
 }
 
+fn first_signal(snapshot: &DashboardSnapshot) -> Option<&SignalSnapshot> {
+    snapshot
+        .top_signals
+        .first()
+        .or_else(|| snapshot.bullish_signals.first())
+        .or_else(|| snapshot.defensive_signals.first())
+}
+
+fn format_signal_breakdown(signal: &SignalSnapshot) -> String {
+    let reason = &signal.reason;
+    format!(
+        "{} | best={:?} strategy={:.2}/{:.2} | alignment={}/{} contrib={:.2} | regime trend={:.2} risk={:.2} combined={:.2} contrib={:.2} | rotation momentum={:.2} rank={} combined={:.2} contrib={:.2}",
+        reason.summary,
+        reason.best_strategy,
+        reason.strategy_score,
+        reason.strategy_contribution,
+        reason.alignment,
+        reason
+            .aligned_strategies
+            .iter()
+            .map(|strategy| format!("{:?}", strategy))
+            .collect::<Vec<_>>()
+            .join(","),
+        reason.alignment_contribution,
+        reason.regime.trend_score,
+        reason.regime.risk_score,
+        reason.regime.combined_score,
+        reason.regime.contribution,
+        reason.rotation.momentum_score,
+        reason
+            .rotation
+            .rank
+            .map(|rank| rank.to_string())
+            .unwrap_or_else(|| "N/A".to_string()),
+        reason.rotation.combined_score,
+        reason.rotation.contribution,
+    )
+}
+
+fn signal_basis_note(snapshot: &DashboardSnapshot) -> Option<String> {
+    let signal = first_signal(snapshot)?;
+    let analysis_scope = signal.analysis_scope.to_uppercase();
+    let regime_basis_scope = signal.regime_basis_scope.to_uppercase();
+    let snapshot_scope = snapshot.scope.to_uppercase();
+    let mut note = format!(
+        "- Signal Analysis Scope: {}\n- Signal Regime Basis: {}\n",
+        analysis_scope, regime_basis_scope
+    );
+    if regime_basis_scope != snapshot_scope {
+        note.push_str(&format!(
+            "- Trust Note: signal scoring still uses {} regime semantics while this report is scoped to {}\n",
+            regime_basis_scope, snapshot_scope
+        ));
+    }
+    Some(note)
+}
+
+fn backtest_matches_snapshot(snapshot: &DashboardSnapshot, backtest: &BacktestSummary) -> bool {
+    backtest
+        .analysis_scope
+        .eq_ignore_ascii_case(&snapshot.scope)
+        && backtest.signal_scope.eq_ignore_ascii_case(&snapshot.scope)
+        && backtest
+            .signal_end_date
+            .map(|date| date.to_string())
+            .as_deref()
+            == Some(snapshot.report_date.as_str())
+}
+
 pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     let mut output = String::new();
     output.push_str(&format!(
         "# Daily Quant Report\n\nScope: {}\nDate: {}\n\n",
         snapshot.scope, snapshot.report_date
     ));
+    output.push_str("## Trust Summary\n\n");
+    if let Some(trust) = &snapshot.trust_summary {
+        output.push_str(&format!(
+            "- Level: {}\n- Headline: {}\n- Message: {}\n- Freshest Market Date: {}\n- Latest Available Date: {}\n- Latest-Day Complete: {}\n- Macro Status: {}\n- Data Health Generated At: {}\n- Data Health Review Symbols: {}\n- Data Health Critical Symbols: {}\n- Data Health Review Macro Sources: {}\n- Data Health Critical Macro Sources: {}\n- Signal Analysis Scope: {}\n- Signal Regime Basis: {}\n- Backtest Matches Current Snapshot: {}\n",
+            trust.level,
+            trust.headline,
+            trust.message,
+            trust
+                .freshest_market_date
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
+            trust
+                .latest_available_date
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
+            if trust.latest_day_complete { "yes" } else { "no" },
+            trust.macro_status,
+            trust
+                .data_health_generated_at
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_review_symbols,
+            trust.data_health_critical_symbols,
+            trust.data_health_review_macro_sources,
+            trust.data_health_critical_macro_sources,
+            trust
+                .signal_analysis_scope
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
+            trust
+                .signal_regime_basis_scope
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
+            match trust.backtest_matches_snapshot {
+                Some(true) => "yes",
+                Some(false) => "no",
+                None => "N/A",
+            },
+        ));
+        if let Some(state) = &trust.strategy_state {
+            output.push_str(&format!(
+                "- Strategy State: {}\n- Strategy Recommended Position: {}\n",
+                state,
+                trust
+                    .strategy_recommended_position_pct
+                    .map(|value| format!("{value:.2}%"))
+                    .unwrap_or_else(|| "N/A".to_string())
+            ));
+        }
+        output.push_str(&format!(
+            "- Scoped Latest-Day Coverage: {}/{}\n- Pipeline Partial Latest: {} ({})\n- Pipeline Stale Stage: {} ({})\n",
+            trust.scoped_symbols_on_freshest_market_date,
+            trust.scoped_symbols_expected,
+            if trust.pipeline_has_partial_latest { "yes" } else { "no" },
+            trust.pipeline_partial_latest_stage_count,
+            if trust.pipeline_has_stale_stage { "yes" } else { "no" },
+            trust.pipeline_stale_stage_count,
+        ));
+        if snapshot.report_date != snapshot.latest_available_date {
+            output.push_str(&format!(
+                "- Trust Evidence Basis: current operational freshness/data-health evidence as of {} while snapshot content remains scoped to report date {}\n",
+                snapshot.latest_available_date,
+                snapshot.report_date,
+            ));
+        }
+        for note in &trust.notes {
+            output.push_str(&format!("- Note: {}\n", note));
+        }
+        output.push_str("\n");
+    } else {
+        output.push_str("- Trust summary is unavailable for this report export\n\n");
+    }
+    output.push_str("## Strategy State\n\n");
+    if let Some(strategy_state) = &snapshot.strategy_state {
+        output.push_str(&format!(
+            "- State: {}\n- State As Of: {}\n- Scope: {}\n- State Score: {:.2}\n- Recommended Position: {:.2}%\n- Transition Reason: {}\n\n",
+            strategy_state.state,
+            strategy_state.date,
+            strategy_state.scope,
+            strategy_state.state_score,
+            strategy_state.recommended_position_pct,
+            strategy_state.transition_reason,
+        ));
+    } else {
+        output.push_str("- Strategy state is unavailable for this report date\n\n");
+    }
     output.push_str("## Market Regime\n\n");
     output.push_str(&format!(
         "- Label: {}\n- Regime As Of: {}\n- Regime Lag: {} day(s)\n- Trend Score: {:.2}\n- Liquidity Score: {:.2}\n- Risk Score: {:.2}\n\n",
@@ -399,36 +595,77 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     for item in &snapshot.top_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
+    }
+    if let Some(note) = signal_basis_note(snapshot) {
+        output.push_str(&note);
     }
     output.push_str("\n## Bullish Signals\n\n");
     for item in &snapshot.bullish_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
     }
     output.push_str("\n## Defensive Signals\n\n");
     for item in &snapshot.defensive_signals {
         output.push_str(&format!(
             "- {} | score={:.2} | label={:?} | {}\n",
-            item.symbol, item.final_score, item.signal_label, item.explanation
+            item.symbol,
+            item.final_score,
+            item.signal_label,
+            format_signal_breakdown(item)
         ));
     }
     output.push_str("\n## Latest Backtest\n\n");
     if let Some(backtest) = &snapshot.latest_backtest {
         output.push_str(&format!(
-            "- Run ID: {}\n- Strategy: {}\n- CAGR: {:.4}\n- Max Drawdown: {:.4}\n- Sharpe: {:.4}\n- Final Equity: {:.2}\n- Trades: {}\n- Trading Days: {}\n",
+            "- Run ID: {}\n- Strategy: {}\n- Analysis Scope: {}\n- Signal Scope: {}\n- Regime Basis: {}\n- Signal Window: {} -> {}\n- Config: {}\n- Matches Current Snapshot: {}\n- CAGR: {:.4}\n- Max Drawdown: {:.4}\n- Drawdown Events: {}\n- Sharpe: {:.4}\n- Final Equity: {:.2}\n- Trades: {}\n- Trading Days: {}\n",
             backtest.run_id,
             backtest.strategy_name,
+            backtest.analysis_scope,
+            backtest.signal_scope,
+            backtest.regime_basis_scope,
+            backtest
+                .signal_start_date
+                .map(|date| date.to_string())
+                .unwrap_or_else(|| "N/A".to_string()),
+            backtest
+                .signal_end_date
+                .map(|date| date.to_string())
+                .unwrap_or_else(|| "N/A".to_string()),
+            backtest.config_summary,
+            if backtest_matches_snapshot(snapshot, backtest) {
+                "yes"
+            } else {
+                "no"
+            },
             backtest.cagr,
             backtest.max_drawdown,
+            backtest.drawdown_events,
             backtest.sharpe,
             backtest.final_equity,
             backtest.trades,
             backtest.trading_days
         ));
+        if backtest.drawdown_events > 0 {
+            output.push_str(
+                "- Note: Drawdown limit protective actions were triggered during this run.\n",
+            );
+        }
+        if !backtest.state_trajectory.is_empty() {
+            output.push_str("\n## Strategy State Trajectory\n\n");
+            for (date, state) in &backtest.state_trajectory {
+                output.push_str(&format!("- {} | {}\n", date, state));
+            }
+        }
     } else {
         output.push_str("- No backtest result available\n");
     }
@@ -467,7 +704,7 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
     ));
     output.push_str("## Summary\n\n");
     output.push_str(&format!(
-        "- Canonical Adjustment: {}\n- Freshest Market Date: {}\n- Latest-Day Coverage: {}/{}\n- Latest-Day Complete: {}\n- Checked Symbols: {}\n- Healthy Symbols: {}\n- Review Symbols: {}\n- Critical Symbols: {}\n- Healthy Macro Sources: {}\n- Review Macro Sources: {}\n- Critical Macro Sources: {}\n\n",
+        "- Canonical Adjustment: {}\n- Freshest Market Date: {}\n- Latest-Day Coverage: {}/{}\n- Latest-Day Complete: {}\n- Report-Gate Latest-Day Coverage: {}/{}\n- Report-Gate Latest-Day Complete: {}\n- Checked Symbols: {}\n- Healthy Symbols: {}\n- Review Symbols: {}\n- Critical Symbols: {}\n- Healthy Macro Sources: {}\n- Review Macro Sources: {}\n- Critical Macro Sources: {}\n\n",
         summary.canonical_adjustment,
         summary
             .freshest_market_date
@@ -476,6 +713,9 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
         summary.symbols_on_freshest_market_date,
         summary.checked_symbols,
         if summary.freshest_market_date_complete { "yes" } else { "no" },
+        summary.latest_gate_symbols_on_freshest_market_date,
+        summary.latest_gate_checked_symbols,
+        if summary.latest_gate_freshest_market_date_complete { "yes" } else { "no" },
         summary.checked_symbols,
         summary.healthy_symbols,
         summary.review_symbols,
@@ -510,10 +750,11 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
     output.push_str("## Symbol Checks\n\n");
     for row in &summary.symbols {
         output.push_str(&format!(
-            "- {} ({}) | status={} | rows={} | primary_ok={} | fallback_ok={:?} | gaps={} | max_gap_days={} | suspicious_jumps={} | max_abs_return={:.2}% | missing_turnover={}\n",
+            "- {} ({}) | status={} | latest_gate_required={} | rows={} | primary_ok={} | fallback_ok={:?} | gaps={} | max_gap_days={} | suspicious_jumps={} | max_abs_return={:.2}% | missing_turnover={}\n",
             row.symbol,
             row.name,
             row.status,
+            if row.latest_gate_required { "yes" } else { "no" },
             row.rows,
             row.primary_provider_ok,
             row.fallback_provider_ok,
@@ -535,6 +776,10 @@ pub fn render_data_health_report(summary: &DataHealthSummary) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use backtest_engine::BacktestSummary;
+    use core_domain::{
+        RegimeReason, RotationReason, SignalLabel, SignalReason, SignalSnapshot, StrategyKind,
+    };
 
     #[test]
     fn render_markdown_report_includes_watchlist_breadth_section() {
@@ -550,7 +795,37 @@ mod tests {
             risk_score: 55.0,
             top_rotation: Vec::new(),
             bottom_rotation: Vec::new(),
-            top_signals: Vec::new(),
+            top_signals: vec![SignalSnapshot {
+                date: NaiveDate::from_ymd_opt(2026, 3, 20).unwrap(),
+                symbol: "510300".to_string(),
+                final_score: 82.0,
+                signal_label: SignalLabel::StrongBuy,
+                analysis_scope: "GLOBAL".to_string(),
+                regime_basis_scope: "GLOBAL".to_string(),
+                reason: SignalReason {
+                    best_strategy: StrategyKind::TrendBreakout,
+                    strategy_score: 82.0,
+                    strategy_contribution: 36.9,
+                    alignment: 3,
+                    aligned_strategies: vec![StrategyKind::TrendBreakout],
+                    alignment_contribution: 9.0,
+                    regime: RegimeReason {
+                        trend_score: 72.0,
+                        risk_score: 55.0,
+                        combined_score: 63.5,
+                        contribution: 12.7,
+                    },
+                    rotation: RotationReason {
+                        momentum_score: 78.0,
+                        rank: Some(1),
+                        combined_score: 78.0,
+                        contribution: 15.6,
+                    },
+                    final_score: 82.0,
+                    label: SignalLabel::StrongBuy,
+                    summary: "动量最强策略TrendBreakout得分82.0，趋势分63.5，轮动分78.0，最终信号StrongBuy".to_string(),
+                },
+            }],
             bullish_signals: Vec::new(),
             defensive_signals: Vec::new(),
             environment: Some(EnvironmentSnapshot {
@@ -572,6 +847,33 @@ mod tests {
                 environment_score: 68.0,
                 environment_label: "constructive".to_string(),
             }),
+            strategy_state: None,
+            trust_summary: Some(TrustSummary {
+                level: "review".to_string(),
+                headline: "Use with review".to_string(),
+                message: "Pipeline is usable, but signal/basis context and data-health warnings should be checked before acting.".to_string(),
+                pipeline_has_partial_latest: true,
+                pipeline_has_stale_stage: false,
+                pipeline_partial_latest_stage_count: 1,
+                pipeline_stale_stage_count: 0,
+                freshest_market_date: Some("2026-03-20".to_string()),
+                latest_available_date: Some("2026-03-20".to_string()),
+                latest_day_complete: false,
+                scoped_symbols_expected: 4,
+                scoped_symbols_on_freshest_market_date: 3,
+                macro_status: "review".to_string(),
+                data_health_generated_at: Some("2026-03-20T12:00:00+00:00".to_string()),
+                data_health_review_symbols: 2,
+                data_health_critical_symbols: 0,
+                data_health_review_macro_sources: 1,
+                data_health_critical_macro_sources: 0,
+                signal_analysis_scope: Some("GLOBAL".to_string()),
+                signal_regime_basis_scope: Some("GLOBAL".to_string()),
+                strategy_state: None,
+                strategy_recommended_position_pct: None,
+                backtest_matches_snapshot: Some(true),
+                notes: vec!["Macro transport is degraded to fallback path.".to_string()],
+            }),
             watchlist_breadth: Some(WatchlistBreadthSnapshot {
                 report_date: "2026-03-20".to_string(),
                 methodology_note: "Proxy only; not full-market stock breadth.".to_string(),
@@ -589,7 +891,26 @@ mod tests {
                     status_label: "near_local_high".to_string(),
                 }],
             }),
-            latest_backtest: None,
+            latest_backtest: Some(BacktestSummary {
+                run_id: "bt-20260320".to_string(),
+                strategy_name: "SIGNAL_PORTFOLIO_V1".to_string(),
+                analysis_scope: "GLOBAL".to_string(),
+                signal_scope: "GLOBAL".to_string(),
+                regime_basis_scope: "GLOBAL".to_string(),
+                signal_start_date: Some(NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()),
+                signal_end_date: Some(NaiveDate::from_ymd_opt(2026, 3, 20).unwrap()),
+                config_summary:
+                    "initial_capital=1000000, max_holdings=3, fee_rate=0.0010, slippage_rate=0.0005"
+                        .to_string(),
+                cagr: 0.18,
+                max_drawdown: 0.09,
+                sharpe: 1.12,
+                final_equity: 1_120_000.0,
+                trades: 14,
+                trading_days: 14,
+                drawdown_events: 0,
+                state_trajectory: Vec::new(),
+            }),
             load_metrics: None,
         };
 
@@ -597,7 +918,11 @@ mod tests {
 
         assert!(rendered.contains("## Watchlist Breadth (MA30)"));
         assert!(rendered.contains("## Environment Layer"));
+        assert!(rendered.contains("## Trust Summary"));
+        assert!(rendered.contains("Level: review"));
         assert!(rendered.contains("Environment Score: 68.00"));
+        assert!(rendered.contains("Signal Regime Basis: GLOBAL"));
+        assert!(rendered.contains("Matches Current Snapshot: yes"));
         assert!(rendered.contains("Proxy only; not full-market stock breadth."));
         assert!(rendered.contains("CN tracked universe | breadth=75.00% | above=3/4"));
         assert!(rendered.contains("status=near_local_high"));
@@ -613,6 +938,10 @@ mod tests {
             symbols_on_freshest_market_date: 20,
             symbols_missing_freshest_market_date: 2,
             freshest_market_date_complete: false,
+            latest_gate_checked_symbols: 20,
+            latest_gate_symbols_on_freshest_market_date: 20,
+            latest_gate_symbols_missing_freshest_market_date: 0,
+            latest_gate_freshest_market_date_complete: true,
             checked_symbols: 22,
             healthy_symbols: 14,
             review_symbols: 8,
@@ -629,5 +958,6 @@ mod tests {
         assert!(rendered.contains("Freshest Market Date: 2026-03-30"));
         assert!(rendered.contains("Latest-Day Coverage: 20/22"));
         assert!(rendered.contains("Latest-Day Complete: no"));
+        assert!(rendered.contains("Report-Gate Latest-Day Complete: yes"));
     }
 }

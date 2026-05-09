@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::NaiveDate;
-use core_domain::{DailyBar, SignalLabel, SignalSnapshot};
+use core_domain::{DailyBar, SignalLabel, SignalSnapshot, StrategyState, StrategyStateSnapshot};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +11,11 @@ pub struct BacktestConfig {
     pub max_holdings: usize,
     pub fee_rate: f64,
     pub slippage_rate: f64,
+    pub analysis_scope: String,
+    pub signal_scope: String,
+    pub regime_basis_scope: String,
+    pub use_strategy_state: bool,
+    pub drawdown_limit_pct: Option<f64>,
 }
 
 impl Default for BacktestConfig {
@@ -21,6 +26,11 @@ impl Default for BacktestConfig {
             max_holdings: 3,
             fee_rate: 0.001,
             slippage_rate: 0.0005,
+            analysis_scope: "GLOBAL".to_string(),
+            signal_scope: "GLOBAL".to_string(),
+            regime_basis_scope: "GLOBAL".to_string(),
+            use_strategy_state: false,
+            drawdown_limit_pct: None,
         }
     }
 }
@@ -48,12 +58,20 @@ pub struct BacktestEquityPoint {
 pub struct BacktestSummary {
     pub run_id: String,
     pub strategy_name: String,
+    pub analysis_scope: String,
+    pub signal_scope: String,
+    pub regime_basis_scope: String,
+    pub signal_start_date: Option<NaiveDate>,
+    pub signal_end_date: Option<NaiveDate>,
+    pub config_summary: String,
     pub cagr: f64,
     pub max_drawdown: f64,
     pub sharpe: f64,
     pub final_equity: f64,
     pub trades: usize,
     pub trading_days: usize,
+    pub drawdown_events: usize,
+    pub state_trajectory: Vec<(NaiveDate, String)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,11 +148,94 @@ fn exit_signal(label: &SignalLabel) -> bool {
     matches!(label, SignalLabel::Reduce | SignalLabel::Sell)
 }
 
+fn format_config_summary(config: &BacktestConfig) -> String {
+    let base = format!(
+        "initial_capital={:.0}, max_holdings={}, fee_rate={:.4}, slippage_rate={:.4}",
+        config.initial_capital, config.max_holdings, config.fee_rate, config.slippage_rate
+    );
+    if !config.use_strategy_state && config.drawdown_limit_pct.is_none() {
+        return base;
+    }
+    format!(
+        "{}, use_strategy_state={}, drawdown_limit_pct={}",
+        base,
+        config.use_strategy_state,
+        config
+            .drawdown_limit_pct
+            .map(|value| format!("{value:.4}"))
+            .unwrap_or_else(|| "none".to_string())
+    )
+}
+
+fn state_limits(state: &StrategyState, max_holdings: usize) -> (usize, f64) {
+    match state {
+        StrategyState::NoTrade => (0, 0.0),
+        StrategyState::LeftProbe => (1, 0.2),
+        StrategyState::ConfirmAdd => (2, 0.6),
+        StrategyState::FullTrend => (max_holdings, 1.0),
+        StrategyState::DeRisk => (0, 0.0),
+    }
+}
+
+fn position_value_at_open(
+    positions: &BTreeMap<String, Position>,
+    bar_lookup: &BTreeMap<String, BTreeMap<NaiveDate, DailyBar>>,
+    trade_date: NaiveDate,
+) -> f64 {
+    positions
+        .iter()
+        .map(|(symbol, position)| {
+            let price = bar_lookup
+                .get(symbol)
+                .and_then(|rows| rows.get(&trade_date))
+                .map(|bar| bar.open)
+                .unwrap_or(position.last_price);
+            position.quantity * price
+        })
+        .sum()
+}
+
+fn sell_positions_at_open(
+    run_id: &str,
+    symbols: Vec<String>,
+    trade_date: NaiveDate,
+    positions: &mut BTreeMap<String, Position>,
+    bar_lookup: &BTreeMap<String, BTreeMap<NaiveDate, DailyBar>>,
+    config: &BacktestConfig,
+    trades: &mut Vec<BacktestTrade>,
+    cash: &mut f64,
+) {
+    for symbol in symbols {
+        let Some(bar) = bar_lookup
+            .get(&symbol)
+            .and_then(|rows| rows.get(&trade_date))
+        else {
+            continue;
+        };
+        if let Some(position) = positions.remove(&symbol) {
+            let price = bar.open * (1.0 - config.slippage_rate);
+            let gross = position.quantity * price;
+            let fee = gross * config.fee_rate;
+            *cash += gross - fee;
+            trades.push(BacktestTrade {
+                run_id: run_id.to_string(),
+                trade_date,
+                symbol,
+                action: "SELL".to_string(),
+                price,
+                quantity: position.quantity,
+                trade_value: gross,
+            });
+        }
+    }
+}
+
 pub fn run_signal_backtest(
     run_id: &str,
     config: &BacktestConfig,
     signals: &[SignalSnapshot],
     bars_by_symbol: &BTreeMap<String, Vec<DailyBar>>,
+    strategy_states: &[StrategyStateSnapshot],
 ) -> BacktestResult {
     let mut signal_dates = signals
         .iter()
@@ -167,18 +268,35 @@ pub fn run_signal_backtest(
     let mut positions = BTreeMap::<String, Position>::new();
     let mut trades = Vec::new();
     let mut equity_curve = Vec::new();
+    let mut drawdown_events = 0;
+    let mut drawdown_triggered = false;
+    let mut liquidate_next_open = false;
+    let mut peak_equity = config.initial_capital;
+    let mut state_trajectory = Vec::new();
+    let strategy_state_by_date = strategy_states
+        .iter()
+        .map(|row| (row.date, row))
+        .collect::<BTreeMap<_, _>>();
 
     if signal_dates.is_empty() {
         return BacktestResult {
             summary: BacktestSummary {
                 run_id: run_id.to_string(),
                 strategy_name: config.strategy_name.clone(),
+                analysis_scope: config.analysis_scope.clone(),
+                signal_scope: config.signal_scope.clone(),
+                regime_basis_scope: config.regime_basis_scope.clone(),
+                signal_start_date: None,
+                signal_end_date: None,
+                config_summary: format_config_summary(config),
                 cagr: 0.0,
                 max_drawdown: 0.0,
                 sharpe: 0.0,
                 final_equity: config.initial_capital,
                 trades: 0,
                 trading_days: 0,
+                drawdown_events,
+                state_trajectory,
             },
             trades,
             equity_curve,
@@ -199,6 +317,36 @@ pub fn run_signal_backtest(
             .get(&decision_date)
             .cloned()
             .unwrap_or_default();
+
+        if liquidate_next_open {
+            let symbols = positions.keys().cloned().collect::<Vec<_>>();
+            sell_positions_at_open(
+                run_id,
+                symbols,
+                trade_date,
+                &mut positions,
+                &bar_lookup,
+                config,
+                &mut trades,
+                &mut cash,
+            );
+            liquidate_next_open = false;
+        }
+
+        let mut effective_max_holdings = config.max_holdings;
+        let mut capital_multiplier = 1.0;
+        if config.use_strategy_state {
+            if let Some(state) = strategy_state_by_date
+                .range(..=decision_date)
+                .next_back()
+                .map(|(_, row)| *row)
+            {
+                let limits = state_limits(&state.state, config.max_holdings);
+                effective_max_holdings = limits.0;
+                capital_multiplier = limits.1;
+                state_trajectory.push((decision_date, state.state.as_str().to_string()));
+            }
+        }
 
         let signal_map = decision_signals
             .iter()
@@ -234,8 +382,8 @@ pub fn run_signal_backtest(
             }
         }
 
-        let slots = config.max_holdings.saturating_sub(positions.len());
-        if slots > 0 {
+        let slots = effective_max_holdings.saturating_sub(positions.len());
+        if slots > 0 && !drawdown_triggered {
             let mut candidates = decision_signals
                 .into_iter()
                 .filter(|row| {
@@ -250,6 +398,9 @@ pub fn run_signal_backtest(
             });
 
             let mut remaining_slots = slots;
+            let available_capital = config.initial_capital * capital_multiplier;
+            let invested_at_open = position_value_at_open(&positions, &bar_lookup, trade_date);
+            let mut buy_cash = cash.min((available_capital - invested_at_open).max(0.0));
             for signal in candidates.into_iter().take(slots) {
                 if remaining_slots == 0 {
                     break;
@@ -264,7 +415,7 @@ pub fn run_signal_backtest(
                 if price <= 0.0 {
                     continue;
                 }
-                let budget = cash / remaining_slots as f64;
+                let budget = buy_cash / remaining_slots as f64;
                 let quantity = (budget / (price * (1.0 + config.fee_rate))).floor();
                 if quantity < 1.0 {
                     continue;
@@ -276,6 +427,7 @@ pub fn run_signal_backtest(
                     continue;
                 }
                 cash -= total;
+                buy_cash = (buy_cash - total).max(0.0);
                 positions.insert(
                     signal.symbol.clone(),
                     Position {
@@ -306,11 +458,27 @@ pub fn run_signal_backtest(
             }
             equity += position.quantity * position.last_price;
         }
+        peak_equity = peak_equity.max(equity);
+        let drawdown = if peak_equity <= 0.0 {
+            0.0
+        } else {
+            (peak_equity - equity) / peak_equity
+        };
+        if let Some(limit) = config.drawdown_limit_pct {
+            if drawdown_triggered && drawdown < limit * 0.5 {
+                drawdown_triggered = false;
+            }
+            if !drawdown_triggered && drawdown > limit {
+                drawdown_events += 1;
+                drawdown_triggered = true;
+                liquidate_next_open = true;
+            }
+        }
         equity_curve.push(BacktestEquityPoint {
             run_id: run_id.to_string(),
             date: trade_date,
             equity,
-            drawdown: 0.0,
+            drawdown,
         });
     }
 
@@ -341,12 +509,20 @@ pub fn run_signal_backtest(
         summary: BacktestSummary {
             run_id: run_id.to_string(),
             strategy_name: config.strategy_name.clone(),
+            analysis_scope: config.analysis_scope.clone(),
+            signal_scope: config.signal_scope.clone(),
+            regime_basis_scope: config.regime_basis_scope.clone(),
+            signal_start_date: signal_dates.first().copied(),
+            signal_end_date: signal_dates.last().copied(),
+            config_summary: format_config_summary(config),
             cagr,
             max_drawdown: mdd,
             sharpe,
             final_equity,
             trades: trades.len(),
             trading_days: equities.len().saturating_sub(1),
+            drawdown_events,
+            state_trajectory,
         },
         trades,
         equity_curve,

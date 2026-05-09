@@ -9,6 +9,8 @@ pub struct AnalysisContext {
     pub indicators: IndicatorSnapshot,
     pub regime: Option<MarketRegimeSnapshot>,
     pub rotation: Option<RotationRankSnapshot>,
+    pub analysis_scope: String,
+    pub regime_basis_scope: String,
 }
 
 pub trait StrategyScorer {
@@ -162,6 +164,8 @@ pub fn build_strategy_preferences(contexts: &[AnalysisContext]) -> Vec<StrategyP
             StrategyPreferenceSnapshot {
                 date: context.bar.date,
                 symbol: context.bar.symbol.clone(),
+                analysis_scope: context.analysis_scope.clone(),
+                regime_basis_scope: context.regime_basis_scope.clone(),
                 value_left_score,
                 trend_pullback_score,
                 trend_breakout_score,

@@ -20,19 +20,57 @@ Turn the current V1 index/ETF research system into a more layered, explainable V
 
 - V1 already has ingest, indicators, macro/regime, rotation, strategy preference, signals, backtest, dashboard, markdown export, health diagnostics, pipeline freshness diagnostics, and scoped GLOBAL/CN/HK report flows.
 - Current universe is still INDEX / ETF centric.
-- Scoped reporting exists, but regime is still effectively global.
+- Scoped dashboard/report now uses scoped regime + scoped environment.
+- Strategy, signal, and backtest still intentionally rely on GLOBAL regime semantics.
 - `app-service` and `market-store` are still monolithic pressure points.
 - There is no stock fundamentals pipeline.
 
-## Do Now
+## Heavy-User Priority Order
+
+### P0. Close the trust gap first
+- Make signal/backtest provenance explicit in dashboard/report/export.
+- Do not let CN/HK views imply fully scoped strategy/backtest until that path is real.
+- Extend `AnalysisScope` into strategy/signal/backtest only after provenance is clear.
+
+### P1. Turn refresh into a validated research cycle
+- Refresh completion should surface pipeline freshness, latest-day completeness, macro-source degradation, and trust judgement together.
+- Exported reports should carry freshness/health/basis context.
+- Latest backtest should show scope, date range, config, and whether it matches the current snapshot.
+
+### P2. Improve interpretability and drilldown
+- Structured signal reasons instead of debug-style explanation strings.
+- Symbol drilldown for trend structure, strategy breakdown, historical signal/rotation context.
+- Scope-aware diagnostic presentation for symbol-level trust.
+
+### P3. Improve repeated-use efficiency
+- Persist scope/date/UI preferences.
+- Make recent reports actionable (open/copy/compare).
+- Add partial rerun / retry / cancel around refresh flow.
+
+### P4. Defer deeper performance work until semantics are trusted
+- Ingest parallelization, refresh concurrency, and deeper optimization are valid later work, but not the first user-value milestone.
+
+## Completed Foundation
 
 ### 1. Per-scope regime
-- Replace current global-only regime semantics in scoped reports with actual `GLOBAL / CN / HK` regime rows.
-- Keep global path intact.
+- `GLOBAL / CN / HK` regime rows are now in place.
 
 ### 2. Breadth as environment input
-- Upgrade breadth from display-only proxy to environment factor.
-- Use breadth level + breadth momentum + repair/exhaustion semantics.
+- Breadth is now persisted inside `environment_snapshot`.
+
+### 3. Light liquidity/stress proxies
+- The first environment-layer proxy set is already wired into dashboard/report.
+
+## Do Now
+
+### 1. Trust closure around scope semantics
+- Make GLOBAL-regime basis explicit wherever scoped dashboard/report still shows global-scored signal/backtest outputs.
+- Promote scoped strategy/signal/backtest from plan to implementation only after provenance is visible.
+
+### 2. Validated refresh / export / backtest cycle
+- Refresh completion should surface pipeline freshness, latest-day completeness, macro-source degradation, and trust judgement together.
+- Exported reports should carry freshness/health/basis context.
+- Latest backtest should show scope, date range, config, and whether it matches the current snapshot.
 
 ### 3. Dual-stage strategy framework
 - Introduce explicit states:
@@ -42,13 +80,64 @@ Turn the current V1 index/ETF research system into a more layered, explainable V
   - `FULL_TREND`
   - `DE_RISK`
 
-### 4. Execution prototype
+### 4. Better explainability and drilldown
+- Structured signal reasons instead of debug-style explanation strings.
+- Symbol drilldown for trend structure, strategy breakdown, historical signal/rotation context.
+- Scope-aware diagnostic presentation for symbol-level trust.
+
+### 5. Execution prototype
 - Add position sizing and drawdown control prototype to the backtestable execution flow.
 
-### 5. Better explainability
-- Environment decomposition
-- Strategy decision breakdown
-- Report/dashboard wording that explains stage transitions clearly
+### 6. Workflow efficiency
+- Persist scope/date/UI preferences.
+- Make recent reports actionable (open/copy/compare).
+- Add partial rerun / retry / cancel around refresh flow.
+
+## Module-Level Execution Checklist
+
+### P0-A. Provenance contract and trust labeling — ✅ IMPLEMENTED
+- `crates/core-domain/src/lib.rs`: add provenance fields for strategy/signal/backtest outputs.
+- `crates/backtest-engine/src/lib.rs`: expose backtest run metadata and config summary.
+- `sql/clickhouse/001_init.sql` + `crates/market-store/src/lib.rs`: persist provenance columns and read helpers.
+- `crates/app-service/src/lib.rs`: aggregate provenance into dashboard/export payloads.
+- `crates/report-engine/src/lib.rs` + desktop/CLI surfaces: render regime-basis / scope-basis notices.
+- **Note**: DTOs, storage schema, trust summary aggregation, and report rendering all complete.
+
+### P0-B. Real scoped strategy / signal / backtest path — ✅ IMPLEMENTED
+- `crates/strategy-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: make strategy computation scope-aware.
+- `crates/signal-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: make signal generation scope-aware.
+- `crates/backtest-engine/src/lib.rs` + `crates/app-service/src/lib.rs`: run backtests on scoped signal streams.
+- `apps/cli/src/main.rs` + `apps/desktop/src-tauri/src/lib.rs`: expose scope-compatible command/runtime paths.
+- **Note**: `compute_strategy_preferences` iterates Global/Cn/Hk; `signal-engine` uses `row.regime_basis_scope`; `run_backtest` takes scope param.
+
+### P1. Validated research cycle — ✅ MOSTLY IMPLEMENTED
+- `crates/app-service/src/lib.rs`: build a unified trust summary from pipeline freshness + data health + provenance.
+- `apps/desktop/src-tauri/src/lib.rs` + `apps/desktop/frontend/src/main.js`: attach trust judgement to refresh completion.
+- `crates/report-engine/src/lib.rs`: add freshness / health / basis context to exports.
+- desktop backtest card: show scope/date/config/match-to-current-snapshot metadata.
+- **Note**: unified trust summary exists; refresh completion triggers dashboard reload with trust panel; exports carry context; backtest metadata includes scope/date/config/match.
+
+### P2. Structured explanation and drilldown — NOT STARTED
+- `crates/core-domain/src/lib.rs` + `crates/signal-engine/src/lib.rs`: replace explanation-string-only flow with structured reason model.
+- `crates/app-service/src/lib.rs` + `crates/report-engine/src/lib.rs`: define symbol detail payload.
+- `apps/desktop/src-tauri/src/lib.rs` + `apps/desktop/frontend/src/main.js`: implement click-through symbol drilldown.
+- diagnostics presentation: keep provider health global, make symbol trust views scope-aware.
+
+### P3. Workflow efficiency — PARTIALLY DONE
+- SQLite preference path: persist scope/date/viewer state through market-store/app-service/Tauri/frontend.
+- Recent report actions: open artifact, copy path, compare previous. **(done)**
+- Refresh controls: cancel, retry failed stage, partial rerun; likely requires real task orchestration instead of the current linear thread. **(not done)**
+
+## Recommended Safe Order
+
+1. provenance DTO/schema
+2. provenance store/app-service aggregation
+3. dashboard/report/export trust labeling
+4. unified trust summary after refresh
+5. real scoped strategy/signal/backtest path
+6. structured signal reasons
+7. drilldown UI
+8. workflow-efficiency wins
 
 ## Defer
 
@@ -79,19 +168,30 @@ Turn the current V1 index/ETF research system into a more layered, explainable V
 - breadth environment integration
 - light liquidity/stress proxies
 
-### Phase 2: Strategy state machine
+### Phase 2: Trust closure and research-loop validation
+- explicit signal/backtest provenance
+- refresh completion with freshness + health judgement
+- trustable exports
+
+### Phase 3: Strategy state machine
 - left probe vs trend confirm vs de-risk
 - strategy-state outputs in dashboard/report
 
-### Phase 3: Execution prototype
+### Phase 4: Explainability and drilldown
+- structured signal explanation
+- symbol-level detail workflows
+- scope-aware diagnostic presentation
+
+### Phase 5: Execution prototype
 - staged position sizing
 - drawdown control
 - execution-aware backtest logic
 
-### Phase 4: Explainability and diagnostics
-- decision decomposition
-- scope-aware diagnostic clarity
-- more explicit report justification
+### Phase 6: Workflow efficiency and selective performance work
+- saved UI preferences
+- recent-report actions
+- partial rerun / retry / cancel
+- targeted performance improvements only if refresh cost becomes recurrent pain
 
 ## Acceptance Criteria
 
@@ -117,6 +217,16 @@ Turn the current V1 index/ETF research system into a more layered, explainable V
   - `cargo run -p quant-cli -- compute-signals`
   - `cargo run -p quant-cli -- dashboard-snapshot --scope cn`
 - Verify: environment output includes breadth-derived fields and those fields change when breadth conditions change
+
+### QA 2A: Provenance and trust labeling
+- Run:
+  - `cargo run -p quant-cli -- init-storage`
+  - `cargo run -p quant-cli -- dashboard-snapshot --scope cn --date 2026-04-01`
+  - `cargo run -p quant-cli -- export-report --scope cn --date 2026-04-01`
+- Verify:
+  - signal payload includes explicit provenance fields (`analysis_scope`, `regime_basis_scope`)
+  - latest backtest payload includes scope/date/config provenance when available
+  - exported markdown visibly states signal/backtest basis and snapshot-match context
 
 ### QA 3: Strategy state machine
 - Replay three windows:

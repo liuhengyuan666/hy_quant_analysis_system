@@ -7,7 +7,8 @@ use backtest_engine::{BacktestEquityPoint, BacktestSummary, BacktestTrade};
 use chrono::NaiveDate;
 use core_domain::{
     AnalysisScope, DailyBar, EnvironmentSnapshot, IndicatorSnapshot, Instrument, MacroSnapshot,
-    MarketRegimeSnapshot, RotationRankSnapshot, SignalSnapshot, StrategyPreferenceSnapshot,
+    MarketRegimeSnapshot, RefreshJobRecord, RegimeReason, RotationRankSnapshot, RotationReason,
+    SignalReason, SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
 };
 use reqwest::blocking::Client;
 use rusqlite::Connection;
@@ -95,6 +96,186 @@ pub fn init_sqlite(config: &StorageConfig) -> Result<()> {
     Ok(())
 }
 
+fn sqlite_connection(config: &StorageConfig) -> Result<Connection> {
+    let sqlite_path = config.sqlite_abspath()?;
+    if let Some(parent) = sqlite_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create sqlite directory: {}", parent.display()))?;
+    }
+    let connection = Connection::open(&sqlite_path)
+        .with_context(|| format!("failed to open sqlite database: {}", sqlite_path.display()))?;
+    ensure_refresh_jobs_table(&connection)?;
+    ensure_user_preferences_table(&connection)?;
+    Ok(connection)
+}
+
+fn ensure_refresh_jobs_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS refresh_jobs (
+                id TEXT PRIMARY KEY,
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                status TEXT NOT NULL,
+                stages_json TEXT NOT NULL,
+                last_successful_stage TEXT,
+                error TEXT,
+                refresh_from TEXT,
+                refresh_to TEXT
+            );",
+        )
+        .context("failed to ensure refresh_jobs table")?;
+    Ok(())
+}
+
+fn ensure_user_preferences_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS user_preferences (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );",
+        )
+        .context("failed to ensure user_preferences table")?;
+    Ok(())
+}
+
+pub fn insert_refresh_job(config: &StorageConfig, job: &RefreshJobRecord) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    connection
+        .execute(
+            "INSERT INTO refresh_jobs (id, started_at, finished_at, status, stages_json, last_successful_stage, error, refresh_from, refresh_to)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                &job.id,
+                &job.started_at,
+                &job.finished_at,
+                &job.status,
+                &job.stages_json,
+                &job.last_successful_stage,
+                &job.error,
+                &job.refresh_from,
+                &job.refresh_to,
+            ],
+        )
+        .context("failed to insert refresh job")?;
+    Ok(())
+}
+
+pub fn update_refresh_job(config: &StorageConfig, job: &RefreshJobRecord) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    connection
+        .execute(
+            "UPDATE refresh_jobs
+             SET started_at = ?2,
+                 finished_at = ?3,
+                 status = ?4,
+                 stages_json = ?5,
+                 last_successful_stage = ?6,
+                 error = ?7,
+                 refresh_from = ?8,
+                 refresh_to = ?9
+             WHERE id = ?1",
+            rusqlite::params![
+                &job.id,
+                &job.started_at,
+                &job.finished_at,
+                &job.status,
+                &job.stages_json,
+                &job.last_successful_stage,
+                &job.error,
+                &job.refresh_from,
+                &job.refresh_to,
+            ],
+        )
+        .context("failed to update refresh job")?;
+    Ok(())
+}
+
+pub fn fetch_latest_refresh_job(config: &StorageConfig) -> Result<Option<RefreshJobRecord>> {
+    let mut jobs = fetch_refresh_jobs(config, 1)?;
+    Ok(jobs.pop())
+}
+
+pub fn fetch_refresh_jobs(config: &StorageConfig, limit: usize) -> Result<Vec<RefreshJobRecord>> {
+    let connection = sqlite_connection(config)?;
+    let limit = i64::try_from(limit).unwrap_or(i64::MAX).max(0);
+    let mut statement = connection
+        .prepare(
+            "SELECT id, started_at, finished_at, status, stages_json, last_successful_stage, error, refresh_from, refresh_to
+             FROM refresh_jobs
+             ORDER BY started_at DESC
+             LIMIT ?1",
+        )
+        .context("failed to prepare refresh jobs query")?;
+    let rows = statement
+        .query_map([limit], |row| {
+            Ok(RefreshJobRecord {
+                id: row.get(0)?,
+                started_at: row.get(1)?,
+                finished_at: row.get(2)?,
+                status: row.get(3)?,
+                stages_json: row.get(4)?,
+                last_successful_stage: row.get(5)?,
+                error: row.get(6)?,
+                refresh_from: row.get(7)?,
+                refresh_to: row.get(8)?,
+            })
+        })
+        .context("failed to query refresh jobs")?;
+    rows.collect::<std::result::Result<Vec<_>, _>>()
+        .context("failed to decode refresh jobs")
+}
+
+pub fn get_user_preference(config: &StorageConfig, key: &str) -> Result<Option<String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT value FROM user_preferences WHERE key = ?1")
+        .context("failed to prepare get_user_preference query")?;
+    let mut rows = statement
+        .query_map([key], |row| row.get::<_, String>(0))
+        .context("failed to query user preference")?;
+    match rows.next() {
+        Some(Ok(value)) => Ok(Some(value)),
+        Some(Err(error)) => Err(error).context("failed to read user preference value"),
+        None => Ok(None),
+    }
+}
+
+pub fn set_user_preference(config: &StorageConfig, key: &str, value: &str) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    let now = chrono::Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO user_preferences (key, value, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = ?3",
+            rusqlite::params![key, value, now],
+        )
+        .context("failed to set user preference")?;
+    Ok(())
+}
+
+pub fn get_all_user_preferences(
+    config: &StorageConfig,
+) -> Result<std::collections::BTreeMap<String, String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT key, value FROM user_preferences")
+        .context("failed to prepare get_all_user_preferences query")?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .context("failed to query all user preferences")?;
+    let mut map = std::collections::BTreeMap::new();
+    for row in rows {
+        let (key, value) = row.context("failed to read user preference row")?;
+        map.insert(key, value);
+    }
+    Ok(map)
+}
+
 fn clickhouse_client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
     CLIENT.get_or_init(Client::new)
@@ -119,6 +300,70 @@ fn ensure_environment_snapshot_table(config: &StorageConfig) -> Result<()> {
     execute_clickhouse_query(
         config,
         "CREATE TABLE IF NOT EXISTS quant.environment_snapshot (date Date,scope LowCardinality(String),regime_as_of_date Date,breadth_as_of_date Date,stress_as_of_date Date,breadth_eligible_count UInt32,breadth_above_count UInt32,breadth_pct Float64,breadth_pct_sma5 Nullable(Float64),breadth_5d_delta Nullable(Float64),breadth_state LowCardinality(String),volume_expansion_pct Nullable(Float64),turnover_coverage_pct Nullable(Float64),liquidity_proxy_score Float64,stress_proxy_score Float64,environment_score Float64,environment_label LowCardinality(String),updated_at DateTime DEFAULT now()) ENGINE = MergeTree PARTITION BY toYYYYMM(date) ORDER BY (scope, date)",
+    )
+}
+
+fn ensure_strategy_state_table(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "CREATE TABLE IF NOT EXISTS quant.strategy_state (date Date,scope LowCardinality(String),state LowCardinality(String),state_score Float64,transition_reason String,recommended_position_pct Float64,updated_at DateTime DEFAULT now()) ENGINE = MergeTree PARTITION BY toYYYYMM(date) ORDER BY (scope, date)",
+    )
+}
+
+fn ensure_strategy_preference_scope_columns(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.strategy_preference ADD COLUMN IF NOT EXISTS analysis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.strategy_preference ADD COLUMN IF NOT EXISTS regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )
+}
+
+fn ensure_signal_snapshot_provenance_columns(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.signal_snapshot ADD COLUMN IF NOT EXISTS analysis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.signal_snapshot ADD COLUMN IF NOT EXISTS regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )
+}
+
+fn ensure_backtest_run_provenance_columns(config: &StorageConfig) -> Result<()> {
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS analysis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS signal_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS signal_start_date Nullable(Date)",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS signal_end_date Nullable(Date)",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS config_summary String DEFAULT ''",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS drawdown_events UInt64 DEFAULT 0",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS state_trajectory_json String DEFAULT ''",
     )
 }
 
@@ -200,7 +445,72 @@ fn decode_signal_snapshot_row(mut row: serde_json::Value) -> Result<SignalSnapsh
             _ => serde_json::json!("Hold"),
         };
     }
+    if row.get("analysis_scope").is_none() {
+        row["analysis_scope"] = serde_json::json!("GLOBAL");
+    }
+    if row.get("regime_basis_scope").is_none() {
+        row["regime_basis_scope"] = serde_json::json!("GLOBAL");
+    }
+    let explanation = row
+        .get("explanation")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let trimmed_explanation = explanation.trim_start();
+    row["reason"] = match serde_json::from_str::<SignalReason>(&explanation) {
+        Ok(reason) => serde_json::to_value(reason)?,
+        Err(error) if trimmed_explanation.starts_with('{') => {
+            anyhow::bail!("failed to parse structured signal reason JSON: {error}")
+        }
+        Err(_) => serde_json::to_value(fallback_signal_reason(&row, &explanation))?,
+    };
+    if let Some(object) = row.as_object_mut() {
+        object.remove("explanation");
+    }
     serde_json::from_value::<SignalSnapshot>(row).context("failed to decode signal snapshot")
+}
+
+fn fallback_signal_reason(row: &serde_json::Value, summary: &str) -> SignalReason {
+    let final_score = row
+        .get("final_score")
+        .and_then(|value| value.as_f64())
+        .unwrap_or(0.0);
+    let label = row
+        .get("signal_label")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or(core_domain::SignalLabel::Hold);
+    SignalReason {
+        best_strategy: StrategyKind::ValueLeft,
+        strategy_score: 0.0,
+        strategy_contribution: 0.0,
+        alignment: 0,
+        aligned_strategies: Vec::new(),
+        alignment_contribution: 0.0,
+        regime: RegimeReason {
+            trend_score: 50.0,
+            risk_score: 50.0,
+            combined_score: 50.0,
+            contribution: 10.0,
+        },
+        rotation: RotationReason {
+            momentum_score: 40.0,
+            rank: None,
+            combined_score: 40.0,
+            contribution: 8.0,
+        },
+        final_score,
+        label,
+        summary: summary.to_string(),
+    }
+}
+
+fn parse_state_trajectory(value: Option<&serde_json::Value>) -> Vec<(NaiveDate, String)> {
+    value
+        .and_then(|value| value.as_str())
+        .filter(|text| !text.trim().is_empty())
+        .and_then(|text| serde_json::from_str::<Vec<(NaiveDate, String)>>(text).ok())
+        .unwrap_or_default()
 }
 
 fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> {
@@ -268,6 +578,9 @@ pub fn init_clickhouse(config: &StorageConfig) -> Result<()> {
         execute_clickhouse_query(config, &statement)?;
     }
     ensure_environment_snapshot_table(config)?;
+    ensure_strategy_preference_scope_columns(config)?;
+    ensure_signal_snapshot_provenance_columns(config)?;
+    ensure_backtest_run_provenance_columns(config)?;
     Ok(())
 }
 
@@ -760,6 +1073,118 @@ pub fn insert_environment_snapshots(
     Ok(())
 }
 
+pub fn insert_strategy_states(
+    config: &StorageConfig,
+    rows: &[StrategyStateSnapshot],
+) -> Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    ensure_strategy_state_table(config)?;
+    let min_date = rows
+        .iter()
+        .map(|row| row.date)
+        .min()
+        .context("missing min strategy state date")?;
+    let max_date = rows
+        .iter()
+        .map(|row| row.date)
+        .max()
+        .context("missing max strategy state date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.scope.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
+    execute_clickhouse_query(
+        config,
+        &format!(
+            "ALTER TABLE quant.strategy_state DELETE WHERE scope IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
+        ),
+    )?;
+
+    let payload = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "date": row.date.to_string(),
+                "scope": row.scope,
+                "state": row.state.as_str(),
+                "state_score": row.state_score,
+                "transition_reason": row.transition_reason,
+                "recommended_position_pct": row.recommended_position_pct,
+            })
+        })
+        .map(|row| serde_json::to_string(&row))
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .join("\n");
+
+    let query = "INSERT INTO quant.strategy_state FORMAT JSONEachRow";
+    let url = format!(
+        "{}?database={}&query={}",
+        config.clickhouse_url,
+        config.clickhouse_database,
+        urlencoding::encode(query)
+    );
+    let response = clickhouse_client()
+        .post(url)
+        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
+        .body(payload)
+        .send()
+        .context("failed to insert strategy states")?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "strategy state insert failed with status {}",
+            response.status()
+        );
+    }
+    Ok(())
+}
+
+pub fn fetch_latest_strategy_state_on_or_before(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+    scope: AnalysisScope,
+) -> Result<Option<StrategyStateSnapshot>> {
+    ensure_strategy_state_table(config)?;
+    let query = format!(
+        "SELECT date,scope,state,state_score,transition_reason,recommended_position_pct FROM quant.strategy_state WHERE scope = '{}' AND date <= '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+        scope.as_str(), report_date
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    Ok(Some(
+        serde_json::from_str::<StrategyStateSnapshot>(line)
+            .context("failed to parse strategy state row")?,
+    ))
+}
+
+pub fn fetch_strategy_states_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Vec<StrategyStateSnapshot>> {
+    ensure_strategy_state_table(config)?;
+    let query = format!(
+        "SELECT date,scope,state,state_score,transition_reason,recommended_position_pct FROM quant.strategy_state WHERE scope = '{}' ORDER BY date FORMAT JSONEachRow",
+        escape_sql_string(scope.as_str())
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row::<StrategyStateSnapshot>(&body, "failed to parse strategy state row")
+}
+
+pub fn fetch_latest_strategy_state_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table_with_filter(config, "strategy_state", "scope", scope.as_str())
+}
+
 pub fn insert_rotation_ranks(config: &StorageConfig, rows: &[RotationRankSnapshot]) -> Result<()> {
     if rows.is_empty() {
         return Ok(());
@@ -1081,6 +1506,7 @@ pub fn insert_strategy_preferences(
     if rows.is_empty() {
         return Ok(());
     }
+    ensure_strategy_preference_scope_columns(config)?;
     let min_date = rows
         .iter()
         .map(|row| row.date)
@@ -1091,11 +1517,19 @@ pub fn insert_strategy_preferences(
         .map(|row| row.date)
         .max()
         .context("missing max strategy date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.analysis_scope.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
     execute_clickhouse_query(
         config,
         &format!(
-            "ALTER TABLE quant.strategy_preference DELETE WHERE date BETWEEN '{}' AND '{}'",
-            min_date, max_date
+            "ALTER TABLE quant.strategy_preference DELETE WHERE analysis_scope IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
         ),
     )?;
 
@@ -1105,6 +1539,8 @@ pub fn insert_strategy_preferences(
             serde_json::json!({
                 "date": row.date.to_string(),
                 "symbol": row.symbol,
+                "analysis_scope": row.analysis_scope,
+                "regime_basis_scope": row.regime_basis_scope,
                 "value_left_score": row.value_left_score,
                 "trend_pullback_score": row.trend_pullback_score,
                 "trend_breakout_score": row.trend_breakout_score,
@@ -1148,7 +1584,8 @@ pub fn insert_strategy_preferences(
 pub fn fetch_latest_backtest_run(
     config: &StorageConfig,
 ) -> Result<Option<backtest_engine::BacktestSummary>> {
-    let query = "SELECT run_id,strategy_name,cagr,max_drawdown,sharpe FROM quant.backtest_run ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
+    ensure_backtest_run_provenance_columns(config)?;
+    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
     let body = fetch_clickhouse_text(config, query)?;
     let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
         return Ok(None);
@@ -1205,6 +1642,34 @@ pub fn fetch_latest_backtest_run(
             .and_then(|value| value.as_str())
             .unwrap_or_default()
             .to_string(),
+        analysis_scope: row
+            .get("analysis_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        signal_scope: row
+            .get("signal_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        regime_basis_scope: row
+            .get("regime_basis_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        signal_start_date: row
+            .get("signal_start_date")
+            .and_then(|value| value.as_str())
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+        signal_end_date: row
+            .get("signal_end_date")
+            .and_then(|value| value.as_str())
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+        config_summary: row
+            .get("config_summary")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
         cagr: row
             .get("cagr")
             .and_then(|value| value.as_f64())
@@ -1220,7 +1685,148 @@ pub fn fetch_latest_backtest_run(
         final_equity,
         trades,
         trading_days,
+        drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
+        state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
     }))
+}
+
+pub fn fetch_latest_backtest_run_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<backtest_engine::BacktestSummary>> {
+    ensure_backtest_run_provenance_columns(config)?;
+    let query = format!(
+        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run WHERE analysis_scope = '{}' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse scoped latest backtest run row")?;
+    let run_id = row
+        .get("run_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let final_equity = fetch_clickhouse_text(
+        config,
+        &format!(
+            "SELECT equity FROM quant.backtest_equity_curve WHERE run_id = '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
+            escape_sql_string(&run_id)
+        ),
+    )?
+    .lines()
+    .find(|line| !line.trim().is_empty())
+    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+    .and_then(|json| json.get("equity").and_then(|value| value.as_f64()))
+    .unwrap_or(0.0);
+    let trades = fetch_clickhouse_text(
+        config,
+        &format!(
+            "SELECT count() AS trades FROM quant.backtest_trade WHERE run_id = '{}' FORMAT JSONEachRow",
+            escape_sql_string(&run_id)
+        ),
+    )?
+    .lines()
+    .find(|line| !line.trim().is_empty())
+    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+    .and_then(|json| json_u64(json.get("trades")))
+    .unwrap_or(0) as usize;
+    let trading_days = fetch_clickhouse_text(
+        config,
+        &format!(
+            "SELECT count() AS points FROM quant.backtest_equity_curve WHERE run_id = '{}' FORMAT JSONEachRow",
+            escape_sql_string(&run_id)
+        ),
+    )?
+    .lines()
+    .find(|line| !line.trim().is_empty())
+    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+    .and_then(|json| json_u64(json.get("points")))
+    .unwrap_or(0)
+    .saturating_sub(1) as usize;
+
+    Ok(Some(backtest_engine::BacktestSummary {
+        run_id,
+        strategy_name: row
+            .get("strategy_name")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        analysis_scope: row
+            .get("analysis_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        signal_scope: row
+            .get("signal_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        regime_basis_scope: row
+            .get("regime_basis_scope")
+            .and_then(|value| value.as_str())
+            .unwrap_or("GLOBAL")
+            .to_string(),
+        signal_start_date: row
+            .get("signal_start_date")
+            .and_then(|value| value.as_str())
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+        signal_end_date: row
+            .get("signal_end_date")
+            .and_then(|value| value.as_str())
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
+        config_summary: row
+            .get("config_summary")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        cagr: row
+            .get("cagr")
+            .and_then(|value| value.as_f64())
+            .unwrap_or(0.0),
+        max_drawdown: row
+            .get("max_drawdown")
+            .and_then(|value| value.as_f64())
+            .unwrap_or(0.0),
+        sharpe: row
+            .get("sharpe")
+            .and_then(|value| value.as_f64())
+            .unwrap_or(0.0),
+        final_equity,
+        trades,
+        trading_days,
+        drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
+        state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
+    }))
+}
+
+pub fn fetch_latest_strategy_preference_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    ensure_strategy_preference_scope_columns(config)?;
+    fetch_max_date_for_table_with_filter(
+        config,
+        "strategy_preference",
+        "analysis_scope",
+        scope.as_str(),
+    )
+}
+
+pub fn fetch_latest_signal_snapshot_date_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Option<NaiveDate>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    fetch_max_date_for_table_with_filter(
+        config,
+        "signal_snapshot",
+        "analysis_scope",
+        scope.as_str(),
+    )
 }
 
 pub fn insert_report_snapshot(
@@ -1290,7 +1896,8 @@ pub fn fetch_recent_report_snapshots(
 pub fn fetch_strategy_preferences(
     config: &StorageConfig,
 ) -> Result<Vec<StrategyPreferenceSnapshot>> {
-    let query = "SELECT date,symbol,value_left_score,trend_pullback_score,trend_breakout_score,momentum_right_score,best_strategy,confidence,alignment FROM quant.strategy_preference ORDER BY date,symbol FORMAT JSONEachRow";
+    ensure_strategy_preference_scope_columns(config)?;
+    let query = "SELECT date,symbol,analysis_scope,regime_basis_scope,value_left_score,trend_pullback_score,trend_breakout_score,momentum_right_score,best_strategy,confidence,alignment FROM quant.strategy_preference ORDER BY analysis_scope,date,symbol FORMAT JSONEachRow";
     let url = format!(
         "{}?database={}&query={}",
         config.clickhouse_url,
@@ -1325,6 +1932,12 @@ pub fn fetch_strategy_preferences(
                 _ => serde_json::json!("ValueLeft"),
             };
         }
+        if row.get("analysis_scope").is_none() {
+            row["analysis_scope"] = serde_json::json!("GLOBAL");
+        }
+        if row.get("regime_basis_scope").is_none() {
+            row["regime_basis_scope"] = serde_json::json!("GLOBAL");
+        }
         rows.push(
             serde_json::from_value::<StrategyPreferenceSnapshot>(row)
                 .context("failed to decode strategy preference snapshot")?,
@@ -1337,6 +1950,7 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
     if rows.is_empty() {
         return Ok(());
     }
+    ensure_signal_snapshot_provenance_columns(config)?;
     let min_date = rows
         .iter()
         .map(|row| row.date)
@@ -1347,18 +1961,27 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
         .map(|row| row.date)
         .max()
         .context("missing max signal date")?;
+    let scopes = rows
+        .iter()
+        .map(|row| row.analysis_scope.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(|scope| format!("'{}'", escape_sql_string(&scope)))
+        .collect::<Vec<_>>()
+        .join(",");
     execute_clickhouse_query(
         config,
         &format!(
-            "ALTER TABLE quant.signal_snapshot DELETE WHERE date BETWEEN '{}' AND '{}'",
-            min_date, max_date
+            "ALTER TABLE quant.signal_snapshot DELETE WHERE analysis_scope IN ({}) AND date BETWEEN '{}' AND '{}'",
+            scopes, min_date, max_date
         ),
     )?;
 
     let payload = rows
         .iter()
-        .map(|row| {
-            serde_json::json!({
+        .map(|row| -> Result<String> {
+            let reason_json = serde_json::to_string(&row.reason)?;
+            Ok(serde_json::to_string(&serde_json::json!({
                 "date": row.date.to_string(),
                 "symbol": row.symbol,
                 "final_score": row.final_score,
@@ -1370,11 +1993,12 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
                     core_domain::SignalLabel::Reduce => "REDUCE",
                     core_domain::SignalLabel::Sell => "SELL",
                 },
-                "explanation": row.explanation,
-            })
+                "analysis_scope": row.analysis_scope,
+                "regime_basis_scope": row.regime_basis_scope,
+                "explanation": reason_json,
+            }))?)
         })
-        .map(|row| serde_json::to_string(&row))
-        .collect::<std::result::Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<_>>>()?
         .join("\n");
 
     let query = "INSERT INTO quant.signal_snapshot FORMAT JSONEachRow";
@@ -1400,7 +2024,8 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
 }
 
 pub fn fetch_signal_snapshots(config: &StorageConfig) -> Result<Vec<SignalSnapshot>> {
-    let query = "SELECT date,symbol,final_score,signal_label,explanation FROM quant.signal_snapshot ORDER BY date,symbol FORMAT JSONEachRow";
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot ORDER BY date,symbol FORMAT JSONEachRow";
     let url = format!(
         "{}?database={}&query={}",
         config.clickhouse_url,
@@ -1431,12 +2056,32 @@ pub fn fetch_signal_snapshots(config: &StorageConfig) -> Result<Vec<SignalSnapsh
     Ok(rows)
 }
 
+pub fn fetch_signal_snapshots_with_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+) -> Result<Vec<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE analysis_scope = '{}' ORDER BY date,symbol FORMAT JSONEachRow",
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let mut rows = Vec::new();
+    for line in body.lines().filter(|line| !line.trim().is_empty()) {
+        let row: serde_json::Value =
+            serde_json::from_str(line).context("failed to parse scoped signal snapshot row")?;
+        rows.push(decode_signal_snapshot_row(row)?);
+    }
+    Ok(rows)
+}
+
 pub fn fetch_signal_snapshots_for_date(
     config: &StorageConfig,
     report_date: NaiveDate,
 ) -> Result<Vec<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
     let query = format!(
-        "SELECT date,symbol,final_score,signal_label,explanation FROM quant.signal_snapshot WHERE date = '{}' ORDER BY final_score DESC,symbol FORMAT JSONEachRow",
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE date = '{}' ORDER BY final_score DESC,symbol FORMAT JSONEachRow",
         report_date
     );
     let body = fetch_clickhouse_text(config, &query)?;
@@ -1449,12 +2094,56 @@ pub fn fetch_signal_snapshots_for_date(
     Ok(rows)
 }
 
+pub fn fetch_signal_snapshots_for_date_with_scope(
+    config: &StorageConfig,
+    report_date: NaiveDate,
+    scope: AnalysisScope,
+) -> Result<Vec<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE date = '{}' AND analysis_scope = '{}' ORDER BY final_score DESC,symbol FORMAT JSONEachRow",
+        report_date,
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let mut rows = Vec::new();
+    for line in body.lines().filter(|line| !line.trim().is_empty()) {
+        let row: serde_json::Value =
+            serde_json::from_str(line).context("failed to parse scoped signal snapshot row")?;
+        rows.push(decode_signal_snapshot_row(row)?);
+    }
+    Ok(rows)
+}
+
+pub fn fetch_signal_snapshot_for_symbol(
+    config: &StorageConfig,
+    date: NaiveDate,
+    symbol: &str,
+    scope: AnalysisScope,
+) -> Result<Option<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE date = '{}' AND symbol = '{}' AND analysis_scope = '{}' LIMIT 1 FORMAT JSONEachRow",
+        date,
+        escape_sql_string(symbol),
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value =
+        serde_json::from_str(line).context("failed to parse signal snapshot row")?;
+    Ok(Some(decode_signal_snapshot_row(row)?))
+}
+
 pub fn insert_backtest_result(
     config: &StorageConfig,
     summary: &BacktestSummary,
     trades: &[BacktestTrade],
     equity_curve: &[BacktestEquityPoint],
 ) -> Result<()> {
+    ensure_backtest_run_provenance_columns(config)?;
     execute_clickhouse_query(
         config,
         &format!(
@@ -1477,11 +2166,20 @@ pub fn insert_backtest_result(
         ),
     )?;
 
+    let state_trajectory_json = serde_json::to_string(&summary.state_trajectory)?;
     let run_payload = serde_json::to_string(&serde_json::json!({
         "run_id": summary.run_id,
         "strategy_name": summary.strategy_name,
+        "analysis_scope": summary.analysis_scope,
+        "signal_scope": summary.signal_scope,
+        "regime_basis_scope": summary.regime_basis_scope,
+        "signal_start_date": summary.signal_start_date.map(|date| date.to_string()),
+        "signal_end_date": summary.signal_end_date.map(|date| date.to_string()),
+        "config_summary": summary.config_summary,
         "started_at": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         "finished_at": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        "drawdown_events": summary.drawdown_events,
+        "state_trajectory_json": state_trajectory_json,
         "cagr": summary.cagr,
         "max_drawdown": summary.max_drawdown,
         "sharpe": summary.sharpe,

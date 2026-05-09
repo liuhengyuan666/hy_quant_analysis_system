@@ -7,6 +7,8 @@
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
 - `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
+- `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
+- `docs/阶段性更新-2026-04-26.md`：汇总这轮阶段性成果与当前仍待继续推进的方向
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
@@ -223,6 +225,33 @@ cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
 ```
 
+### 8.6A 一次执行完整刷新（工程 / 高级用户路径）
+
+```bash
+cargo run -p quant-cli -- refresh-all
+cargo run -p quant-cli -- refresh-all --to 2026-04-26
+```
+
+说明：
+
+- 该命令会按当前 desktop refresh 相同顺序依次执行：
+  - `ingest -> indicators -> macro -> rotation -> strategy -> signals -> backtests`
+- `--scope` 用于选择**latest-date diagnostics / gate explanation** 的解释 scope，
+  - 不表示只刷新某个 scope 的底层数据链路
+- `--run-backtests` 当前默认为 `true`，与 desktop 完整 refresh 的语义一致
+- 结束后会返回结构化 JSON，总结：
+  - refresh window
+  - latest daily date / latest gated dashboard date
+  - refresh reason / repair window days
+  - 各阶段执行结果
+  - 各 scope 的 `pipeline_diagnostics`
+  - default latest-date 是否推进
+  - latest-gate / consistency 阻塞提示
+- 当前 refresh window 不再只锚定 `latest_daily_date - 7d`；
+  - 如果某个 scope 的 gated latest 落后，或仍没有 gated latest，
+  - 系统会自动扩到一个保守的 repair window 来修复被 gate 卡住的较早日期
+- 这条命令更适合作为 **显式工程路径 / 高级用户路径**；默认用户路径仍然优先推荐桌面端 `Refresh data`
+
 ### 8.7 跑回测
 
 ```bash
@@ -235,6 +264,7 @@ cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- dashboard-dates
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
+cargo run -p quant-cli -- explain-latest-gate
 cargo run -p quant-cli -- dashboard-dates --scope cn
 cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 ```
@@ -246,13 +276,15 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 - `dashboard-snapshot --date YYYY-MM-DD` 可回看某一历史日期的分析结果
 - `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
 - `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
-- 当前 Phase 1 下，`strategy_preference / signal / backtest` 仍沿用 `GLOBAL` regime 评分；scope-aware 的 regime / environment 先用于 dashboard、report 与 diagnostics
+- `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
+- signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
+- `explain-latest-gate` 会专门解释：为什么默认最新日期还没有推进到 freshest market date，以及卡在 signal / rotation / regime / environment 哪一层
 
 ### 8.9 导出日报
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-04-02
+cargo run -p quant-cli -- export-report --date 2026-04-07
 cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
 ```
 
@@ -323,10 +355,12 @@ cargo run -p quant-desktop
 - Analysis date selector
 - Market regime
 - Environment layer
+- Trust summary
 - Top rotation
 - Top signals
 - Latest backtest
 - Data health summary
+- Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
 
 ---
@@ -340,38 +374,75 @@ cargo run -p quant-desktop
 - 低频操作
 - 手动 / 低频刷新
 
+当前默认用户路径建议是：
+
+> **优先使用桌面端的 `Refresh data` 作为默认刷新入口；CLI 全链路命令继续保留为显式工程/高级用户路径。**
+
 推荐日常流程：
 
 1. 更新日线数据
 2. 跑指标 / 宏观 / 轮动 / 信号
-3. 先看一次 pipeline freshness / completeness
-4. 再跑一次数据健康检查
-5. 查看 dashboard
-6. 导出日报
-7. 有需要时再跑回测
+3. 先看一次 trust summary
+4. 再下钻 pipeline freshness / completeness
+5. 再跑一次数据健康检查
+6. 查看 dashboard
+7. 导出日报
+8. 有需要时再跑回测
 
-也就是：
+如果你日常主要使用桌面端，更推荐的实际顺序是：
+
+1. 打开桌面端
+2. 点击 `Refresh data`
+3. 先看 `Trust summary`
+4. 再下钻 `Pipeline freshness` 与 `Data health`
+5. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
+6. 需要留档时再导出 report
+
+### CLI 手动链路（工程/高级用户路径）
+
+> **这组命令必须按顺序执行**，不能倒序或跳过中间阶段，否则 `export-report` 会因 latest gate 落后而被拒绝。
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-04-03
+# 1. 拉取行情（顺序：必须先有数据）
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
+
+# 2. 计算技术指标
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-04-03
+
+# 3. 计算宏观与市场环境（同时重建 macro / regime / environment / strategy_state）
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-08
+
+# 4. 计算轮动强弱
 cargo run -p quant-cli -- compute-rotation
+
+# 5. 计算策略偏好
 cargo run -p quant-cli -- compute-strategy-preferences
+
+# 6. 生成最终信号
 cargo run -p quant-cli -- compute-signals
+
+# 7. 检查各阶段日期是否推进（排查用）
 cargo run -p quant-cli -- pipeline-dates
+
+# 8. 数据健康检查
 cargo run -p quant-cli -- check-data-health
+
+# 9. 查看 dashboard
 cargo run -p quant-cli -- dashboard-snapshot
+
+# 10. 导出日报（如果前面有阶段 lagging，这一步会 fail-loud）
 cargo run -p quant-cli -- export-report
 ```
 
 补充说明：
 
 - `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
+- 如果 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，优先单独重跑一次 `compute-signals`
 - `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
 - 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 - 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
-- `GLOBAL / CN / HK` 的 dashboard/report 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化
+- `GLOBAL / CN / HK` 的 dashboard/report/strategy/signal/backtest 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化；signal 和 backtest 均携带显式 provenance 字段（`analysis_scope`、`regime_basis_scope`、`matches current snapshot`）
+- **默认 `export-report` 现在会在 latest gate 落后时直接失败，不再静默导出旧日期日报；如果确实要导出历史日报，请显式传 `--date YYYY-MM-DD`**
 
 ---
 
@@ -388,22 +459,37 @@ cargo run -p quant-cli -- export-report
 ## 13. 常用命令总表
 
 ```bash
+# 环境
 cargo run -p quant-cli -- status
 docker compose -f infra/docker/docker-compose.yml up -d
 cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
-cargo run -p quant-cli -- ingest-daily --from 2024-01-01 --to 2025-01-31
+
+# 推荐默认路径（一条命令完成全链路刷新）
+cargo run -p quant-cli -- refresh-all --to 2026-05-08
+
+# 分步路径（必须按顺序执行，不能倒序）
+cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
 cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2025-01-01 --to 2025-01-31
+cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-08
 cargo run -p quant-cli -- compute-rotation
 cargo run -p quant-cli -- compute-strategy-preferences
 cargo run -p quant-cli -- compute-signals
+
+# 检查与排查
 cargo run -p quant-cli -- pipeline-dates
+cargo run -p quant-cli -- explain-latest-gate
 cargo run -p quant-cli -- check-data-health
-cargo run -p quant-cli -- run-backtest
+
+# 查看与导出
 cargo run -p quant-cli -- dashboard-snapshot
 cargo run -p quant-cli -- dashboard-snapshot --scope cn
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --scope hk
+cargo run -p quant-cli -- export-report --date 2026-05-07
+cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
 cargo run -p quant-cli -- export-data-health-report
+
+# 回测
+cargo run -p quant-cli -- run-backtest
+cargo run -p quant-cli -- run-backtest --scope global --use-state-sizing --max-drawdown 0.15
 ```

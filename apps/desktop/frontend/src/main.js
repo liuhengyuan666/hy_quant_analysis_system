@@ -1,10 +1,57 @@
 import { invoke } from '@tauri-apps/api/core';
+import { createDataHealthSlice } from './features/data-health.js';
+import { createRecentReportsSlice } from './features/recent-reports.js';
+import { createUsageGuidesSlice } from './features/usage-guides.js';
+import {
+  escapeHtml,
+  formatCanonicalAdjustment,
+  formatCurrency,
+  formatDate,
+  formatDateRange,
+  formatDateTime,
+  formatFallbackState,
+  formatInteger,
+  formatNumber,
+  formatPercent,
+  formatReportType,
+  formatScopeLabel,
+  getDayDifference,
+  getErrorMessage,
+  getFiniteNumber,
+  getFlaggedMacroSources,
+  getFlaggedSymbols,
+  getRecentReportScope,
+  healthTone,
+  normalizeAvailableDates,
+  normalizeRecentReports,
+  normalizeRefreshStatus,
+  normalizeScope,
+  normalizeUsageGuides,
+  prettifyToken,
+  regimeTone,
+  renderMarkdownContent,
+  resolveSelectedReportDate,
+  resolveSelectedUsageGuide,
+  signalTone,
+  trustTone,
+} from './lib/dashboard-utils.js';
+import { createEnvironmentBreadthRenderers } from './renderers/environment-breadth.js';
 import './styles.css';
 
 const app = document.querySelector('#app');
 
 const RECENT_REPORT_LIMIT = 8;
 const DATA_HEALTH_CACHE_MS = 5 * 60 * 1000;
+const REFRESH_START_STAGE_OPTIONS = [
+  { value: 'full', label: 'Full refresh' },
+  { value: 'ingest', label: 'From daily bars' },
+  { value: 'indicators', label: 'From indicators' },
+  { value: 'macro', label: 'From macro' },
+  { value: 'rotation', label: 'From rotation' },
+  { value: 'strategy', label: 'From strategy' },
+  { value: 'signals', label: 'From signals' },
+  { value: 'backtests', label: 'From backtests' },
+];
 
 const state = {
   loading: true,
@@ -20,6 +67,7 @@ const state = {
   usageGuidesError: '',
   exportResult: null,
   dataHealthExportResult: null,
+  recentReportActionResult: null,
   status: null,
   pipelineDates: null,
   snapshot: null,
@@ -30,18 +78,26 @@ const state = {
   availableDates: [],
   selectedScope: 'global',
   selectedReportDate: '',
+  selectedRefreshStartStage: 'full',
   selectedUsageGuideId: '',
+  selectedSignalDetail: null,
   lastUpdatedAt: null,
   refreshStatus: {
     running: false,
     status: 'idle',
     progress_pct: 0,
     stage: 'Idle',
+    current_stage: null,
+    start_stage: 'full',
+    retry_from_stage: null,
     refresh_from: null,
     refresh_to: null,
     started_at: null,
     finished_at: null,
     error: null,
+    cancelling: false,
+    job_id: null,
+    last_successful_stage: null,
   },
 };
 
@@ -59,337 +115,91 @@ const COMMANDS = {
   recentReports: 'recent_reports',
   usageGuides: 'usage_guides',
   startRefresh: 'start_dashboard_refresh',
+  cancelRefresh: 'cancel_dashboard_refresh',
+  retryRefresh: 'retry_dashboard_refresh',
   refreshStatus: 'dashboard_refresh_status',
+  openReportArtifact: 'open_report_artifact',
+  getUserPreferences: 'get_user_preferences',
+  setUserPreference: 'set_user_preference',
 };
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+function savePreference(key, value) {
+  invoke(COMMANDS.setUserPreference, { key, value }).catch(() => {});
 }
 
-function formatDate(value) {
-  if (!value) return 'Unavailable';
-  const dateOnlyMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const date = dateOnlyMatch
-    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
-    : new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return escapeHtml(value);
+async function loadAndApplyPreferences() {
+  try {
+    const prefs = await invoke(COMMANDS.getUserPreferences);
+    if (prefs.default_scope && ['global', 'cn', 'hk'].includes(prefs.default_scope)) {
+      state.selectedScope = prefs.default_scope;
+    }
+    if (prefs.last_analysis_date) {
+      state.selectedReportDate = prefs.last_analysis_date;
+    }
+  } catch (_) {
+    // Silently ignore preference load errors
   }
-  return new Intl.DateTimeFormat(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
 }
 
-function formatDateTime(value) {
-  if (!value) return 'Not yet synced';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return escapeHtml(value);
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
+const usageGuides = createUsageGuidesSlice({
+  state,
+  render,
+  invoke,
+  commands: COMMANDS,
+  escapeHtml,
+  formatInteger,
+  normalizeUsageGuides,
+  resolveSelectedUsageGuide,
+  renderMarkdownContent,
+  getErrorMessage,
+});
 
-function normalizeRefreshStatus(payload) {
-  return {
-    running: Boolean(payload?.running),
-    status: String(payload?.status ?? 'idle'),
-    progress_pct: Math.max(0, Math.min(100, Number(payload?.progress_pct ?? 0))),
-    stage: String(payload?.stage ?? 'Idle'),
-    refresh_from: payload?.refresh_from ? String(payload.refresh_from) : null,
-    refresh_to: payload?.refresh_to ? String(payload.refresh_to) : null,
-    started_at: payload?.started_at ? String(payload.started_at) : null,
-    finished_at: payload?.finished_at ? String(payload.finished_at) : null,
-    error: payload?.error ? String(payload.error) : null,
-  };
-}
+const dataHealth = createDataHealthSlice({
+  state,
+  render,
+  invoke,
+  commands: COMMANDS,
+  cacheMs: DATA_HEALTH_CACHE_MS,
+  escapeHtml,
+  formatCanonicalAdjustment,
+  formatDate,
+  formatDateRange,
+  formatDateTime,
+  formatFallbackState,
+  formatInteger,
+  formatNumber,
+  getErrorMessage,
+  getFlaggedMacroSources,
+  getFlaggedSymbols,
+  healthTone,
+  prettifyToken,
+  renderMetricCard,
+  renderNotice,
+  pushRecentReport,
+});
 
-function formatNumber(value, digits = 2) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(numeric);
-}
+const environmentBreadthRenderers = createEnvironmentBreadthRenderers({
+  renderMetricCard,
+});
 
-function getFiniteNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function formatInteger(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat().format(numeric);
-}
-
-function formatPercent(value, digits = 2) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return `${formatNumber(numeric * 100, digits)}%`;
-}
-
-function formatDisplayPercent(value, digits = 1) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return `${formatNumber(numeric, digits)}%`;
-}
-
-function formatDeltaPoints(value, digits = 1) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  const sign = numeric > 0 ? '+' : '';
-  return `${sign}${formatNumber(numeric, digits)} pts`;
-}
-
-function formatCurrency(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(numeric);
-}
-
-function clampScore(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 0;
-  return Math.max(0, Math.min(100, numeric));
-}
-
-function prettifyToken(value) {
-  return String(value ?? '')
-    .replaceAll('_', ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (match) => match.toUpperCase());
-}
-
-function formatCanonicalAdjustment(value) {
-  const adjustment = String(value ?? '').trim();
-  if (!adjustment) return 'Unknown';
-  return adjustment.length <= 5 ? adjustment.toUpperCase() : prettifyToken(adjustment);
-}
-
-function regimeTone(label) {
-  const normalized = String(label ?? '').toLowerCase();
-  if (normalized.includes('risk_on')) return 'positive';
-  if (normalized.includes('risk_off')) return 'negative';
-  return 'neutral';
-}
-
-function breadthTone(label) {
-  const normalized = String(label ?? '').toLowerCase();
-  if (normalized === 'improving' || normalized === 'strong') return 'positive';
-  if (normalized === 'weakening' || normalized === 'weak') return 'negative';
-  if (normalized === 'near_local_low' || normalized === 'near_local_high') return 'warning';
-  if (normalized === 'unavailable') return 'outline';
-  return 'neutral';
-}
-
-function signalTone(label) {
-  const normalized = String(label ?? '').toLowerCase();
-  if (normalized.includes('strongbuy') || normalized.includes('buy')) return 'positive';
-  if (normalized.includes('sell') || normalized.includes('reduce')) return 'negative';
-  return 'neutral';
-}
-
-function healthTone(status) {
-  const normalized = String(status ?? '').toLowerCase();
-  if (normalized === 'healthy') return 'positive';
-  if (normalized === 'critical') return 'negative';
-  return 'neutral';
-}
-
-function dataHealthTone(summary) {
-  if (!summary) return 'neutral';
-  if (Number(summary.critical_symbols) > 0 || Number(summary.critical_macro_sources) > 0) return 'negative';
-  if (Number(summary.review_symbols) > 0 || Number(summary.review_macro_sources) > 0) return 'neutral';
-  return 'positive';
-}
-
-function getFlaggedSymbols(summary) {
-  if (!Array.isArray(summary?.symbols)) return [];
-
-  const weightByStatus = {
-    critical: 0,
-    review: 1,
-    healthy: 2,
-  };
-
-  return [...summary.symbols]
-    .filter((item) => String(item?.status ?? '').toLowerCase() !== 'healthy')
-    .sort((left, right) => {
-      const statusDelta = (weightByStatus[String(left?.status ?? '').toLowerCase()] ?? 3)
-        - (weightByStatus[String(right?.status ?? '').toLowerCase()] ?? 3);
-      if (statusDelta !== 0) return statusDelta;
-
-      const noteDelta = (right?.notes?.length ?? 0) - (left?.notes?.length ?? 0);
-      if (noteDelta !== 0) return noteDelta;
-
-      return String(left?.symbol ?? '').localeCompare(String(right?.symbol ?? ''));
-    });
-}
-
-function getFlaggedMacroSources(summary) {
-  if (!Array.isArray(summary?.macro_sources)) return [];
-
-  const weightByStatus = {
-    critical: 0,
-    review: 1,
-    healthy: 2,
-  };
-
-  return [...summary.macro_sources]
-    .filter((item) => String(item?.status ?? '').toLowerCase() !== 'healthy')
-    .sort((left, right) => {
-      const statusDelta = (weightByStatus[String(left?.status ?? '').toLowerCase()] ?? 3)
-        - (weightByStatus[String(right?.status ?? '').toLowerCase()] ?? 3);
-      if (statusDelta !== 0) return statusDelta;
-      return String(left?.factor_name ?? '').localeCompare(String(right?.factor_name ?? ''));
-    });
-}
-
-function formatDateRange(start, end) {
-  if (!start && !end) return 'Date range unavailable';
-  return `${formatDate(start)} → ${formatDate(end)}`;
-}
-
-function normalizeAvailableDates(values) {
-  if (!Array.isArray(values)) return [];
-
-  return [...new Set(values.map((value) => String(value ?? '').trim()).filter(Boolean))]
-    .sort((left, right) => right.localeCompare(left));
-}
-
-function normalizeRecentReports(values) {
-  if (!Array.isArray(values)) return [];
-
-  const seen = new Set();
-
-  return values
-    .map((item) => ({
-      report_type: String(item?.report_type ?? '').trim(),
-      report_date: String(item?.report_date ?? '').trim(),
-      artifact_path: String(item?.artifact_path ?? '').trim(),
-    }))
-    .filter((item) => item.report_type && item.report_date && item.artifact_path)
-    .filter((item) => {
-      const key = `${item.report_type}::${item.report_date}::${item.artifact_path}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, RECENT_REPORT_LIMIT);
-}
-
-function normalizeUsageGuides(values) {
-  if (!Array.isArray(values)) return [];
-
-  const seen = new Set();
-
-  return values
-    .map((item, index) => ({
-      id: String(item?.id ?? `guide-${index + 1}`).trim(),
-      title: String(item?.title ?? '').trim(),
-      content: String(item?.content ?? ''),
-    }))
-    .filter((item) => item.id && item.title)
-    .filter((item) => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return true;
-    });
-}
-
-function resolveSelectedUsageGuide(guides, currentGuideId) {
-  if (!guides.length) return '';
-  if (currentGuideId && guides.some((guide) => guide.id === currentGuideId)) return currentGuideId;
-  return guides[0].id;
-}
-
-function getSelectedUsageGuide() {
-  return state.usageGuides.find((guide) => guide.id === state.selectedUsageGuideId) || state.usageGuides[0] || null;
-}
-
-function resolveSelectedReportDate(availableDates, currentDate) {
-  if (!availableDates.length) return '';
-  if (currentDate && availableDates.includes(currentDate)) return currentDate;
-  return availableDates[0];
-}
-
-function formatReportType(value) {
-  const normalized = String(value ?? '').trim().toUpperCase();
-
-  if (normalized === 'DAILY_REPORT') return 'Daily report';
-  if (normalized === 'DAILY_REPORT_CN') return 'Daily report (CN)';
-  if (normalized === 'DAILY_REPORT_HK') return 'Daily report (HK)';
-  if (normalized === 'DATA_HEALTH_REPORT') return 'Data health';
-
-  return prettifyToken(value);
-}
-
-function parseDateValue(value) {
-  if (!value) return null;
-
-  const dateOnlyMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (dateOnlyMatch) {
-    return Date.UTC(
-      Number(dateOnlyMatch[1]),
-      Number(dateOnlyMatch[2]) - 1,
-      Number(dateOnlyMatch[3]),
-    );
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.getTime();
-}
-
-function normalizeScope(value) {
-  const normalized = String(value ?? 'global').trim().toLowerCase();
-  if (normalized === 'cn' || normalized === 'hk') return normalized;
-  return 'global';
-}
-
-function formatScopeLabel(value) {
-  const normalized = normalizeScope(value);
-  if (normalized === 'cn') return 'CN';
-  if (normalized === 'hk') return 'HK';
-  return 'GLOBAL';
-}
-
-function isDataHealthCacheFresh() {
-  if (!state.dataHealth || !state.dataHealthFetchedAt) return false;
-  const fetchedAt = new Date(state.dataHealthFetchedAt).getTime();
-  if (!Number.isFinite(fetchedAt)) return false;
-  return (Date.now() - fetchedAt) < DATA_HEALTH_CACHE_MS;
-}
-
-function getDayDifference(earlier, later) {
-  const earlierValue = parseDateValue(earlier);
-  const laterValue = parseDateValue(later);
-
-  if (!Number.isFinite(earlierValue) || !Number.isFinite(laterValue)) {
-    return null;
-  }
-
-  return Math.round((laterValue - earlierValue) / 86400000);
-}
+const recentReports = createRecentReportsSlice({
+  state,
+  render,
+  invoke,
+  commands: COMMANDS,
+  escapeHtml,
+  formatDate,
+  formatInteger,
+  formatReportType,
+  formatScopeLabel,
+  getErrorMessage,
+  getRecentReportScope,
+  getActiveReportDate,
+  loadDashboard,
+  loadSelectedSnapshot,
+  normalizeScope,
+  renderNotice,
+});
 
 function getActiveReportDate() {
   return state.selectedReportDate || state.snapshot?.report_date || '';
@@ -445,7 +255,7 @@ function pushRecentReport(reportType, reportDate, artifactPath) {
       artifact_path: artifactPath,
     },
     ...state.recentReports,
-  ]);
+  ], RECENT_REPORT_LIMIT);
 }
 
 function getViewModeSummary(selectedDate, latestAvailableDate) {
@@ -476,167 +286,11 @@ function getViewModeSummary(selectedDate, latestAvailableDate) {
   };
 }
 
-function formatFallbackState(value) {
-  if (value === true) return 'Fallback ok';
-  if (value === false) return 'Fallback down';
-  return 'Fallback n/a';
+function formatRefreshStageLabel(value) {
+  const normalized = String(value ?? 'full').trim().toLowerCase();
+  return REFRESH_START_STAGE_OPTIONS.find((option) => option.value === normalized)?.label || 'Full refresh';
 }
 
-function getErrorMessage(error) {
-  if (typeof error === 'string') return error;
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
-  }
-  return 'Unable to complete the request.';
-}
-
-function renderMarkdownInline(value) {
-  let html = escapeHtml(value);
-  const inlineCodeTokens = [];
-
-  html = html.replace(/`([^`]+)`/g, (_, code) => {
-    const token = `__INLINE_CODE_${inlineCodeTokens.length}__`;
-    inlineCodeTokens.push(`<code>${code}</code>`);
-    return token;
-  });
-
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, url) => (
-    `<a href="${url}" target="_blank" rel="noreferrer">${label}</a>`
-  ));
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-  return html.replace(/__INLINE_CODE_(\d+)__/g, (_, index) => inlineCodeTokens[Number(index)] || '');
-}
-
-function renderMarkdownContent(value) {
-  const lines = String(value ?? '').replace(/\r\n/g, '\n').split('\n');
-  const blocks = [];
-  let paragraphLines = [];
-  let listType = '';
-  let listItems = [];
-  let quoteLines = [];
-  let codeFenceActive = false;
-  let codeFenceLanguage = '';
-  let codeFenceLines = [];
-
-  const flushParagraph = () => {
-    if (!paragraphLines.length) return;
-    blocks.push(`<p>${paragraphLines.map((line) => renderMarkdownInline(line)).join(' ')}</p>`);
-    paragraphLines = [];
-  };
-
-  const flushList = () => {
-    if (!listItems.length || !listType) return;
-    blocks.push(`<${listType}>${listItems.map((item) => `<li>${item}</li>`).join('')}</${listType}>`);
-    listItems = [];
-    listType = '';
-  };
-
-  const flushQuote = () => {
-    if (!quoteLines.length) return;
-    blocks.push(`<blockquote><p>${quoteLines.map((line) => renderMarkdownInline(line)).join('<br>')}</p></blockquote>`);
-    quoteLines = [];
-  };
-
-  const flushContentBlocks = () => {
-    flushParagraph();
-    flushList();
-    flushQuote();
-  };
-
-  const flushCodeBlock = () => {
-    const languageClass = codeFenceLanguage ? ` class="language-${escapeHtml(codeFenceLanguage)}"` : '';
-    blocks.push(`<pre><code${languageClass}>${escapeHtml(codeFenceLines.join('\n'))}</code></pre>`);
-    codeFenceActive = false;
-    codeFenceLanguage = '';
-    codeFenceLines = [];
-  };
-
-  for (const rawLine of lines) {
-    const trimmedLine = rawLine.trim();
-
-    if (codeFenceActive) {
-      if (trimmedLine.startsWith('```')) {
-        flushCodeBlock();
-      } else {
-        codeFenceLines.push(rawLine);
-      }
-      continue;
-    }
-
-    if (!trimmedLine) {
-      flushContentBlocks();
-      continue;
-    }
-
-    if (trimmedLine.startsWith('```')) {
-      flushContentBlocks();
-      codeFenceActive = true;
-      codeFenceLanguage = trimmedLine.slice(3).trim();
-      codeFenceLines = [];
-      continue;
-    }
-
-    const headingMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
-    if (headingMatch) {
-      flushContentBlocks();
-      const level = headingMatch[1].length;
-      blocks.push(`<h${level}>${renderMarkdownInline(headingMatch[2].trim())}</h${level}>`);
-      continue;
-    }
-
-    if (/^(-{3,}|\*{3,})$/.test(trimmedLine)) {
-      flushContentBlocks();
-      blocks.push('<hr>');
-      continue;
-    }
-
-    const quoteMatch = rawLine.match(/^\s*>\s?(.*)$/);
-    if (quoteMatch) {
-      flushParagraph();
-      flushList();
-      quoteLines.push(quoteMatch[1]);
-      continue;
-    }
-
-    flushQuote();
-
-    const unorderedListMatch = rawLine.match(/^\s*[-*+]\s+(.+)$/);
-    if (unorderedListMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ul') flushList();
-      listType = 'ul';
-      listItems.push(renderMarkdownInline(unorderedListMatch[1]));
-      continue;
-    }
-
-    const orderedListMatch = rawLine.match(/^\s*\d+\.\s+(.+)$/);
-    if (orderedListMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ol') flushList();
-      listType = 'ol';
-      listItems.push(renderMarkdownInline(orderedListMatch[1]));
-      continue;
-    }
-
-    if (listItems.length && /^\s{2,}\S/.test(rawLine)) {
-      listItems[listItems.length - 1] = `${listItems[listItems.length - 1]}<br>${renderMarkdownInline(trimmedLine)}`;
-      continue;
-    }
-
-    flushList();
-    paragraphLines.push(trimmedLine);
-  }
-
-  if (codeFenceActive) {
-    flushCodeBlock();
-  }
-
-  flushContentBlocks();
-
-  return blocks.join('');
-}
 
 function renderMetricCard(label, value, meta, tone = 'neutral') {
   return `
@@ -669,6 +323,12 @@ function renderPipelineDateDiagnostics(pipelineDates) {
         <p class="panel__section-title">Pipeline freshness</p>
         <span class="panel__meta">Freshest market date · ${escapeHtml(formatDate(pipelineDates.freshest_market_date))}</span>
       </div>
+      ${Array.isArray(pipelineDates.alerts) && pipelineDates.alerts.length ? `
+        <section class="staleness-banner staleness-banner--warning" aria-label="Pipeline freshness alerts">
+          <strong>Action required before trusting latest defaults</strong>
+          <ul class="note-list">${pipelineDates.alerts.map((alert) => `<li>${escapeHtml(alert)}</li>`).join('')}</ul>
+        </section>
+      ` : ''}
       <div class="table-wrap">
         <table class="data-table data-table--compact">
           <thead>
@@ -756,7 +416,7 @@ function renderTimeContext(snapshot) {
   `;
 }
 
-function renderHealthStrip(status, snapshot, dataHealth) {
+function renderHealthStrip(status, snapshot) {
   const exportTone = state.exportResult?.kind === 'success'
     ? 'positive'
     : state.exportResult?.kind === 'error'
@@ -773,17 +433,6 @@ function renderHealthStrip(status, snapshot, dataHealth) {
       label: 'Snapshot',
       value: snapshot?.report_date ? `Loaded · ${formatDate(snapshot.report_date)}` : 'No report snapshot yet',
       tone: snapshot?.report_date ? 'positive' : 'neutral',
-    },
-    {
-      label: 'Data health',
-      value: dataHealth
-        ? Number(dataHealth.critical_symbols) > 0
-          ? `${formatInteger(dataHealth.critical_symbols)} critical · ${formatInteger(dataHealth.review_symbols)} review`
-          : Number(dataHealth.review_symbols) > 0
-            ? `${formatInteger(dataHealth.review_symbols)} review symbols`
-            : 'All checked symbols healthy'
-        : 'No health summary yet',
-      tone: dataHealthTone(dataHealth),
     },
     {
       label: 'Export',
@@ -813,6 +462,91 @@ function renderHealthStrip(status, snapshot, dataHealth) {
         )
         .join('')}
     </section>
+  `;
+}
+
+function renderTrustSummaryPanel(snapshot, pipelineDates, dataHealth) {
+  const trust = snapshot?.trust_summary;
+  if (!trust) return '';
+
+  const trustLevelTone = trustTone(trust.level);
+  const freshnessValue = trust.pipeline_has_stale_stage
+    ? `${formatInteger(trust.pipeline_stale_stage_count)} stale stage${trust.pipeline_stale_stage_count === 1 ? '' : 's'}`
+    : trust.pipeline_has_partial_latest
+      ? `${formatInteger(trust.pipeline_partial_latest_stage_count)} partial latest`
+      : 'Decision stages fresh';
+  const freshnessTone = trust.pipeline_has_stale_stage
+    ? 'negative'
+    : trust.pipeline_has_partial_latest || !trust.latest_day_complete
+      ? 'warning'
+      : 'positive';
+  const dataHealthValue = trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
+    ? `${formatInteger(trust.data_health_critical_symbols)} symbol / ${formatInteger(trust.data_health_critical_macro_sources)} macro critical`
+    : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
+      ? `${formatInteger(trust.data_health_review_symbols)} symbol / ${formatInteger(trust.data_health_review_macro_sources)} macro review`
+      : 'No critical health warnings';
+  const dataHealthToneValue = trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
+    ? 'negative'
+    : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
+      ? 'warning'
+      : 'positive';
+  const dataHealthGeneratedAt = dataHealth?.generated_at || trust.data_health_generated_at || '';
+  const freshestMarketDate = trust.freshest_market_date || 'N/A';
+  const latestAvailableDate = trust.latest_available_date || 'N/A';
+  const freshnessStageCount = pipelineDates?.stages?.length ?? 0;
+  const notes = Array.isArray(trust.notes) && trust.notes.length
+    ? `<ul class="note-list">${trust.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
+    : '';
+  const historicalEvidenceNote = snapshot?.report_date && trust.latest_available_date && snapshot.report_date !== trust.latest_available_date
+    ? `This trust summary combines the selected historical snapshot with current operational freshness/data-health evidence as of ${trust.latest_available_date}.`
+    : '';
+
+  return `
+    <article class="panel panel--accent">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Trust summary</p>
+          <h2>${escapeHtml(trust.headline)}</h2>
+          <p class="panel__lede">Primary trust verdict for the currently selected snapshot. Use the evidence sections below before acting on environment, signal, or backtest output.</p>
+        </div>
+        <div class="panel__actions">
+          <span class="pill pill--${trustLevelTone}">${escapeHtml(prettifyToken(trust.level))}</span>
+        </div>
+      </div>
+      <p>${escapeHtml(trust.message)}</p>
+      <div class="panel__meta-row">
+        <span class="panel__meta">Dashboard scope · ${escapeHtml(snapshot.scope)}</span>
+        <span class="panel__meta">Signal analysis scope · ${escapeHtml(trust.signal_analysis_scope || 'N/A')}</span>
+        <span class="panel__meta">Signal regime basis · ${escapeHtml(trust.signal_regime_basis_scope || 'N/A')}</span>
+        <span class="panel__meta">Backtest matches snapshot · ${escapeHtml(trust.backtest_matches_snapshot === undefined || trust.backtest_matches_snapshot === null ? 'N/A' : trust.backtest_matches_snapshot ? 'yes' : 'no')}</span>
+      </div>
+      ${historicalEvidenceNote ? `<p class="breadth-panel__note">${escapeHtml(historicalEvidenceNote)}</p>` : ''}
+      <div class="mini-metrics">
+        ${renderMetricCard('Trust level', prettifyToken(trust.level), trust.headline, trustLevelTone)}
+        ${renderMetricCard('Latest-day coverage', `${formatInteger(trust.scoped_symbols_on_freshest_market_date)}/${formatInteger(trust.scoped_symbols_expected)}`, `Freshest market date · ${freshestMarketDate}`, trust.latest_day_complete ? 'positive' : 'warning')}
+        ${renderMetricCard('Pipeline evidence', freshnessValue, `Latest available · ${latestAvailableDate}`, freshnessTone)}
+        ${renderMetricCard('Data health evidence', dataHealthValue, dataHealthGeneratedAt ? `Generated ${formatDateTime(dataHealthGeneratedAt)}` : 'Detailed health summary not loaded yet', dataHealthToneValue)}
+      </div>
+      <section>
+        <div class="panel__subheader">
+          <p class="panel__section-title">Freshness evidence</p>
+          <span class="panel__meta">${escapeHtml(formatInteger(freshnessStageCount))} tracked stages</span>
+        </div>
+        <p class="breadth-panel__note">
+          ${escapeHtml(`Pipeline freshness remains the stage-level evidence layer. Current verdict: ${freshnessValue}. Latest-day complete: ${trust.latest_day_complete ? 'yes' : 'no'}.`)}
+        </p>
+      </section>
+      <section>
+        <div class="panel__subheader">
+          <p class="panel__section-title">Data-health evidence</p>
+          <span class="panel__meta">Macro status · ${escapeHtml(prettifyToken(trust.macro_status))}</span>
+        </div>
+        <p class="breadth-panel__note">
+          ${escapeHtml(`Data health remains the symbol/provider evidence layer. Current digest: ${dataHealthValue}.`)}
+        </p>
+      </section>
+      ${notes}
+    </article>
   `;
 }
 
@@ -946,70 +680,146 @@ function renderRegimePanel(snapshot) {
   `;
 }
 
-function renderEnvironmentPanel(snapshot) {
-  const environment = snapshot?.environment;
+function getSignalBasisInfo(snapshot) {
+  const signal = snapshot?.top_signals?.[0] || snapshot?.bullish_signals?.[0] || snapshot?.defensive_signals?.[0];
+  if (!signal) return null;
 
-  if (!environment) {
-    return `
-      <article class="panel panel--soft">
-        <div class="panel__header">
-          <div>
-            <p class="eyebrow">Environment layer</p>
-            <h2>Unavailable</h2>
-            <p class="panel__lede">Run the macro/environment pipeline to populate per-scope environment diagnostics.</p>
-          </div>
-        </div>
-        <div class="empty-state">
-          <p>No environment snapshot is available for the selected report date.</p>
-        </div>
-      </article>
-    `;
-  }
+  const analysisScope = String(signal.analysis_scope || 'GLOBAL').toUpperCase();
+  const regimeBasisScope = String(signal.regime_basis_scope || 'GLOBAL').toUpperCase();
+  const snapshotScope = String(snapshot?.scope || 'GLOBAL').toUpperCase();
 
-  const scores = [
-    ['Environment score', environment.environment_score],
-    ['Liquidity proxy', environment.liquidity_proxy_score],
-    ['Stress proxy', environment.stress_proxy_score],
-  ];
+  return {
+    analysisScope,
+    regimeBasisScope,
+    snapshotScope,
+    mismatched: regimeBasisScope !== snapshotScope,
+  };
+}
+
+function getBacktestMatchInfo(snapshot, backtest) {
+  if (!backtest) return null;
+  const snapshotScope = String(snapshot?.scope || 'GLOBAL').toUpperCase();
+  const analysisScope = String(backtest.analysis_scope || 'GLOBAL').toUpperCase();
+  const signalScope = String(backtest.signal_scope || 'GLOBAL').toUpperCase();
+  const regimeBasisScope = String(backtest.regime_basis_scope || 'GLOBAL').toUpperCase();
+  const signalEndDate = backtest.signal_end_date || '';
+  const matchesCurrentSnapshot = analysisScope === snapshotScope
+    && signalScope === snapshotScope
+    && signalEndDate === String(snapshot?.report_date || '');
+
+  return {
+    analysisScope,
+    signalScope,
+    regimeBasisScope,
+    signalEndDate,
+    matchesCurrentSnapshot,
+  };
+}
+
+function renderSignalReason(reason) {
+  if (!reason) return '';
+
+  const alignedStrategies = Array.isArray(reason.aligned_strategies) && reason.aligned_strategies.length
+    ? reason.aligned_strategies.map((strategy) => prettifyToken(strategy)).join(', ')
+    : 'None';
+  const rank = reason.rotation?.rank === null || reason.rotation?.rank === undefined
+    ? 'N/A'
+    : `#${formatInteger(reason.rotation.rank)}`;
 
   return `
-    <article class="panel panel--soft">
-      <div class="panel__header">
-        <div>
-          <p class="eyebrow">Environment layer</p>
-          <h2>${escapeHtml(prettifyToken(environment.environment_label))}</h2>
-          <p class="panel__lede">Scope-aware participation, liquidity proxy, and stress posture for the selected report date.</p>
-        </div>
-        <div class="panel__actions">
-          <span class="pill pill--${breadthTone(environment.breadth_state)}">Breadth · ${escapeHtml(prettifyToken(environment.breadth_state))}</span>
-          <span class="pill pill--outline">Regime as-of · ${escapeHtml(formatDate(environment.regime_as_of_date))}</span>
-        </div>
+    <p class="signal-card__text">${escapeHtml(reason.summary || '')}</p>
+    <div class="panel__meta-row">
+      <span class="panel__meta">Strategy · ${escapeHtml(prettifyToken(reason.best_strategy))} ${escapeHtml(formatNumber(reason.strategy_score, 1))} / contrib ${escapeHtml(formatNumber(reason.strategy_contribution, 1))}</span>
+      <span class="panel__meta">Alignment · ${escapeHtml(formatInteger(reason.alignment))} (${escapeHtml(alignedStrategies)}) / contrib ${escapeHtml(formatNumber(reason.alignment_contribution, 1))}</span>
+      <span class="panel__meta">Regime · trend ${escapeHtml(formatNumber(reason.regime?.trend_score, 1))} · risk ${escapeHtml(formatNumber(reason.regime?.risk_score, 1))} · contrib ${escapeHtml(formatNumber(reason.regime?.contribution, 1))}</span>
+      <span class="panel__meta">Rotation · momentum ${escapeHtml(formatNumber(reason.rotation?.momentum_score, 1))} · rank ${escapeHtml(rank)} · contrib ${escapeHtml(formatNumber(reason.rotation?.contribution, 1))}</span>
+    </div>
+  `;
+}
+
+function renderSignalContributionSection(title, weight, valueRows) {
+  return `
+    <section class="signal-detail__section">
+      <div class="panel__subheader">
+        <p class="panel__section-title">${escapeHtml(title)}</p>
+        <span class="pill pill--outline">${escapeHtml(weight)}</span>
       </div>
-      <div class="mini-metrics">
-        ${renderMetricCard('Breadth', formatDisplayPercent(environment.breadth_pct, 1), `${formatInteger(environment.breadth_above_count)} / ${formatInteger(environment.breadth_eligible_count)} above MA30`, 'neutral')}
-        ${renderMetricCard('Breadth SMA5', formatDisplayPercent(environment.breadth_pct_sma5, 1), 'Smoothed participation', 'neutral')}
-        ${renderMetricCard('Breadth 5d', formatDeltaPoints(environment.breadth_5d_delta, 1), 'Repair or deterioration speed', 'neutral')}
-        ${renderMetricCard('Volume expansion', formatDisplayPercent(environment.volume_expansion_pct, 1), 'Share of tracked symbols above vol_ma20', 'neutral')}
-      </div>
-      <div class="score-stack environment-panel__scores">
-        ${scores
+      <dl class="detail-grid signal-detail__grid">
+        ${valueRows
           .map(
             ([label, value]) => `
-              <div class="score-row">
-                <div class="score-row__meta">
-                  <span>${escapeHtml(label)}</span>
-                  <strong>${escapeHtml(formatNumber(value, 1))}</strong>
-                </div>
-                <div class="score-bar">
-                  <span class="score-bar__fill" style="width: ${clampScore(value)}%"></span>
-                </div>
+              <div class="detail-item">
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${value}</dd>
               </div>
             `,
           )
           .join('')}
-      </div>
-      <p class="breadth-panel__note">Tracked-universe proxy only. Environment breadth remains based on enabled INDEX + ETF instruments, not a full stock-universe breadth series.</p>
-    </article>
+      </dl>
+    </section>
+  `;
+}
+
+function renderSignalDetailModal(signal) {
+  if (!signal) return '';
+
+  const reason = signal.reason || {};
+  const label = signal.signal_label || reason.label || 'N/A';
+  const finalScore = signal.final_score ?? reason.final_score;
+  const alignedStrategies = Array.isArray(reason.aligned_strategies) && reason.aligned_strategies.length
+    ? reason.aligned_strategies
+      .map((strategy) => `<span class="pill pill--neutral">${escapeHtml(prettifyToken(strategy))}</span>`)
+      .join('')
+    : '<span class="panel__meta">No aligned strategies</span>';
+  const alignmentCount = reason.alignment === null || reason.alignment === undefined
+    ? 'N/A'
+    : formatInteger(reason.alignment);
+  const rotationRank = reason.rotation?.rank === null || reason.rotation?.rank === undefined
+    ? 'N/A'
+    : `#${formatInteger(reason.rotation.rank)}`;
+
+  return `
+    <div class="signal-detail" role="dialog" aria-modal="true" aria-labelledby="signalDetailTitle">
+      <button class="signal-detail__backdrop" type="button" aria-label="Close signal detail"></button>
+      <article class="signal-detail__panel panel">
+        <div class="panel__header signal-detail__header">
+          <div>
+            <p class="eyebrow">Signal drilldown</p>
+            <h2 id="signalDetailTitle">${escapeHtml(signal.symbol || 'Unknown symbol')}</h2>
+            <p class="panel__lede">${escapeHtml(reason.summary || 'No structured summary is available for this signal.')}</p>
+          </div>
+          <div class="panel__actions signal-detail__actions">
+            <span class="pill pill--${signalTone(label)}">${escapeHtml(prettifyToken(label))}</span>
+            <span class="pill pill--outline">Score ${escapeHtml(formatNumber(finalScore, 2))}</span>
+            <button id="closeSignalDetailButton" class="signal-detail__close" type="button" aria-label="Close signal detail">×</button>
+          </div>
+        </div>
+        <div class="signal-detail__sections">
+          ${renderSignalContributionSection('Strategy', '45% weight', [
+            ['Best strategy', escapeHtml(prettifyToken(reason.best_strategy || 'N/A'))],
+            ['Strategy score', escapeHtml(formatNumber(reason.strategy_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.strategy_contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Alignment', '15% weight', [
+            ['Alignment count', escapeHtml(alignmentCount)],
+            ['Aligned strategies', `<div class="signal-detail__pill-row">${alignedStrategies}</div>`],
+            ['Contribution', escapeHtml(formatNumber(reason.alignment_contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Regime', '20% weight', [
+            ['Trend score', escapeHtml(formatNumber(reason.regime?.trend_score, 2))],
+            ['Risk score', escapeHtml(formatNumber(reason.regime?.risk_score, 2))],
+            ['Combined score', escapeHtml(formatNumber(reason.regime?.combined_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.regime?.contribution, 2))],
+          ])}
+          ${renderSignalContributionSection('Rotation', '20% weight', [
+            ['Momentum score', escapeHtml(formatNumber(reason.rotation?.momentum_score, 2))],
+            ['Rank', escapeHtml(rotationRank)],
+            ['Combined score', escapeHtml(formatNumber(reason.rotation?.combined_score, 2))],
+            ['Contribution', escapeHtml(formatNumber(reason.rotation?.contribution, 2))],
+          ])}
+        </div>
+      </article>
+    </div>
   `;
 }
 
@@ -1119,10 +929,11 @@ function renderRotationPanel(snapshot) {
 }
 
 function renderSignalsPanel(snapshot) {
+  const topSignals = snapshot?.top_signals || [];
   const bullishSignals = snapshot?.bullish_signals || [];
   const defensiveSignals = snapshot?.defensive_signals || [];
 
-  if (!bullishSignals.length && !defensiveSignals.length) {
+  if (!topSignals.length && !bullishSignals.length && !defensiveSignals.length) {
     return `
       <article class="panel">
         <div class="panel__header">
@@ -1138,6 +949,8 @@ function renderSignalsPanel(snapshot) {
     `;
   }
 
+  const signalBasis = getSignalBasisInfo(snapshot);
+
   return `
     <article class="panel">
       <div class="panel__header">
@@ -1146,8 +959,49 @@ function renderSignalsPanel(snapshot) {
           <h2>Buy & defensive groups</h2>
           <p class="panel__lede">Bullish opportunities separated from defensive or sell-side signals for the selected report date.</p>
         </div>
-        <span class="panel__meta">Grouped signal view for ${escapeHtml(snapshot.report_date)}</span>
+        <div class="panel__actions">
+          <span class="panel__meta">Grouped signal view for ${escapeHtml(snapshot.report_date)}</span>
+        </div>
       </div>
+      ${signalBasis ? `
+        <div class="panel__meta-row">
+          <span class="panel__meta">Dashboard scope · ${escapeHtml(signalBasis.snapshotScope)}</span>
+          <span class="panel__meta">Signal analysis scope · ${escapeHtml(signalBasis.analysisScope)}</span>
+          <span class="panel__meta">Signal regime basis · ${escapeHtml(signalBasis.regimeBasisScope)}</span>
+        </div>
+      ` : ''}
+      ${signalBasis?.mismatched ? `
+        <section class="staleness-banner staleness-banner--warning" aria-label="Signal provenance notice">
+          <strong>Signal scoring basis differs from the selected scope</strong>
+          <p>${escapeHtml(`This ${signalBasis.snapshotScope} view is currently showing signals with analysis scope ${signalBasis.analysisScope} and regime basis ${signalBasis.regimeBasisScope}.`)}</p>
+        </section>
+      ` : ''}
+      ${topSignals.length ? `
+        <section class="signal-focus-section">
+          <div class="panel__subheader">
+            <p class="panel__section-title">Top signals</p>
+            <span class="panel__meta">Highest conviction across labels</span>
+          </div>
+          <div class="signal-list">
+            ${topSignals
+              .map(
+                (item, index) => `
+                  <button class="signal-card signal-card--top signal-card--interactive" type="button" data-signal-group="top" data-signal-index="${escapeHtml(index)}">
+                    <div class="signal-card__header">
+                      <div>
+                        <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
+                        <p class="signal-card__score">Score ${escapeHtml(formatNumber(item.final_score, 2))}</p>
+                      </div>
+                      <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
+                    </div>
+                    ${renderSignalReason(item.reason)}
+                  </button>
+                `,
+              )
+              .join('')}
+          </div>
+        </section>
+      ` : ''}
       <div class="signal-groups-grid">
         <section>
           <div class="panel__subheader">
@@ -1158,8 +1012,8 @@ function renderSignalsPanel(snapshot) {
             ? `<div class="signal-list">
                 ${bullishSignals
                   .map(
-                    (item) => `
-                      <article class="signal-card signal-card--bullish">
+                    (item, index) => `
+                      <button class="signal-card signal-card--bullish signal-card--interactive" type="button" data-signal-group="bullish" data-signal-index="${escapeHtml(index)}">
                         <div class="signal-card__header">
                           <div>
                             <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
@@ -1167,8 +1021,8 @@ function renderSignalsPanel(snapshot) {
                           </div>
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
-                        <p class="signal-card__text">${escapeHtml(item.explanation)}</p>
-                      </article>
+                        ${renderSignalReason(item.reason)}
+                      </button>
                     `,
                   )
                   .join('')}
@@ -1184,8 +1038,8 @@ function renderSignalsPanel(snapshot) {
             ? `<div class="signal-list">
                 ${defensiveSignals
                   .map(
-                    (item) => `
-                      <article class="signal-card signal-card--defensive">
+                    (item, index) => `
+                      <button class="signal-card signal-card--defensive signal-card--interactive" type="button" data-signal-group="defensive" data-signal-index="${escapeHtml(index)}">
                         <div class="signal-card__header">
                           <div>
                             <strong class="signal-card__symbol">${escapeHtml(item.symbol)}</strong>
@@ -1193,8 +1047,8 @@ function renderSignalsPanel(snapshot) {
                           </div>
                           <span class="pill pill--${signalTone(item.signal_label)}">${escapeHtml(prettifyToken(item.signal_label))}</span>
                         </div>
-                        <p class="signal-card__text">${escapeHtml(item.explanation)}</p>
-                      </article>
+                        ${renderSignalReason(item.reason)}
+                      </button>
                     `,
                   )
                   .join('')}
@@ -1202,97 +1056,6 @@ function renderSignalsPanel(snapshot) {
             : `<div class="empty-state empty-state--compact"><p>No defensive or sell-side signals for this date.</p></div>`}
         </section>
       </div>
-    </article>
-  `;
-}
-
-function renderWatchlistBreadthPanel(snapshot) {
-  const breadth = snapshot?.watchlist_breadth;
-
-  if (!breadth?.markets?.length) {
-    return `
-      <article class="panel panel--soft">
-        <div class="panel__header">
-          <div>
-            <p class="eyebrow">Participation</p>
-            <h2>Watchlist Breadth (MA30)</h2>
-            <p class="panel__lede">Tracked INDEX + ETF participation above MA30 for the selected report date.</p>
-          </div>
-          <span class="pill pill--outline">Proxy only</span>
-        </div>
-        <div class="empty-state">
-          <p>Watchlist breadth is unavailable for this dashboard snapshot.</p>
-        </div>
-      </article>
-    `;
-  }
-
-  const marketCards = breadth.markets
-    .map((market) => {
-      const eligibleCount = Number(market?.eligible_count ?? 0);
-      const aboveCount = Number(market?.above_count ?? 0);
-      const unavailable = String(market?.status_label ?? '').toLowerCase() === 'unavailable' || eligibleCount === 0;
-      const breadthValue = unavailable ? 'Unavailable' : formatDisplayPercent(market?.breadth_pct, 1);
-      const summaryText = unavailable
-        ? 'No eligible instruments with both close and MA30 on this date.'
-        : `${formatInteger(aboveCount)} / ${formatInteger(eligibleCount)} above MA30`;
-      const rangePosition = getFiniteNumber(market?.range_position_60d);
-
-      return `
-        <section class="breadth-market ${unavailable ? 'breadth-market--unavailable' : ''}">
-          <div class="panel__subheader">
-            <p class="panel__section-title">${escapeHtml(market?.universe_label || `${market?.market || 'Tracked'} universe`)}</p>
-            <span class="pill pill--${breadthTone(market?.status_label)}">${escapeHtml(prettifyToken(market?.status_label || 'Unavailable'))}</span>
-          </div>
-
-          <div class="breadth-market__headline">
-            <strong class="breadth-market__value">${escapeHtml(breadthValue)}</strong>
-            <span class="breadth-market__summary">${escapeHtml(summaryText)}</span>
-          </div>
-
-          <div class="breadth-market__metrics">
-            <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">SMA5</span>
-              <strong class="breadth-market__metric-value">${escapeHtml(formatDisplayPercent(market?.breadth_pct_sma5, 1))}</strong>
-            </article>
-            <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">5d delta</span>
-              <strong class="breadth-market__metric-value">${escapeHtml(formatDeltaPoints(market?.breadth_5d_delta, 1))}</strong>
-            </article>
-            <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">60d range</span>
-              <strong class="breadth-market__metric-value">${escapeHtml(rangePosition === null ? 'N/A' : formatPercent(rangePosition, 0))}</strong>
-            </article>
-          </div>
-
-          <div class="score-row breadth-market__range-row">
-            <div class="score-row__meta">
-              <span>Current breadth</span>
-              <strong>${escapeHtml(unavailable ? 'N/A' : formatDisplayPercent(market?.breadth_pct, 1))}</strong>
-            </div>
-            <div class="score-bar" aria-hidden="true">
-              <span class="score-bar__fill" style="width: ${rangePosition === null ? 0 : clampScore(rangePosition * 100)}%"></span>
-            </div>
-          </div>
-        </section>
-      `;
-    })
-    .join('');
-
-  return `
-    <article class="panel panel--soft">
-      <div class="panel__header">
-        <div>
-          <p class="eyebrow">Participation</p>
-          <h2>Watchlist Breadth (MA30)</h2>
-          <p class="panel__lede">Tracked INDEX + ETF participation above MA30 for the selected report date.</p>
-        </div>
-        <span class="pill pill--outline">Proxy only · not full-market stock breadth</span>
-      </div>
-      <div class="breadth-market-grid">
-        ${marketCards}
-      </div>
-      <p class="breadth-panel__note">${escapeHtml(breadth.methodology_note || 'Eligible tracked instruments require both close and MA30 on the selected date.')}</p>
     </article>
   `;
 }
@@ -1316,6 +1079,8 @@ function renderBacktestPanel(snapshot) {
     `;
   }
 
+  const provenance = getBacktestMatchInfo(snapshot, backtest);
+
   return `
     <article class="panel panel--soft">
       <div class="panel__header">
@@ -1324,14 +1089,26 @@ function renderBacktestPanel(snapshot) {
           <h2>Latest backtest</h2>
           <p class="panel__lede">Recent strategy validation snapshot generated from the same pipeline.</p>
         </div>
-        <span class="panel__meta">${escapeHtml(backtest.strategy_name)}</span>
+        <div class="panel__actions">
+          <span class="panel__meta">${escapeHtml(backtest.strategy_name)}</span>
+          ${provenance ? `<span class="pill pill--${provenance.matchesCurrentSnapshot ? 'positive' : 'warning'}">${escapeHtml(provenance.matchesCurrentSnapshot ? 'Matches current snapshot' : 'Snapshot mismatch')}</span>` : ''}
+        </div>
       </div>
+      ${provenance ? `
+        <div class="panel__meta-row">
+          <span class="panel__meta">Analysis scope · ${escapeHtml(provenance.analysisScope)}</span>
+          <span class="panel__meta">Signal scope · ${escapeHtml(provenance.signalScope)}</span>
+          <span class="panel__meta">Regime basis · ${escapeHtml(provenance.regimeBasisScope)}</span>
+          <span class="panel__meta">Signal end · ${escapeHtml(provenance.signalEndDate ? formatDate(provenance.signalEndDate) : 'N/A')}</span>
+        </div>
+      ` : ''}
       <div class="mini-metrics">
         ${renderMetricCard('CAGR', formatPercent(backtest.cagr), 'Annualized return', 'positive')}
         ${renderMetricCard('Max drawdown', formatPercent(backtest.max_drawdown), 'Peak-to-trough', 'negative')}
         ${renderMetricCard('Sharpe', formatNumber(backtest.sharpe, 2), 'Risk-adjusted', 'neutral')}
         ${renderMetricCard('Final equity', formatCurrency(backtest.final_equity), `${formatInteger(backtest.trades)} trades · ${formatInteger(backtest.trading_days)} days`, 'neutral')}
       </div>
+      ${backtest.config_summary ? `<p class="breadth-panel__note">Config · ${escapeHtml(backtest.config_summary)}</p>` : ''}
     </article>
   `;
 }
@@ -1359,13 +1136,52 @@ function renderNotice(result, className = '') {
   `;
 }
 
+function renderTrustSummaryNotice(snapshot, inline = false) {
+  const trust = snapshot?.trust_summary;
+  if (!trust) return '';
+
+  const notes = Array.isArray(trust.notes) && trust.notes.length
+    ? `<ul class="note-list">${trust.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
+    : '';
+  const historicalEvidenceNote = snapshot?.report_date && trust.latest_available_date && snapshot.report_date !== trust.latest_available_date
+    ? `This trust summary combines the selected historical snapshot with current operational freshness/data-health evidence as of ${trust.latest_available_date}.`
+    : '';
+  const provenanceSummary = [
+    snapshot?.scope ? `Dashboard scope: ${snapshot.scope}` : null,
+    trust.signal_analysis_scope ? `Signal analysis scope: ${trust.signal_analysis_scope}` : null,
+    trust.signal_regime_basis_scope ? `Signal regime basis: ${trust.signal_regime_basis_scope}` : null,
+    trust.backtest_matches_snapshot === null || trust.backtest_matches_snapshot === undefined
+      ? null
+      : `Backtest matches snapshot: ${trust.backtest_matches_snapshot ? 'yes' : 'no'}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return `
+    <section class="notice notice--${trustTone(trust.level)} ${inline ? 'notice--inline' : ''}">
+      <div>
+        <strong>${escapeHtml(trust.headline)}</strong>
+        <p>${escapeHtml(trust.message)}</p>
+        <p class="notice__detail">
+          ${escapeHtml(`Trust level: ${prettifyToken(trust.level)} · Macro status: ${prettifyToken(trust.macro_status)} · Latest-day complete: ${trust.latest_day_complete ? 'yes' : 'no'}`)}
+        </p>
+        ${provenanceSummary ? `<p class="notice__detail">${escapeHtml(provenanceSummary)}</p>` : ''}
+        ${historicalEvidenceNote ? `<p class="notice__detail">${escapeHtml(historicalEvidenceNote)}</p>` : ''}
+        ${notes}
+      </div>
+    </section>
+  `;
+}
+
 function renderRefreshProgress() {
   const refresh = state.refreshStatus;
-  const isVisible = state.refreshing || refresh.running || refresh.status === 'error' || refresh.status === 'success';
+  const isVisible = state.refreshing || refresh.running || ['error', 'success', 'cancelled'].includes(refresh.status);
   if (!isVisible) return '';
 
   const tone = refresh.status === 'error'
     ? 'negative'
+    : refresh.status === 'cancelled'
+      ? 'warning'
     : refresh.running
       ? 'neutral'
       : 'positive';
@@ -1379,16 +1195,36 @@ function renderRefreshProgress() {
     : refresh.finished_at
       ? `Finished ${formatDateTime(refresh.finished_at)}`
       : 'Waiting to start';
+  const retryDisabled = state.loading || state.refreshing || state.refreshStatus.running;
+  const lastSuccessfulStage = refresh.last_successful_stage || refresh.retry_from_stage || '';
+  const lastSuccessfulLabel = lastSuccessfulStage ? formatRefreshStageLabel(lastSuccessfulStage) : 'none';
+  const retryLabel = refresh.status === 'cancelled'
+    ? 'Resume'
+    : lastSuccessfulStage
+      ? `Resume from ${formatRefreshStageLabel(lastSuccessfulStage)}`
+      : 'Retry failed stage';
+  const title = refresh.running
+    ? refresh.cancelling ? 'Cancelling refresh' : 'Refreshing analysis pipeline'
+    : refresh.status === 'error'
+      ? 'Refresh failed'
+      : refresh.status === 'cancelled'
+        ? 'Refresh cancelled'
+        : 'Refresh completed';
 
   return `
     <section class="refresh-progress refresh-progress--${tone}" aria-live="polite">
       <div class="refresh-progress__header">
         <div>
           <p class="eyebrow">Background refresh</p>
-          <h2>${escapeHtml(refresh.running ? 'Refreshing analysis pipeline' : refresh.status === 'error' ? 'Refresh failed' : 'Refresh completed')}</h2>
+          <h2>${escapeHtml(title)}</h2>
           <p class="panel__lede">${escapeHtml(refresh.stage || 'Waiting')}</p>
         </div>
-        <span class="pill pill--${tone}">${escapeHtml(`${formatInteger(progress)}%`)}</span>
+        <div class="panel__actions">
+          <span class="pill pill--outline">Run from · ${escapeHtml(formatRefreshStageLabel(refresh.start_stage))}</span>
+          ${refresh.retry_from_stage ? `<span class="pill pill--warning">Retry from · ${escapeHtml(formatRefreshStageLabel(refresh.retry_from_stage))}</span>` : ''}
+          ${refresh.cancelling ? '<span class="pill pill--warning">Cancelling...</span>' : ''}
+          <span class="pill pill--${tone}">${escapeHtml(`${formatInteger(progress)}%`)}</span>
+        </div>
       </div>
       <div class="refresh-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${escapeHtml(progress)}">
         <span class="refresh-progress__fill" style="width: ${progress}%"></span>
@@ -1397,7 +1233,47 @@ function renderRefreshProgress() {
         <span>${escapeHtml(rangeText)}</span>
         <span>${escapeHtml(timingText)}</span>
       </div>
+      ${refresh.running && !refresh.cancelling ? `
+        <div class="refresh-progress__meta-row">
+          <button
+            id="cancelRefreshButton"
+            class="button button--secondary button--compact"
+            ${state.loading ? 'disabled' : ''}
+          >
+            Cancel
+          </button>
+        </div>
+      ` : ''}
+      ${refresh.status === 'cancelled' ? `
+        <section class="notice notice--warning notice--inline">
+          <div>
+            <strong>Refresh was cancelled</strong>
+            <p>${escapeHtml(`Refresh was cancelled. Last successful stage: ${lastSuccessfulLabel}.`)}</p>
+          </div>
+        </section>
+        <div class="refresh-progress__meta-row">
+          <button
+            id="resumeRefreshButton"
+            class="button button--secondary button--compact"
+            ${retryDisabled ? 'disabled' : ''}
+          >
+            Resume
+          </button>
+        </div>
+      ` : ''}
+      ${refresh.status === 'error' ? `
+        <div class="refresh-progress__meta-row">
+          <button
+            id="retryRefreshButton"
+            class="button button--secondary button--compact"
+            ${retryDisabled ? 'disabled' : ''}
+          >
+            ${escapeHtml(retryLabel)}
+          </button>
+        </div>
+      ` : ''}
       ${refresh.error ? `<p class="refresh-progress__error">${escapeHtml(refresh.error)}</p>` : ''}
+      ${refresh.status === 'success' ? renderTrustSummaryNotice(state.snapshot, true) : ''}
     </section>
   `;
 }
@@ -1466,172 +1342,6 @@ function renderDateSelector() {
   `;
 }
 
-function renderUsageEntry() {
-  const guideCount = state.usageGuides.length;
-  const statusText = state.usageGuidesLoading
-    ? 'Loading manuals from the desktop runtime.'
-    : state.usageGuidesError
-      ? 'Guide content is temporarily unavailable. Open the viewer to retry.'
-      : state.usageGuidesLoaded
-        ? `${formatInteger(guideCount)} in-app guide${guideCount === 1 ? '' : 's'} ready for reading.`
-        : 'Open the in-app manuals for day-to-day operations and analysis workflow guidance.';
-
-  return `
-    <div class="hero__control hero__control--guide">
-      <div class="control-field">
-        <div class="control-field__header">
-          <span class="control-field__label">Help / Usage</span>
-          <span class="pill pill--${state.usageGuidesError ? 'negative' : 'outline'}">
-            ${state.usageGuidesLoading ? 'Syncing guides' : state.usageGuidesLoaded ? `${escapeHtml(formatInteger(guideCount))} guides` : 'Guide viewer'}
-          </span>
-        </div>
-        <span class="control-field__hint">${escapeHtml(statusText)}</span>
-        <button
-          id="openUsageGuidesButton"
-          class="button button--secondary guide-entry__button"
-          ${state.usageGuidesLoading && !state.isUsageGuideOpen ? 'disabled' : ''}
-        >
-          ${state.usageGuidesLoading && state.isUsageGuideOpen ? 'Loading guides…' : 'Open guides'}
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function renderRecentReportsPanel() {
-  return `
-    <article class="panel panel--soft">
-      <div class="panel__header">
-        <div>
-          <p class="eyebrow">Exports</p>
-          <h2>Recent reports</h2>
-          <p class="panel__lede">Recently exported report artifacts for quick recall after browsing historical analysis dates.</p>
-        </div>
-        <span class="panel__meta">Latest ${escapeHtml(formatInteger(state.recentReports.length))} exports</span>
-      </div>
-
-      ${state.recentReports.length
-        ? `
-          <div class="report-history" aria-label="Recent report history">
-            ${state.recentReports
-              .map(
-                (item) => `
-                  <article class="report-history__item">
-                    <div class="report-history__row">
-                      <span class="pill pill--outline">${escapeHtml(formatReportType(item.report_type))}</span>
-                      <span class="report-history__date">${escapeHtml(formatDate(item.report_date))}</span>
-                    </div>
-                    <p class="report-history__path"><code>${escapeHtml(item.artifact_path)}</code></p>
-                  </article>
-                `,
-              )
-              .join('')}
-          </div>
-        `
-        : `
-          <div class="empty-state empty-state--compact">
-            <p>No report artifacts have been exported yet.</p>
-          </div>
-        `}
-    </article>
-  `;
-}
-
-function renderUsageGuidesViewer() {
-  const selectedGuide = getSelectedUsageGuide();
-  const guideCount = state.usageGuides.length;
-
-  return `
-    <section class="guide-viewer ${state.isUsageGuideOpen ? 'guide-viewer--open' : ''}" aria-hidden="${state.isUsageGuideOpen ? 'false' : 'true'}">
-      <button class="guide-viewer__backdrop" type="button" data-guide-close="true" aria-label="Close guide viewer"></button>
-
-      <div class="guide-viewer__panel" role="dialog" aria-modal="true" aria-labelledby="usageGuideViewerTitle">
-        <div class="guide-viewer__header">
-          <div>
-            <p class="eyebrow">Help / Usage</p>
-            <h2 id="usageGuideViewerTitle">Guide library</h2>
-            <p class="panel__lede">Read the desktop usage manuals without leaving the dashboard.</p>
-          </div>
-          <div class="panel__actions">
-            <span class="pill pill--outline">${escapeHtml(formatInteger(guideCount))} available</span>
-            <button
-              id="reloadUsageGuidesButton"
-              class="button button--secondary button--compact"
-              ${state.usageGuidesLoading ? 'disabled' : ''}
-            >
-              ${state.usageGuidesLoading ? 'Refreshing…' : 'Reload'}
-            </button>
-            <button id="closeUsageGuidesButton" class="button button--secondary button--compact">Close</button>
-          </div>
-        </div>
-
-        <div class="guide-viewer__body">
-          <aside class="guide-viewer__sidebar" aria-label="Usage guide navigation">
-            ${guideCount
-              ? `
-                <div class="guide-tab-list" role="tablist" aria-label="Usage guides">
-                  ${state.usageGuides
-                    .map(
-                      (guide) => `
-                        <button
-                          class="guide-tab ${guide.id === state.selectedUsageGuideId ? 'guide-tab--active' : ''}"
-                          type="button"
-                          role="tab"
-                          aria-selected="${guide.id === state.selectedUsageGuideId ? 'true' : 'false'}"
-                          data-guide-id="${escapeHtml(guide.id)}"
-                        >
-                          <span class="guide-tab__eyebrow">Manual</span>
-                          <strong class="guide-tab__title">${escapeHtml(guide.title)}</strong>
-                        </button>
-                      `,
-                    )
-                    .join('')}
-                </div>
-              `
-              : `
-                <div class="empty-state empty-state--compact guide-viewer__empty-nav">
-                  <p>${state.usageGuidesLoading ? 'Preparing guide navigation…' : 'No guides loaded yet.'}</p>
-                </div>
-              `}
-          </aside>
-
-          <div class="guide-viewer__content">
-            ${state.usageGuidesLoading && !guideCount
-              ? `
-                <div class="empty-state">
-                  <p>Loading in-app manuals from the desktop runtime…</p>
-                </div>
-              `
-              : state.usageGuidesError
-                ? `
-                  <section class="notice notice--error notice--inline">
-                    <div>
-                      <strong>Guide library unavailable</strong>
-                      <p>${escapeHtml(state.usageGuidesError)}</p>
-                    </div>
-                  </section>
-                `
-                : !selectedGuide
-                  ? `
-                    <div class="empty-state">
-                      <p>No usage guides were returned by the desktop runtime.</p>
-                    </div>
-                  `
-                  : `
-                    <article class="guide-article">
-                      <header class="guide-article__header">
-                        <p class="eyebrow">Manual</p>
-                        <h3>${escapeHtml(selectedGuide.title)}</h3>
-                      </header>
-                      <div class="guide-article__content">${renderMarkdownContent(selectedGuide.content)}</div>
-                    </article>
-                  `}
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-}
 
 function renderSkeleton() {
   return `
@@ -1644,243 +1354,8 @@ function renderSkeleton() {
   `;
 }
 
-function renderDataHealthPanel(summary) {
-  const flaggedSymbols = getFlaggedSymbols(summary);
-  const flaggedMacroSources = getFlaggedMacroSources(summary);
-  const exportDisabled = state.loading || state.refreshing || state.refreshStatus.running || state.dataHealthLoading || state.dataHealthExporting || !summary;
-  const refreshHealthDisabled = state.dataHealthLoading || state.refreshing || state.refreshStatus.running;
-  const healthStatusMeta = state.dataHealthLoading
-    ? 'Refreshing health summary…'
-    : state.dataHealthError
-      ? `Health refresh issue · ${state.dataHealthError}`
-      : summary
-        ? `Generated ${formatDateTime(summary.generated_at)} · session cache active`
-        : 'Health summary not loaded';
-
-  if (!summary) {
-    return `
-      <article class="panel panel--soft">
-        <div class="panel__header">
-          <div>
-            <p class="eyebrow">Data quality</p>
-            <h2>Data health</h2>
-            <p class="panel__lede">Coverage, provider reachability, and anomaly checks will appear here after the summary loads.</p>
-          </div>
-          <div class="panel__actions">
-            <span class="pill pill--outline">${escapeHtml(healthStatusMeta)}</span>
-            <button id="refreshHealthButton" class="button button--secondary button--compact" ${refreshHealthDisabled ? 'disabled' : ''}>
-              ${state.dataHealthLoading ? 'Refreshing…' : 'Load health summary'}
-            </button>
-            <button id="exportHealthButton" class="button button--secondary button--compact" disabled>
-              Export data-health report
-            </button>
-          </div>
-        </div>
-        <div class="empty-state">
-          <p>${state.dataHealthLoading ? 'Refreshing data-health summary in the background…' : 'Data-health summary is unavailable.'}</p>
-        </div>
-      </article>
-    `;
-  }
-
-  return `
-    <article class="panel panel--soft">
-      <div class="panel__header">
-        <div>
-          <p class="eyebrow">Data quality</p>
-          <h2>Data health</h2>
-          <p class="panel__lede">Provider availability and daily-bar sanity checks for the active universe.</p>
-        </div>
-        <div class="panel__actions">
-          <span class="pill pill--outline">Canonical ${escapeHtml(formatCanonicalAdjustment(summary.canonical_adjustment))}</span>
-          <button
-            id="refreshHealthButton"
-            class="button button--secondary button--compact"
-            ${refreshHealthDisabled ? 'disabled' : ''}
-          >
-            ${state.dataHealthLoading ? 'Refreshing…' : 'Refresh health summary'}
-          </button>
-          <button
-            id="exportHealthButton"
-            class="button button--secondary button--compact"
-            ${exportDisabled ? 'disabled' : ''}
-          >
-            ${state.dataHealthExporting ? 'Exporting…' : 'Export data-health report'}
-          </button>
-        </div>
-      </div>
-
-      <div class="panel__meta-row">
-        <span class="panel__meta">${escapeHtml(healthStatusMeta)}</span>
-        <span class="panel__meta">${escapeHtml(formatInteger(summary.checked_symbols))} symbols checked</span>
-        <span class="panel__meta">Freshest market date · ${escapeHtml(formatDate(summary.freshest_market_date))}</span>
-      </div>
-
-      <div class="mini-metrics">
-        ${renderMetricCard('Healthy', formatInteger(summary.healthy_symbols), 'Clear for use', Number(summary.healthy_symbols) > 0 ? 'positive' : 'neutral')}
-        ${renderMetricCard('Review', formatInteger(summary.review_symbols), 'Needs analyst review', Number(summary.review_symbols) > 0 ? 'neutral' : 'positive')}
-        ${renderMetricCard('Critical', formatInteger(summary.critical_symbols), 'Needs immediate follow-up', Number(summary.critical_symbols) > 0 ? 'negative' : 'neutral')}
-        ${renderMetricCard('Checked', formatInteger(summary.checked_symbols), 'Universe coverage', 'neutral')}
-      </div>
-
-      <div class="mini-metrics">
-        ${renderMetricCard('Latest-day coverage', `${formatInteger(summary.symbols_on_freshest_market_date)}/${formatInteger(summary.checked_symbols)}`, 'Symbols with bars on the freshest stored market date', summary.freshest_market_date_complete ? 'positive' : 'warning')}
-        ${renderMetricCard('Missing latest-day', formatInteger(summary.symbols_missing_freshest_market_date), 'Symbols not updated on the freshest stored market date', Number(summary.symbols_missing_freshest_market_date) > 0 ? 'warning' : 'positive')}
-        ${renderMetricCard('Freshest date complete', summary.freshest_market_date_complete ? 'Yes' : 'No', 'Latest stored market date has full symbol coverage', summary.freshest_market_date_complete ? 'positive' : 'warning')}
-        ${renderMetricCard('Freshest date', formatDate(summary.freshest_market_date), 'Reference date for latest-day coverage checks', 'neutral')}
-      </div>
-
-      <div class="mini-metrics">
-        ${renderMetricCard('Macro healthy', formatInteger(summary.healthy_macro_sources), 'Primary reqwest path', Number(summary.healthy_macro_sources) > 0 ? 'positive' : 'neutral')}
-        ${renderMetricCard('Macro review', formatInteger(summary.review_macro_sources), 'Compatibility fallback in use', Number(summary.review_macro_sources) > 0 ? 'neutral' : 'positive')}
-        ${renderMetricCard('Macro critical', formatInteger(summary.critical_macro_sources), 'Macro source unavailable', Number(summary.critical_macro_sources) > 0 ? 'negative' : 'neutral')}
-        ${renderMetricCard('Macro sources', formatInteger(summary.macro_sources?.length ?? 0), 'FRED factor coverage', 'neutral')}
-      </div>
-
-      ${renderNotice(state.dataHealthExportResult, 'notice--inline')}
-
-      <section class="data-health__review-block">
-        <div class="panel__subheader">
-          <p class="panel__section-title">Macro source status</p>
-          <span class="panel__meta">
-            ${flaggedMacroSources.length
-              ? `${escapeHtml(formatInteger(flaggedMacroSources.length))} source${flaggedMacroSources.length === 1 ? '' : 's'} degraded`
-              : 'All macro sources on primary path'}
-          </span>
-        </div>
-
-        ${flaggedMacroSources.length
-          ? `
-            <div class="table-wrap">
-              <table class="data-table data-table--compact">
-                <thead>
-                  <tr>
-                    <th>Factor</th>
-                    <th>Status</th>
-                    <th>Transport</th>
-                    <th>Coverage</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${flaggedMacroSources
-                    .map(
-                      (item) => `
-                        <tr>
-                          <td>
-                            <div class="table-symbol">
-                              <strong class="data-table__symbol">${escapeHtml(prettifyToken(item.factor_name))}</strong>
-                              <span class="table-symbol__meta">${escapeHtml(item.source)}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span class="pill pill--${healthTone(item.status)}">${escapeHtml(prettifyToken(item.status))}</span>
-                          </td>
-                          <td>
-                            <span class="pill pill--outline">${escapeHtml(item.transport)}</span>
-                          </td>
-                          <td>
-                            <div class="table-stack">
-                              <strong>${escapeHtml(formatInteger(item.rows))} rows</strong>
-                              <span class="table-stack__meta">${escapeHtml(formatDateRange(item.first_date, item.last_date))}</span>
-                            </div>
-                          </td>
-                          <td>
-                            ${item.notes?.length
-                              ? `<ul class="note-list">${item.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
-                              : '<span class="table-stack__meta">No notes provided</span>'}
-                          </td>
-                        </tr>
-                      `,
-                    )
-                    .join('')}
-                </tbody>
-              </table>
-            </div>
-          `
-          : `
-            <div class="empty-state empty-state--compact">
-              <p>All macro sources are currently using the primary transport path.</p>
-            </div>
-          `}
-      </section>
-
-      <section class="data-health__review-block">
-        <div class="panel__subheader">
-          <p class="panel__section-title">Review queue</p>
-          <span class="panel__meta">
-            ${flaggedSymbols.length
-              ? `${escapeHtml(formatInteger(flaggedSymbols.length))} symbol${flaggedSymbols.length === 1 ? '' : 's'} flagged`
-              : 'No symbols currently flagged'}
-          </span>
-        </div>
-
-        ${flaggedSymbols.length
-          ? `
-            <div class="table-wrap">
-              <table class="data-table data-table--compact">
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Status</th>
-                    <th>Coverage</th>
-                    <th>Checks</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${flaggedSymbols
-                    .map(
-                      (item) => `
-                        <tr>
-                          <td>
-                            <div class="table-symbol">
-                              <strong class="data-table__symbol">${escapeHtml(item.display_symbol || item.symbol)}</strong>
-                              <span class="table-symbol__meta">${escapeHtml(item.name)}${item.display_symbol ? ` · ${escapeHtml(item.symbol)}` : ''}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span class="pill pill--${healthTone(item.status)}">${escapeHtml(prettifyToken(item.status))}</span>
-                          </td>
-                          <td>
-                            <div class="table-stack">
-                              <strong>${escapeHtml(formatInteger(item.rows))} rows</strong>
-                              <span class="table-stack__meta">${escapeHtml(formatDateRange(item.first_date, item.last_date))}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="table-flags">
-                              <span>${escapeHtml(`${item.primary_provider_ok ? 'Primary ok' : 'Primary down'} · ${formatFallbackState(item.fallback_provider_ok)}`)}</span>
-                              <span>${escapeHtml(`${formatInteger(item.gap_count)} gaps · max ${formatInteger(item.max_gap_days)}d`)}</span>
-                              <span>${escapeHtml(`${formatInteger(item.suspicious_jump_count)} jumps · max move ${formatNumber(item.max_abs_daily_return_pct, 1)}%`)}</span>
-                              <span>${escapeHtml(`${formatInteger(item.missing_turnover_rows)} turnover missing`)}</span>
-                            </div>
-                          </td>
-                          <td>
-                            ${item.notes?.length
-                              ? `<ul class="note-list">${item.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
-                              : '<span class="table-stack__meta">No notes provided</span>'}
-                          </td>
-                        </tr>
-                      `,
-                    )
-                    .join('')}
-                </tbody>
-              </table>
-            </div>
-          `
-          : `
-            <div class="empty-state empty-state--compact">
-              <p>All checked symbols passed the current health thresholds.</p>
-            </div>
-          `}
-      </section>
-    </article>
-  `;
-}
-
 function commitRender() {
-  const { status, snapshot, dataHealth } = state;
+  const { status, snapshot, dataHealth: dataHealthSummary } = state;
   const shellState = (state.loading || state.refreshing || state.refreshStatus.running) ? 'true' : 'false';
 
   app.innerHTML = `
@@ -1897,10 +1372,21 @@ function commitRender() {
           </div>
           <div class="hero__actions">
             ${renderDateSelector()}
-            ${renderUsageEntry()}
+            ${usageGuides.renderUsageEntry()}
             <div class="hero__action-row">
+              <select
+                id="refreshStageSelect"
+                class="select-control select-control--compact"
+                ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'disabled' : ''}
+              >
+                ${REFRESH_START_STAGE_OPTIONS
+                  .map(
+                    (option) => `<option value="${escapeHtml(option.value)}" ${state.selectedRefreshStartStage === option.value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`,
+                  )
+                  .join('')}
+              </select>
               <button id="refreshButton" class="button button--secondary" ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'disabled' : ''}>
-                ${(state.refreshing || state.refreshStatus.running) ? 'Refreshing…' : 'Refresh data'}
+                ${(state.refreshing || state.refreshStatus.running) ? 'Refreshing…' : state.selectedRefreshStartStage === 'full' ? 'Refresh data' : `Run from ${formatRefreshStageLabel(state.selectedRefreshStartStage)}`}
               </button>
               <button
                 id="exportButton"
@@ -1920,7 +1406,8 @@ function commitRender() {
 
       ${state.error ? `<section class="notice notice--error"><div><strong>Data load failed</strong><p>${escapeHtml(state.error)}</p></div></section>` : ''}
       ${renderNotice(state.exportResult)}
-      ${renderHealthStrip(status, snapshot, dataHealth)}
+      ${renderTrustSummaryPanel(snapshot, state.pipelineDates, dataHealthSummary)}
+      ${renderHealthStrip(status, snapshot)}
 
       ${renderTimeContext(snapshot)}
 
@@ -1929,26 +1416,29 @@ function commitRender() {
       <section class="dashboard-grid ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'dashboard-grid--dimmed' : ''}">
         <div class="dashboard-grid__status">${renderStatusPanel(status, state.pipelineDates)}</div>
         <div class="dashboard-grid__regime">${renderRegimePanel(snapshot)}</div>
-          <div class="dashboard-grid__environment">${renderEnvironmentPanel(snapshot)}</div>
-          <div class="dashboard-grid__breadth">${renderWatchlistBreadthPanel(snapshot)}</div>
+          <div class="dashboard-grid__environment">${environmentBreadthRenderers.renderEnvironmentPanel(snapshot)}</div>
+          <div class="dashboard-grid__breadth">${environmentBreadthRenderers.renderWatchlistBreadthPanel(snapshot)}</div>
         <div class="dashboard-grid__rotation">${renderRotationPanel(snapshot)}</div>
         <div class="dashboard-grid__signals">${renderSignalsPanel(snapshot)}</div>
         <div class="dashboard-grid__backtest">${renderBacktestPanel(snapshot)}</div>
-        <div class="dashboard-grid__reports">${renderRecentReportsPanel()}</div>
-        <div class="dashboard-grid__data-health">${renderDataHealthPanel(dataHealth)}</div>
+        <div class="dashboard-grid__reports">${recentReports.renderRecentReportsPanel()}</div>
+        <div class="dashboard-grid__data-health">${dataHealth.renderPanel(dataHealthSummary)}</div>
       </section>
     </main>
-    ${renderUsageGuidesViewer()}
+    ${usageGuides.renderUsageGuidesViewer()}
+    ${renderSignalDetailModal(state.selectedSignalDetail)}
   `;
 
   document.body.classList.toggle('body--guide-viewer-open', state.isUsageGuideOpen);
+  document.body.classList.toggle('body--signal-modal-open', Boolean(state.selectedSignalDetail));
 
   document.querySelector('#refreshButton').onclick = () => {
-    startRefreshJob();
+    startRefreshJob(state.selectedRefreshStartStage);
   };
 
-  document.querySelector('#openUsageGuidesButton').onclick = () => {
-    openUsageGuides();
+  document.querySelector('#refreshStageSelect').onchange = (event) => {
+    state.selectedRefreshStartStage = String(event.target.value || 'full');
+    render();
   };
 
   document.querySelector('#reportDateSelect').onchange = (event) => {
@@ -1957,6 +1447,8 @@ function commitRender() {
 
     state.selectedReportDate = nextDate;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
+    savePreference('last_analysis_date', nextDate);
     loadSelectedSnapshot();
   };
 
@@ -1968,6 +1460,8 @@ function commitRender() {
     state.selectedReportDate = '';
     state.snapshot = null;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
+    savePreference('default_scope', nextScope);
     loadDashboard();
   };
 
@@ -1977,6 +1471,8 @@ function commitRender() {
 
     state.selectedReportDate = latestAvailableDate;
     state.exportResult = null;
+    state.selectedSignalDetail = null;
+    savePreference('last_analysis_date', latestAvailableDate);
     loadSelectedSnapshot();
   };
 
@@ -1984,36 +1480,62 @@ function commitRender() {
     exportReport();
   };
 
-  document.querySelector('#exportHealthButton').onclick = () => {
-    exportDataHealthReport();
-  };
-
-  document.querySelector('#refreshHealthButton').onclick = () => {
-    void loadDataHealthSummary({ force: true });
-  };
-
-  document.querySelector('#closeUsageGuidesButton').onclick = () => {
-    closeUsageGuides();
-  };
-
-  document.querySelector('#reloadUsageGuidesButton').onclick = () => {
-    loadUsageGuides();
-  };
-
-  document.querySelectorAll('[data-guide-close="true"]').forEach((element) => {
-    element.onclick = () => {
-      closeUsageGuides();
+  const retryRefreshButton = document.querySelector('#retryRefreshButton');
+  if (retryRefreshButton) {
+    retryRefreshButton.onclick = () => {
+      retryFailedRefresh();
     };
-  });
+  }
 
-  document.querySelectorAll('[data-guide-id]').forEach((element) => {
-    element.onclick = () => {
-      const nextGuideId = element.getAttribute('data-guide-id');
-      if (!nextGuideId || nextGuideId === state.selectedUsageGuideId) return;
-      state.selectedUsageGuideId = nextGuideId;
+  const resumeRefreshButton = document.querySelector('#resumeRefreshButton');
+  if (resumeRefreshButton) {
+    resumeRefreshButton.onclick = () => {
+      retryFailedRefresh();
+    };
+  }
+
+  const cancelRefreshButton = document.querySelector('#cancelRefreshButton');
+  if (cancelRefreshButton) {
+    cancelRefreshButton.onclick = () => {
+      cancelRefreshJob();
+    };
+  }
+
+  document.querySelectorAll('.signal-card--interactive').forEach((button) => {
+    button.onclick = () => {
+      const group = button.dataset.signalGroup;
+      const index = Number(button.dataset.signalIndex);
+      const signals = group === 'bullish'
+        ? state.snapshot?.bullish_signals
+        : group === 'defensive'
+          ? state.snapshot?.defensive_signals
+          : state.snapshot?.top_signals;
+      const signal = Array.isArray(signals) ? signals[index] : null;
+      if (!signal) return;
+
+      state.selectedSignalDetail = signal;
       render();
     };
   });
+
+  const closeSignalDetail = () => {
+    state.selectedSignalDetail = null;
+    render();
+  };
+
+  const signalDetailBackdrop = document.querySelector('.signal-detail__backdrop');
+  if (signalDetailBackdrop) {
+    signalDetailBackdrop.onclick = closeSignalDetail;
+  }
+
+  const closeSignalDetailButton = document.querySelector('#closeSignalDetailButton');
+  if (closeSignalDetailButton) {
+    closeSignalDetailButton.onclick = closeSignalDetail;
+  }
+
+  dataHealth.bindEvents(document);
+  recentReports.bindEvents(document);
+  usageGuides.bindUsageGuideEvents(document);
 }
 
 function render() {
@@ -2022,21 +1544,6 @@ function render() {
     renderFrame = 0;
     commitRender();
   });
-}
-
-function openUsageGuides() {
-  state.isUsageGuideOpen = true;
-  render();
-
-  if (!state.usageGuidesLoaded && !state.usageGuidesLoading) {
-    loadUsageGuides();
-  }
-}
-
-function closeUsageGuides() {
-  if (!state.isUsageGuideOpen) return;
-  state.isUsageGuideOpen = false;
-  render();
 }
 
 function stopRefreshPolling() {
@@ -2082,15 +1589,18 @@ async function pollRefreshStatus() {
   }
 }
 
-async function startRefreshJob() {
+async function startRefreshJob(startStage = 'full') {
   if (state.refreshing || state.refreshStatus.running) return;
 
   state.error = '';
   state.refreshing = true;
+  state.selectedSignalDetail = null;
   render();
 
   try {
-    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.startRefresh));
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.startRefresh, {
+      startStage: startStage === 'full' ? null : startStage,
+    }));
     state.refreshing = state.refreshStatus.running;
     render();
     scheduleRefreshPoll(500);
@@ -2106,44 +1616,53 @@ async function startRefreshJob() {
   }
 }
 
-async function loadUsageGuides() {
-  if (state.usageGuidesLoading) return;
+async function retryFailedRefresh() {
+  if (state.refreshing || state.refreshStatus.running) return;
 
-  state.usageGuidesLoading = true;
-  state.usageGuidesError = '';
+  state.error = '';
+  state.refreshing = true;
+  state.selectedSignalDetail = null;
   render();
 
   try {
-    state.usageGuides = normalizeUsageGuides(await invoke(COMMANDS.usageGuides));
-    state.usageGuidesLoaded = true;
-    state.selectedUsageGuideId = resolveSelectedUsageGuide(state.usageGuides, state.selectedUsageGuideId);
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.retryRefresh));
+    state.refreshing = state.refreshStatus.running;
+    render();
+    scheduleRefreshPoll(500);
   } catch (error) {
-    state.usageGuides = [];
-    state.usageGuidesLoaded = false;
-    state.selectedUsageGuideId = '';
-    state.usageGuidesError = getErrorMessage(error);
-  } finally {
-    state.usageGuidesLoading = false;
+    state.refreshing = false;
+    state.refreshStatus = {
+      ...state.refreshStatus,
+      running: false,
+      status: 'error',
+      error: getErrorMessage(error),
+    };
     render();
   }
 }
 
-async function loadDataHealthSummary({ force = false } = {}) {
-  if (state.dataHealthLoading) return;
-  if (!force && isDataHealthCacheFresh()) return;
+async function cancelRefreshJob() {
+  if (!state.refreshStatus.running || state.refreshStatus.cancelling) return;
 
-  state.dataHealthLoading = true;
-  state.dataHealthError = '';
+  state.refreshStatus = {
+    ...state.refreshStatus,
+    cancelling: true,
+    stage: 'Cancelling after current stage completes...',
+  };
   render();
 
   try {
-    state.dataHealth = await invoke(COMMANDS.dataHealthSummary);
-    state.dataHealthFetchedAt = new Date().toISOString();
-    state.lastUpdatedAt = new Date().toISOString();
+    await invoke(COMMANDS.cancelRefresh);
+    state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.refreshStatus));
+    state.refreshing = state.refreshStatus.running;
+    render();
+    scheduleRefreshPoll(500);
   } catch (error) {
-    state.dataHealthError = getErrorMessage(error);
-  } finally {
-    state.dataHealthLoading = false;
+    state.refreshStatus = {
+      ...state.refreshStatus,
+      cancelling: false,
+      error: getErrorMessage(error),
+    };
     render();
   }
 }
@@ -2151,6 +1670,7 @@ async function loadDataHealthSummary({ force = false } = {}) {
 async function loadDashboard() {
   state.loading = true;
   state.error = '';
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -2168,7 +1688,7 @@ async function loadDashboard() {
       state.status = bundleResult.status || null;
       state.pipelineDates = bundleResult.pipeline_dates || null;
       state.availableDates = normalizeAvailableDates(bundleResult.available_dates);
-      state.recentReports = normalizeRecentReports(bundleResult.recent_reports);
+      state.recentReports = normalizeRecentReports(bundleResult.recent_reports, RECENT_REPORT_LIMIT);
       state.snapshot = bundleResult.snapshot || null;
       state.selectedScope = normalizeScope(state.snapshot?.scope || activeScope);
       state.selectedReportDate = state.snapshot?.report_date
@@ -2200,8 +1720,8 @@ async function loadDashboard() {
   } finally {
     state.loading = false;
     render();
-    if (!isDataHealthCacheFresh()) {
-      void loadDataHealthSummary();
+    if (!dataHealth.isCacheFresh()) {
+      void dataHealth.loadSummary();
     }
   }
 }
@@ -2209,6 +1729,7 @@ async function loadDashboard() {
 async function loadSelectedSnapshot() {
   state.loading = true;
   state.error = '';
+  state.selectedSignalDetail = null;
   render();
 
   try {
@@ -2273,42 +1794,16 @@ async function exportReport() {
   }
 }
 
-async function exportDataHealthReport() {
-  if (!state.dataHealth || state.dataHealthExporting) return;
-
-  state.dataHealthExporting = true;
-  state.dataHealthExportResult = null;
-  render();
-
-  try {
-    const result = await invoke(COMMANDS.exportDataHealthReport);
-    state.dataHealthExportResult = {
-      kind: 'success',
-      title: 'Data-health report exported',
-      message: `Saved data-health report for ${result.report_date}.`,
-      output_path: result.output_path,
-      failed_items: Array.isArray(result.failed_items) ? result.failed_items : [],
-    };
-    if (result.output_path) {
-      pushRecentReport('DATA_HEALTH_REPORT', result.report_date, result.output_path);
-    }
-  } catch (error) {
-    state.dataHealthExportResult = {
-      kind: 'error',
-      title: 'Data-health export failed',
-      message: getErrorMessage(error),
-    };
-  } finally {
-    state.dataHealthExporting = false;
-    render();
-  }
-}
-
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && state.isUsageGuideOpen) {
-    closeUsageGuides();
+    usageGuides.closeUsageGuides();
+  }
+
+  if (event.key === 'Escape' && state.selectedSignalDetail) {
+    state.selectedSignalDetail = null;
+    render();
   }
 });
 
 render();
-loadDashboard();
+loadAndApplyPreferences().then(() => loadDashboard());

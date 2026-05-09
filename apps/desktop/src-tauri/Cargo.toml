@@ -16,7 +16,9 @@ tauri-build = { version = "2" }
 anyhow.workspace = true
 app-service = { path = "../../../crates/app-service" }
 chrono.workspace = true
+core-domain = { path = "../../../crates/core-domain" }
 market-store = { path = "../../../crates/market-store" }
 report-engine = { path = "../../../crates/report-engine" }
 serde.workspace = true
+serde_json.workspace = true
 tauri = { version = "2", features = [] }

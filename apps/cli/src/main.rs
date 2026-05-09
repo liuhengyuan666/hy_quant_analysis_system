@@ -1,6 +1,6 @@
 use anyhow::Result;
 use app_service::{AppContext, ReportScope};
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand, ValueEnum};
 use market_store::StorageConfig;
 
@@ -50,7 +50,31 @@ enum Command {
     ComputeRotation,
     ComputeStrategyPreferences,
     ComputeSignals,
-    PipelineDates,
+    RefreshAll {
+        #[arg(long)]
+        to: Option<NaiveDate>,
+        #[arg(
+            long,
+            help = "Scope used for latest-date diagnostics and gate explanation only"
+        )]
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(
+            long,
+            default_value_t = true,
+            help = "Whether to include standard-scope backtests in the aggregate refresh (default: true)"
+        )]
+        #[arg(long, default_value_t = true)]
+        run_backtests: bool,
+    },
+    ExplainLatestGate {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+    PipelineDates {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     CheckDataHealth,
     RunBacktest {
         #[arg(long, default_value_t = 1000000.0)]
@@ -61,6 +85,12 @@ enum Command {
         fee_rate: f64,
         #[arg(long, default_value_t = 0.0005)]
         slippage_rate: f64,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, default_value_t = false)]
+        use_state_sizing: bool,
+        #[arg(long)]
+        max_drawdown: Option<f64>,
     },
     DashboardSnapshot {
         #[arg(long)]
@@ -123,8 +153,29 @@ fn main() -> Result<()> {
             let result = context.compute_signals()?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::PipelineDates => {
-            let result = context.pipeline_date_diagnostics()?;
+        Command::RefreshAll {
+            to,
+            scope,
+            run_backtests,
+        } => {
+            let result = context.refresh_pipeline(
+                to.unwrap_or_else(|| Local::now().date_naive()),
+                scope.into(),
+                run_backtests,
+                None,
+                None,
+            )?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+            if !result.success {
+                std::process::exit(1);
+            }
+        }
+        Command::ExplainLatestGate { scope } => {
+            let result = context.explain_latest_gate(scope.into())?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::PipelineDates { scope } => {
+            let result = context.pipeline_date_diagnostics_with_scope(scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::CheckDataHealth => {
@@ -136,9 +187,19 @@ fn main() -> Result<()> {
             max_holdings,
             fee_rate,
             slippage_rate,
+            scope,
+            use_state_sizing,
+            max_drawdown,
         } => {
-            let result =
-                context.run_backtest(initial_capital, max_holdings, fee_rate, slippage_rate)?;
+            let result = context.run_backtest(
+                initial_capital,
+                max_holdings,
+                fee_rate,
+                slippage_rate,
+                scope.into(),
+                use_state_sizing,
+                max_drawdown,
+            )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::DashboardSnapshot { date, scope } => {

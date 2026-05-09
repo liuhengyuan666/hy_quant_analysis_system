@@ -145,6 +145,12 @@ pub struct UniverseRecord {
     pub eastmoney_secid: String,
     pub tencent_symbol: Option<String>,
     pub enabled: bool,
+    #[serde(default = "default_latest_gate_required")]
+    pub latest_gate_required: bool,
+}
+
+fn default_latest_gate_required() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -174,10 +180,15 @@ pub fn load_universe(path: &Path) -> Result<Vec<Instrument>> {
             eastmoney_secid: record.eastmoney_secid,
             tencent_symbol: record.tencent_symbol,
             enabled: record.enabled,
+            latest_gate_required: record.latest_gate_required,
         })
         .filter(|instrument| instrument.enabled)
         .collect();
     Ok(instruments)
+}
+
+fn latest_bar_date(bars: &[DailyBar]) -> Option<NaiveDate> {
+    bars.iter().map(|bar| bar.date).max()
 }
 
 #[derive(Debug, Deserialize)]
@@ -285,7 +296,22 @@ pub fn fetch_daily_bars(
     to: NaiveDate,
 ) -> Result<Vec<DailyBar>> {
     match fetch_eastmoney_daily_bars(&instrument.symbol, &instrument.eastmoney_secid, from, to) {
-        Ok(bars) if !bars.is_empty() => Ok(bars),
+        Ok(bars) if !bars.is_empty() => {
+            if let Some(tencent_symbol) = &instrument.tencent_symbol {
+                let primary_latest = latest_bar_date(&bars);
+                if matches!(primary_latest, Some(latest) if latest < to) {
+                    if let Ok(fallback_bars) =
+                        fetch_tencent_daily_bars(&instrument.symbol, tencent_symbol, from, to)
+                    {
+                        let fallback_latest = latest_bar_date(&fallback_bars);
+                        if fallback_latest > primary_latest {
+                            return Ok(fallback_bars);
+                        }
+                    }
+                }
+            }
+            Ok(bars)
+        }
         Ok(_) | Err(_) => {
             if let Some(tencent_symbol) = &instrument.tencent_symbol {
                 fetch_tencent_daily_bars(&instrument.symbol, tencent_symbol, from, to)

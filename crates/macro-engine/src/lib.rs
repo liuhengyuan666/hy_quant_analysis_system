@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use chrono::NaiveDate;
-use core_domain::{AnalysisScope, DailyBar, MacroSnapshot, MarketRegimeSnapshot};
+use core_domain::{
+    AnalysisScope, DailyBar, EnvironmentSnapshot, MacroSnapshot, MarketRegimeSnapshot,
+    StrategyState, StrategyStateSnapshot,
+};
 
 #[derive(Debug, Clone)]
 pub struct MacroFactorSeries {
@@ -182,6 +185,69 @@ pub fn build_market_regimes(
         }
     }
     rows
+}
+
+/// Build a strategy state snapshot from regime + environment.
+///
+/// State transitions are based on trend strength, risk level, market breadth,
+/// liquidity and stress proxies.  The rules are intentionally conservative:
+/// - liquidity crisis => NO_TRADE regardless of other signals
+/// - high risk or weakening trend => DE_RISK
+/// - strong trend + healthy breadth + low risk => FULL_TREND
+/// - improving but not yet confirmed => CONFIRM_ADD
+/// - deeply depressed but not crashing => LEFT_PROBE
+pub fn build_strategy_state(
+    regime: &MarketRegimeSnapshot,
+    environment: &EnvironmentSnapshot,
+) -> StrategyStateSnapshot {
+    let trend = regime.trend_score;
+    let risk = regime.risk_score;
+    let liquidity = regime.liquidity_score;
+    let breadth = environment.breadth_pct;
+    let env_score = environment.environment_score;
+    let stress = environment.stress_proxy_score;
+
+    let (state, reason, position_pct) = if liquidity < 20.0 || (trend < 25.0 && risk > 75.0) {
+        (
+            StrategyState::NoTrade,
+            "流动性极度紧张或市场极度低迷，全面观望",
+            0.0,
+        )
+    } else if trend < 45.0 && breadth < 35.0 && env_score < 45.0 && risk < 65.0 {
+        (
+            StrategyState::LeftProbe,
+            "市场低迷但未到崩溃边缘，可能触底，小仓位试探",
+            20.0,
+        )
+    } else if trend > 70.0 && risk < 40.0 && breadth > 50.0 && env_score > 60.0 && stress < 60.0 {
+        (
+            StrategyState::FullTrend,
+            "趋势明确，风险可控，广度健康，满仓操作",
+            100.0,
+        )
+    } else if trend > 55.0 && env_score > 50.0 && breadth > 35.0 && risk < 55.0 {
+        (StrategyState::ConfirmAdd, "趋势初步确认，逐步加仓", 60.0)
+    } else if trend < 55.0 || risk > 60.0 || stress > 70.0 {
+        (
+            StrategyState::DeRisk,
+            "趋势减弱或风险/压力上升，降低仓位",
+            30.0,
+        )
+    } else {
+        (StrategyState::NoTrade, "市场状态不明确，保持观望", 0.0)
+    };
+
+    let state_score = (trend * 0.35 + (100.0 - risk) * 0.25 + breadth * 0.20 + env_score * 0.20)
+        .clamp(0.0, 100.0);
+
+    StrategyStateSnapshot {
+        date: regime.date,
+        scope: regime.market.clone(),
+        state,
+        state_score,
+        transition_reason: reason.to_string(),
+        recommended_position_pct: position_pct,
+    }
 }
 
 #[cfg(test)]

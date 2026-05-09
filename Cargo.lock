@@ -124,8 +124,10 @@ dependencies = [
  "report-engine",
  "rotation-engine",
  "serde",
+ "serde_json",
  "signal-engine",
  "strategy-engine",
+ "uuid",
 ]
 
 [[package]]
@@ -2841,9 +2843,11 @@ dependencies = [
  "anyhow",
  "app-service",
  "chrono",
+ "core-domain",
  "market-store",
  "report-engine",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
 ]

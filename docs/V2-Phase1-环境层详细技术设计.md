@@ -1,5 +1,29 @@
 # V2 Phase 1 详细技术设计：Per-Scope Regime + Environment Layer
 
+> **文档状态说明**：这份文档保留了 V2 Phase 1 当时的详细设计与实现基线。
+>
+> 当前仓库实现已经在部分语义上继续向前推进，尤其是 signal / backtest provenance 与用户面展示已经不再完全停留在本文档描述的早期边界。
+>
+> 因此：
+>
+> - 这里仍适合看 **Phase 1 当时为什么这样设计**
+> - 当前运行中的真实行为请优先参考：
+>   - `README.md`
+>   - `docs/系统架构与数据流.md`
+>   - `docs/功能模块与处理逻辑.md`
+>   - `docs/分析使用手册.md`
+>   - `docs/日常操作手册.md`
+>
+> **Post-Phase-1 演进说明**：
+>
+> 以下功能在 Phase 1 基线之上已进一步演进，不再完全受本文档早期边界约束：
+> - `signal-engine` 已支持按 `regime_basis_scope` 查找 regime，信号生成不再仅限 GLOBAL
+> - `backtest-engine` 已支持按 scope 运行回测
+> - `TrustSummary` 已扩展 provenance 字段（`signal_analysis_scope`, `signal_regime_basis_scope`, `backtest_matches_snapshot`）
+> - 默认 `export-report` 已增加 fail-loud 保护（latest gate 落后时拒绝导出）
+> - 数据健康检查的 gap 告警已过滤全休市期间（通过 `TradingCalendar`）
+> - 桌面端 refresh 完成后自动展示 trust summary
+
 ## 1. 文档目标
 
 本文档把 `设计规划-v2.md` 中 **Phase 1：环境层语义补全** 细化为可落地的工程设计，覆盖：

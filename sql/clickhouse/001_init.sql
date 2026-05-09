@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS quant.strategy_preference
 (
     date Date,
     symbol String,
+    analysis_scope LowCardinality(String) DEFAULT 'GLOBAL',
+    regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL',
     value_left_score Float64,
     trend_pullback_score Float64,
     trend_breakout_score Float64,
@@ -144,6 +146,8 @@ CREATE TABLE IF NOT EXISTS quant.signal_snapshot
     symbol String,
     final_score Float64,
     signal_label LowCardinality(String),
+    analysis_scope LowCardinality(String) DEFAULT 'GLOBAL',
+    regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL',
     explanation String,
     updated_at DateTime DEFAULT now()
 )
@@ -155,6 +159,12 @@ CREATE TABLE IF NOT EXISTS quant.backtest_run
 (
     run_id String,
     strategy_name LowCardinality(String),
+    analysis_scope LowCardinality(String) DEFAULT 'GLOBAL',
+    signal_scope LowCardinality(String) DEFAULT 'GLOBAL',
+    regime_basis_scope LowCardinality(String) DEFAULT 'GLOBAL',
+    signal_start_date Nullable(Date),
+    signal_end_date Nullable(Date),
+    config_summary String DEFAULT '',
     started_at DateTime,
     finished_at Nullable(DateTime),
     cagr Nullable(Float64),
@@ -199,3 +209,17 @@ CREATE TABLE IF NOT EXISTS quant.report_snapshot
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(report_date)
 ORDER BY (report_type, report_date);
+
+CREATE TABLE IF NOT EXISTS quant.strategy_state
+(
+    date Date,
+    scope LowCardinality(String),
+    state LowCardinality(String),
+    state_score Float64,
+    transition_reason String,
+    recommended_position_pct Float64,
+    updated_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(date)
+ORDER BY (scope, date);

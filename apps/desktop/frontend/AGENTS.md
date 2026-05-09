@@ -1,40 +1,41 @@
 # FRONTEND KNOWLEDGE BASE
 
 ## OVERVIEW
-Plain-JS dashboard frontend. Single root render, Tauri invoke bridge, no active Vue runtime.
+Plain-JS dashboard frontend. Single root render tree, Tauri invoke bridge, no active Vue runtime.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| State + commands | `src/main.js` top section | global `state`, `COMMANDS`, helpers |
-| Startup flow | `src/main.js::loadDashboard` | bundled bootstrap path with `selectedScope` |
-| Historical date flow | `src/main.js::loadSelectedSnapshot` | lighter snapshot-only path |
-| Scope control | `src/main.js::renderDateSelector` | scope selector + date selector share one control card |
-| Environment panel | `src/main.js::renderEnvironmentPanel` | scope-aware environment layer UI |
-| Render pipeline | `src/main.js::render` + `commitRender` | rAF-coalesced DOM writes |
-| Health cache flow | `src/main.js::loadDataHealthSummary` | 5-minute session cache + manual refresh |
-| Visual system | `src/styles.css` | panel/grid/pill/score styles |
+| Root state + commands | `src/main.js` top section | `state`, `COMMANDS`, load/render orchestration |
+| Shared helpers | `src/lib/dashboard-utils.js` | formatting, normalization, scope/report helpers |
+| Trust entry panel | `src/main.js::renderTrustSummaryPanel` | primary trust verdict with freshness + health evidence summaries |
+| Refresh UI | `src/main.js::renderRefreshProgress` + `startRefreshJob` | full refresh CTA, stage selector, retry flow |
+| Recent-reports slice | `src/features/recent-reports.js` | snapshot jump, artifact open, copy path |
+| Data-health slice | `src/features/data-health.js` | cache, load, export, render |
+| Usage-guides slice | `src/features/usage-guides.js` | guide loading and viewer state |
+| Environment/breadth renderers | `src/renderers/environment-breadth.js` | paired environment explanation + breadth proxy panels |
+| Visual system | `src/styles.css` | panel/grid/pill/refresh/report-history styles |
 
 ## CONVENTIONS
-- Plain JS is the real UI runtime; `vue` dependency exists but is not the active implementation.
-- Startup should prefer `dashboard_bundle`; avoid multi-invoke bootstrap drift.
-- Scope changes should trigger a full bundle reload; date changes stay on the snapshot-only path.
-- Historical date changes should stay on `dashboard_snapshot` unless bundle semantics truly need expansion.
-- `render()` schedules; `commitRender()` mutates the DOM.
-- Environment UI should read the persisted snapshot contract directly; do not invent derived regime semantics in frontend.
-- Data health is intentionally decoupled from normal dashboard correctness and may be stale-cached.
-- Usage guides load on demand; keep docs rendering isolated from dashboard hot paths.
+- Plain JS is the real UI runtime; do not plan around a hidden Vue layer.
+- `main.js` owns root state, command names, and render scheduling; feature slices own local actions/renderers once extracted.
+- Startup and scope changes should use `dashboard_bundle`; historical date changes should stay on `dashboard_snapshot`.
+- `render()` schedules and `commitRender()` mutates the DOM.
+- `renderTrustSummaryPanel()` is the primary “can I trust this snapshot?” entry point; the inline trust notice is secondary post-refresh context.
+- `Recent reports` supports `Open snapshot` for `DAILY_REPORT*`, plus `Open artifact` and `Copy path` for all artifacts.
+- Default refresh is full refresh. Stage rerun options are advanced recovery controls and must stay aligned with backend order: `ingest -> indicators -> macro -> rotation -> strategy -> signals -> backtests`.
+- Environment layer and watchlist breadth intentionally coexist: explanation layer + raw proxy breakdown.
 
 ## ANTI-PATTERNS
 - Do **not** add business logic or provider semantics in frontend.
-- Do **not** bypass `render()` scheduling with ad-hoc direct DOM writes all over the file.
-- Do **not** reintroduce root-level startup fan-out when `dashboard_bundle` already returns the bootstrap payload.
-- Do **not** let export/snapshot calls ignore `selectedScope`; scope must flow through bundle, snapshot, and export consistently.
-- Do **not** assume data health must refresh every dashboard load.
-- Do **not** label Environment Layer as stock-market breadth; it is tracked-universe proxy + liquidity/stress decomposition.
+- Do **not** bypass scheduled rendering with scattered direct DOM writes.
+- Do **not** reintroduce root-level startup fan-out when `dashboard_bundle` already supplies the bootstrap payload.
+- Do **not** let snapshot/export/recent-report actions ignore `selectedScope`.
+- Do **not** push feature-specific logic back into `main.js` once a dedicated slice exists.
+- Do **not** label Environment Layer as true stock-market breadth.
 
 ## NOTES
-- `src/main.js` is large and central; if it grows further, split by area (`snapshot`, `health`, `guides`, `render`) before behavior drifts.
-- Recent report labels now encode scope (`DAILY_REPORT_CN`, `DAILY_REPORT_HK`); keep UI formatting aligned with backend report types.
-- `renderEnvironmentPanel` and watchlist breadth panel intentionally coexist: environment = explanation layer, breadth panel = raw proxy breakdown.
+- `main.js` is still large, but pure helper logic and several interaction areas have already moved out into dedicated slices.
+- Recent report labels still encode scope (`DAILY_REPORT_CN`, `DAILY_REPORT_HK`); keep UI scope inference aligned with backend report types until metadata grows a first-class scope field.
+- The next likely seam for result-management work is still `src/features/recent-reports.js` plus the snapshot-loading path in `main.js`.
 - `node_modules/` and `dist/` are generated artifacts.
