@@ -127,6 +127,7 @@ dependencies = [
  "serde_json",
  "signal-engine",
  "strategy-engine",
+ "uuid",
 ]
 
 [[package]]
@@ -2846,6 +2847,7 @@ dependencies = [
  "market-store",
  "report-engine",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
 ]
