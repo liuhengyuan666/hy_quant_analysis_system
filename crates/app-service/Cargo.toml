@@ -26,4 +26,4 @@ tokio.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
-wiremock.workspace = true
+wiremock = "0.6"

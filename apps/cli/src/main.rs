@@ -169,7 +169,12 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&instruments)?);
         }
         Command::IngestDaily { from, to } => {
-            let result = context.ingest_daily(from, to)?;
+            let progress_fn = |msg: &str| eprintln!("[ingest] {}", msg);
+            let result = if cli.quiet {
+                context.ingest_daily(from, to, None)?
+            } else {
+                context.ingest_daily(from, to, Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeIndicators => {
@@ -304,11 +309,19 @@ fn main() -> Result<()> {
             if !cli.quiet {
                 eprintln!("[sync-and-export] Starting...");
             }
+            let progress_callback: Option<Box<dyn Fn(&str) + Send>> = if cli.quiet {
+                None
+            } else {
+                Some(Box::new(|msg: &str| {
+                    eprintln!("[sync-and-export] {}", msg);
+                }))
+            };
             let result = context.sync_and_export(
                 date,
                 to.unwrap_or_else(|| Local::now().date_naive()),
                 scope.into(),
                 run_backtests,
+                progress_callback,
             )?;
             if !cli.quiet {
                 eprintln!("[sync-and-export] Done.");

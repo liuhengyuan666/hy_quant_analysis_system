@@ -1201,7 +1201,7 @@ fn compute_participation_metrics(
 const LLM_SERVICE_NAME: &str = "rust-quant-analysis-system";
 const LLM_ACCOUNT_NAME: &str = "llm_api_key";
 
-fn probe_keyring() -> bool {
+fn probe_keyring_readable() -> bool {
     let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME);
     match entry.get_password() {
         Ok(_) => true,
@@ -1234,7 +1234,7 @@ impl AppContext {
             Ok(root) => load_calendar_from_config(&root.join("config/calendars")),
             Err(_) => core_domain::calendar::TradingCalendar::default(),
         };
-        if !probe_keyring() {
+        if !probe_keyring_readable() {
             eprintln!("WARN: OS keyring is unavailable. LLM API keys will be stored in SQLite credential_store as fallback.");
         }
         Self { storage, calendar }
@@ -1277,11 +1277,17 @@ impl AppContext {
         Ok(instruments)
     }
 
-    pub fn ingest_daily(&self, from: NaiveDate, to: NaiveDate) -> Result<IngestSummary> {
+    pub fn ingest_daily(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<IngestSummary> {
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
+        let total = instruments.len();
         let mut total_rows = 0usize;
         let mut failed_symbols = Vec::new();
-        for instrument in &instruments {
+        for (idx, instrument) in instruments.iter().enumerate() {
             let bars = match fetch_daily_bars(instrument, from, to) {
                 Ok(bars) => bars,
                 Err(error) => {
@@ -1294,6 +1300,17 @@ impl AppContext {
                 market_store::insert_daily_bars(&self.storage, &instrument.symbol, &bars)
             {
                 failed_symbols.push(format!("{}: {}", instrument.symbol, error));
+            }
+            if let Some(cb) = progress_callback {
+                let milestone = total / 10;
+                if milestone == 0 || idx % milestone == 0 || idx + 1 == total {
+                    cb(&format!(
+                        "ingest progress: {}/{} symbols ({}%)",
+                        idx + 1,
+                        total,
+                        ((idx + 1) * 100) / total
+                    ));
+                }
             }
         }
         Ok(IngestSummary {
@@ -1499,6 +1516,7 @@ impl AppContext {
                                 summary: Some($summary_variant(summary)),
                                 error: None,
                             });
+                            notify(&format!("Finished {}.", $stage_name));
                             persist_job(&mut job, &stages, "running", None, None)?;
                         }
                         Err(error) => {
@@ -1526,7 +1544,7 @@ impl AppContext {
         run_refresh_stage!(
             "ingest",
             RefreshStageSummary::Ingest,
-            self.ingest_daily(refresh_from, refresh_to)
+            self.ingest_daily(refresh_from, refresh_to, cb)
         );
         notify("[2/7] Starting indicators...");
         run_refresh_stage!(
@@ -1569,6 +1587,7 @@ impl AppContext {
                         summary: Some(RefreshStageSummary::Backtests(summary)),
                         error: None,
                     });
+                    notify("Finished backtests.");
                     persist_job(&mut job, &stages, "running", None, None)?;
                 }
                 Err(error) => {
@@ -3099,6 +3118,7 @@ impl AppContext {
         to: NaiveDate,
         scope: ReportScope,
         run_backtests: bool,
+        progress_callback: Option<Box<dyn Fn(&str) + Send>>,
     ) -> Result<SyncAndExportSummary> {
         if let Some(report_date) = date {
             let summary = self.export_report_with_scope(Some(report_date), scope)?;
@@ -3114,7 +3134,7 @@ impl AppContext {
 
         if sync_gate_needs_refresh(gate_before.latest_gate_advanced) {
             let refresh_result =
-                self.refresh_pipeline(to, scope, run_backtests, None, None, None)?;
+                self.refresh_pipeline(to, scope, run_backtests, None, None, progress_callback)?;
             validate_sync_refresh_result(refresh_result.success, &refresh_result.alerts.blocking)?;
         }
 

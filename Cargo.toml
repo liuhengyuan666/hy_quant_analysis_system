@@ -40,4 +40,3 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 urlencoding = "2"
 uuid = { version = "1", features = ["v4"] }
 keyring = "3"
-wiremock = "0.6"
