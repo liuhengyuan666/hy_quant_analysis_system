@@ -3139,6 +3139,12 @@ impl AppContext {
         }
 
         let gate_after = self.explain_latest_gate(scope)?;
+        if gate_after.latest_gate_advanced != Some(true) {
+            anyhow::bail!(
+                "sync-and-export aborted: latest gate is not advanced after refresh. Gate status: {:?}. Run 'explain-latest-gate' for details.",
+                gate_after.latest_gate_advanced
+            );
+        }
         let summary = self.export_report_with_scope(None, scope)?;
 
         Ok(SyncAndExportSummary {
@@ -3276,11 +3282,11 @@ impl AppContext {
         match entry.get_password() {
             Ok(key) if !key.is_empty() => Ok(Some(key)),
             Ok(_) | Err(keyring::Error::NoEntry) => {
-                market_store::fetch_credential(&self.storage, "llm_api_key")
+                Ok(market_store::fetch_credential(&self.storage, "llm_api_key")?.filter(|s| !s.is_empty()))
             }
             Err(keyring_err) => {
                 eprintln!("WARN: keyring read failed ({keyring_err}), falling back to SQLite credential_store.");
-                market_store::fetch_credential(&self.storage, "llm_api_key")
+                Ok(market_store::fetch_credential(&self.storage, "llm_api_key")?.filter(|s| !s.is_empty()))
             }
         }
     }

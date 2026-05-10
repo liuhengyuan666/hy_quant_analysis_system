@@ -408,7 +408,8 @@ fn spawn_dashboard_refresh(
                 if let Some(start) = msg.find("Starting ") {
                     let rest = &msg[start + "Starting ".len()..];
                     let stage_name = rest.trim_end_matches("...").trim_end_matches(".");
-                    if let Some(pct) = pipeline_stages::progress_after(stage_name) {
+                    let pct = pipeline_stages::progress_after(stage_name);
+                    if pct > 0 {
                         set_refresh_status(&progress_worker, |status| {
                             status.progress_pct = pct;
                             status.stage = stage_name.to_string();
