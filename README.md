@@ -37,6 +37,9 @@
 - 基础回测
 - Markdown 报告导出
 - Tauri 桌面 Dashboard（支持 `GLOBAL / CN / HK` scope）
+- **V3**：一键同步导出（`sync-and-export`）
+- **V3**：CLI 阶段进度输出（`--quiet` 关闭）
+- **V3**：LLM 智能报告分析（OpenAI-compatible API）
 
 ### 当前适用场景
 
@@ -252,13 +255,70 @@ cargo run -p quant-cli -- refresh-all --to 2026-04-26
   - 系统会自动扩到一个保守的 repair window 来修复被 gate 卡住的较早日期
 - 这条命令更适合作为 **显式工程路径 / 高级用户路径**；默认用户路径仍然优先推荐桌面端 `Refresh data`
 
-### 8.7 跑回测
+### 8.7 V3 一键同步导出（推荐默认路径）
+
+```bash
+cargo run -p quant-cli -- sync-and-export --scope global
+cargo run -p quant-cli -- sync-and-export --scope cn --date 2026-05-07
+```
+
+说明：
+
+- `sync-and-export` 是 V3 新增的**推荐默认路径**，一条命令完成：
+  1. 检查 latest gate 状态
+  2. 若 gate 落后，自动执行 `refresh_pipeline` 全链路刷新
+  3. 刷新后再次检查 gate
+  4. gate 通过后自动导出日报
+- 不带 `--date` 时，自动处理最新日期；带 `--date` 时直接导出指定历史日期（跳过刷新）
+- `--scope global|cn|hk` 选择对应的 dashboard scope
+- `--run-backtests` 控制是否执行回测阶段，默认 `true`
+- 若刷新后 gate 仍未通过，会 fail-loud 并提示运行 `explain-latest-gate` 排查
+
+### 8.8 V3 LLM 智能报告分析
+
+```bash
+# 配置 LLM（只需执行一次）
+cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
+
+# 设置 API Key（存储在系统 keyring，安全优先）
+cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
+
+# 分析当前最新日报
+cargo run -p quant-cli -- analyze-with-llm --scope global
+```
+
+说明：
+
+- 仅支持 OpenAI-compatible API（自定义 `base_url + model + api_key`）
+- API Key 优先存储在 OS keyring，失败时回退到 SQLite credential_store（会打印警告）
+- 分析结果保存为 `reports/llm-analysis-{scope}-{date}.md`
+- 分析文本不会出现在 stdout/stderr/logs/JSON 中，仅保存在报告文件内
+- 不支持流式输出、多 provider、prompt 模板、RAG 或 embeddings
+
+### 8.9 V3 CLI 阶段进度输出
+
+```bash
+# 默认开启 stderr 进度输出
+cargo run -p quant-cli -- refresh-all --to 2026-05-08
+
+# 关闭进度输出（仅保留 stdout JSON）
+cargo run -p quant-cli -- --quiet refresh-all --to 2026-05-08
+cargo run -p quant-cli -- --quiet sync-and-export --scope global
+```
+
+说明：
+
+- `--quiet` 是全局选项，放在子命令之前
+- 进度输出到 stderr，stdout JSON 报告不受影响
+- 长耗时命令（`refresh-all`、`sync-and-export`、`ingest-daily`、`compute-*`）均支持进度回调
+
+### 8.10 跑回测
 
 ```bash
 cargo run -p quant-cli -- run-backtest
 ```
 
-### 8.8 查看 dashboard 数据
+### 8.11 查看 dashboard 数据
 
 ```bash
 cargo run -p quant-cli -- dashboard-dates
@@ -280,7 +340,7 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 - signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
 - `explain-latest-gate` 会专门解释：为什么默认最新日期还没有推进到 freshest market date，以及卡在 signal / rotation / regime / environment 哪一层
 
-### 8.9 导出日报
+### 8.12 导出日报
 
 ```bash
 cargo run -p quant-cli -- export-report
@@ -468,6 +528,10 @@ cargo run -p quant-cli -- seed-universe
 # 推荐默认路径（一条命令完成全链路刷新）
 cargo run -p quant-cli -- refresh-all --to 2026-05-08
 
+# V3 一键同步导出（自动检查 gate → 刷新 → 导出）
+cargo run -p quant-cli -- sync-and-export --scope global
+cargo run -p quant-cli -- sync-and-export --scope cn --date 2026-05-07
+
 # 分步路径（必须按顺序执行，不能倒序）
 cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
 cargo run -p quant-cli -- compute-indicators
@@ -489,7 +553,15 @@ cargo run -p quant-cli -- export-report --date 2026-05-07
 cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
 cargo run -p quant-cli -- export-data-health-report
 
+# V3 LLM 智能分析
+cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
+cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
+cargo run -p quant-cli -- analyze-with-llm --scope global
+
 # 回测
 cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- run-backtest --scope global --use-state-sizing --max-drawdown 0.15
+
+# V3 全局选项
+cargo run -p quant-cli -- --quiet refresh-all --to 2026-05-08
 ```
