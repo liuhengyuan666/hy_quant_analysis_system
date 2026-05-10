@@ -3265,6 +3265,51 @@ impl AppContext {
         }
     }
 
+    async fn call_llm_api(
+        config: LlmConfig,
+        api_key: String,
+        system_prompt: &'static str,
+        user_prompt: String,
+    ) -> Result<String> {
+        let openai_config = async_openai::config::OpenAIConfig::new()
+            .with_api_key(api_key)
+            .with_api_base(config.base_url);
+        let client = async_openai::Client::with_config(openai_config);
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model(&config.model)
+            .messages([
+                async_openai::types::ChatCompletionRequestSystemMessageArgs::default()
+                    .content(system_prompt)
+                    .build()
+                    .map_err(|e| anyhow::anyhow!("failed to build system message: {e}"))?
+                    .into(),
+                async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content(&user_prompt)
+                    .build()
+                    .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
+                    .into(),
+            ])
+            .build()
+            .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
+
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(config.timeout_secs),
+            client.chat().create(request),
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("LLM API call timed out after {}s", config.timeout_secs))?
+        .map_err(|e| anyhow::anyhow!("LLM API call failed: {e}"))?;
+
+        let content = response
+            .choices
+            .into_iter()
+            .next()
+            .and_then(|choice| choice.message.content)
+            .unwrap_or_default();
+
+        Ok(content)
+    }
+
     pub fn analyze_report_with_llm(
         &self,
         report_date: NaiveDate,
@@ -3286,45 +3331,31 @@ impl AppContext {
             report_markdown
         );
 
-        let runtime = tokio::runtime::Runtime::new().context("failed to create tokio runtime")?;
-
-        let analysis_text = runtime.block_on(async {
-            let openai_config = async_openai::config::OpenAIConfig::new()
-                .with_api_key(api_key)
-                .with_api_base(config.base_url.clone());
-            let client = async_openai::Client::with_config(openai_config);
-            let request = async_openai::types::CreateChatCompletionRequestArgs::default()
-                .model(&config.model)
-                .messages([
-                    async_openai::types::ChatCompletionRequestSystemMessageArgs::default()
-                        .content(system_prompt)
-                        .build()
-                        .map_err(|e| anyhow::anyhow!("failed to build system message: {e}"))?
-                        .into(),
-                    async_openai::types::ChatCompletionRequestUserMessageArgs::default()
-                        .content(&user_prompt)
-                        .build()
-                        .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
-                        .into(),
-                ])
-                .build()
-                .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
-
-            let response = client
-                .chat()
-                .create(request)
-                .await
-                .map_err(|e| anyhow::anyhow!("LLM API call failed: {e}"))?;
-
-            let content = response
-                .choices
-                .into_iter()
-                .next()
-                .and_then(|choice| choice.message.content)
-                .unwrap_or_default();
-
-            Ok::<String, anyhow::Error>(content)
-        })?;
+        let analysis_text = match tokio::runtime::Handle::try_current() {
+            Ok(_handle) => {
+                // Inside an existing tokio runtime (e.g., Tauri async command).
+                // Cannot call Runtime::new() or Handle::block_on from here.
+                // Spawn a dedicated thread with its own runtime.
+                std::thread::scope(|s| {
+                    s.spawn(|| {
+                        let runtime = tokio::runtime::Runtime::new()
+                            .context("failed to create tokio runtime")?;
+                        runtime.block_on(Self::call_llm_api(
+                            config, api_key, system_prompt, user_prompt,
+                        ))
+                    })
+                    .join()
+                    .expect("LLM analysis thread panicked")
+                })?
+            }
+            Err(_) => {
+                let runtime = tokio::runtime::Runtime::new()
+                    .context("failed to create tokio runtime")?;
+                runtime.block_on(Self::call_llm_api(
+                    config, api_key, system_prompt, user_prompt,
+                ))?
+            }
+        };
 
         let root = StorageConfig::project_root()?;
         let report_dir = root.join("reports");

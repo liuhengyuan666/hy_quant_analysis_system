@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use app_service::{pipeline_stages, AppContext, ReportScope};
 use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand, ValueEnum};

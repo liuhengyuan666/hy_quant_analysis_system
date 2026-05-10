@@ -274,3 +274,26 @@
 - 原因：文档与代码不一致会导致用户和维护者持续被误导，削弱 Phase 2 已完成的用户价值。
 - 影响：后续开发者阅读规划文档时，能准确判断哪些功能已实现、哪些仍待推进。
 - 状态：已完成
+
+---
+
+## [2026-05-10] V3 功能（sync-and-export / CLI progress / LLM integration）代码审查完成
+
+- 背景：commit `37f2ae5` 完成了 V3 规划中的 sync-and-export、CLI 进度输出、LLM 集成等功能。由于网络阻塞，`cargo check --workspace` 未能在提交前运行，代码仅通过 rustfmt/LSP 验证。
+- 审查发现：
+  1. **编译阻断**：`apps/cli/src/main.rs` 缺少 `use anyhow::Context;` 导入，`.context()` 调用会导致编译失败。
+  2. **架构风险**：`analyze_report_with_llm` 在同步函数内新建 `tokio::runtime::Runtime`，若未来被 async 上下文调用会 panic。
+  3. **死配置**：`LlmConfig.timeout_secs` 被持久化但从未应用到 HTTP 客户端，LLM 调用可能无限挂死。
+  4. **密钥管理缺陷**：keyring 成功时向 SQLite 写入空字符串，若后续 keyring 不可用则 fallback 返回空字符串，导致密钥"丢失"。
+  5. **明文存储**：SQLite `credential_store` 以纯文本存储 API key，存在安全风险。
+  6. **进度回退**：桌面端 `refresh_pipeline` 传入 `None` progress callback，可能丢失前端进度事件。
+  7. **进度不一致**：`ingest_daily` 未接入 progress callback，7 个阶段中仅第 1 阶段无法细粒度报告进度。
+  8. **其他**：`wiremock` 误放在 workspace 依赖、部分单元测试仅验证字符串常量、计划文件文件计数与实际不符等。
+- 决策：
+  - 将审查报告写入 `docs/V3-代码审查报告-2026-05-10.md` 作为项目真相源。
+  - 在 `cargo check` 恢复后，优先修复编译阻断项（P0）和密钥管理缺陷（P1）。
+  - `timeout_secs` 未接入和 Runtime 反模式需在 LLM 功能正式启用前修复。
+  - 桌面端进度回调回退需在下次桌面端发布前修复。
+- 原因：V3 功能在 happy path 上设计正确，但存在编译、异步、安全和 UX 层面的明确缺陷，需要在正式使用前修复。
+- 影响：后续若继续扩展 LLM 功能（多 provider、streaming、前端集成），应以本次审查发现的边界为约束，避免同类问题重复出现。
+- 状态：审查完成，待修复

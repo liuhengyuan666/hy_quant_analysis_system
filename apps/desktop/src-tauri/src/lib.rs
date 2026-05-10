@@ -402,13 +402,29 @@ fn spawn_dashboard_refresh(
         let context = AppContext::new(StorageConfig::default());
         let today = Local::now().date_naive();
 
+        let progress_worker = worker.clone();
+        let progress_callback: Option<Box<dyn Fn(&str) + Send>> =
+            Some(Box::new(move |msg: &str| {
+                if let Some(start) = msg.find("Starting ") {
+                    let rest = &msg[start + "Starting ".len()..];
+                    let stage_name = rest.trim_end_matches("...").trim_end_matches(".");
+                    if let Some(pct) = pipeline_stages::progress_after(stage_name) {
+                        set_refresh_status(&progress_worker, |status| {
+                            status.progress_pct = pct;
+                            status.stage = stage_name.to_string();
+                            status.current_stage = Some(stage_name.to_string());
+                        });
+                    }
+                }
+            }));
+
         let result = context.refresh_pipeline(
             today,
             app_service::ReportScope::Global,
             true,
             Some(worker.cancel_flag.as_ref()),
             start_stage.map(RefreshStartStage::as_str),
-            None,
+            progress_callback,
         );
 
         match result {
