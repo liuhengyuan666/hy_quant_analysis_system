@@ -300,6 +300,21 @@ pub struct StrategyStateSnapshot {
     pub recommended_position_pct: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmConfig {
+    pub base_url: String,
+    pub model: String,
+    pub timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmAnalysisResult {
+    pub report_date: String,
+    pub scope: String,
+    pub output_path: String,
+    pub analysis_text: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UserPreference {
     pub key: String,

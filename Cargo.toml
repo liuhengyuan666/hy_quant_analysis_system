@@ -25,6 +25,7 @@ authors = ["OpenCode"]
 
 [workspace.dependencies]
 anyhow = "1"
+async-openai = { version = "0.34", default-features = false, features = ["chat-completion", "native-tls"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 clickhouse = { version = "0.13", default-features = false }
@@ -38,3 +39,5 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 urlencoding = "2"
 uuid = { version = "1", features = ["v4"] }
+keyring = "3"
+wiremock = "0.6"

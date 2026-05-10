@@ -1,4 +1,4 @@
-use app_service::AppContext;
+use app_service::{pipeline_stages, AppContext};
 use chrono::{Local, NaiveDate};
 use market_store::StorageConfig;
 use serde::{Deserialize, Serialize};
@@ -202,15 +202,7 @@ impl RefreshStartStage {
     }
 
     fn progress_after(self) -> u8 {
-        match self {
-            Self::Ingest => 20,
-            Self::Indicators => 40,
-            Self::Macro => 60,
-            Self::Rotation => 75,
-            Self::Strategy => 88,
-            Self::Signals => 92,
-            Self::Backtests => 96,
-        }
+        pipeline_stages::progress_after(self.as_str())
     }
 }
 
@@ -416,6 +408,7 @@ fn spawn_dashboard_refresh(
             true,
             Some(worker.cancel_flag.as_ref()),
             start_stage.map(RefreshStartStage::as_str),
+            None,
         );
 
         match result {

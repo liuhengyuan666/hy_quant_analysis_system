@@ -2,7 +2,8 @@ use anyhow::{Context, Result};
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
-    EnvironmentSnapshot, Instrument, InstrumentType, Market, RefreshJobRecord, SignalSnapshot,
+    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig, Market,
+    RefreshJobRecord, SignalSnapshot,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
@@ -33,6 +34,47 @@ const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
 const REFRESH_GATE_REPAIR_WINDOW_DAYS: i64 = 30;
 const REFRESH_BOOTSTRAP_LOOKBACK_DAYS: i64 = 730;
 const REFRESH_MACRO_LOOKBACK_DAYS: i64 = 550;
+
+pub mod pipeline_stages {
+    pub const STAGE_INGEST: &str = "ingest";
+    pub const STAGE_INDICATORS: &str = "indicators";
+    pub const STAGE_MACRO: &str = "macro";
+    pub const STAGE_ROTATION: &str = "rotation";
+    pub const STAGE_STRATEGY: &str = "strategy";
+    pub const STAGE_SIGNALS: &str = "signals";
+    pub const STAGE_BACKTESTS: &str = "backtests";
+
+    pub const ALL: &[&str] = &[
+        STAGE_INGEST,
+        STAGE_INDICATORS,
+        STAGE_MACRO,
+        STAGE_ROTATION,
+        STAGE_STRATEGY,
+        STAGE_SIGNALS,
+        STAGE_BACKTESTS,
+    ];
+
+    pub const PROGRESS_INGEST: u8 = 20;
+    pub const PROGRESS_INDICATORS: u8 = 40;
+    pub const PROGRESS_MACRO: u8 = 60;
+    pub const PROGRESS_ROTATION: u8 = 75;
+    pub const PROGRESS_STRATEGY: u8 = 88;
+    pub const PROGRESS_SIGNALS: u8 = 92;
+    pub const PROGRESS_BACKTESTS: u8 = 96;
+
+    pub fn progress_after(stage: &str) -> u8 {
+        match stage {
+            STAGE_INGEST => PROGRESS_INGEST,
+            STAGE_INDICATORS => PROGRESS_INDICATORS,
+            STAGE_MACRO => PROGRESS_MACRO,
+            STAGE_ROTATION => PROGRESS_ROTATION,
+            STAGE_STRATEGY => PROGRESS_STRATEGY,
+            STAGE_SIGNALS => PROGRESS_SIGNALS,
+            STAGE_BACKTESTS => PROGRESS_BACKTESTS,
+            _ => 0,
+        }
+    }
+}
 
 fn load_calendar_from_config(dir: &std::path::Path) -> core_domain::calendar::TradingCalendar {
     use chrono::NaiveDate;
@@ -269,6 +311,14 @@ pub struct ReportSummary {
     pub report_date: String,
     pub output_path: String,
     pub failed_items: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SyncAndExportSummary {
+    pub report_date: String,
+    pub output_path: String,
+    pub refreshed: bool,
+    pub gate_advanced: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1148,12 +1198,45 @@ fn compute_participation_metrics(
     }
 }
 
+const LLM_SERVICE_NAME: &str = "rust-quant-analysis-system";
+const LLM_ACCOUNT_NAME: &str = "llm_api_key";
+
+fn probe_keyring() -> bool {
+    let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME);
+    match entry.get_password() {
+        Ok(_) => true,
+        Err(keyring::Error::NoEntry) => true,
+        Err(_) => false,
+    }
+}
+
+/// Determines whether `sync_and_export` should attempt a pipeline refresh.
+/// Returns `true` when the gate is not yet advanced (behind or unknown).
+fn sync_gate_needs_refresh(gate_before_advanced: Option<bool>) -> bool {
+    gate_before_advanced != Some(true)
+}
+
+/// Validates that a refresh pipeline result is acceptable for proceeding.
+/// Returns `Ok(())` if refresh succeeded, `Err` with blocking alerts if it failed.
+fn validate_sync_refresh_result(success: bool, blocking_alerts: &[String]) -> Result<()> {
+    if !success {
+        anyhow::bail!(
+            "sync-and-export aborted because refresh_pipeline failed. {}",
+            blocking_alerts.join(" | ")
+        );
+    }
+    Ok(())
+}
+
 impl AppContext {
     pub fn new(storage: StorageConfig) -> Self {
         let calendar = match StorageConfig::project_root() {
             Ok(root) => load_calendar_from_config(&root.join("config/calendars")),
             Err(_) => core_domain::calendar::TradingCalendar::default(),
         };
+        if !probe_keyring() {
+            eprintln!("WARN: OS keyring is unavailable. LLM API keys will be stored in SQLite credential_store as fallback.");
+        }
         Self { storage, calendar }
     }
 
@@ -1293,7 +1376,13 @@ impl AppContext {
         run_backtests: bool,
         cancel_flag: Option<&AtomicBool>,
         start_stage: Option<&str>,
+        progress_callback: Option<Box<dyn Fn(&str) + Send>>,
     ) -> Result<RefreshPipelineSummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
         let before_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
         let latest_dates_before = Self::summarize_latest_dates(&before_diagnostics);
         let plan = self.build_refresh_plan(to)?;
@@ -1429,36 +1518,47 @@ impl AppContext {
             };
         }
 
+        let cb: Option<&dyn Fn(&str)> = progress_callback
+            .as_ref()
+            .map(|b| b.as_ref() as &dyn Fn(&str));
+
+        notify("[1/7] Starting ingest...");
         run_refresh_stage!(
             "ingest",
             RefreshStageSummary::Ingest,
             self.ingest_daily(refresh_from, refresh_to)
         );
+        notify("[2/7] Starting indicators...");
         run_refresh_stage!(
             "indicators",
             RefreshStageSummary::Indicators,
-            self.compute_indicators()
+            self.compute_indicators(cb)
         );
+        notify("[3/7] Starting macro...");
         run_refresh_stage!(
             "macro",
             RefreshStageSummary::Macro,
-            self.compute_macro_regime(macro_from, macro_to)
+            self.compute_macro_regime(macro_from, macro_to, cb)
         );
+        notify("[4/7] Starting rotation...");
         run_refresh_stage!(
             "rotation",
             RefreshStageSummary::Rotation,
-            self.compute_rotation()
+            self.compute_rotation(cb)
         );
+        notify("[5/7] Starting strategy...");
         run_refresh_stage!(
             "strategy",
             RefreshStageSummary::Strategy,
-            self.compute_strategy_preferences()
+            self.compute_strategy_preferences(cb)
         );
+        notify("[6/7] Starting signals...");
         run_refresh_stage!(
             "signals",
             RefreshStageSummary::Signals,
-            self.compute_signals()
+            self.compute_signals(cb)
         );
+        notify("[7/7] Starting backtests...");
         if success && run_backtests && should_run("backtests") {
             check_cancel!();
             match self.refresh_backtests_for_standard_scopes() {
@@ -1796,7 +1896,16 @@ impl AppContext {
         Ok(rows)
     }
 
-    pub fn compute_indicators(&self) -> Result<IndicatorSummary> {
+    pub fn compute_indicators(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<IndicatorSummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
+        notify("Starting compute_indicators...");
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
         let mut total_snapshots = 0usize;
         let mut failed_symbols = Vec::new();
@@ -1820,6 +1929,7 @@ impl AppContext {
             }
         }
 
+        notify("Finished compute_indicators.");
         Ok(IndicatorSummary {
             symbols: instruments.len(),
             snapshots: total_snapshots,
@@ -1827,7 +1937,18 @@ impl AppContext {
         })
     }
 
-    pub fn compute_macro_regime(&self, from: NaiveDate, to: NaiveDate) -> Result<MacroSummary> {
+    pub fn compute_macro_regime(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<MacroSummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
+        notify("Starting compute_macro_regime...");
         let mut failed_items = Vec::new();
         let macro_fetch_from = from - Duration::days(550);
         let factor_specs = [
@@ -1912,6 +2033,7 @@ impl AppContext {
             failed_items.push(format!("strategy_state: {}", format_error_chain(&error)));
         }
 
+        notify("Finished compute_macro_regime.");
         Ok(MacroSummary {
             factors: factors.len(),
             macro_rows: macro_rows.len(),
@@ -1922,7 +2044,16 @@ impl AppContext {
         })
     }
 
-    pub fn compute_rotation(&self) -> Result<RotationSummary> {
+    pub fn compute_rotation(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<RotationSummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
+        notify("Starting compute_rotation...");
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
         let mut series_by_symbol = BTreeMap::new();
         let mut failed_symbols = Vec::new();
@@ -1943,6 +2074,7 @@ impl AppContext {
             failed_symbols.push(format!("rotation_rank: {error}"));
         }
 
+        notify("Finished compute_rotation.");
         Ok(RotationSummary {
             symbols: series_by_symbol.len(),
             rows: rows.len(),
@@ -1950,7 +2082,16 @@ impl AppContext {
         })
     }
 
-    pub fn compute_strategy_preferences(&self) -> Result<StrategySummary> {
+    pub fn compute_strategy_preferences(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<StrategySummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
+        notify("Starting compute_strategy_preferences...");
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
         let market_regimes = market_store::fetch_market_regimes(&self.storage)?;
         let rotation_rows = market_store::fetch_rotation_ranks(&self.storage)?;
@@ -2018,6 +2159,7 @@ impl AppContext {
             anyhow::bail!("strategy_preference insert failed: {error}");
         }
 
+        notify("Finished compute_strategy_preferences.");
         Ok(StrategySummary {
             symbols: instruments.len(),
             rows: rows.len(),
@@ -2025,7 +2167,16 @@ impl AppContext {
         })
     }
 
-    pub fn compute_signals(&self) -> Result<SignalSummary> {
+    pub fn compute_signals(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<SignalSummary> {
+        let notify = |msg: &str| {
+            if let Some(ref cb) = progress_callback {
+                cb(msg);
+            }
+        };
+        notify("Starting compute_signals...");
         let strategies = market_store::fetch_strategy_preferences(&self.storage)?;
         let regimes = market_store::fetch_market_regimes(&self.storage)?;
         let rotations = market_store::fetch_rotation_ranks(&self.storage)?;
@@ -2051,6 +2202,7 @@ impl AppContext {
         } else {
             None
         };
+        notify("Finished compute_signals.");
         Ok(SignalSummary {
             rows: rows.len(),
             failed_items: Vec::new(),
@@ -2941,6 +3093,42 @@ impl AppContext {
         })
     }
 
+    pub fn sync_and_export(
+        &self,
+        date: Option<NaiveDate>,
+        to: NaiveDate,
+        scope: ReportScope,
+        run_backtests: bool,
+    ) -> Result<SyncAndExportSummary> {
+        if let Some(report_date) = date {
+            let summary = self.export_report_with_scope(Some(report_date), scope)?;
+            return Ok(SyncAndExportSummary {
+                report_date: summary.report_date,
+                output_path: summary.output_path,
+                refreshed: false,
+                gate_advanced: None,
+            });
+        }
+
+        let gate_before = self.explain_latest_gate(scope)?;
+
+        if sync_gate_needs_refresh(gate_before.latest_gate_advanced) {
+            let refresh_result =
+                self.refresh_pipeline(to, scope, run_backtests, None, None, None)?;
+            validate_sync_refresh_result(refresh_result.success, &refresh_result.alerts.blocking)?;
+        }
+
+        let gate_after = self.explain_latest_gate(scope)?;
+        let summary = self.export_report_with_scope(None, scope)?;
+
+        Ok(SyncAndExportSummary {
+            report_date: summary.report_date,
+            output_path: summary.output_path,
+            refreshed: sync_gate_needs_refresh(gate_before.latest_gate_advanced),
+            gate_advanced: gate_after.latest_gate_advanced,
+        })
+    }
+
     pub fn get_signal_detail(
         &self,
         scope: ReportScope,
@@ -3026,6 +3214,148 @@ impl AppContext {
                 })
             })
             .collect()
+    }
+
+    pub fn set_llm_config(&self, base_url: &str, model: &str, timeout_secs: u64) -> Result<()> {
+        let config = LlmConfig {
+            base_url: base_url.to_string(),
+            model: model.to_string(),
+            timeout_secs,
+        };
+        let json = serde_json::to_string(&config).context("failed to serialize llm_config")?;
+        market_store::insert_app_config(&self.storage, "llm_config", &json)
+    }
+
+    pub fn get_llm_config(&self) -> Result<LlmConfig> {
+        match market_store::fetch_app_config(&self.storage, "llm_config")? {
+            Some(json) => serde_json::from_str(&json).context("failed to parse llm_config"),
+            None => Ok(LlmConfig {
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                timeout_secs: 60,
+            }),
+        }
+    }
+
+    pub fn set_llm_api_key(&self, api_key: &str) -> Result<()> {
+        let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME);
+        match entry.set_password(api_key) {
+            Ok(()) => {
+                let _ = market_store::insert_credential(&self.storage, "llm_api_key", "");
+                Ok(())
+            }
+            Err(keyring_err) => {
+                eprintln!("WARN: keyring storage failed ({keyring_err}), falling back to SQLite credential_store. API key will be stored in local database.");
+                market_store::insert_credential(&self.storage, "llm_api_key", api_key)
+            }
+        }
+    }
+
+    pub fn get_llm_api_key(&self) -> Result<Option<String>> {
+        let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME);
+        match entry.get_password() {
+            Ok(key) if !key.is_empty() => Ok(Some(key)),
+            Ok(_) | Err(keyring::Error::NoEntry) => {
+                market_store::fetch_credential(&self.storage, "llm_api_key")
+            }
+            Err(keyring_err) => {
+                eprintln!("WARN: keyring read failed ({keyring_err}), falling back to SQLite credential_store.");
+                market_store::fetch_credential(&self.storage, "llm_api_key")
+            }
+        }
+    }
+
+    pub fn analyze_report_with_llm(
+        &self,
+        report_date: NaiveDate,
+        scope: ReportScope,
+    ) -> Result<LlmAnalysisResult> {
+        let config = self.get_llm_config()?;
+        let api_key = self
+            .get_llm_api_key()?
+            .context("LLM API key not configured. Use set_llm_api_key first.")?;
+
+        let snapshot = self
+            .dashboard_snapshot_with_scope(Some(report_date), scope)?
+            .context("no dashboard snapshot available for LLM analysis")?;
+        let report_markdown = render_markdown_report(&snapshot);
+
+        let system_prompt = "You are a senior quantitative analyst. Analyze the following daily market research report and provide concise insights on regime, breadth, top signals, risks, and actionable takeaways.";
+        let user_prompt = format!(
+            "{}\n\nPlease provide a structured analysis.",
+            report_markdown
+        );
+
+        let runtime = tokio::runtime::Runtime::new().context("failed to create tokio runtime")?;
+
+        let analysis_text = runtime.block_on(async {
+            let openai_config = async_openai::config::OpenAIConfig::new()
+                .with_api_key(api_key)
+                .with_api_base(config.base_url.clone());
+            let client = async_openai::Client::with_config(openai_config);
+            let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+                .model(&config.model)
+                .messages([
+                    async_openai::types::ChatCompletionRequestSystemMessageArgs::default()
+                        .content(system_prompt)
+                        .build()
+                        .map_err(|e| anyhow::anyhow!("failed to build system message: {e}"))?
+                        .into(),
+                    async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                        .content(&user_prompt)
+                        .build()
+                        .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
+                        .into(),
+                ])
+                .build()
+                .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
+
+            let response = client
+                .chat()
+                .create(request)
+                .await
+                .map_err(|e| anyhow::anyhow!("LLM API call failed: {e}"))?;
+
+            let content = response
+                .choices
+                .into_iter()
+                .next()
+                .and_then(|choice| choice.message.content)
+                .unwrap_or_default();
+
+            Ok::<String, anyhow::Error>(content)
+        })?;
+
+        let root = StorageConfig::project_root()?;
+        let report_dir = root.join("reports");
+        fs::create_dir_all(&report_dir).with_context(|| {
+            format!(
+                "failed to create report directory: {}",
+                report_dir.display()
+            )
+        })?;
+        let scope_str = scope_label(scope).to_lowercase();
+        let output_path = report_dir.join(format!("llm-analysis-{}-{}.md", scope_str, report_date));
+        fs::write(&output_path, &analysis_text).with_context(|| {
+            format!(
+                "failed to write LLM analysis file: {}",
+                output_path.display()
+            )
+        })?;
+
+        market_store::insert_report_snapshot(
+            &self.storage,
+            &report_date.to_string(),
+            "LLM_ANALYSIS",
+            &output_path.display().to_string(),
+        )?;
+
+        Ok(LlmAnalysisResult {
+            report_date: report_date.to_string(),
+            scope: scope_label(scope).to_string(),
+            output_path: output_path.display().to_string(),
+            analysis_text,
+        })
     }
 }
 
@@ -3253,5 +3583,495 @@ mod tests {
 
         assert!(refresh_from <= latest_daily);
         assert_eq!(reason, "missing-gated-scope-repair");
+    }
+
+    #[test]
+    fn sync_gate_needs_refresh_skips_when_gate_already_advanced() {
+        assert!(!sync_gate_needs_refresh(Some(true)));
+    }
+
+    #[test]
+    fn sync_gate_needs_refresh_requests_when_gate_behind() {
+        assert!(sync_gate_needs_refresh(Some(false)));
+    }
+
+    #[test]
+    fn sync_gate_needs_refresh_requests_when_gate_unknown() {
+        assert!(sync_gate_needs_refresh(None));
+    }
+
+    #[test]
+    fn validate_sync_refresh_result_ok_on_success() {
+        let result = validate_sync_refresh_result(true, &[]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_sync_refresh_result_bails_on_failure_with_alerts() {
+        let alerts = vec!["signal lagging".to_string(), "rotation incomplete".to_string()];
+        let result = validate_sync_refresh_result(false, &alerts);
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("sync-and-export aborted"));
+        assert!(err.contains("signal lagging"));
+        assert!(err.contains("rotation incomplete"));
+    }
+
+    #[test]
+    fn validate_sync_refresh_result_bails_on_failure_with_empty_alerts() {
+        let result = validate_sync_refresh_result(false, &[]);
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("sync-and-export aborted"));
+    }
+
+    #[test]
+    fn sync_gate_decision_flow_gate_advanced_skips_refresh() {
+        let gate_before = Some(true);
+        assert!(!sync_gate_needs_refresh(gate_before));
+    }
+
+    #[test]
+    fn sync_gate_decision_flow_gate_behind_refresh_succeeds() {
+        let gate_before = Some(false);
+        assert!(sync_gate_needs_refresh(gate_before));
+        assert!(validate_sync_refresh_result(true, &[]).is_ok());
+    }
+
+    #[test]
+    fn sync_gate_decision_flow_gate_behind_refresh_fails() {
+        let gate_before = Some(false);
+        assert!(sync_gate_needs_refresh(gate_before));
+        let alerts = vec!["stale data".to_string()];
+        let err = validate_sync_refresh_result(false, &alerts).unwrap_err();
+        assert!(err.to_string().contains("stale data"));
+    }
+
+    #[test]
+    fn sync_gate_decision_flow_gate_unknown_treated_as_behind() {
+        let gate_before: Option<bool> = None;
+        assert!(sync_gate_needs_refresh(gate_before));
+    }
+
+    #[test]
+    fn llm_config_roundtrip_serde() {
+        let config = LlmConfig {
+            base_url: "https://custom.api.com/v1".to_string(),
+            model: "gpt-4".to_string(),
+            timeout_secs: 120,
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: LlmConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.base_url, deserialized.base_url);
+        assert_eq!(config.model, deserialized.model);
+        assert_eq!(config.timeout_secs, deserialized.timeout_secs);
+    }
+
+    #[test]
+    fn llm_config_default_values_match_expectations() {
+        let defaults = LlmConfig {
+            base_url: "https://api.openai.com/v1".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            timeout_secs: 60,
+        };
+        assert_eq!(defaults.base_url, "https://api.openai.com/v1");
+        assert_eq!(defaults.model, "gpt-4o-mini");
+        assert_eq!(defaults.timeout_secs, 60);
+    }
+
+    #[test]
+    fn llm_config_from_json_string() {
+        let json =
+            r#"{"base_url":"https://custom.api.com/v1","model":"gpt-4","timeout_secs":120}"#;
+        let config: LlmConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.base_url, "https://custom.api.com/v1");
+        assert_eq!(config.model, "gpt-4");
+        assert_eq!(config.timeout_secs, 120);
+    }
+
+    #[test]
+    fn llm_config_invalid_json_returns_error() {
+        let json = r#"{"base_url":"https://api.com","model":123}"#;
+        let result = serde_json::from_str::<LlmConfig>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn llm_system_prompt_contains_expected_content() {
+        let system_prompt = "You are a senior quantitative analyst. Analyze the following daily market research report and provide concise insights on regime, breadth, top signals, risks, and actionable takeaways.";
+        assert!(system_prompt.contains("quantitative analyst"));
+        assert!(system_prompt.contains("regime"));
+        assert!(system_prompt.contains("breadth"));
+        assert!(system_prompt.contains("top signals"));
+        assert!(system_prompt.contains("risks"));
+        assert!(system_prompt.contains("actionable takeaways"));
+    }
+
+    #[test]
+    fn llm_user_prompt_includes_report_and_structured_request() {
+        let report_markdown = "# Daily Report\nSome market data here";
+        let user_prompt =
+            format!("{}\n\nPlease provide a structured analysis.", report_markdown);
+        assert!(user_prompt.contains(report_markdown));
+        assert!(user_prompt.contains("structured analysis"));
+    }
+
+    #[test]
+    fn llm_missing_api_key_error_is_clear() {
+        let error_msg = "LLM API key not configured. Use set_llm_api_key first.";
+        assert!(error_msg.contains("LLM API key not configured"));
+        assert!(error_msg.contains("set_llm_api_key"));
+        assert!(!error_msg.contains("sk-"));
+        assert!(!error_msg.contains("Bearer"));
+    }
+
+    #[test]
+    fn llm_api_key_not_in_error_context_message() {
+        let context_msg = "LLM API call failed";
+        assert!(!context_msg.contains("sk-"));
+        assert!(!context_msg.contains("Bearer"));
+        assert!(!context_msg.contains("api_key"));
+    }
+
+    #[test]
+    fn llm_service_and_account_names_are_constants() {
+        assert_eq!(LLM_SERVICE_NAME, "rust-quant-analysis-system");
+        assert_eq!(LLM_ACCOUNT_NAME, "llm_api_key");
+    }
+
+    fn mock_chat_completion_response(content: &str) -> serde_json::Value {
+        serde_json::json!({
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": 1699000000,
+            "model": "gpt-4o-mini",
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": content
+                },
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 100,
+                "completion_tokens": 50,
+                "total_tokens": 150
+            }
+        })
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_receives_correct_prompt_and_model() {
+        let mock_server = wiremock::MockServer::start().await;
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .and(wiremock::matchers::body_string_contains("quantitative analyst"))
+            .and(wiremock::matchers::body_string_contains("structured analysis"))
+            .and(wiremock::matchers::body_string_contains("gpt-4o-mini"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200)
+                    .set_body_json(mock_chat_completion_response("Analysis complete")),
+            )
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key("test-api-key-12345")
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let system_prompt = "You are a senior quantitative analyst. Analyze the following daily market research report and provide concise insights on regime, breadth, top signals, risks, and actionable takeaways.";
+        let report_markdown = "# Test Report\nMarket data here";
+        let user_prompt =
+            format!("{}\n\nPlease provide a structured analysis.", report_markdown);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages([
+                async_openai::types::ChatCompletionRequestSystemMessageArgs::default()
+                    .content(system_prompt)
+                    .build()
+                    .unwrap()
+                    .into(),
+                async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content(user_prompt.as_str())
+                    .build()
+                    .unwrap()
+                    .into(),
+            ])
+            .build()
+            .unwrap();
+
+        let response = client.chat().create(request).await.unwrap();
+        let content = response.choices[0]
+            .message
+            .content
+            .clone()
+            .unwrap_or_default();
+        assert_eq!(content, "Analysis complete");
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_receives_api_key_in_auth_header() {
+        let mock_server = wiremock::MockServer::start().await;
+        let test_key = "sk-test-secret-key-99999";
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .and(wiremock::matchers::header(
+                "authorization",
+                format!("Bearer {test_key}"),
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200)
+                    .set_body_json(mock_chat_completion_response("OK")),
+            )
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key(test_key)
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let response = client.chat().create(request).await;
+        assert!(response.is_ok());
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_handles_401_unauthorized() {
+        let mock_server = wiremock::MockServer::start().await;
+        let secret_key = "sk-invalid-key-12345";
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .respond_with(wiremock::ResponseTemplate::new(401).set_body_json(
+                serde_json::json!({
+                    "error": {
+                        "message": "Invalid API key",
+                        "type": "invalid_request_error",
+                        "code": "invalid_api_key"
+                    }
+                }),
+            ))
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key(secret_key)
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let result = client.chat().create(request).await;
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(!error_msg.contains(secret_key));
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_handles_429_rate_limit() {
+        let mock_server = wiremock::MockServer::start().await;
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .respond_with(wiremock::ResponseTemplate::new(429).set_body_json(
+                serde_json::json!({
+                    "error": {
+                        "message": "Rate limit exceeded",
+                        "type": "requests",
+                        "code": "rate_limit_exceeded"
+                    }
+                }),
+            ))
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key("test-key")
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let result = client.chat().create(request).await;
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("429") || error_msg.contains("rate"));
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_handles_500_server_error() {
+        let mock_server = wiremock::MockServer::start().await;
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .respond_with(wiremock::ResponseTemplate::new(500).set_body_json(
+                serde_json::json!({
+                    "error": {
+                        "message": "Internal server error",
+                        "type": "server_error",
+                        "code": "internal_error"
+                    }
+                }),
+            ))
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key("test-key")
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let result = client.chat().create(request).await;
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(
+            error_msg.contains("500")
+                || error_msg.contains("server")
+                || error_msg.contains("Internal")
+        );
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_error_does_not_leak_api_key() {
+        let mock_server = wiremock::MockServer::start().await;
+        let real_key = "sk-super-secret-production-key-abcdef";
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .respond_with(wiremock::ResponseTemplate::new(500).set_body_json(
+                serde_json::json!({
+                    "error": {
+                        "message": "Internal server error",
+                        "type": "server_error",
+                        "code": "internal_error"
+                    }
+                }),
+            ))
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key(real_key)
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let result = client.chat().create(request).await;
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        // SECURITY: API key must NEVER appear in error messages
+        assert!(
+            !error_msg.contains(real_key),
+            "API key leaked in error message: {error_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn llm_mock_server_handles_empty_choices() {
+        let mock_server = wiremock::MockServer::start().await;
+
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/chat/completions"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "id": "chatcmpl-empty",
+                    "object": "chat.completion",
+                    "created": 1699000000,
+                    "model": "gpt-4o-mini",
+                    "choices": [],
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 0,
+                        "total_tokens": 10
+                    }
+                })),
+            )
+            .mount(&mock_server)
+            .await;
+
+        let config = async_openai::config::OpenAIConfig::new()
+            .with_api_key("test-key")
+            .with_api_base(mock_server.uri());
+        let client = async_openai::Client::with_config(config);
+
+        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages(
+                [async_openai::types::ChatCompletionRequestUserMessageArgs::default()
+                    .content("test")
+                    .build()
+                    .unwrap()
+                    .into()],
+            )
+            .build()
+            .unwrap();
+
+        let response = client.chat().create(request).await.unwrap();
+        let content = response
+            .choices
+            .first()
+            .and_then(|c| c.message.content.clone())
+            .unwrap_or_default();
+        assert!(content.is_empty());
     }
 }
