@@ -1,0 +1,39 @@
+﻿=== Task F2 Functionality Check ===
+Date: 2026-05-20 20:12:49
+Command: cargo run -p quant-cli -- dashboard-snapshot
+
+=== RESULT: PASS ===
+
+Command Status: SUCCESS
+JSON Output: VALID
+
+=== Trust Summary Verification ===
+
+trust_summary.level: review
+trust_summary.headline: "Review before acting"
+trust_summary.macro_status: "unknown" ✓
+trust_summary.data_health_generated_at: null ✓
+trust_summary.data_health_review_symbols: null ✓
+trust_summary.data_health_critical_symbols: null ✓
+trust_summary.data_health_review_macro_sources: null ✓
+trust_summary.data_health_critical_macro_sources: null ✓
+
+=== Other Key Fields ===
+
+scope: GLOBAL
+report_date: 2026-05-19
+latest_available_date: 2026-05-19
+regime_label: risk_off
+strategy_state: CONFIRM_ADD
+environment_label: constructive
+
+=== Notes in trust_summary ===
+- Data health summary is unavailable; trust assessment is degraded.
+- 21 symbol(s) were on non-trading markets on the freshest market date and were excluded from coverage checks.
+- Latest market date is not fully covered across the active trading universe.
+- Strategy state CONFIRM_ADD recommends 60.00% position as of 2026-05-19.
+
+=== Conclusion ===
+All data_health fields correctly set to null.
+macro_status correctly set to "unknown".
+Dashboard snapshot outputs valid JSON with all expected fields present.

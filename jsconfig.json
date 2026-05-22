@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "checkJs": true,
+    "allowJs": true
+  },
+  "include": [
+    "apps/desktop/frontend/src/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps/desktop/frontend/dist",
+    "apps/desktop/frontend/node_modules"
+  ]
+}
