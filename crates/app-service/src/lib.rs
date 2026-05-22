@@ -905,7 +905,9 @@ fn analyze_gap_metrics(
 }
 
 fn analyze_jump_metrics(instrument: &Instrument, bars: &[core_domain::DailyBar]) -> (usize, f64) {
+    const REGISTRATION_BOARD_INDICES: &[&str] = &["000688", "000698", "399006", "399673"];
     let threshold = match instrument.instrument_type {
+        InstrumentType::Index if REGISTRATION_BOARD_INDICES.contains(&instrument.symbol.as_str()) => 0.22,
         InstrumentType::Index => 0.12,
         InstrumentType::Etf => 0.15,
     };

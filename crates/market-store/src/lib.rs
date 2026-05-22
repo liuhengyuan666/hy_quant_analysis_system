@@ -1389,7 +1389,7 @@ pub fn fetch_indicator_snapshots_for_symbols_in_range(
 }
 
 pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSnapshot>> {
-    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE market = 'GLOBAL' ORDER BY date FORMAT JSONEachRow";
+    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime ORDER BY date FORMAT JSONEachRow";
     let url = format!(
         "{}?database={}&query={}",
         config.clickhouse_url,

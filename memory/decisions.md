@@ -9,7 +9,25 @@
 - 决策：以 `TOOLS.md` 及其引用的 `runtime/memory.md` 作为后续协作中的最高行为准则。
 - 原因：需要统一探索模式 / 执行模式切换、记忆读写规范与上下文优先级。
 - 影响：后续工作前优先读取 `memory/`；关键节点需要维护项目记忆。
-- 状态：进行中
+- 状态：superseded（2026-05-20：TOOLS.md 已删除，Agent 行为准则改为通过内置 skill 注入，不再依赖项目内文件）
+
+## [2026-05-20] Agent 行为准则从项目内文件（TOOLS.md）转为内置 skill 注入
+
+- 背景：`TOOLS.md` 作为项目内文件维护成本高，且 Agent 每次会话都需要读取；改为通过 opencode skill 机制内置注入后，行为准则与 Agent 运行时绑定，无需项目内文件。
+- 备选方案：
+  - 方案 A：保留 TOOLS.md，继续作为项目内最高行为准则。
+  - 方案 B：删除 TOOLS.md，将行为准则内容迁移为 opencode 内置 skill。
+- 决策：采用方案 B。删除 `TOOLS.md`，Agent 行为准则通过 skill 机制注入。
+- 原因：
+  - skill 注入比文件读取更可靠（不会因文件路径变动而失效）。
+  - 减少项目根目录文件数量，降低维护噪音。
+  - `memory/` 机制（context/decisions/structure/tech 等）继续保留作为项目级长期记忆，与 Agent skill 不冲突。
+- 影响：
+  - `TOOLS.md` 已删除。
+  - `AGENTS.md` 中的 `TOOLS.md` 引用已移除。
+  - `memory/decisions.md` 中 [2026-04-24] 决策标记为 superseded。
+  - 后续 Agent 会话不再依赖 `TOOLS.md` 和 `runtime/memory.md` 文件路径。
+- 状态：active
 
 ## [2026-04-25] 目录整理采用方案 A：先内部清理与渐进拆解，再考虑顶层重组
 
@@ -297,3 +315,43 @@
 - 原因：V3 功能在 happy path 上设计正确，但存在编译、异步、安全和 UX 层面的明确缺陷，需要在正式使用前修复。
 - 影响：后续若继续扩展 LLM 功能（多 provider、streaming、前端集成），应以本次审查发现的边界为约束，避免同类问题重复出现。
 - 状态：审查完成，待修复
+## [2026-05-20] Oracle 数据质量复核报告 — P5：修复 `fetch_market_regimes` GLOBAL-only 过滤导致 CN/HK scope 信号永远 missing regime
+
+- 背景：Oracle 复核报告标注 `regime_missing=17,195`（50.2% 信号）根因为宏观因子历史缺口（P0）。P0 执行 `compute-macro --from 2020` 补全历史后，`compute-signals` 重跑结果 `regime_missing` 仍为 17,195，未改善。深入排查发现 `market-store::fetch_market_regimes` 硬编码 `WHERE market = 'GLOBAL'`，只加载 GLOBAL scope 的 regime 行。而 `signal-engine::build_signal_snapshots` 按 `(date, scope)` 做 exact lookup，CN/HK scoped 策略偏好永远无法匹配到 regime，全部 fallback 50.0。
+- 备选方案：
+  - 方案 A：修改 `fetch_market_regimes` 移除 GLOBAL 过滤，返回全 scope regime。
+  - 方案 B：在信号引擎中改为 scope-agnostic lookup（fallback to GLOBAL regime for CN/HK signals）。
+- 决策：采用方案 A，从 SQL 查询中移除 `WHERE market = 'GLOBAL'`，与 `build_market_regimes` 已生成 `GLOBAL/CN/HK` 三 scope 的实现对齐。
+- 原因：方案 A 是最小改动（1 行 SQL），且与上游已落地的 per-scope regime 计算语义一致；方案 B 会模糊 scope 语义，与 Phase 2 的设计方向冲突。
+- 影响：
+  - `regime_missing` 从 17,195 降至 152（-99.1%），`data_starved` 从 52.6% 降至 2.9%。
+  - 信号质量大幅提升，CN/HK scope 信号现在使用正确的 scoped regime 而非 fallback。
+  - `fetch_market_regimes` 返回值数量从仅 GLOBAL 扩展到三 scope，下游消费者（dashboard/report/export）已在 scope-aware 路径上使用 scoped fetch（`fetch_latest_market_regime_on_or_before`），不受影响。
+- 状态：完成
+
+## [2026-05-20] Oracle 数据质量复核报告 — P2：Tencent fallback 解析 turnover 字段
+
+- 背景：`fetch_tencent_daily_bars` 硬编码 `turnover: None`，所有通过 Tencent fallback 获取的 bar 缺失 turnover。当前环境 Eastmoney 主源全部不可达，全部 22 标的走 Tencent fallback，导致 `liquidity_proxy_score` 中的 `turnover_coverage_pct` 系统性为 0。
+- 决策：将 `turnover: None` 改为 `turnover: row.get(6).and_then(|v| v.parse().ok())`，安全解析腾讯 K 线接口第 7 列（成交额）。若列不存在或解析失败，退化为 `None`，不影响现有流程。
+- 影响：
+  - 代码已修复并通过 `cargo check`。存量 ClickHouse 数据仍需 `ingest-daily` 回填才能反映 turnover。
+  - 新拉取的腾讯日线将包含 turnover，`liquidity_proxy_score` 计算更准确。
+- 状态：完成（代码侧），存量数据回填待执行
+
+## [2026-05-20] Oracle 数据质量复核报告 — P4：注册制板块指数（科创/创业板）跳变阈值差异化
+
+- 背景：`analyze_jump_metrics` 对所有 Index 使用统一 12% 阈值，导致科创50/100、创业板指/50 等注册制板块（20% 涨跌停制度）的真实极端行情被误报为"可疑大波动日"。
+- 决策：增加 `REGISTRATION_BOARD_INDICES` 常量集合（`["000688", "000698", "399006", "399673"]`），对匹配到的 Index 使用 22% 阈值，其余 Index 保持 12%，ETF 保持 15%。
+- 影响：
+  - 科创50/100/创业板指/50 的 `suspicious_jump_count` 从若干 → 0，噪音消除。
+  - 阈值硬编码 symbol 列表在 universe 扩展时需同步维护。后续可考虑将 `volatility_regime` 元数据放入 `universe.json`。
+- 状态：完成
+
+## [2026-05-20] Oracle 数据质量复核报告 — P0：宏观因子历史回填
+
+- 背景：`macro_snapshot` 表仅覆盖 2025-04-14 之后，导致 2023-2024 年无 regime/environment/strategy_state。根源是此前 `compute-macro` 的 `--from` 参数过晚。
+- 决策：执行 `compute-macro --from 2020-01-01 --to 2026-05-19` 完成历史回填。
+- 影响：
+  - 生成 7,149 macro 行、各 2,442 regime/environment/strategy_state 行（覆盖 GLOBAL/CN/HK）。
+  - 配合 P5（scope 过滤修复），信号从 2023 年起拥有完整 regime 数据。
+- 状态：完成

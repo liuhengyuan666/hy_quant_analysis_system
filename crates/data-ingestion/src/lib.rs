@@ -284,7 +284,7 @@ pub fn fetch_tencent_daily_bars(
                 high: row[3].parse()?,
                 low: row[4].parse()?,
                 volume: row[5].parse()?,
-                turnover: None,
+                turnover: row.get(6).and_then(|v| v.parse().ok()),
             })
         })
         .collect()
