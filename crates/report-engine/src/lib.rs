@@ -53,10 +53,10 @@ pub struct TrustSummary {
     pub scoped_symbols_on_freshest_market_date: usize,
     pub macro_status: String,
     pub data_health_generated_at: Option<String>,
-    pub data_health_review_symbols: usize,
-    pub data_health_critical_symbols: usize,
-    pub data_health_review_macro_sources: usize,
-    pub data_health_critical_macro_sources: usize,
+    pub data_health_review_symbols: Option<usize>,
+    pub data_health_critical_symbols: Option<usize>,
+    pub data_health_review_macro_sources: Option<usize>,
+    pub data_health_critical_macro_sources: Option<usize>,
     pub signal_analysis_scope: Option<String>,
     pub signal_regime_basis_scope: Option<String>,
     pub strategy_state: Option<String>,
@@ -457,10 +457,10 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
                 .data_health_generated_at
                 .clone()
                 .unwrap_or_else(|| "N/A".to_string()),
-            trust.data_health_review_symbols,
-            trust.data_health_critical_symbols,
-            trust.data_health_review_macro_sources,
-            trust.data_health_critical_macro_sources,
+            trust.data_health_review_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_critical_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_review_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_critical_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
             trust
                 .signal_analysis_scope
                 .clone()

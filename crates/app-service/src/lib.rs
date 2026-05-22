@@ -458,10 +458,10 @@ fn build_trust_summary(
     scoped_instruments: &[Instrument],
     snapshot: &DashboardSnapshot,
     pipeline_dates: &PipelineDateDiagnostics,
-    data_health: &DataHealthSummary,
+    data_health: Option<&DataHealthSummary>,
     calendar: &core_domain::calendar::TradingCalendar,
 ) -> TrustSummary {
-    let freshest_market_date = data_health.freshest_market_date;
+    let freshest_market_date = data_health.and_then(|dh| dh.freshest_market_date);
     let trading_instruments: Vec<_> = match freshest_market_date {
         Some(date) => scoped_instruments
             .iter()
@@ -473,28 +473,25 @@ fn build_trust_summary(
         .len()
         .saturating_sub(trading_instruments.len());
     let scoped_symbols_expected = trading_instruments.len();
-    let scoped_symbols_on_freshest_market_date = freshest_market_date
-        .map(|date| {
-            data_health
-                .symbols
-                .iter()
-                .filter(|row| {
-                    trading_instruments.iter().any(|i| i.symbol == row.symbol)
-                        && row.last_date == Some(date)
-                })
-                .count()
-        })
-        .unwrap_or(0);
+    let scoped_symbols_on_freshest_market_date = match (freshest_market_date, data_health) {
+        (Some(date), Some(dh)) => dh
+            .symbols
+            .iter()
+            .filter(|row| {
+                trading_instruments.iter().any(|i| i.symbol == row.symbol)
+                    && row.last_date == Some(date)
+            })
+            .count(),
+        _ => 0,
+    };
     let latest_day_complete = scoped_symbols_expected > 0
         && scoped_symbols_on_freshest_market_date == scoped_symbols_expected;
-    let macro_status = if data_health.critical_macro_sources > 0 {
-        "critical"
-    } else if data_health.review_macro_sources > 0 {
-        "review"
-    } else {
-        "healthy"
-    }
-    .to_string();
+    let macro_status = match data_health {
+        Some(dh) if dh.critical_macro_sources > 0 => "critical".to_string(),
+        Some(dh) if dh.review_macro_sources > 0 => "review".to_string(),
+        Some(_) => "healthy".to_string(),
+        None => "unknown".to_string(),
+    };
 
     let signal_analysis_scope = snapshot
         .top_signals
@@ -553,6 +550,9 @@ fn build_trust_summary(
         .count();
 
     let mut notes = Vec::new();
+    if data_health.is_none() {
+        notes.push("Data health summary is unavailable; trust assessment is degraded.".to_string());
+    }
     if non_trading_count > 0 {
         notes.push(format!(
             "{} symbol(s) were on non-trading markets on the freshest market date and were excluded from coverage checks.",
@@ -565,12 +565,12 @@ fn build_trust_summary(
                 .to_string(),
         );
     }
-    if data_health.review_macro_sources > 0 {
+    if matches!(data_health, Some(dh) if dh.review_macro_sources > 0) {
         notes.push(
             "One or more macro sources are currently using review/fallback transport.".to_string(),
         );
     }
-    if data_health.critical_macro_sources > 0 {
+    if matches!(data_health, Some(dh) if dh.critical_macro_sources > 0) {
         notes.push("One or more macro sources are currently unavailable.".to_string());
     }
     if pipeline_partial_latest {
@@ -610,14 +610,17 @@ fn build_trust_summary(
         ));
     }
 
-    let (level, headline, message) = if data_health.critical_macro_sources > 0 || pipeline_stale {
+    let critical_macro = matches!(data_health, Some(dh) if dh.critical_macro_sources > 0);
+    let review_macro = matches!(data_health, Some(dh) if dh.review_macro_sources > 0);
+
+    let (level, headline, message) = if critical_macro || pipeline_stale {
         (
             "degraded",
             "Use with caution",
             "The current research view is usable, but freshness or macro availability issues reduce trust in the latest outputs.",
         )
     } else if !latest_day_complete
-        || data_health.review_macro_sources > 0
+        || review_macro
         || pipeline_partial_latest
         || backtest_matches_snapshot == Some(false)
     {
@@ -642,19 +645,17 @@ fn build_trust_summary(
         pipeline_has_stale_stage: pipeline_stale,
         pipeline_partial_latest_stage_count,
         pipeline_stale_stage_count,
-        freshest_market_date: data_health
-            .freshest_market_date
-            .map(|date| date.to_string()),
+        freshest_market_date: freshest_market_date.map(|date| date.to_string()),
         latest_available_date: Some(snapshot.latest_available_date.clone()),
         latest_day_complete,
         scoped_symbols_expected,
         scoped_symbols_on_freshest_market_date,
         macro_status,
-        data_health_generated_at: Some(data_health.generated_at.clone()),
-        data_health_review_symbols: data_health.review_symbols,
-        data_health_critical_symbols: data_health.critical_symbols,
-        data_health_review_macro_sources: data_health.review_macro_sources,
-        data_health_critical_macro_sources: data_health.critical_macro_sources,
+        data_health_generated_at: data_health.map(|dh| dh.generated_at.clone()),
+        data_health_review_symbols: data_health.map(|dh| dh.review_symbols),
+        data_health_critical_symbols: data_health.map(|dh| dh.critical_symbols),
+        data_health_review_macro_sources: data_health.map(|dh| dh.review_macro_sources),
+        data_health_critical_macro_sources: data_health.map(|dh| dh.critical_macro_sources),
         signal_analysis_scope,
         signal_regime_basis_scope,
         strategy_state: snapshot
@@ -2353,7 +2354,7 @@ impl AppContext {
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
         let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
-        let data_health = self.check_data_health()?;
+        let data_health = None; // 不再同步调用 check_data_health
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         Ok(snapshot.map(|mut snapshot| {
             snapshot.load_metrics = Some(metrics);
@@ -2361,7 +2362,7 @@ impl AppContext {
                 &scoped_instruments,
                 &snapshot,
                 &pipeline_dates,
-                &data_health,
+                data_health,
                 &self.calendar,
             ));
             snapshot
@@ -2391,7 +2392,7 @@ impl AppContext {
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         let recent_reports = self.recent_reports(recent_report_limit)?;
         let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
-        let data_health = self.check_data_health()?;
+        let data_health = None; // 不再同步调用 check_data_health
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
@@ -2401,7 +2402,7 @@ impl AppContext {
                 &scoped_instruments,
                 &snapshot,
                 &pipeline_dates,
-                &data_health,
+                data_health,
                 &self.calendar,
             ));
             snapshot

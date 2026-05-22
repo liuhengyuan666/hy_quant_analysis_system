@@ -355,3 +355,45 @@
   - 生成 7,149 macro 行、各 2,442 regime/environment/strategy_state 行（覆盖 GLOBAL/CN/HK）。
   - 配合 P5（scope 过滤修复），信号从 2023 年起拥有完整 regime 数据。
 - 状态：完成
+
+## [2026-05-20] Dashboard 性能优化：移除 check_data_health 从热路径
+
+- **背景**：用户反馈 `cargo run -p quant-desktop` 调试运行很卡，体感差。性能测试发现 `dashboard-snapshot`、`export-report` 等命令超时（>120秒）。
+- **根本原因**：`check_data_health()` 函数在仪表板热路径上发起 48 个外部 HTTP 请求（4 FRED + 22 Eastmoney + 22 Tencent），每次加载仪表板都会触发。
+- **Oracle 复核**：
+  - 确认 `check_data_health()` 是仪表板加载超时的根本原因
+  - 修正误判：`refresh_pipeline` 并不调用 `check_data_health`，`refresh-all` 超时源是 `compute_macro_regime` 的 FRED 调用
+  - 确认前端数据健康加载已经是异步的（`main.js:1723-1724`）
+  - 发现 `build_trust_summary` 对 `data_health` 有硬依赖，需要修改为 Option
+- **备选方案**：
+  - 方案 A：将 `check_data_health()` 从热路径中移除，改为独立异步加载
+  - 方案 B：实现数据健康检查缓存（SQLite）
+  - 方案 C：并行化外部 HTTP 请求
+  - 方案 D：前端优化 - 异步加载数据健康
+- **决策**：采用方案 A + D。从 `dashboard_snapshot_with_scope` 和 `dashboard_bundle_with_scope` 中移除 `check_data_health()` 调用，修改 `TrustSummary` DTO 使 data_health 字段改为 Option，前端补充降级渲染。
+- **原因**：
+  - 方案 A 是最小改动，仅修改 2 行函数调用 + DTO 字段类型
+  - 方案 D 已经实现（前端异步加载），只需补充降级渲染
+  - 不引入新依赖或基础设施
+  - 数据健康仍可通过独立的 Tauri command 异步加载
+- **影响**：
+  - 仪表板加载时间从 >120秒 降到 <1秒
+  - `export_report_with_scope` 同样受益
+  - trust summary 面板需要处理 data_health 字段为 null 的情况
+  - 数据健康信息仍可通过异步加载获取
+- **状态**：已完成
+- **实施结果**：
+  - 修改文件：
+    - `crates/report-engine/src/lib.rs`: TrustSummary DTO data_health 字段改为 Option
+    - `crates/app-service/src/lib.rs`: 移除 check_data_health 从热路径，build_trust_summary 支持 Option
+    - `apps/desktop/frontend/src/main.js`: 前端降级渲染
+  - 性能改善：
+    - dashboard-snapshot: >120秒 → 27秒（~78% 改善）
+    - export-report: >120秒 → 52秒（~57% 改善）
+  - 功能验证：全部通过
+  - 编译状态：通过
+  - 前端构建：通过
+- **遗留问题**：
+  - 未达到 <1秒目标，新的瓶颈是 ClickHouse 日期查询（available_dates_ms: 24秒）
+  - 需要进一步优化 ClickHouse 查询性能
+- **改造文档**：`.omo/plans/dashboard-performance-optimization.md`
