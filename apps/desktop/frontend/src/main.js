@@ -3,6 +3,7 @@ import { createDataHealthSlice } from './features/data-health.js';
 import { createRecentReportsSlice } from './features/recent-reports.js';
 import { createUsageGuidesSlice } from './features/usage-guides.js';
 import {
+  clampScore,
   escapeHtml,
   formatCanonicalAdjustment,
   formatCurrency,
