@@ -38,8 +38,8 @@
   - 方案 C：直接推进顶层 `/front` `/backend` 重组。
 - 决策：本阶段采用方案 A，先处理文档真相源、历史文档归档语义、未使用依赖与热点文件拆分准备，不进行顶层目录搬迁。
 - 原因：当前 `market-store`、`app-service`、`src-tauri` 与根目录路径存在真实耦合，先做内部清理更稳妥。
-- 影响：后续执行顺序以“清理与标注 → 热点拆分 → 再评估目录重组”为主。
-- 状态：进行中
+- 影响：后续执行顺序以"清理与标注 → 热点拆分 → 再评估目录重组"为主。
+- 状态：完成
 
 ## [2026-04-25] `main.js` 拆分先抽离纯工具层，不先打散状态流与渲染流
 
@@ -50,7 +50,7 @@
 - 决策：先把 formatting / normalization / markdown / tone 这类纯函数迁移到 `src/lib/dashboard-utils.js`，保留 `main.js` 中的状态对象、异步加载、事件绑定与主渲染流程。
 - 原因：纯工具层最容易验证等价性，风险最低，也能立即降低 `main.js` 顶部噪音。
 - 影响：后续前端拆分应继续按 `snapshot / health / guides / render` 之类的状态边界推进，而不是把新工具代码继续堆回 `main.js`。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-25] `main.js` 第二段拆分优先抽离 usage-guides slice
 
@@ -62,7 +62,7 @@
 - 决策：先把 guide viewer 相关逻辑迁移到 `src/features/usage-guides.js`，保留 `main.js` 对全局 state 与主 render 流的控制权。
 - 原因：guides 按项目约定本就应与 dashboard 热路径解耦，是下一刀风险最低、收益最直接的 area split。
 - 影响：后续前端拆分可继续在 `health`、`snapshot`、`render` 这几条状态边界上推进。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-25] `main.js` 第三段拆分优先抽离 data-health slice
 
@@ -74,7 +74,7 @@
 - 决策：先把 data-health 相关逻辑迁移到 `src/features/data-health.js`，保留 `main.js` 对全局 render 调度和 dashboard 主流程的控制。
 - 原因：data-health 既有独立交互面，又有明确的文档语义（异步、会话缓存、手动刷新），适合作为低风险的第三段拆分。
 - 影响：后续前端拆分应继续向 `snapshot` 或 `render` 这样的主流程边界推进。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-25] `main.js` 第四段拆分优先抽离 environment/breadth renderers
 
@@ -86,7 +86,7 @@
 - 决策：先把 environment layer 与 watchlist breadth 的 paired renderers 迁移到 `src/renderers/environment-breadth.js`，保留 `main.js` 对主 render 组合和 async 主流程的控制。
 - 原因：这两块本来就共享“解释层 + 原始 proxy 视图”的产品语义，而且只依赖 snapshot 展示数据与 render helper，不涉及异步 orchestration。
 - 影响：后续前端拆分可继续在剩余 render cluster 或 snapshot 边界上推进，但不需要再回头处理这组 paired panels。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-25] 功能设计复盘后的 5 项确认结论
 
@@ -99,10 +99,10 @@
   2. `Pipeline freshness`、`Data health`、`trust summary` 的产品表达应收敛为“一个主可信度入口 + 两个证据层”。
   3. `Environment layer` 与 `Watchlist Breadth` 暂时保留双面板，但要明确其分别代表解释层与原始 proxy 视图。
   4. `Recent reports` 不再只作为文件路径列表看待，后续应升级为“研究结果管理入口”。
-  5. `desktop refresh` 作为默认用户路径；CLI 手动全链路保留为工程/高级用户路径。
+   5. `desktop refresh` 作为默认用户路径；CLI 手动全链路保留为工程/高级用户路径。
 - 原因：这样既能保持当前系统的研究型分层优势，又能减少用户心智分裂与历史设计残留造成的误读。
-- 影响：后续优先级应围绕“语义一致性 → 可信度主入口 → 研究结果管理 → 其余体验优化”推进，而不是继续平铺功能面。
-- 状态：进行中
+- 影响：后续优先级应围绕"语义一致性 → 可信度主入口 → 研究结果管理 → 其余体验优化"推进，而不是继续平铺功能面。
+- 状态：完成
 
 ## [2026-04-25] P0 先做语义一致性收口，不先做更大语义重构
 
@@ -112,8 +112,8 @@
   - 先统一主参考文档与前端 provenance/trust 展示，再决定是否继续深入语义重构。
 - 决策：先完成文档与展示层的 P0 语义收口：更新 truth-source docs 的 scope/provenance 表述，并补强桌面端对 signal/backtest/trust provenance 的直观展示。
 - 原因：当前代码层已经暴露出大量 provenance 字段，最先需要解决的是用户和维护者继续被旧文档/弱展示误导。
-- 影响：后续可在此基础上继续推进“一个主可信度入口 + 两个证据层”，而不是继续让文档、UI、实现各讲各的版本。
-- 状态：进行中
+- 影响：后续可在此基础上继续推进"一个主可信度入口 + 两个证据层"，而不是继续让文档、UI、实现各讲各的版本。
+- 状态：完成
 
 ## [2026-04-25] trust summary 先提升为主入口，再决定是否继续深挖后端重构
 
@@ -124,7 +124,7 @@
 - 决策：先扩展 `TrustSummary` 的 freshness/data-health 证据摘要，并在桌面端把 trust summary 提升为主入口区块；`Pipeline freshness` 与 `Data health` 继续保留为证据层与下钻层。
 - 原因：当前问题不在“trust 不存在”，而在“trust 仍然像一个附属 notice”。先解决入口层级最有价值，也最不容易引发大范围语义回归。
 - 影响：后续如果继续做 deeper refactor，应围绕 trust contract 和 transport/API 统一推进，而不是再回到纯展示修补。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] 当 latest available date 被 signal 层卡住时，优先提示重跑 `compute-signals`
 
@@ -135,7 +135,7 @@
 - 决策：先在 `PipelineDateDiagnostics` 增加 `alerts`，并在桌面端/文档中明确提示：当 `strategy_preference` 比 `signal_snapshot` 更新时，优先重跑 `compute-signals`。
 - 原因：当前最需要的是降低排障成本，而不是先做更大的 backend 改造。
 - 影响：CLI、桌面端和文档会对 signal 落后问题给出同一条排障路径；后续若继续深挖 sequencing 问题，再考虑更深入修复。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] `compute-signals` 与 refresh 对 signal-vs-strategy 落后关系 fail loud
 
@@ -146,7 +146,7 @@
 - 决策：在 backend 增加 signal-vs-strategy 对齐校验 helper，并让 `compute-signals` 与桌面 refresh 在发现落后时 fail loud。
 - 原因：当前系统已经允许通过提示降低排障成本，下一步最有价值的是阻止“看起来成功但默认日期仍然落后”的假成功态。
 - 影响：后续如果 sequencing 问题再次出现，CLI 和桌面 refresh 会更早失败，而不是把 stale signal 继续传播到 dashboard/export 默认日期。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] signal alignment guard 也覆盖 latest-day incompleteness
 
@@ -157,7 +157,7 @@
 - 决策：让 `pipeline_date_alerts()` 同时在“signal 最新日不完整”时发出同类告警，并让 `compute-signals` / refresh 末尾一致性校验同样对此失败。
 - 原因：这是和原始问题同一族的错误状态，继续只提示日期滞后会留下明显漏网场景。
 - 影响：当前 guard 不仅能防住 signal 日期落后，也能防住 signal 最新日 rows 不完整导致的假成功态。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] signal guard 最终统一到 scoped diagnostics alerts
 
@@ -168,7 +168,7 @@
 - 决策：让 `compute-signals` 与 refresh 一致地复用 scoped diagnostics alerts；refresh 末尾不再只校验 `GLOBAL`，而校验全部标准 scope。
 - 原因：这样可以避免 guard 逻辑在多个地方分叉，减少“日期问题修了但 completeness 或局部 scope 还漏掉”的情况。
 - 影响：当前 signal guard 的判断标准已统一到同一套 diagnostics 语义上，后续若再增强，只需要在 diagnostics/alerts 一处扩展。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] refresh stage control 先做 suffix-run，不做 stop-at-stage 或持久化 job model
 
@@ -178,8 +178,8 @@
   - 先在 Tauri refresh coordinator 层支持 `Retry failed stage` 和 `Run from stage`，并保持后端阶段方法不拆。
 - 决策：先实现 suffix-run 语义：用户只能从某个阶段开始并一直跑到结尾；失败后可直接 `Retry failed stage`。当前阶段名集合包含 `ingest`、`indicators`、`macro`、`rotation`、`strategy`、`signals`、`backtests`。
 - 原因：这是最小侵入、最不容易破坏现有桌面默认路径的实现，同时能覆盖最常见的恢复场景。
-- 影响：当前 refresh 已从“单一按钮”升级成“默认完整刷新 + 轻量阶段控制”。后续若继续增强，再考虑 cancel/resume 或独立 job-state。
-- 状态：进行中
+- 影响：当前 refresh 已从"单一按钮"升级成"默认完整刷新 + 轻量阶段控制"。后续若继续增强，再考虑 cancel/resume 或独立 job-state。
+- 状态：完成
 
 ## [2026-04-25] `Recent reports` 先升级成可操作入口，不先做 schema/API 大改
 
@@ -190,7 +190,7 @@
 - 决策：先实现 `Open snapshot`（仅 `DAILY_REPORT*`）与 `Copy path`（所有 artifact），保持后端 schema 和 Tauri bridge 不变。
 - 原因：这是从“路径列表”走向“研究结果管理入口”的最高性价比第一步，同时复用现有 snapshot/date/scope 状态流，不需要立即引入新 schema 迁移。
 - 影响：后续如果继续增强，可在此基础上再做 `compare previous`、first-class `scope` metadata、artifact open/reveal 等动作。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-25] `Recent reports` 第二阶段优先补 `Open artifact`，不先做 capability/plugin 扩张
 
@@ -201,7 +201,7 @@
 - 决策：先在 `src-tauri` 加入 repo-local 的 `open_report_artifact` 命令，并在 recent-reports slice 中接入 `Open artifact` 动作。
 - 原因：这是最小侵入、最可控的下一步，不需要立刻把工作升级成 schema/API 或插件治理问题。
 - 影响：`Recent reports` 现在对 daily reports 和 data-health reports 都有直接可用的 artifact 动作；后续若继续增强，再考虑 reveal/opener plugin 或 first-class metadata。
-- 状态：进行中
+- 状态：完成
 
 ## [2026-04-26] `/init-deep` 先补边界最强的 AGENTS 层级，而不是平均铺满所有目录
 

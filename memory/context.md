@@ -5,7 +5,8 @@
 - 阶段：执行模式
 - 当前目标：
   - Oracle 数据质量复核报告问题修复（P0-P5）已全部完成并验证。
-  - 待提交代码变更（P2/P4/P5 代码修复 + Dashboard 性能优化 + memory 更新）。
+  - Dashboard 性能优化已完成并提交（commit `2a4a875`）。
+  - Memory 体系清理与状态同步（当前会话）。
 
 ## 关键任务
 
@@ -16,7 +17,7 @@
 - ✅ P4：注册制板块指数跳变阈值差异化（科创50/100/创业板指/50 → 22% 阈值）。
 - ✅ P3：HSAHP 调研（Tencent 无 K 线，Eastmoney 不可达，待用户决策）。
 - ✅ 全链路验证：`pipeline-dates` 全部对齐、`dashboard-snapshot` 正常、`export-report` 成功。
-- ⏸️ 待提交：P2/P4/P5 代码变更 + PROJECT_STRUCTURE.md + memory 更新 → git commit。
+- ✅ 代码提交：P0-P5 修复 (`12b17bb`) + Dashboard 性能优化 (`2a4a875`) 已分别提交。
 
 ## 当前约束
 
@@ -58,11 +59,12 @@
 
 ## 当前执行焦点
 
-- 当前焦点：代码变更已全部就绪。下一步：
-  1. 提交所有代码变更（P2/P4/P5 + Dashboard 性能优化 + memory 更新）→ git commit。
+- 当前焦点：代码修复与性能优化已全部提交。剩余待办：
+  1. Memory 体系清理（decisions 状态同步、glossary 补全、archive 初始化）— 当前会话进行中。
   2. （可选）`ingest-daily --from 2023-01-01` 回填 turnover 存量数据。
   3. HSAHP 处置决策（`enabled: false` 或寻找替代源）。
   4. 840 个 rotation_missing 逐个 symbol-date 下钻。
+  5. 进一步优化 ClickHouse 日期查询性能（当前 available_dates_ms: 24秒，为仪表板新瓶颈）。
 
 ## 当前最新进展
 
@@ -73,15 +75,13 @@
 - `analyze_jump_metrics` 注册制板块阈值差异化。
 - `fetch_tencent_daily_bars` turnover 解析。
 - 全链路验证全部通过：`pipeline-dates`（9/9 阶段对齐）、`dashboard-snapshot`（report_date=2026-05-19）、`export-report`（产出 daily-report-2026-05-19.md）、`check-data-health`（P4 生效）。
-- `PROJECT_STRUCTURE.md` 已创建（根目录结构说明书）。
-- `memory/structure.md` 已更新至最新状态。
-- **Dashboard 性能分析完成**：识别出 `check_data_health()` 是仪表板加载超时的根本原因。
-- **Oracle 复核完成**：确认优化方案可行，修正了几个关键误判。
-- **改造文档已创建**：`.omo/plans/dashboard-performance-optimization.md`
-- **Dashboard 性能优化实施完成**：
-  - Task 1: TrustSummary DTO 修改完成
-  - Task 2: 从热路径移除 check_data_health 调用完成
-  - Task 3: 前端降级渲染完成
-  - F1 性能验证：dashboard-snapshot 27秒（改善 ~78%），export-report 52秒（改善 ~57%）
-  - F2 功能验证：全部通过
-  - 代码编译通过，前端构建成功
+- **Dashboard 性能优化已完成**（commit `2a4a875`）：
+  - TrustSummary DTO data_health 字段改为 Option；前端补充降级渲染。
+  - 性能改善：dashboard-snapshot >120秒 → 27秒（~78%），export-report >120秒 → 52秒（~57%）。
+  - 新瓶颈：ClickHouse 日期查询（available_dates_ms: 24秒）。
+- **Memory 体系已刷新**（当前会话）：
+  - `structure.md`：重写为活跃拓扑，移除历史日志和过时推测问题。
+  - `decisions.md`：15 条 stale ADR 状态从"进行中"修正为"完成"。
+  - `context.md`：同步提交状态与执行焦点。
+  - `tech.md`：补记 TrustSummary DTO 变更与 TradingCalendar 模块。
+  - `glossary.md`：补全 data_starved / TradingCalendar / SignalBuildStats 等术语。
