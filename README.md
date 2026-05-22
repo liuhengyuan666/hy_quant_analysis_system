@@ -189,7 +189,7 @@ cargo run -p quant-cli -- seed-universe
 ### 8.1 拉取日线数据
 
 ```bash
-cargo run -p quant-cli -- ingest-daily --from 2026-03-01 --to 2026-03-16
+cargo run -p quant-cli -- ingest-daily --from 2026-05-19 --to 2026-05-20
 ```
 
 ### 8.2 计算指标
