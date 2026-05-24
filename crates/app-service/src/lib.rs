@@ -24,6 +24,7 @@ use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
 
@@ -34,6 +35,62 @@ const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
 const REFRESH_GATE_REPAIR_WINDOW_DAYS: i64 = 30;
 const REFRESH_BOOTSTRAP_LOOKBACK_DAYS: i64 = 730;
 const REFRESH_MACRO_LOOKBACK_DAYS: i64 = 550;
+
+/// Dashboard 可用日期缓存 TTL（5 分钟）
+const AVAILABLE_DATES_CACHE_TTL_SECS: u64 = 300;
+
+/// 缓存条目：存储结果和上次更新时间
+#[derive(Debug, Clone)]
+struct CacheEntry<T: Clone> {
+    data: T,
+    updated_at: Instant,
+}
+
+/// Dashboard 可用日期缓存
+#[derive(Debug)]
+struct AvailableDatesCache {
+    /// 按 scope 缓存的可用日期
+    dates_by_scope: Mutex<BTreeMap<ReportScope, CacheEntry<Vec<NaiveDate>>>>,
+}
+
+impl AvailableDatesCache {
+    fn new() -> Self {
+        Self {
+            dates_by_scope: Mutex::new(BTreeMap::new()),
+        }
+    }
+
+    /// 获取缓存的可用日期，如果过期则返回 None
+    fn get(&self, scope: &ReportScope) -> Option<Vec<NaiveDate>> {
+        let cache = self.dates_by_scope.lock().ok()?;
+        let entry = cache.get(scope)?;
+        if entry.updated_at.elapsed().as_secs() < AVAILABLE_DATES_CACHE_TTL_SECS {
+            Some(entry.data.clone())
+        } else {
+            None
+        }
+    }
+
+    /// 更新缓存
+    fn insert(&self, scope: ReportScope, dates: Vec<NaiveDate>) {
+        if let Ok(mut cache) = self.dates_by_scope.lock() {
+            cache.insert(
+                scope,
+                CacheEntry {
+                    data: dates,
+                    updated_at: Instant::now(),
+                },
+            );
+        }
+    }
+
+    /// 清除所有缓存
+    fn clear(&self) {
+        if let Ok(mut cache) = self.dates_by_scope.lock() {
+            cache.clear();
+        }
+    }
+}
 
 pub mod pipeline_stages {
     pub const STAGE_INGEST: &str = "ingest";
@@ -233,6 +290,8 @@ fn refresh_stage_order(stage: &str) -> Option<u8> {
 pub struct AppContext {
     pub storage: StorageConfig,
     pub calendar: core_domain::calendar::TradingCalendar,
+    /// Dashboard 可用日期缓存
+    available_dates_cache: std::sync::Arc<AvailableDatesCache>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1242,7 +1301,16 @@ impl AppContext {
         if !probe_keyring_readable() {
             eprintln!("WARN: OS keyring is unavailable. LLM API keys will be stored in SQLite credential_store as fallback.");
         }
-        Self { storage, calendar }
+        Self { 
+            storage, 
+            calendar,
+            available_dates_cache: std::sync::Arc::new(AvailableDatesCache::new()),
+        }
+    }
+
+    /// 清除所有缓存（在数据刷新后调用）
+    pub fn clear_cache(&self) {
+        self.available_dates_cache.clear();
     }
 
     pub fn status(&self) -> Result<AppStatus> {
@@ -1663,6 +1731,9 @@ impl AppContext {
             Some(Utc::now().to_rfc3339()),
             final_error,
         )?;
+
+        // 刷新完成后清除缓存，确保下次加载获取最新数据
+        self.clear_cache();
 
         Ok(RefreshPipelineSummary {
             success,
@@ -2722,6 +2793,11 @@ impl AppContext {
     }
 
     fn dashboard_available_dates_for_scope(&self, scope: ReportScope) -> Result<Vec<NaiveDate>> {
+        // 检查缓存
+        if let Some(cached) = self.available_dates_cache.get(&scope) {
+            return Ok(cached);
+        }
+
         let available_dates = market_store::fetch_dashboard_available_dates(&self.storage)?;
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         if scoped_instruments.is_empty() {
@@ -2775,6 +2851,10 @@ impl AppContext {
                 scoped_dates.push(date);
             }
         }
+
+        // 更新缓存
+        self.available_dates_cache.insert(scope, scoped_dates.clone());
+
         Ok(scoped_dates)
     }
 

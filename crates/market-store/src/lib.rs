@@ -1477,7 +1477,20 @@ pub fn fetch_latest_environment_date_for_scope(
 
 pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<NaiveDate>> {
     ensure_environment_snapshot_table(config)?;
-    let query = "SELECT DISTINCT date FROM quant.signal_snapshot WHERE date IN (SELECT DISTINCT date FROM quant.rotation_rank) AND date >= greatest((SELECT min(date) FROM quant.market_regime WHERE market = 'GLOBAL'), (SELECT min(date) FROM quant.environment_snapshot WHERE scope = 'GLOBAL')) ORDER BY date DESC FORMAT JSONEachRow";
+    // 优化：使用 JOIN 替代 IN 子句，避免双表全扫描
+    let query = r#"
+        SELECT DISTINCT s.date
+        FROM quant.signal_snapshot s
+        INNER JOIN (
+            SELECT DISTINCT date FROM quant.rotation_rank
+        ) r ON s.date = r.date
+        WHERE s.date >= greatest(
+            (SELECT min(date) FROM quant.market_regime WHERE market = 'GLOBAL'),
+            (SELECT min(date) FROM quant.environment_snapshot WHERE scope = 'GLOBAL')
+        )
+        ORDER BY s.date DESC
+        FORMAT JSONEachRow
+    "#;
     let body = fetch_clickhouse_text(config, query)?;
     let mut dates = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
