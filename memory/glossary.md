@@ -17,3 +17,14 @@
 - **rotation_missing**：信号生成时无法匹配到 rotation_rank 而使用 fallback 40.0 的次数。
 - **REGISTRATION_BOARD_INDICES**：注册制板块指数集合（科创50/100、创业板指/50），使用 22% 跳变阈值（区别于普通 Index 的 12%）。
 - **Trading-Aware Partial Coverage**：门控逻辑只检查"该日期期望交易"的 symbol 是否有数据，休市 symbol 不计入 `expected_count`。
+- **available_dates_ms**：ClickHouse 日期查询耗时指标（毫秒），当前为仪表板新瓶颈（~24秒）。
+- **pipeline_diagnostics**：流水线诊断信息，包含各阶段最新日期、完整性、alerts 等。
+- **refresh_pipeline**：桌面端刷新流水线函数，执行 ingest → indicators → macro → rotation → strategy → signals → backtests 全链路。
+- **dashboard_bundle**：桌面端聚合数据包，包含 snapshot + trust summary + recent reports 等。
+- **dashboard_snapshot**：单个分析日期的桌面端快照数据，不含 trust summary 等聚合信息。
+- **sync-and-export**：V3 新增的一键同步导出命令，自动检查 gate → 刷新 → 导出日报。
+- **explain-latest-gate**：诊断命令，解释为什么默认最新日期未推进到 freshest market date。
+- **suffix-run**：刷新阶段控制模式，从指定阶段开始一直跑到结尾，不支持 stop-at-stage。
+- **data_health**：数据健康检查结果，包含 provider 可达性、缺口、异常波动、turnover 缺失等。TrustSummary 中为 `Option` 类型。
+- **regime_basis_scope**：信号/回测使用的 regime 来源 scope，用于 provenance 追踪。
+- **analysis_scope**：信号/回测的分析 scope（GLOBAL/CN/HK），用于 provenance 追踪。
