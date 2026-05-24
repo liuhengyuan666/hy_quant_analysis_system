@@ -1,0 +1,22 @@
+# Task 2: Remove check_data_health() sync calls from dashboard_snapshot_with_scope and dashboard_bundle_with_scope
+# Date: 2026-05-20
+
+## Changes Made
+
+### dashboard_snapshot_with_scope (line 2184)
+- Before: `let data_health = self.check_data_health()?;`
+- After:  `let data_health = None; // 不再同步调用 check_data_health`
+- Changed `Some(&data_health)` to `data_health` in build_trust_summary call
+
+### dashboard_bundle_with_scope (line 2222)
+- Before: `let data_health = self.check_data_health()?;`
+- After:  `let data_health = None; // 不再同步调用 check_data_health`
+- Changed `Some(&data_health)` to `data_health` in build_trust_summary call
+
+## Compile Check Result
+```
+cargo check -p app-service
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+```
+
+Result: PASS - compilation successful

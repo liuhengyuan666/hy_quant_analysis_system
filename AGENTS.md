@@ -20,7 +20,7 @@ rust-quant-analysis-system/
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Agent rules + memory workflow | `TOOLS.md` + `runtime/memory.md` | highest-priority collaboration rules |
+| Agent rules + memory workflow | `memory/context.md` + `memory/decisions.md` | highest-priority collaboration rules |
 | Current repo truth source | `README.md` + `docs/文档状态说明.md` | start here before old planning docs |
 | Orchestration / trust / freshness guards | `crates/app-service/src/lib.rs` | `AppContext`, `build_trust_summary`, `dashboard_bundle_with_scope`, `refresh_consistency_alerts` |
 | Shared contracts | `crates/core-domain/src/lib.rs` | `AnalysisScope`, shared snapshot DTOs, provenance fields |
@@ -34,7 +34,7 @@ rust-quant-analysis-system/
 | Current phase memory | `docs/阶段性更新-2026-04-26.md` + `memory/context.md` + `memory/decisions.md` | latest intent, decisions, and next seam |
 
 ## CONVENTIONS
-- Read `TOOLS.md`, `memory/context.md`, and `memory/decisions.md` before deep edits.
+- Read `memory/context.md` and `memory/decisions.md` before deep edits.
 - Desktop `Refresh data` is the default user path. CLI full-chain runs remain explicit engineering / advanced-user paths.
 - Startup and scope reloads use `dashboard_bundle`; historical date changes use `dashboard_snapshot`.
 - `Trust summary` is the primary trust verdict. `Pipeline freshness` and `Data health` stay as evidence / drilldown layers beneath it.

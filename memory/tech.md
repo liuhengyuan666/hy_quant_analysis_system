@@ -20,6 +20,8 @@
 - 日线口径统一为前复权：Eastmoney `fqt=1`，Tencent `qfq`。
 - Dashboard / report 使用持久化快照与 as-of 日期语义。
 - `GLOBAL / CN / HK` 已是显式 scope 语义。
+- `TrustSummary.data_health` 已改为 `Option<DataHealthSummary>`（2026-05-20 Dashboard 性能优化），热路径不再阻塞于外部 HTTP 请求。
+- `core-domain` 新增 `TradingCalendar` 模块（`src/calendar.rs`），基于 `config/calendars/*.json` 提供 CN/HK 休市日判断。
 
 ## 当前工程现实
 

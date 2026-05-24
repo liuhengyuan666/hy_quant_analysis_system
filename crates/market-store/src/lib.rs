@@ -106,6 +106,8 @@ fn sqlite_connection(config: &StorageConfig) -> Result<Connection> {
         .with_context(|| format!("failed to open sqlite database: {}", sqlite_path.display()))?;
     ensure_refresh_jobs_table(&connection)?;
     ensure_user_preferences_table(&connection)?;
+    ensure_app_config_table(&connection)?;
+    ensure_credential_store_table(&connection)?;
     Ok(connection)
 }
 
@@ -138,6 +140,32 @@ fn ensure_user_preferences_table(connection: &Connection) -> Result<()> {
             );",
         )
         .context("failed to ensure user_preferences table")?;
+    Ok(())
+}
+
+fn ensure_app_config_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS app_config (
+                config_key TEXT PRIMARY KEY,
+                config_value TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .context("failed to ensure app_config table")?;
+    Ok(())
+}
+
+fn ensure_credential_store_table(connection: &Connection) -> Result<()> {
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS credential_store (
+                credential_key TEXT PRIMARY KEY,
+                credential_value TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .context("failed to ensure credential_store table")?;
     Ok(())
 }
 
@@ -253,6 +281,62 @@ pub fn set_user_preference(config: &StorageConfig, key: &str, value: &str) -> Re
             rusqlite::params![key, value, now],
         )
         .context("failed to set user preference")?;
+    Ok(())
+}
+
+pub fn fetch_app_config(config: &StorageConfig, key: &str) -> Result<Option<String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT config_value FROM app_config WHERE config_key = ?1")
+        .context("failed to prepare fetch_app_config query")?;
+    let mut rows = statement
+        .query_map([key], |row| row.get::<_, String>(0))
+        .context("failed to query app_config")?;
+    match rows.next() {
+        Some(Ok(value)) => Ok(Some(value)),
+        Some(Err(error)) => Err(error).context("failed to read app_config value"),
+        None => Ok(None),
+    }
+}
+
+pub fn insert_app_config(config: &StorageConfig, key: &str, value: &str) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    let now = chrono::Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO app_config (config_key, config_value, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(config_key) DO UPDATE SET config_value = ?2, updated_at = ?3",
+            rusqlite::params![key, value, now],
+        )
+        .context("failed to insert app_config")?;
+    Ok(())
+}
+
+pub fn fetch_credential(config: &StorageConfig, key: &str) -> Result<Option<String>> {
+    let connection = sqlite_connection(config)?;
+    let mut statement = connection
+        .prepare("SELECT credential_value FROM credential_store WHERE credential_key = ?1")
+        .context("failed to prepare fetch_credential query")?;
+    let mut rows = statement
+        .query_map([key], |row| row.get::<_, String>(0))
+        .context("failed to query credential_store")?;
+    match rows.next() {
+        Some(Ok(value)) => Ok(Some(value)),
+        Some(Err(error)) => Err(error).context("failed to read credential value"),
+        None => Ok(None),
+    }
+}
+
+pub fn insert_credential(config: &StorageConfig, key: &str, value: &str) -> Result<()> {
+    let connection = sqlite_connection(config)?;
+    let now = chrono::Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO credential_store (credential_key, credential_value, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(credential_key) DO UPDATE SET credential_value = ?2, updated_at = ?3",
+            rusqlite::params![key, value, now],
+        )
+        .context("failed to insert credential")?;
     Ok(())
 }
 
@@ -1305,7 +1389,7 @@ pub fn fetch_indicator_snapshots_for_symbols_in_range(
 }
 
 pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSnapshot>> {
-    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime WHERE market = 'GLOBAL' ORDER BY date FORMAT JSONEachRow";
+    let query = "SELECT date,macro_as_of_date,market,trend_score,liquidity_score,risk_score,regime_label FROM quant.market_regime ORDER BY date FORMAT JSONEachRow";
     let url = format!(
         "{}?database={}&query={}",
         config.clickhouse_url,
@@ -1393,7 +1477,20 @@ pub fn fetch_latest_environment_date_for_scope(
 
 pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<NaiveDate>> {
     ensure_environment_snapshot_table(config)?;
-    let query = "SELECT DISTINCT date FROM quant.signal_snapshot WHERE date IN (SELECT DISTINCT date FROM quant.rotation_rank) AND date >= greatest((SELECT min(date) FROM quant.market_regime WHERE market = 'GLOBAL'), (SELECT min(date) FROM quant.environment_snapshot WHERE scope = 'GLOBAL')) ORDER BY date DESC FORMAT JSONEachRow";
+    // 优化：使用 JOIN 替代 IN 子句，避免双表全扫描
+    let query = r#"
+        SELECT DISTINCT s.date
+        FROM quant.signal_snapshot s
+        INNER JOIN (
+            SELECT DISTINCT date FROM quant.rotation_rank
+        ) r ON s.date = r.date
+        WHERE s.date >= greatest(
+            (SELECT min(date) FROM quant.market_regime WHERE market = 'GLOBAL'),
+            (SELECT min(date) FROM quant.environment_snapshot WHERE scope = 'GLOBAL')
+        )
+        ORDER BY s.date DESC
+        FORMAT JSONEachRow
+    "#;
     let body = fetch_clickhouse_text(config, query)?;
     let mut dates = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -2289,4 +2386,125 @@ pub fn date_bounds(bars: &[DailyBar]) -> Option<(NaiveDate, NaiveDate)> {
         bars.iter().map(|bar| bar.date).min()?,
         bars.iter().map(|bar| bar.date).max()?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_db_path() -> String {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let pid = std::process::id();
+        let dir = std::env::temp_dir();
+        dir.join(format!("market_store_test_{pid}_{nanos}.db"))
+            .to_string_lossy()
+            .to_string()
+    }
+
+    fn temp_config() -> (String, StorageConfig) {
+        let path = temp_db_path();
+        let config = StorageConfig {
+            sqlite_path: path.clone(),
+            ..StorageConfig::default()
+        };
+        let conn = Connection::open(&path).expect("open temp sqlite");
+        ensure_app_config_table(&conn).expect("create app_config table");
+        ensure_credential_store_table(&conn).expect("create credential_store table");
+        ensure_refresh_jobs_table(&conn).expect("create refresh_jobs table");
+        ensure_user_preferences_table(&conn).expect("create user_preferences table");
+        (path, config)
+    }
+
+    #[test]
+    fn fetch_app_config_returns_none_for_missing_key() {
+        let (_path, config) = temp_config();
+        let result = fetch_app_config(&config, "nonexistent_key").expect("query should succeed");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn app_config_round_trip() {
+        let (_path, config) = temp_config();
+        let key = "test.setting";
+        let value = "hello world 42";
+
+        insert_app_config(&config, key, value).expect("insert should succeed");
+        let fetched = fetch_app_config(&config, key).expect("fetch should succeed");
+        assert_eq!(fetched.as_deref(), Some(value));
+    }
+
+    #[test]
+    fn app_config_upsert_updates_value() {
+        let (_path, config) = temp_config();
+        let key = "upsert.key";
+
+        insert_app_config(&config, key, "first").expect("first insert");
+        insert_app_config(&config, key, "second").expect("second insert");
+
+        let fetched = fetch_app_config(&config, key).expect("fetch");
+        assert_eq!(fetched.as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn credential_round_trip() {
+        let (_path, config) = temp_config();
+        let key = "api.test_token";
+        let value = "secret-value-abc123";
+
+        insert_credential(&config, key, value).expect("insert should succeed");
+        let fetched = fetch_credential(&config, key).expect("fetch should succeed");
+        assert_eq!(fetched.as_deref(), Some(value));
+    }
+
+    #[test]
+    fn credential_upsert_updates_value() {
+        let (_path, config) = temp_config();
+        let key = "api.rotate_token";
+
+        insert_credential(&config, key, "old_secret").expect("first insert");
+        insert_credential(&config, key, "new_secret").expect("second insert");
+
+        let fetched = fetch_credential(&config, key).expect("fetch");
+        assert_eq!(fetched.as_deref(), Some("new_secret"));
+    }
+
+    #[test]
+    fn app_config_sets_updated_at() {
+        let (_path, config) = temp_config();
+        let key = "ts.check";
+
+        insert_app_config(&config, key, "value").expect("insert");
+
+        let conn = Connection::open(&config.sqlite_path).expect("open for verification");
+        let ts: String = conn
+            .query_row(
+                "SELECT updated_at FROM app_config WHERE config_key = ?1",
+                [key],
+                |row| row.get(0),
+            )
+            .expect("row should exist");
+        assert!(!ts.is_empty(), "updated_at should be a non-empty timestamp");
+    }
+
+    #[test]
+    fn credential_sets_updated_at() {
+        let (_path, config) = temp_config();
+        let key = "cred.ts";
+
+        insert_credential(&config, key, "val").expect("insert");
+
+        let conn = Connection::open(&config.sqlite_path).expect("open for verification");
+        let ts: String = conn
+            .query_row(
+                "SELECT updated_at FROM credential_store WHERE credential_key = ?1",
+                [key],
+                |row| row.get(0),
+            )
+            .expect("row should exist");
+        assert!(!ts.is_empty(), "updated_at should be a non-empty timestamp");
+    }
 }

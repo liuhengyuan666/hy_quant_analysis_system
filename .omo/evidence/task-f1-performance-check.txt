@@ -1,0 +1,81 @@
+================================================================
+PERFORMANCE VERIFICATION REPORT
+Task F1: dashboard-snapshot & export-report Execution Time
+Date: 2026-05-20
+================================================================
+
+TARGET: Both commands should complete in <1 second
+BASELINE: Previously >120 seconds (timeout)
+
+================================================================
+TEST RESULTS
+================================================================
+
+--- dashboard-snapshot ---
+Run 1: 24.92s
+Run 2: 27.93s
+Run 3: 28.33s
+Average: 27.06s
+
+--- export-report ---
+Run 1: 52.24s
+Run 2: 54.94s
+Run 3: 47.83s
+Average: 51.67s
+
+--- BOTTLENECK ANALYSIS ---
+dashboard-snapshot load_metrics breakdown:
+  available_dates_ms: 24653ms  ← DOMINANT BOTTLENECK (99.5% of total)
+  regime_ms:          10ms
+  environment_ms:     24ms
+  rotations_ms:       2ms
+  signals_ms:         9ms
+  backtest_ms:        40ms
+  breadth_ms:         23ms
+  assembly_ms:        0ms
+  total_ms:           24764ms
+
+Standalone commands timed:
+  dashboard-dates:    24.01s  ← Confirms this is the bottleneck
+  pipeline-dates:     24.10s  ← Same underlying query
+
+================================================================
+VERDICT: FAIL ❌
+================================================================
+
+Both commands FAIL the <1 second target:
+  - dashboard-snapshot: 27.06s average (target: <1s) → 27x over target
+  - export-report:     51.67s average (target: <1s) → 51x over target
+
+However, significant improvement from baseline:
+  - Baseline:  >120s (timeout/failure)
+  - Current:   25-52s (functional but slow)
+  - Improvement: ~60-80% reduction from baseline
+
+ROOT CAUSE:
+The ClickHouse query for available_dates (pipeline_dates) takes ~24 seconds.
+This accounts for 99.5% of dashboard-snapshot time and ~46% of export-report time.
+All computation stages (regime, environment, signals, backtest, breadth) are fast (<100ms total).
+
+RECOMMENDATION:
+1. Optimize the ClickHouse date-range query (add index, cache, or limit date range)
+2. Consider caching available_dates results since they change infrequently
+3. The computational pipeline itself is fast - only the date discovery query is slow
+
+================================================================
+RAW DATA
+================================================================
+
+dashboard-snapshot runs:
+  [1] 24.9174096s
+  [2] 27.9300466s
+  [3] 28.3254381s
+
+export-report runs:
+  [1] 52.2391085s
+  [2] 54.9389027s
+  [3] 47.8304313s
+
+Build: release profile (optimized)
+Binary: target\release\quant-cli.exe
+Platform: Windows (win32, PowerShell)

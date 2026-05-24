@@ -1,0 +1,21 @@
+Task 3: Handle null data_health fields in renderTrustSummaryPanel
+Date: 2026-05-20
+File: apps/desktop/frontend/src/main.js
+
+Change Summary:
+- Added `hasDataHealth` guard checking `trust.data_health_generated_at !== null && !== undefined`
+- When `hasDataHealth` is false:
+  - `dataHealthValue` = 'Data health not yet checked'
+  - `dataHealthToneValue` = 'neutral'
+- When `hasDataHealth` is true: original logic preserved (negative/warning/positive)
+- `dataHealthGeneratedAt` unchanged (already falls back to '' which shows 'Detailed health summary not loaded yet' in metric card)
+- `formatInteger(null)` returns '0' (Number(null)=0, finite), but short-circuit prevents reaching those comparisons
+
+Build Result: SUCCESS
+> quant-desktop-frontend@0.1.0 build
+> vite build
+✓ 11 modules transformed.
+dist/index.html                 0.56 kB │ gzip: 0.34 kB
+dist/assets/index-ykSfJ_NB.css  26.71 kB │ gzip: 5.17 kB
+dist/assets/index-BUmxvi5B.js   88.53 kB │ gzip: 20.39 kB
+✓ built in 1.05s

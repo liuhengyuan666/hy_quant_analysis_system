@@ -3,6 +3,7 @@ import { createDataHealthSlice } from './features/data-health.js';
 import { createRecentReportsSlice } from './features/recent-reports.js';
 import { createUsageGuidesSlice } from './features/usage-guides.js';
 import {
+  clampScore,
   escapeHtml,
   formatCanonicalAdjustment,
   formatCurrency,
@@ -480,16 +481,24 @@ function renderTrustSummaryPanel(snapshot, pipelineDates, dataHealth) {
     : trust.pipeline_has_partial_latest || !trust.latest_day_complete
       ? 'warning'
       : 'positive';
-  const dataHealthValue = trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
-    ? `${formatInteger(trust.data_health_critical_symbols)} symbol / ${formatInteger(trust.data_health_critical_macro_sources)} macro critical`
-    : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
-      ? `${formatInteger(trust.data_health_review_symbols)} symbol / ${formatInteger(trust.data_health_review_macro_sources)} macro review`
-      : 'No critical health warnings';
-  const dataHealthToneValue = trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
-    ? 'negative'
-    : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
-      ? 'warning'
-      : 'positive';
+  const hasDataHealth = trust.data_health_generated_at !== null && trust.data_health_generated_at !== undefined;
+
+  const dataHealthValue = !hasDataHealth
+    ? 'Data health not yet checked'
+    : trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
+      ? `${formatInteger(trust.data_health_critical_symbols)} symbol / ${formatInteger(trust.data_health_critical_macro_sources)} macro critical`
+      : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
+        ? `${formatInteger(trust.data_health_review_symbols)} symbol / ${formatInteger(trust.data_health_review_macro_sources)} macro review`
+        : 'No critical health warnings';
+
+  const dataHealthToneValue = !hasDataHealth
+    ? 'neutral'
+    : trust.data_health_critical_symbols > 0 || trust.data_health_critical_macro_sources > 0
+      ? 'negative'
+      : trust.data_health_review_symbols > 0 || trust.data_health_review_macro_sources > 0
+        ? 'warning'
+        : 'positive';
+
   const dataHealthGeneratedAt = dataHealth?.generated_at || trust.data_health_generated_at || '';
   const freshestMarketDate = trust.freshest_market_date || 'N/A';
   const latestAvailableDate = trust.latest_available_date || 'N/A';

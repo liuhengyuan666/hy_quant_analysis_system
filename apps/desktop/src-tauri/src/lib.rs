@@ -1,4 +1,4 @@
-use app_service::AppContext;
+use app_service::{pipeline_stages, AppContext};
 use chrono::{Local, NaiveDate};
 use market_store::StorageConfig;
 use serde::{Deserialize, Serialize};
@@ -202,15 +202,7 @@ impl RefreshStartStage {
     }
 
     fn progress_after(self) -> u8 {
-        match self {
-            Self::Ingest => 20,
-            Self::Indicators => 40,
-            Self::Macro => 60,
-            Self::Rotation => 75,
-            Self::Strategy => 88,
-            Self::Signals => 92,
-            Self::Backtests => 96,
-        }
+        pipeline_stages::progress_after(self.as_str())
     }
 }
 
@@ -410,12 +402,30 @@ fn spawn_dashboard_refresh(
         let context = AppContext::new(StorageConfig::default());
         let today = Local::now().date_naive();
 
+        let progress_worker = worker.clone();
+        let progress_callback: Option<Box<dyn Fn(&str) + Send>> =
+            Some(Box::new(move |msg: &str| {
+                if let Some(start) = msg.find("Starting ") {
+                    let rest = &msg[start + "Starting ".len()..];
+                    let stage_name = rest.trim_end_matches("...").trim_end_matches(".");
+                    let pct = pipeline_stages::progress_after(stage_name);
+                    if pct > 0 {
+                        set_refresh_status(&progress_worker, |status| {
+                            status.progress_pct = pct;
+                            status.stage = stage_name.to_string();
+                            status.current_stage = Some(stage_name.to_string());
+                        });
+                    }
+                }
+            }));
+
         let result = context.refresh_pipeline(
             today,
             app_service::ReportScope::Global,
             true,
             Some(worker.cancel_flag.as_ref()),
             start_stage.map(RefreshStartStage::as_str),
+            progress_callback,
         );
 
         match result {

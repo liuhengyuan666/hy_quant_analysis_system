@@ -1,8 +1,16 @@
-use anyhow::Result;
-use app_service::{AppContext, ReportScope};
+use anyhow::{Context, Result};
+use app_service::{pipeline_stages, AppContext, ReportScope};
 use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand, ValueEnum};
 use market_store::StorageConfig;
+
+fn stage_label(stage: &str) -> String {
+    let total = pipeline_stages::ALL.len();
+    match pipeline_stages::ALL.iter().position(|&s| s == stage) {
+        Some(idx) => format!("[{}/{}] {}", idx + 1, total, stage),
+        None => stage.to_string(),
+    }
+}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum ReportScopeArg {
@@ -25,6 +33,9 @@ impl From<ReportScopeArg> for ReportScope {
 #[command(name = "quant-cli")]
 #[command(about = "Rust quant analysis system CLI")]
 struct Cli {
+    #[arg(long, global = true, help = "Suppress progress output to stderr")]
+    quiet: bool,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -109,6 +120,34 @@ enum Command {
         scope: ReportScopeArg,
     },
     ExportDataHealthReport,
+    SyncAndExport {
+        #[arg(long)]
+        date: Option<NaiveDate>,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long)]
+        to: Option<NaiveDate>,
+        #[arg(long, default_value_t = true)]
+        run_backtests: bool,
+    },
+    SetLlmConfig {
+        #[arg(long)]
+        base_url: String,
+        #[arg(long)]
+        model: String,
+        #[arg(long, default_value_t = 60)]
+        timeout_secs: u64,
+    },
+    SetLlmApiKey {
+        #[arg(long)]
+        key: String,
+    },
+    AnalyzeWithLlm {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long)]
+        date: Option<NaiveDate>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -130,27 +169,62 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&instruments)?);
         }
         Command::IngestDaily { from, to } => {
-            let result = context.ingest_daily(from, to)?;
+            let progress_fn = |msg: &str| eprintln!("[ingest] {}", msg);
+            let result = if cli.quiet {
+                context.ingest_daily(from, to, None)?
+            } else {
+                context.ingest_daily(from, to, Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeIndicators => {
-            let result = context.compute_indicators()?;
+            let label = stage_label(pipeline_stages::STAGE_INDICATORS);
+            let progress_fn = |msg: &str| eprintln!("{}: {}", label, msg);
+            let result = if cli.quiet {
+                context.compute_indicators(None)?
+            } else {
+                context.compute_indicators(Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeMacro { from, to } => {
-            let result = context.compute_macro_regime(from, to)?;
+            let label = stage_label(pipeline_stages::STAGE_MACRO);
+            let progress_fn = |msg: &str| eprintln!("{}: {}", label, msg);
+            let result = if cli.quiet {
+                context.compute_macro_regime(from, to, None)?
+            } else {
+                context.compute_macro_regime(from, to, Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeRotation => {
-            let result = context.compute_rotation()?;
+            let label = stage_label(pipeline_stages::STAGE_ROTATION);
+            let progress_fn = |msg: &str| eprintln!("{}: {}", label, msg);
+            let result = if cli.quiet {
+                context.compute_rotation(None)?
+            } else {
+                context.compute_rotation(Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeStrategyPreferences => {
-            let result = context.compute_strategy_preferences()?;
+            let label = stage_label(pipeline_stages::STAGE_STRATEGY);
+            let progress_fn = |msg: &str| eprintln!("{}: {}", label, msg);
+            let result = if cli.quiet {
+                context.compute_strategy_preferences(None)?
+            } else {
+                context.compute_strategy_preferences(Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::ComputeSignals => {
-            let result = context.compute_signals()?;
+            let label = stage_label(pipeline_stages::STAGE_SIGNALS);
+            let progress_fn = |msg: &str| eprintln!("{}: {}", label, msg);
+            let result = if cli.quiet {
+                context.compute_signals(None)?
+            } else {
+                context.compute_signals(Some(&progress_fn))?
+            };
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
         Command::RefreshAll {
@@ -158,12 +232,20 @@ fn main() -> Result<()> {
             scope,
             run_backtests,
         } => {
+            let progress_callback: Option<Box<dyn Fn(&str) + Send>> = if cli.quiet {
+                None
+            } else {
+                Some(Box::new(|msg: &str| {
+                    eprintln!("[refresh] {}", msg);
+                }))
+            };
             let result = context.refresh_pipeline(
                 to.unwrap_or_else(|| Local::now().date_naive()),
                 scope.into(),
                 run_backtests,
                 None,
                 None,
+                progress_callback,
             )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
             if !result.success {
@@ -216,6 +298,76 @@ fn main() -> Result<()> {
         }
         Command::ExportDataHealthReport => {
             let result = context.export_data_health_report()?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::SyncAndExport {
+            date,
+            scope,
+            to,
+            run_backtests,
+        } => {
+            if !cli.quiet {
+                eprintln!("[sync-and-export] Starting...");
+            }
+            let progress_callback: Option<Box<dyn Fn(&str) + Send>> = if cli.quiet {
+                None
+            } else {
+                Some(Box::new(|msg: &str| {
+                    eprintln!("[sync-and-export] {}", msg);
+                }))
+            };
+            let result = context.sync_and_export(
+                date,
+                to.unwrap_or_else(|| Local::now().date_naive()),
+                scope.into(),
+                run_backtests,
+                progress_callback,
+            )?;
+            if !cli.quiet {
+                eprintln!("[sync-and-export] Done.");
+            }
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::SetLlmConfig {
+            base_url,
+            model,
+            timeout_secs,
+        } => {
+            context.set_llm_config(&base_url, &model, timeout_secs)?;
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                "status": "ok",
+                "base_url": base_url,
+                "model": model,
+                "timeout_secs": timeout_secs,
+            }))?);
+        }
+        Command::SetLlmApiKey { key } => {
+            context.set_llm_api_key(&key)?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "status": "ok",
+                    "message": "LLM API key stored successfully"
+                }))?
+            );
+        }
+        Command::AnalyzeWithLlm { scope, date } => {
+            let report_date = match date {
+                Some(d) => d,
+                None => {
+                    let dates =
+                        context.dashboard_available_dates_with_scope(scope.into())?;
+                    let latest = dates.first().context(
+                        "no dashboard dates available; run refresh-all first",
+                    )?;
+                    NaiveDate::parse_from_str(latest, "%Y-%m-%d")
+                        .context("failed to parse latest dashboard date")?
+                }
+            };
+            if !cli.quiet {
+                eprintln!("[analyze-with-llm] Analyzing report for {report_date}...");
+            }
+            let result = context.analyze_report_with_llm(report_date, scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
     }

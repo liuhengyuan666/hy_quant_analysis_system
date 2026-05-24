@@ -1,0 +1,76 @@
+{
+  "adrs": [
+    {
+      "id": "ADR-026",
+      "tags": [
+        "memory",
+        "maintenance",
+        "documentation"
+      ],
+      "title": "Memory 体系清理与状态同步"
+    },
+    {
+      "id": "ADR-027",
+      "tags": [
+        "performance",
+        "clickhouse",
+        "caching",
+        "dashboard"
+      ],
+      "title": "ClickHouse 日期查询性能优化"
+    },
+    {
+      "id": "ADR-028",
+      "tags": [
+        "rotation",
+        "signal",
+        "data-quality",
+        "expected-behavior"
+      ],
+      "title": "rotation_missing 根因分析：历史窗口不足导致的预期行为"
+    },
+    {
+      "id": "ADR-029",
+      "tags": [
+        "HSAHP",
+        "data-source",
+        "HK-scope",
+        "disabled"
+      ],
+      "title": "HSAHP 暂时禁用决策"
+    },
+    {
+      "id": "ADR-030",
+      "tags": [
+        "turnover",
+        "backfill",
+        "data-quality",
+        "manual-execution"
+      ],
+      "title": "Turnover 存量回填待执行"
+    },
+    {
+      "id": "ADR-027",
+      "tags": [
+        "performance",
+        "clickhouse",
+        "caching",
+        "dashboard",
+        "oracle-reviewed"
+      ],
+      "title": "ClickHouse 日期查询性能优化（Oracle 复核修正）"
+    },
+    {
+      "id": "ADR-031",
+      "tags": [
+        "HSAHP",
+        "data-source",
+        "root-cause-analysis",
+        "eastmoney",
+        "tencent"
+      ],
+      "title": "HSAHP 数据失效根因分析"
+    }
+  ],
+  "traps": []
+}
