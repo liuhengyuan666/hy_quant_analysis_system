@@ -1,0 +1,122 @@
+{
+  "active_plan": "F:\\ai_area\\rust-quant-analysis-system\\.sisyphus\\plans\\v3-features.md",
+  "started_at": "2026-05-10T06:00:00Z",
+  "session_ids": [
+    "ses_1f547c04effe2huJ0VALDQL6xo"
+  ],
+  "plan_name": "v3-features",
+  "worktree_path": null,
+  "session_origins": {
+    "ses_1f547c04effe2huJ0VALDQL6xo": "direct"
+  },
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "**market-store SQLite config/credential helpers**",
+      "session_id": "ses_1ef85bc5dffeJ96jfWzADKiFtJ",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:03:23.832Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "**core-domain types for LLM config/result**",
+      "session_id": "ses_1ef831a20ffe0Rj8W7xIJoOTdr",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:05:11.794Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "**Add async-openai + keyring to workspace dependencies**",
+      "session_id": "ses_1ef81fbd2ffeg1j61kamL2NB2F",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:07:27.863Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "**Centralize stage progress metadata**",
+      "session_id": "ses_1ef7f6040ffeyNaBDzkR10rzo8",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:11:46.654Z"
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "**Progress callback infrastructure in app-service**",
+      "session_id": "ses_1ef7ba048ffed5BMaPQuPMGHkN",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-10T06:17:15.020Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "**sync-and-export CLI command + AppContext method**",
+      "session_id": "ses_1ef761935ffeppVPtTBXgWUnLy",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-10T06:23:53.363Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "**CLI progress output for all long-running commands**",
+      "session_id": "ses_1ef70a97cffe8xBVR8lVUxYS4B",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:27:27.579Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "**LLM client module + config methods in app-service**",
+      "session_id": "ses_1ef6d9e52ffeirL6txxyElpraR",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-10T06:37:41.828Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "**CLI LLM commands**",
+      "session_id": "ses_1ef643ab9ffeehwcwQU6aEikyU",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:41:20.386Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "**Unit tests for config storage round-trip**",
+      "session_id": "ses_1ef603b8cffej4P1E51SLDQg4F",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:52:11.436Z"
+    },
+    "todo:11": {
+      "task_key": "todo:11",
+      "task_label": "11",
+      "task_title": "**Unit tests for sync-and-export gate-after-refresh logic**",
+      "session_id": "ses_1ef570866ffeZnAG1lUFRb3n7z",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T06:59:52.506Z"
+    },
+    "todo:12": {
+      "task_key": "todo:12",
+      "task_label": "12",
+      "task_title": "**Unit tests for LLM client (mock server)**",
+      "session_id": "ses_1ef4fe258ffeUEfcSX31v1Losq",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-10T07:09:57.160Z"
+    }
+  }
+}

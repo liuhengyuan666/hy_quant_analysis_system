@@ -1,0 +1,52 @@
+{
+  "current_phase": "- 阶段：执行模式 - 当前目标： - Oracle 数据质量复核报告问题修复（P0-P5）已全部完成并验证。 - Dashboard 性能优化已完成并提交（commit `2a4a875`）。 - Memory 体系清理与状态同步（当前会话）。",
+  "active_tasks": [
+    {
+      "id": "TASK-000",
+      "description": "✅ P0：宏观因子历史回填（`compute-macro --from 2020` → 7,149 macro 行）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-001",
+      "description": "✅ P5：修复 `fetch_market_regimes` GLOBAL-only 过滤（`regime_missing` 17,195 → 152）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-002",
+      "description": "✅ P1：`compute-signals` 重跑（`data_starved` 52.6% → 2.9%）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-003",
+      "description": "✅ P2：Tencent turnover 解析（`turnover: None` → `row.get(6)`，代码已修复，存量数据待 `ingest-daily` 回填）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-004",
+      "description": "✅ P4：注册制板块指数跳变阈值差异化（科创50/100/创业板指/50 → 22% 阈值）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-005",
+      "description": "✅ P3：HSAHP 调研（Tencent 无 K 线，Eastmoney 不可达，待用户决策）。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-006",
+      "description": "✅ 全链路验证：`pipeline-dates` 全部对齐、`dashboard-snapshot` 正常、`export-report` 成功。",
+      "status": "Todo"
+    },
+    {
+      "id": "TASK-007",
+      "description": "✅ 代码提交：P0-P5 修复 (`12b17bb`) + Dashboard 性能优化 (`2a4a875`) 已分别提交。",
+      "status": "Todo"
+    }
+  ],
+  "constraints": [
+    "静态 JSON 日历覆盖 2024-2027，后续需要人工维护。",
+    "`TradingCalendar` 当前只覆盖 CN/HK。",
+    "`app-service/src/lib.rs` 仍是 monolith（~796 行）。",
+    "Eastmoney 主源从当前环境不可达，全部标的走 Tencent fallback。",
+    "P2 turnover 修复仅影响新拉取数据，存量 ClickHouse 数据需 `ingest-daily` 回填。"
+  ]
+}
