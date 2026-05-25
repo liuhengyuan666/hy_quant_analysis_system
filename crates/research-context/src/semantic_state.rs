@@ -27,6 +27,7 @@ pub struct ResearchContext {
     pub rotation: RotationContext,
     pub regime: RegimeContext,
     pub signals: SignalsContext,
+    #[serde(rename = "macro")]
     pub macro_: MacroContext,
     pub risk: RiskContext,
 }

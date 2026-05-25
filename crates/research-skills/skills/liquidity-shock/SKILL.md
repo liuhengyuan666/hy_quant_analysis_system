@@ -95,7 +95,7 @@ steps:
     inputs:
       - breadth.breadth_pct
       - breadth.breadth_delta
-  - regime.current
+      - regime.current
     checks:
       - is_breadth_weakening
       - is_regime_deteriorating
