@@ -3550,6 +3550,7 @@ impl AppContext {
         &self,
         skill_name: &str,
         scope: ReportScope,
+        profile: Option<&research_skills::AgentProfile>,
     ) -> anyhow::Result<serde_json::Value> {
         // 1. Build ResearchContext
         let context = self.research_context(scope)?;
@@ -3589,7 +3590,7 @@ impl AppContext {
         let executor = research_skills::executor::SkillExecutor::new(budget, deterministic);
         let provider = PlaceholderProvider;
 
-        let llm_output = executor.execute(skill, &context, &provider).await?;
+        let llm_output = executor.execute(skill, &context, &provider, profile).await?;
 
         // 6. Merge deterministic + LLM results
         let result = serde_json::json!({

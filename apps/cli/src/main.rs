@@ -3,6 +3,7 @@ use app_service::{pipeline_stages, AppContext, ReportScope};
 use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand, ValueEnum};
 use market_store::StorageConfig;
+use research_skills::AgentProfile;
 
 fn stage_label(stage: &str) -> String {
     let total = pipeline_stages::ALL.len();
@@ -161,6 +162,10 @@ enum Command {
         /// Scope to analyze
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
+
+        /// Agent profile name (loads from research/agents/)
+        #[arg(long)]
+        agent: Option<String>,
     },
 }
 
@@ -392,15 +397,30 @@ fn main() -> Result<()> {
             let result = context.analyze_report_with_llm(report_date, scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Command::Analyze { skill, scope } => {
+        Command::Analyze {
+            skill,
+            scope,
+            agent,
+        } => {
             let scope = match scope {
                 ReportScopeArg::Global => ReportScope::Global,
                 ReportScopeArg::Cn => ReportScope::Cn,
                 ReportScopeArg::Hk => ReportScope::Hk,
             };
+            let profile = if let Some(agent_name) = &agent {
+                let profile_path = format!("research/agents/{}.yaml", agent_name);
+                let profile_yaml = std::fs::read_to_string(&profile_path)
+                    .with_context(|| format!("Failed to load agent profile '{}'", agent_name))?;
+                let profile = AgentProfile::from_yaml(&profile_yaml)
+                    .with_context(|| format!("Failed to parse agent profile '{}'", agent_name))?;
+                Some(profile)
+            } else {
+                None
+            };
             let runtime = tokio::runtime::Runtime::new()
                 .context("failed to create tokio runtime")?;
-            let result = runtime.block_on(context.analyze_with_skill(&skill, scope))?;
+            let result =
+                runtime.block_on(context.analyze_with_skill(&skill, scope, profile.as_ref()))?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
     }

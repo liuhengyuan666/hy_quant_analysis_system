@@ -1,5 +1,6 @@
 use research_context::ResearchContext;
 
+use super::agent_profile::AgentProfile;
 use super::deterministic::DeterministicConfig;
 use super::provider::LlmProvider;
 use super::skill::Skill;
@@ -40,15 +41,16 @@ impl SkillExecutor {
         }
     }
 
-    /// Execute a skill with the given context
+    /// Execute a skill with the given context and optional agent profile
     pub async fn execute(
         &self,
         skill: &Skill,
         context: &ResearchContext,
         provider: &dyn LlmProvider,
+        profile: Option<&AgentProfile>,
     ) -> anyhow::Result<SkillOutput> {
         // Layer 1: System prompt
-        let system_prompt = self.render_system_layer(skill);
+        let system_prompt = self.render_system_layer(skill, profile);
 
         // Layer 2: Semantic context (JSON)
         let context_json = self.render_semantic_layer(context);
@@ -91,15 +93,45 @@ impl SkillExecutor {
         })
     }
 
-    /// Layer 1: System prompt (research style, risk tolerance)
-    fn render_system_layer(&self, skill: &Skill) -> String {
-        format!(
-            "You are a quantitative research analyst.\n\n\
-             Skill: {}\n\
-             Description: {}\n\n\
-             Analyze the provided market context and produce a structured analysis.",
-            skill.definition.name, skill.definition.description
-        )
+    /// Layer 1: System prompt (research style, risk tolerance, profile instructions)
+    fn render_system_layer(&self, skill: &Skill, profile: Option<&AgentProfile>) -> String {
+        let mut prompt = String::new();
+
+        // Base system instructions
+        prompt.push_str("You are a quantitative research analyst.\n\n");
+
+        // Add profile-specific instructions if provided
+        if let Some(profile) = profile {
+            prompt.push_str(&profile.render_system_prompt());
+            prompt.push_str("\n\n");
+
+            // Add emphasis instructions based on profile constraints
+            prompt.push_str("Analysis emphasis:\n");
+            prompt.push_str(&format!(
+                "- Regime transitions: {:?}\n",
+                profile.analysis_constraints.emphasis.regime_transition
+            ));
+            prompt.push_str(&format!(
+                "- Breadth signals: {:?}\n",
+                profile.analysis_constraints.emphasis.breadth_signal
+            ));
+            prompt.push_str(&format!(
+                "- Liquidity signals: {:?}\n",
+                profile.analysis_constraints.emphasis.liquidity_signal
+            ));
+            prompt.push_str(&format!(
+                "- Rotation signals: {:?}\n",
+                profile.analysis_constraints.emphasis.rotation_signal
+            ));
+            prompt.push_str("\n");
+        }
+
+        // Add skill-specific instructions
+        prompt.push_str(&format!("Skill: {}\n", skill.definition.name));
+        prompt.push_str(&format!("Description: {}\n", skill.definition.description));
+        prompt.push_str("\nAnalyze the provided market context and produce a structured analysis.");
+
+        prompt
     }
 
     /// Layer 2: Semantic context (JSON)

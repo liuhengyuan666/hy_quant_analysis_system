@@ -3120,6 +3120,7 @@ dependencies = [
  "chrono",
  "clap",
  "market-store",
+ "research-skills",
  "serde_json",
  "tokio",
  "tracing",
