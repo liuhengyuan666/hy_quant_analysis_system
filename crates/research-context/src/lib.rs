@@ -1,6 +1,7 @@
 pub mod semantic_state;
 pub mod feature_engine;
 pub mod builder;
+pub mod compression;
 
 pub use semantic_state::*;
 pub use feature_engine::*;

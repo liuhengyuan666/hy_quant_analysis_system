@@ -158,6 +158,9 @@ impl FeatureComputer for DataStarvedFeature {
 
     fn compute(&self, context: &super::ResearchContext) -> Option<SemanticFeature> {
         let starved = context.signals.data_starved_count > 0;
+        if !starved {
+            return None;
+        }
         Some(SemanticFeature {
             name: self.name().to_string(),
             description: "Detect data-starved signals".to_string(),
@@ -177,6 +180,9 @@ impl FeatureComputer for StateTransitionFeature {
 
     fn compute(&self, context: &super::ResearchContext) -> Option<SemanticFeature> {
         let transitioning = context.market.transition.is_some();
+        if !transitioning {
+            return None;
+        }
         Some(SemanticFeature {
             name: self.name().to_string(),
             description: "Detect regime state transition".to_string(),

@@ -20,8 +20,8 @@ impl ContextBuilder {
     fn build_market_context(snapshot: &DashboardSnapshot) -> MarketContext {
         MarketContext {
             current_state: snapshot.regime_label.clone(),
-            previous_state: String::new(), // TODO: track previous state
-            confidence: 0.8,               // Default confidence
+            previous_state: None, // None = not yet tracked
+            confidence: 0.8,      // TODO: compute from data quality
             drivers: Vec::new(),
             transition: None, // TODO: detect transitions
         }
@@ -40,8 +40,8 @@ impl ContextBuilder {
 
         LiquidityContext {
             pressure,
-            yield_curve_status: "normal".to_string(), // TODO: derive from data
-            dollar_strength: 0.0,                     // TODO: derive from macro data
+            yield_curve_status: None, // None = not yet available
+            dollar_strength: None,    // None = not yet available
         }
     }
 

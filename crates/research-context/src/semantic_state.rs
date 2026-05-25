@@ -14,9 +14,9 @@ pub struct ResearchContext {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketContext {
-    pub current_state: String,      // "risk_off_transition"
-    pub previous_state: String,     // "risk_on"
-    pub confidence: f64,            // [0, 1]
+    pub current_state: String,
+    pub previous_state: Option<String>,  // None = not yet tracked
+    pub confidence: f64,
     pub drivers: Vec<String>,
     pub transition: Option<RegimeTransition>,
 }
@@ -24,11 +24,12 @@ pub struct MarketContext {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiquidityContext {
     pub pressure: LiquidityPressure,
-    pub yield_curve_status: String,  // "normal" / "flat" / "inverted"
-    pub dollar_strength: f64,
+    pub yield_curve_status: Option<String>,  // None = not yet available
+    pub dollar_strength: Option<f64>,         // None = not yet available
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LiquidityPressure {
     Low,
     Moderate,
@@ -44,6 +45,7 @@ pub struct BreadthContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum BreadthCondition {
     Strong,
     Weakening,
@@ -58,6 +60,7 @@ pub struct RotationContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RotationState {
     Broad,
     Concentrated,
