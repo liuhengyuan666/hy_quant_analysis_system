@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FactorCompositeAnalysis",
+  "type": "object",
+  "required": ["composite_signal", "factor_weights", "factor_contributions", "risk_parity_weight", "recommendation", "confidence"],
+  "properties": {
+    "composite_signal": {
+      "type": "number",
+      "minimum": -1,
+      "maximum": 1,
+      "description": "Normalized composite multi-factor signal. Positive = bullish, negative = defensive."
+    },
+    "factor_weights": {
+      "type": "object",
+      "required": ["momentum", "value", "quality", "crowding"],
+      "properties": {
+        "momentum": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "quality": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "crowding": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "description": "Risk parity factor weights, normalized to sum to 1.0."
+    },
+    "factor_contributions": {
+      "type": "object",
+      "required": ["momentum", "value", "quality", "crowding"],
+      "properties": {
+        "momentum": {
+          "type": "number"
+        },
+        "value": {
+          "type": "number"
+        },
+        "quality": {
+          "type": "number"
+        },
+        "crowding": {
+          "type": "number"
+        }
+      },
+      "description": "Marginal contribution of each factor to the composite signal."
+    },
+    "risk_parity_weight": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Risk parity scaling factor derived from inverse volatility normalization."
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": ["overweight_risk", "neutral", "defensive", "high_quality", "avoid_crowded"],
+      "description": "Actionable recommendation based on composite signal and regime context."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence score adjusted by data freshness, factor agreement, and regime alignment."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional warnings for missing factors, stale data, or low-confidence conditions."
+    },
+    "reasoning_trace": {
+      "type": "object",
+      "description": "Step-by-step reasoning trace from the analysis graph."
+    }
+  }
+}
