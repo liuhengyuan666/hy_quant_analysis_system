@@ -41,8 +41,11 @@ pub enum OutputFormat {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisPriority {
+    #[serde(rename = "macro")]
     pub macro_priority: f64,
+    #[serde(rename = "technical")]
     pub technical_priority: f64,
+    #[serde(rename = "sentiment")]
     pub sentiment_priority: f64,
 }
 
@@ -88,9 +91,9 @@ impl AgentProfile {
         if let Some(prompt) = &self.system_prompt {
             prompt
                 .replace("{reasoning_style}", &self.reasoning_style.join(", "))
-                .replace("{risk_tolerance}", &format!("{:?}", self.risk_tolerance))
-                .replace("{output_depth}", &format!("{:?}", self.output_depth))
-                .replace("{tone}", &format!("{:?}", self.analysis_constraints.tone))
+                .replace("{risk_tolerance}", &format!("{:?}", self.risk_tolerance).to_lowercase())
+                .replace("{output_depth}", &format!("{:?}", self.output_depth).to_lowercase())
+                .replace("{tone}", &format!("{:?}", self.analysis_constraints.tone).to_lowercase())
         } else {
             self.default_system_prompt()
         }
