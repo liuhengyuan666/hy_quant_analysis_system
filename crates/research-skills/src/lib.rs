@@ -1,3 +1,4 @@
+pub mod agent_profile;
 pub mod skill;
 pub mod trigger;
 pub mod reasoning;
@@ -10,6 +11,7 @@ pub mod token_budget;
 pub mod deterministic;
 pub mod regime_state_machine;
 
+pub use agent_profile::{AgentProfile, RiskTolerance, OutputDepth, OutputFormat, RenderingTone};
 pub use skill::*;
 pub use trigger::*;
 pub use reasoning::*;
