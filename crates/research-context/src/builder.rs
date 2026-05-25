@@ -14,6 +14,8 @@ impl ContextBuilder {
             rotation: Self::build_rotation_context(snapshot),
             regime: Self::build_regime_context(snapshot),
             signals: Self::build_signals_context(snapshot),
+            macro_: Self::build_macro_context(snapshot),
+            risk: Self::build_risk_context(snapshot),
         }
     }
 
@@ -40,6 +42,7 @@ impl ContextBuilder {
 
         LiquidityContext {
             pressure,
+            spread: None,  // TODO: compute from data when available
             yield_curve_status: None, // None = not yet available
             dollar_strength: None,    // None = not yet available
         }
@@ -80,6 +83,12 @@ impl ContextBuilder {
             .map(|r| r.symbol.clone())
             .collect();
 
+        let bottom_sectors: Vec<String> = snapshot
+            .bottom_rotation
+            .iter()
+            .map(|r| r.symbol.clone())
+            .collect();
+
         // Simple heuristic: if top 3 have similar momentum, it's broad
         let state = if snapshot.top_rotation.len() >= 3 {
             let top3_momentum: Vec<f64> = snapshot
@@ -108,7 +117,12 @@ impl ContextBuilder {
         RotationContext {
             state,
             top_sectors,
+            bottom_sectors,
             leadership_stability: 0.7, // TODO: compute from history
+            momentum_factor: None,  // TODO: compute from rotation data
+            value_factor: None,     // TODO: compute from rotation data
+            quality_factor: None,   // TODO: compute from rotation data
+            crowding_factor: None,  // TODO: compute from rotation data
         }
     }
 
@@ -125,6 +139,23 @@ impl ContextBuilder {
             bullish_count: snapshot.bullish_signals.len(),
             defensive_count: snapshot.defensive_signals.len(),
             data_starved_count: 0, // TODO: get from SignalBuildStats
+        }
+    }
+
+    fn build_macro_context(_snapshot: &DashboardSnapshot) -> MacroContext {
+        MacroContext {
+            spread_10y: None,
+            dxy_index: None,
+            foreign_flow: None,
+            vix: None,
+        }
+    }
+
+    fn build_risk_context(_snapshot: &DashboardSnapshot) -> RiskContext {
+        RiskContext {
+            skewness: None,
+            kurtosis: None,
+            tail_index: None,
         }
     }
 }

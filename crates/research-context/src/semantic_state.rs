@@ -1,6 +1,23 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
+/// Macro linkage context (external factors)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MacroContext {
+    pub spread_10y: Option<f64>,   // 中美利差（目前无数据）
+    pub dxy_index: Option<f64>,    // 美元指数（目前无数据）
+    pub foreign_flow: Option<f64>, // 外资流向（目前无数据）
+    pub vix: Option<f64>,          // VIX波动率（目前无数据）
+}
+
+/// Risk / tail context
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskContext {
+    pub skewness: Option<f64>,     // 偏度（目前无数据）
+    pub kurtosis: Option<f64>,     // 峰度（目前无数据）
+    pub tail_index: Option<f64>,   // 尾部指数（目前无数据）
+}
+
 /// Main ResearchContext - modular composition, NOT a god object
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchContext {
@@ -10,6 +27,8 @@ pub struct ResearchContext {
     pub rotation: RotationContext,
     pub regime: RegimeContext,
     pub signals: SignalsContext,
+    pub macro_: MacroContext,
+    pub risk: RiskContext,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +43,7 @@ pub struct MarketContext {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiquidityContext {
     pub pressure: LiquidityPressure,
+    pub spread: Option<f64>,                  // 资金利差（目前无数据）
     pub yield_curve_status: Option<String>,  // None = not yet available
     pub dollar_strength: Option<f64>,         // None = not yet available
 }
@@ -56,7 +76,12 @@ pub enum BreadthCondition {
 pub struct RotationContext {
     pub state: RotationState,
     pub top_sectors: Vec<String>,
+    pub bottom_sectors: Vec<String>,
     pub leadership_stability: f64,
+    pub momentum_factor: Option<f64>,          // 动量因子（目前无数据）
+    pub value_factor: Option<f64>,             // 价值因子（目前无数据）
+    pub quality_factor: Option<f64>,           // 质量因子（目前无数据）
+    pub crowding_factor: Option<f64>,          // 拥挤因子（目前无数据）
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

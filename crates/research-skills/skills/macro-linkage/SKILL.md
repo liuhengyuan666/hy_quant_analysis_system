@@ -9,10 +9,13 @@ trigger:
   any:
     - field: regime.macro_stale_days
       operator: ">"
-      value: 2
-    - field: macro.spread_10y
-      operator: "changed"
-      value: 20
+      value: 3
+    - field: breadth.breadth_pct
+      operator: "<"
+      value: 50
+    - field: liquidity.pressure
+      operator: "=="
+      value: high
   none: []
   weight:
     regime: 0.85
