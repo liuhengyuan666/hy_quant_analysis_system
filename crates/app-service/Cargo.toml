@@ -8,6 +8,7 @@ authors.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-openai.workspace = true
+async-trait = "0.1"
 backtest-engine = { path = "../backtest-engine" }
 chrono.workspace = true
 data-ingestion = { path = "../data-ingestion" }

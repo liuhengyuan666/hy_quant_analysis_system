@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
@@ -1290,6 +1291,26 @@ fn validate_sync_refresh_result(success: bool, blocking_alerts: &[String]) -> Re
         );
     }
     Ok(())
+}
+
+/// Placeholder LLM provider for testing.
+/// Returns structured dummy responses. Replace with a real provider
+/// (OpenAI, DeepSeek, etc.) for actual analysis.
+struct PlaceholderProvider;
+
+#[async_trait]
+impl research_skills::provider::LlmProvider for PlaceholderProvider {
+    async fn chat(
+        &self,
+        _system_prompt: &str,
+        _user_prompt: &str,
+        _config: &research_skills::provider::LlmCallConfig,
+    ) -> anyhow::Result<String> {
+        Ok(r#"{
+            "analysis": "Market regime analysis completed",
+            "note": "This is a placeholder response. Configure a real LLM provider for actual analysis."
+        }"#.to_string())
+    }
 }
 
 impl AppContext {
@@ -3525,7 +3546,7 @@ impl AppContext {
     ///
     /// Combines ResearchContext + SkillRouter + SkillExecutor into a
     /// complete pipeline: build context → route skills → execute skill.
-    pub fn analyze_with_skill(
+    pub async fn analyze_with_skill(
         &self,
         skill_name: &str,
         scope: ReportScope,
@@ -3556,13 +3577,21 @@ impl AppContext {
             }));
         }
 
-        // 4. Run state machine for regime analysis
+        // 4. Run state machine for regime analysis (deterministic)
         let current_state = research_skills::RegimeStateMachine::current_state(&context);
         let transition =
             research_skills::RegimeStateMachine::detect_transition(current_state, &context);
         let confidence = research_skills::RegimeStateMachine::calculate_confidence(&context);
 
-        // 5. Build analysis result
+        // 5. Create executor and run LLM pipeline
+        let budget = research_skills::token_budget::TokenBudget::default();
+        let deterministic = research_skills::deterministic::DeterministicConfig::default();
+        let executor = research_skills::executor::SkillExecutor::new(budget, deterministic);
+        let provider = PlaceholderProvider;
+
+        let llm_output = executor.execute(skill, &context, &provider).await?;
+
+        // 6. Merge deterministic + LLM results
         let result = serde_json::json!({
             "skill": skill_name,
             "triggered": true,
@@ -3578,6 +3607,8 @@ impl AppContext {
                     "recommendation": self.generate_recommendation(&context)
                 }
             },
+            "llm_analysis": llm_output.response,
+            "token_usage": llm_output.token_usage,
             "context": context
         });
 

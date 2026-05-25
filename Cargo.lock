@@ -115,6 +115,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-openai",
+ "async-trait",
  "backtest-engine",
  "chrono",
  "core-domain",
@@ -3120,6 +3121,7 @@ dependencies = [
  "clap",
  "market-store",
  "serde_json",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

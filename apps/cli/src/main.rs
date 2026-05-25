@@ -398,7 +398,9 @@ fn main() -> Result<()> {
                 ReportScopeArg::Cn => ReportScope::Cn,
                 ReportScopeArg::Hk => ReportScope::Hk,
             };
-            let result = context.analyze_with_skill(&skill, scope)?;
+            let runtime = tokio::runtime::Runtime::new()
+                .context("failed to create tokio runtime")?;
+            let result = runtime.block_on(context.analyze_with_skill(&skill, scope))?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
     }
