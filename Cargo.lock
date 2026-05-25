@@ -3444,6 +3444,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "research-context"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rotation-engine"
 version = "0.1.0"
 dependencies = [

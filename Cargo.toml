@@ -10,6 +10,7 @@ members = [
   "crates/macro-engine",
   "crates/market-store",
   "crates/report-engine",
+  "crates/research-context",
   "crates/rotation-engine",
   "crates/signal-engine",
   "crates/strategy-engine",
