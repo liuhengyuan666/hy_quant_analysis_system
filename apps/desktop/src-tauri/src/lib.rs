@@ -844,6 +844,41 @@ fn retry_dashboard_refresh(
     spawn_dashboard_refresh(refresh.inner().clone(), Some(retry_stage))
 }
 
+#[tauri::command]
+async fn analyze_with_skill(
+    scope: Option<String>,
+    skill_name: String,
+    agent_name: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let scope = scope.unwrap_or_else(|| "global".to_string());
+
+    // Load agent profile if provided
+    let profile = if let Some(ref agent) = agent_name {
+        let profile_path = format!("research/agents/{}.yaml", agent);
+        let profile_yaml = std::fs::read_to_string(&profile_path)
+            .map_err(|e| format!("Failed to load agent profile '{}': {}", agent, e))?;
+        let profile = research_skills::AgentProfile::from_yaml(&profile_yaml)
+            .map_err(|e| format!("Failed to parse agent profile '{}': {}", agent, e))?;
+        Some(profile)
+    } else {
+        None
+    };
+
+    // Parse scope
+    let report_scope = match scope.as_str() {
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        _ => app_service::ReportScope::Global,
+    };
+
+    // Build context and run skill-based analysis
+    let context = AppContext::new(StorageConfig::default());
+    context
+        .analyze_with_skill(&skill_name, report_scope, profile.as_ref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -865,7 +900,8 @@ pub fn run() {
             cancel_dashboard_refresh,
             retry_dashboard_refresh,
             get_user_preferences,
-            set_user_preference
+            set_user_preference,
+            analyze_with_skill
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

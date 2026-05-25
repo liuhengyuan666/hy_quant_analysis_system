@@ -19,5 +19,8 @@ pub use trigger::*;
 pub use reasoning::*;
 pub use regime_state_machine::*;
 
+// Re-export analysis types
+pub use analysis::ResearchAnalysis;
+
 // Re-export renderer
 pub use renderer::render_analysis_markdown;

@@ -3137,6 +3137,7 @@ dependencies = [
  "core-domain",
  "market-store",
  "report-engine",
+ "research-skills",
  "serde",
  "serde_json",
  "tauri",
