@@ -268,7 +268,17 @@ enum Command {
         /// Output format (json, markdown)
         #[arg(long, default_value = "json")]
         format: String,
+
+        /// Use deterministic mode (temperature=0, seed=42)
+        #[arg(long)]
+        deterministic: bool,
+
+        /// Set random seed for deterministic mode
+        #[arg(long, default_value = "42")]
+        seed: u64,
     },
+    /// List all available research skills
+    ListSkills,
 }
 
 fn main() -> Result<()> {
@@ -502,16 +512,48 @@ fn main() -> Result<()> {
             let result = context.analyze_report_with_llm(report_date, scope.into())?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
+        Command::ListSkills => {
+            let skill_dir = std::path::PathBuf::from("crates/research-skills/skills");
+            let registry = research_skills::registry::SkillRegistry::new(skill_dir)
+                .map_err(|e| anyhow::anyhow!("Failed to load skills: {}", e))?;
+
+            println!("Available Research Skills:");
+            let mut names: Vec<_> = registry.list().into_iter().map(|s| s.to_string()).collect();
+            names.sort();
+            for name in &names {
+                if let Some(skill) = registry.get(name) {
+                    println!(
+                        "  - {}: {} (priority: {})",
+                        name,
+                        skill.definition.description,
+                        skill.definition.priority
+                    );
+                }
+            }
+        }
         Command::Analyze {
             skill,
             scope,
             agent,
             format,
+            deterministic,
+            seed,
         } => {
             let scope = match scope {
                 ReportScopeArg::Global => ReportScope::Global,
                 ReportScopeArg::Cn => ReportScope::Cn,
                 ReportScopeArg::Hk => ReportScope::Hk,
+            };
+            // TODO: Wire DeterministicConfig through to analyze_with_skill / executor
+            let _deterministic = if deterministic {
+                research_skills::DeterministicConfig {
+                    temperature: 0.0,
+                    seed,
+                    top_p: 0.1,
+                    max_tokens: 2048,
+                }
+            } else {
+                research_skills::DeterministicConfig::default()
             };
             let profile = if let Some(agent_name) = &agent {
                 let profile_path = format!("research/agents/{}.yaml", agent_name);

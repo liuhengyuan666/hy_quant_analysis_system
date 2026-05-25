@@ -62,53 +62,127 @@ impl SkillRouter {
         let field_value = Self::extract_field(&condition.field, context);
 
         match field_value {
-            Some(value) => Self::compare(&condition.operator, value, &condition.value),
-            None => false, // Field not found = condition fails
+            Some(value) => Self::compare(&condition.operator, &value, &condition.value),
+            None => false, // Field not found or None = condition fails
         }
     }
 
     /// Extract a field value from context using dot notation.
-    /// Supports: market.confidence, breadth.breadth_pct, regime.macro_stale_days, etc.
-    fn extract_field(field: &str, context: &ResearchContext) -> Option<f64> {
+    /// Supports all fields used by skill triggers including strings and Option<f64>.
+    fn extract_field(field: &str, context: &ResearchContext) -> Option<ConditionValue> {
         let parts: Vec<&str> = field.split('.').collect();
 
         match parts.as_slice() {
-            ["market", "confidence"] => Some(context.market.confidence),
-            ["breadth", "breadth_pct"] => Some(context.breadth.breadth_pct),
-            ["breadth", "breadth_delta"] => Some(context.breadth.breadth_delta),
-            ["regime", "confidence"] => Some(context.regime.confidence),
-            ["regime", "macro_stale_days"] => Some(context.regime.macro_stale_days as f64),
-            ["signals", "bullish_count"] => Some(context.signals.bullish_count as f64),
-            ["signals", "defensive_count"] => Some(context.signals.defensive_count as f64),
-            ["signals", "data_starved_count"] => Some(context.signals.data_starved_count as f64),
-            ["liquidity", "dollar_strength"] => context.liquidity.dollar_strength,
+            // ---------- market ----------
+            ["market", "confidence"] => Some(ConditionValue::Float(context.market.confidence)),
+
+            // ---------- breadth ----------
+            ["breadth", "breadth_pct"] => Some(ConditionValue::Float(context.breadth.breadth_pct)),
+            ["breadth", "breadth_delta"] => Some(ConditionValue::Float(context.breadth.breadth_delta)),
+
+            // ---------- regime ----------
+            ["regime", "confidence"] => Some(ConditionValue::Float(context.regime.confidence)),
+            ["regime", "macro_stale_days"] => {
+                Some(ConditionValue::Integer(context.regime.macro_stale_days as i64))
+            }
+            ["regime", "current"] => Some(ConditionValue::String(context.regime.current.clone())),
+
+            // ---------- signals ----------
+            ["signals", "bullish_count"] => {
+                Some(ConditionValue::Integer(context.signals.bullish_count as i64))
+            }
+            ["signals", "defensive_count"] => {
+                Some(ConditionValue::Integer(context.signals.defensive_count as i64))
+            }
+            ["signals", "data_starved_count"] => {
+                Some(ConditionValue::Integer(context.signals.data_starved_count as i64))
+            }
+
+            // ---------- liquidity ----------
+            ["liquidity", "dollar_strength"] => {
+                context.liquidity.dollar_strength.map(ConditionValue::Float)
+            }
+            ["liquidity", "pressure"] => Some(ConditionValue::String(
+                format!("{:?}", context.liquidity.pressure).to_lowercase(),
+            )),
+
+            // ---------- rotation ----------
+            ["rotation", "momentum_factor"] => {
+                context.rotation.momentum_factor.map(ConditionValue::Float)
+            }
+            ["rotation", "value_factor"] => {
+                context.rotation.value_factor.map(ConditionValue::Float)
+            }
+            ["rotation", "quality_factor"] => {
+                context.rotation.quality_factor.map(ConditionValue::Float)
+            }
+            ["rotation", "crowding_factor"] => {
+                context.rotation.crowding_factor.map(ConditionValue::Float)
+            }
+
+            // ---------- macro ----------
+            ["macro", "spread_10y"] => context.macro_.spread_10y.map(ConditionValue::Float),
+            ["macro", "dxy_index"] => context.macro_.dxy_index.map(ConditionValue::Float),
+            ["macro", "foreign_flow"] => context.macro_.foreign_flow.map(ConditionValue::Float),
+            ["macro", "vix"] => context.macro_.vix.map(ConditionValue::Float),
+
+            // ---------- risk ----------
+            ["risk", "skewness"] => context.risk.skewness.map(ConditionValue::Float),
+            ["risk", "kurtosis"] => context.risk.kurtosis.map(ConditionValue::Float),
+            ["risk", "tail_index"] => context.risk.tail_index.map(ConditionValue::Float),
+
             _ => None,
         }
     }
 
-    /// Compare values using the operator
-    fn compare(op: &ComparisonOp, left: f64, right: &ConditionValue) -> bool {
-        match right {
-            ConditionValue::Float(r) => match op {
-                ComparisonOp::LessThan => left < *r,
-                ComparisonOp::LessThanOrEqual => left <= *r,
-                ComparisonOp::GreaterThan => left > *r,
-                ComparisonOp::GreaterThanOrEqual => left >= *r,
-                ComparisonOp::Equal => (left - r).abs() < f64::EPSILON,
-                ComparisonOp::NotEqual => (left - r).abs() >= f64::EPSILON,
+    /// Compare two ConditionValues using the operator.
+    /// Handles numeric (Float/Integer), Boolean, and String comparisons.
+    /// Mixed numeric types are promoted to Float.
+    fn compare(op: &ComparisonOp, left: &ConditionValue, right: &ConditionValue) -> bool {
+        match (left, right) {
+            // --- Float/Float ---
+            (ConditionValue::Float(l), ConditionValue::Float(r)) => match op {
+                ComparisonOp::LessThan => l < r,
+                ComparisonOp::LessThanOrEqual => l <= r,
+                ComparisonOp::GreaterThan => l > r,
+                ComparisonOp::GreaterThanOrEqual => l >= r,
+                ComparisonOp::Equal => (l - r).abs() < f64::EPSILON,
+                ComparisonOp::NotEqual => (l - r).abs() >= f64::EPSILON,
             },
-            ConditionValue::Integer(r) => {
+
+            // --- Integer/Integer → promote to Float ---
+            (ConditionValue::Integer(l), ConditionValue::Integer(r)) => {
+                Self::compare(
+                    op,
+                    &ConditionValue::Float(*l as f64),
+                    &ConditionValue::Float(*r as f64),
+                )
+            }
+
+            // --- Mixed Integer/Float → promote to Float ---
+            (ConditionValue::Float(_l), ConditionValue::Integer(r)) => {
                 Self::compare(op, left, &ConditionValue::Float(*r as f64))
             }
-            ConditionValue::Boolean(r) => {
-                let left_bool = left != 0.0;
-                match op {
-                    ComparisonOp::Equal => left_bool == *r,
-                    ComparisonOp::NotEqual => left_bool != *r,
-                    _ => false,
-                }
+            (ConditionValue::Integer(l), ConditionValue::Float(_r)) => {
+                Self::compare(op, &ConditionValue::Float(*l as f64), right)
             }
-            ConditionValue::String(_) => false, // String comparison not supported for numeric fields
+
+            // --- Boolean/Boolean ---
+            (ConditionValue::Boolean(l), ConditionValue::Boolean(r)) => match op {
+                ComparisonOp::Equal => l == r,
+                ComparisonOp::NotEqual => l != r,
+                _ => false,
+            },
+
+            // --- String/String (case-insensitive == and != only) ---
+            (ConditionValue::String(l), ConditionValue::String(r)) => match op {
+                ComparisonOp::Equal => l.eq_ignore_ascii_case(r),
+                ComparisonOp::NotEqual => !l.eq_ignore_ascii_case(r),
+                _ => false,
+            },
+
+            // --- Mixed types → not supported ---
+            _ => false,
         }
     }
 

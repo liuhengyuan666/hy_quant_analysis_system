@@ -23,4 +23,5 @@ pub use regime_state_machine::*;
 pub use analysis::ResearchAnalysis;
 
 // Re-export renderer
+pub use deterministic::DeterministicConfig;
 pub use renderer::render_analysis_markdown;
