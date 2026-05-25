@@ -1,3 +1,27 @@
+## ADR-032: V4 Research Cognition Layer 实现完成
+
+**Status:** committed
+
+### Context
+V4 规划文档（`设计规划-v4.md`）定义了 Research Cognition Layer 的完整架构，包括 ResearchContext、Skill 系统、Agent Profile、结构化输出等。
+
+### Decision
+完成 V4 全部 6 个 Waves 的实现：
+1. **Wave 1**: ResearchContext（8 子 Context）+ ContextBuilder + FeatureEngine（8 语义特征）
+2. **Wave 2**: Skill 基础设施（Registry/Router/Executor/Provider/TokenBudget/DeterministicConfig）
+3. **Wave 3**: 1 个完整 Skill 链路（market-regime-reasoning）
+4. **Wave 4**: 扩展到 6 个 Skills（liquidity-shock, sector-rotation, macro-linkage, factor-composite, volatility-tail）
+5. **Wave 5**: AgentProfile 系统（3 个配置：macro-strategist, risk-manager, technical-analyst）
+6. **Wave 6**: 结构化输出（ResearchAnalysis + Markdown renderer）+ Desktop 集成 + V3 迁移
+
+Oracle 全面评审通过，D1-D4 条件已修复。
+
+**Branch:** `v4`（31 个提交，已推送到 origin）
+
+**Tags:** v4, research-cognition, skill-system, agent-profile
+
+---
+
 ## ADR-026: Memory 体系清理与状态同步
 
 **Status:** active
