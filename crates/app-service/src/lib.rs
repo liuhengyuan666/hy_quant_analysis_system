@@ -3520,6 +3520,159 @@ impl AppContext {
             .filter_map(|f| f.compute(&context))
             .collect())
     }
+
+    /// Analyze market using a specific skill.
+    ///
+    /// Combines ResearchContext + SkillRouter + SkillExecutor into a
+    /// complete pipeline: build context → route skills → execute skill.
+    pub fn analyze_with_skill(
+        &self,
+        skill_name: &str,
+        scope: ReportScope,
+    ) -> anyhow::Result<serde_json::Value> {
+        // 1. Build ResearchContext
+        let context = self.research_context(scope)?;
+
+        // 2. Load skill from registry
+        let skill_dir = std::path::PathBuf::from("crates/research-skills/skills");
+        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
+
+        let skill = registry
+            .get(skill_name)
+            .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
+
+        // 3. Evaluate trigger
+        let should_run = research_skills::router::SkillRouter::evaluate_trigger(
+            &skill.definition.trigger,
+            &context,
+        );
+
+        if !should_run {
+            return Ok(serde_json::json!({
+                "skill": skill_name,
+                "triggered": false,
+                "reason": "Trigger conditions not met",
+                "context": context
+            }));
+        }
+
+        // 4. Run state machine for regime analysis
+        let current_state = research_skills::RegimeStateMachine::current_state(&context);
+        let transition =
+            research_skills::RegimeStateMachine::detect_transition(current_state, &context);
+        let confidence = research_skills::RegimeStateMachine::calculate_confidence(&context);
+
+        // 5. Build analysis result
+        let result = serde_json::json!({
+            "skill": skill_name,
+            "triggered": true,
+            "scope": scope.as_str(),
+            "regime_analysis": {
+                "current_state": format!("{:?}", current_state),
+                "transition": transition,
+                "confidence": confidence,
+                "key_drivers": self.extract_key_drivers(&context),
+                "risk_assessment": {
+                    "level": self.assess_risk_level(&context),
+                    "factors": self.identify_risk_factors(&context),
+                    "recommendation": self.generate_recommendation(&context)
+                }
+            },
+            "context": context
+        });
+
+        Ok(result)
+    }
+
+    /// Extract key drivers from context
+    fn extract_key_drivers(&self, context: &research_context::ResearchContext) -> Vec<String> {
+        let mut drivers = Vec::new();
+
+        if context.breadth.breadth_pct < 30.0 {
+            drivers.push("breadth_collapse".to_string());
+        }
+        if context.breadth.breadth_delta < -10.0 {
+            drivers.push("breadth_deteriorating".to_string());
+        }
+        if matches!(
+            context.liquidity.pressure,
+            research_context::LiquidityPressure::Critical
+        ) {
+            drivers.push("liquidity_critical".to_string());
+        }
+        if context.regime.macro_stale_days > 3 {
+            drivers.push("macro_stale".to_string());
+        }
+
+        drivers
+    }
+
+    /// Assess risk level from context
+    fn assess_risk_level(&self, context: &research_context::ResearchContext) -> String {
+        if context.breadth.breadth_pct < 20.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::Critical
+            )
+        {
+            "critical".to_string()
+        } else if context.breadth.breadth_pct < 30.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::High
+            )
+        {
+            "high".to_string()
+        } else if context.breadth.breadth_pct < 50.0 {
+            "medium".to_string()
+        } else {
+            "low".to_string()
+        }
+    }
+
+    /// Identify risk factors
+    fn identify_risk_factors(
+        &self,
+        context: &research_context::ResearchContext,
+    ) -> Vec<String> {
+        let mut factors = Vec::new();
+
+        if context.breadth.breadth_pct < 30.0 {
+            factors.push("breadth_below_30".to_string());
+        }
+        if context.breadth.breadth_pct < 20.0 {
+            factors.push("breadth_extreme_collapse".to_string());
+        }
+        if matches!(
+            context.liquidity.pressure,
+            research_context::LiquidityPressure::Critical
+        ) {
+            factors.push("liquidity_critical".to_string());
+        }
+        if context.regime.macro_stale_days > 5 {
+            factors.push("macro_severely_stale".to_string());
+        }
+
+        factors
+    }
+
+    /// Generate recommendation
+    fn generate_recommendation(&self, context: &research_context::ResearchContext) -> String {
+        if context.breadth.breadth_pct < 20.0 {
+            "exit".to_string()
+        } else if context.breadth.breadth_pct < 30.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::Critical
+            )
+        {
+            "reduce_exposure".to_string()
+        } else if context.breadth.breadth_pct < 50.0 {
+            "increase_quality".to_string()
+        } else {
+            "maintain".to_string()
+        }
+    }
 }
 
 #[cfg(test)]

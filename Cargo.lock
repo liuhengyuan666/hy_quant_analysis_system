@@ -125,6 +125,7 @@ dependencies = [
  "market-store",
  "report-engine",
  "research-context",
+ "research-skills",
  "rotation-engine",
  "serde",
  "serde_json",
