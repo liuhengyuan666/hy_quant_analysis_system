@@ -26,7 +26,7 @@ inputs:
   - liquidity.spread
   - breadth.breadth_pct
   - breadth.breadth_delta
-  - regime.state
+  - regime.current
   - regime.confidence
 
 outputs:
