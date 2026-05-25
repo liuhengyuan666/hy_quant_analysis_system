@@ -59,14 +59,28 @@ impl Skill {
         let overview = Self::extract_section(body, "Overview").unwrap_or_default();
         let reasoning_yaml =
             Self::extract_section(body, "Reasoning Graph").unwrap_or_default();
-        let output_format =
+        let output_format_raw =
             Self::extract_section(body, "Output Format").unwrap_or_default();
 
-        let reasoning: ReasoningGraph = if reasoning_yaml.is_empty() {
+        // Strip code fences before parsing (LLM responses often wrap in ```yaml / ```json)
+        let clean_reasoning = reasoning_yaml
+            .trim_start_matches("```yaml")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+
+        let reasoning: ReasoningGraph = if clean_reasoning.is_empty() {
             ReasoningGraph::default()
         } else {
-            serde_yaml::from_str(&reasoning_yaml)?
+            serde_yaml::from_str(clean_reasoning)?
         };
+
+        let output_format = output_format_raw
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+            .to_string();
 
         Ok(Skill {
             definition,

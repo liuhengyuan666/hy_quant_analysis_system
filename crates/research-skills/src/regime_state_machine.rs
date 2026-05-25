@@ -77,13 +77,18 @@ impl RegimeStateMachine {
                         confidence: 0.8,
                     });
                 }
-                // neutral → risk_on: strong recovery
-                if breadth_pct > 60.0 && !liquidity_high {
+                // neutral → risk_on: strong recovery (only when liquidity is explicitly low)
+                if breadth_pct > 60.0
+                    && matches!(
+                        context.liquidity.pressure,
+                        research_context::LiquidityPressure::Low
+                    )
+                {
                     return Some(TransitionResult {
                         from: current,
                         to: RegimeState::RiskOn,
                         triggered: true,
-                        condition_met: "breadth_pct > 60 && !liquidity_high".to_string(),
+                        condition_met: "breadth_pct > 60 && liquidity_low".to_string(),
                         confidence: 0.75,
                     });
                 }
