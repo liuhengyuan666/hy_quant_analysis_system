@@ -95,7 +95,7 @@ steps:
     inputs:
       - breadth.breadth_pct
       - breadth.breadth_delta
-      - regime.state
+  - regime.current
     checks:
       - is_breadth_weakening
       - is_regime_deteriorating
@@ -143,7 +143,7 @@ steps:
 
 1. Retrieve `liquidity.pressure` and `liquidity.spread` from the current analysis scope
 2. Run `funding_analysis` to determine baseline funding conditions
-3. Retrieve `breadth.breadth_pct`, `breadth.breadth_delta`, and current `regime.state`
+3. Retrieve `breadth.breadth_pct`, `breadth.breadth_delta`, and current `regime.current`
 4. Run `breadth_confirmation` to assess market breadth alignment
 5. Feed both results into `shock_detection` for final state classification
 6. Populate confidence by evaluating data freshness, signal convergence, and breadth alignment
