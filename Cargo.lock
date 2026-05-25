@@ -186,6 +186,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.89"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "atk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3445,6 +3456,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "research-benchmark"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "research-context",
+ "research-skills",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "research-context"
 version = "0.1.0"
 dependencies = [
@@ -3460,6 +3483,7 @@ name = "research-skills"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "core-domain",
  "research-context",
