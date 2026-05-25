@@ -11,6 +11,7 @@ members = [
   "crates/market-store",
   "crates/report-engine",
   "crates/research-context",
+  "crates/research-skills",
   "crates/rotation-engine",
   "crates/signal-engine",
   "crates/strategy-engine",
