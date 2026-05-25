@@ -152,6 +152,16 @@ enum Command {
         #[arg(long)]
         date: Option<NaiveDate>,
     },
+    /// Analyze market using a skill
+    Analyze {
+        /// Skill name to use
+        #[arg(long)]
+        skill: String,
+
+        /// Scope to analyze
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
 }
 
 fn main() -> Result<()> {
@@ -380,6 +390,15 @@ fn main() -> Result<()> {
                 eprintln!("[analyze-with-llm] Analyzing report for {report_date}...");
             }
             let result = context.analyze_report_with_llm(report_date, scope.into())?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::Analyze { skill, scope } => {
+            let scope = match scope {
+                ReportScopeArg::Global => ReportScope::Global,
+                ReportScopeArg::Cn => ReportScope::Cn,
+                ReportScopeArg::Hk => ReportScope::Hk,
+            };
+            let result = context.analyze_with_skill(&skill, scope)?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
     }
