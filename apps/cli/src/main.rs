@@ -130,6 +130,10 @@ enum Command {
         #[arg(long, default_value_t = true)]
         run_backtests: bool,
     },
+    ResearchContext {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     SetLlmConfig {
         #[arg(long)]
         base_url: String,
@@ -327,6 +331,14 @@ fn main() -> Result<()> {
                 eprintln!("[sync-and-export] Done.");
             }
             println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        Command::ResearchContext { scope } => {
+            let result = context.research_context(scope.into())?;
+            let features = context.research_features(scope.into())?;
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                "context": result,
+                "features": features,
+            }))?);
         }
         Command::SetLlmConfig {
             base_url,

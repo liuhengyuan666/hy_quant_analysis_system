@@ -3499,6 +3499,27 @@ impl AppContext {
             analysis_text,
         })
     }
+
+    /// Build ResearchContext for a given scope
+    pub fn research_context(&self, scope: ReportScope) -> Result<research_context::ResearchContext> {
+        let snapshot = self
+            .dashboard_snapshot_with_scope(None, scope)?
+            .context("No dashboard data available")?;
+        Ok(research_context::ContextBuilder::build(&snapshot))
+    }
+
+    /// Compute semantic features for a given scope
+    pub fn research_features(
+        &self,
+        scope: ReportScope,
+    ) -> Result<Vec<research_context::SemanticFeature>> {
+        let context = self.research_context(scope)?;
+        let features = research_context::builtin_features();
+        Ok(features
+            .iter()
+            .filter_map(|f| f.compute(&context))
+            .collect())
+    }
 }
 
 #[cfg(test)]
