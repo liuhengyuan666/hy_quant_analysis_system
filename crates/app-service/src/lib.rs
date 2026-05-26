@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
-    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig, Market,
-    RefreshJobRecord, SignalSnapshot,
+    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
+    LlmFileConfig, Market, RefreshJobRecord, SignalSnapshot,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
@@ -28,6 +28,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
+
+/// TOML-based configuration loader module
+pub mod config_loader;
 
 pub use core_domain::AnalysisScope as ReportScope;
 
@@ -3349,13 +3352,28 @@ impl AppContext {
     }
 
     pub fn set_llm_config(&self, base_url: &str, model: &str, timeout_secs: u64) -> Result<()> {
+        // 1. 写入 SQLite（向后兼容）
         let config = LlmConfig {
             base_url: base_url.to_string(),
             model: model.to_string(),
             timeout_secs,
         };
         let json = serde_json::to_string(&config).context("failed to serialize llm_config")?;
-        market_store::insert_app_config(&self.storage, "llm_config", &json)
+        market_store::insert_app_config(&self.storage, "llm_config", &json)?;
+
+        // 2. 同步写入 TOML 文件
+        let toml_path = config_loader::default_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_config(&toml_path)
+        } else {
+            LlmFileConfig::default()
+        };
+        toml_config.llm.base_url = base_url.to_string();
+        toml_config.llm.model = model.to_string();
+        toml_config.llm.timeout_secs = timeout_secs;
+        config_loader::write_llm_config_to_file(&toml_path, &toml_config)?;
+
+        Ok(())
     }
 
     pub fn get_llm_config(&self) -> Result<LlmConfig> {
@@ -3370,17 +3388,40 @@ impl AppContext {
     }
 
     pub fn set_llm_api_key(&self, api_key: &str) -> Result<()> {
+        // 1. 写入 Keyring（优先）
         let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME)?;
         match entry.set_password(api_key) {
             Ok(()) => {
                 let _ = market_store::insert_credential(&self.storage, "llm_api_key", "");
-                Ok(())
             }
             Err(keyring_err) => {
                 eprintln!("WARN: keyring storage failed ({keyring_err}), falling back to SQLite credential_store. API key will be stored in local database.");
-                market_store::insert_credential(&self.storage, "llm_api_key", api_key)
+                market_store::insert_credential(&self.storage, "llm_api_key", api_key)?;
             }
         }
+
+        // 2. 同步写入 TOML 文件（使用环境变量引用格式）
+        let toml_path = config_loader::default_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_config(&toml_path)
+        } else {
+            LlmFileConfig::default()
+        };
+
+        // 检查是否是环境变量引用格式
+        if api_key.starts_with("${") && api_key.ends_with('}') {
+            toml_config.llm.auth.api_key = Some(api_key.to_string());
+        } else {
+            // 明文 key，建议使用环境变量
+            toml_config.llm.auth.api_key = Some(api_key.to_string());
+            #[cfg(windows)]
+            eprintln!("WARN: API key stored in plaintext. Consider using environment variable reference:");
+            eprintln!("      set-llm-api-key --key \"${{OPENAI_API_KEY}}\"");
+        }
+
+        config_loader::write_llm_config_to_file(&toml_path, &toml_config)?;
+
+        Ok(())
     }
 
     pub fn get_llm_api_key(&self) -> Result<Option<String>> {
@@ -3397,18 +3438,95 @@ impl AppContext {
         }
     }
 
+    // ============================================================
+    // TOML-based LLM Config (New)
+    // ============================================================
+
+    /// 获取解析后的 LLM 配置（TOML + 环境变量 + CLI 优先级合并）
+    ///
+    /// 优先级：CLI args > TOML file (with ${VAR}) > defaults
+    pub fn get_resolved_llm_config(
+        &self,
+        cli_args: Option<config_loader::CliLlmArgs>,
+    ) -> Result<config_loader::ResolvedLlmConfig> {
+        config_loader::ResolvedLlmConfig::resolve(cli_args)
+    }
+
+    /// 显示 LLM 配置来源信息
+    pub fn show_llm_config(&self) -> Result<config_loader::ResolvedLlmConfig> {
+        self.get_resolved_llm_config(None)
+    }
+
+    /// 验证 LLM 配置文件
+    pub fn validate_llm_config(&self) -> config_loader::ConfigValidation {
+        config_loader::validate_config()
+    }
+
+    /// 从 SQLite/Keyring 迁移配置到 TOML 文件
+    pub fn migrate_llm_config_to_toml(&self, force: bool) -> Result<String> {
+        let config_path = config_loader::default_config_path()?;
+
+        // 检查文件是否已存在
+        if config_path.exists() && !force {
+            anyhow::bail!(
+                "Config file already exists: {}. Use --force to overwrite.",
+                config_path.display()
+            );
+        }
+
+        // 从 SQLite 读取现有配置
+        let old_config = self.get_llm_config()?;
+
+        // 从 Keyring/SQLite 读取 API Key
+        let api_key = self.get_llm_api_key()?;
+
+        // 构建 TOML 配置
+        let toml_config = LlmFileConfig {
+            llm: core_domain::LlmSection {
+                base_url: old_config.base_url,
+                model: old_config.model,
+                timeout_secs: old_config.timeout_secs,
+                auth: core_domain::AuthSection {
+                    api_key: api_key.map(|k| {
+                        // 如果是明文 key，提示用户设置环境变量
+                        if k.starts_with("sk-") {
+                            eprintln!("WARN: Migrating plaintext API key. Consider using environment variable reference instead.");
+                            eprintln!("      Edit config/llm.toml and change to: api_key = \"${{OPENAI_API_KEY}}\"");
+                        }
+                        k
+                    }),
+                },
+                defaults: core_domain::DefaultsSection::default(),
+            },
+        };
+
+        // 写入 TOML 文件
+        config_loader::write_llm_config_to_file(&config_path, &toml_config)?;
+
+        Ok(format!(
+            "Config migrated to: {}",
+            config_path.display()
+        ))
+    }
+
     async fn call_llm_api(
         config: LlmConfig,
         api_key: String,
         system_prompt: &'static str,
         user_prompt: String,
+        temperature: f64,
+        max_tokens: usize,
+        seed: Option<u64>,
     ) -> Result<String> {
         let openai_config = async_openai::config::OpenAIConfig::new()
             .with_api_key(api_key)
             .with_api_base(config.base_url);
         let client = async_openai::Client::with_config(openai_config);
-        let request = async_openai::types::chat::CreateChatCompletionRequestArgs::default()
+        let mut request_builder = async_openai::types::chat::CreateChatCompletionRequestArgs::default();
+        request_builder
             .model(&config.model)
+            .temperature(temperature as f32)
+            .max_tokens(max_tokens as u32)
             .messages([
                 async_openai::types::chat::ChatCompletionRequestSystemMessageArgs::default()
                     .content(system_prompt)
@@ -3420,7 +3538,11 @@ impl AppContext {
                     .build()
                     .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
                     .into(),
-            ])
+            ]);
+        if let Some(seed_val) = seed {
+            request_builder.seed(seed_val as i64);
+        }
+        let request = request_builder
             .build()
             .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
 
@@ -3447,10 +3569,21 @@ impl AppContext {
         report_date: NaiveDate,
         scope: ReportScope,
     ) -> Result<LlmAnalysisResult> {
-        let config = self.get_llm_config()?;
-        let api_key = self
-            .get_llm_api_key()?
-            .context("LLM API key not configured. Use set_llm_api_key first.")?;
+        // P2: 从 TOML 配置读取（优先级：CLI > File > Default）
+        let resolved = self.get_resolved_llm_config(None)?;
+        let config = LlmConfig {
+            base_url: resolved.base_url,
+            model: resolved.model,
+            timeout_secs: resolved.timeout_secs,
+        };
+        // API Key 回退链：TOML → Keyring → SQLite credential_store
+        let api_key = resolved
+            .api_key
+            .or_else(|| self.get_llm_api_key().ok().flatten())
+            .context("LLM API key not configured. Use set_llm_api_key or config/llm.toml.")?;
+        let temperature = resolved.temperature;
+        let max_tokens = resolved.max_tokens;
+        let seed = resolved.seed;
 
         let snapshot = self
             .dashboard_snapshot_with_scope(Some(report_date), scope)?
@@ -3474,6 +3607,7 @@ impl AppContext {
                             .context("failed to create tokio runtime")?;
                         runtime.block_on(Self::call_llm_api(
                             config, api_key, system_prompt, user_prompt,
+                            temperature, max_tokens, seed,
                         ))
                     })
                     .join()
@@ -3485,6 +3619,7 @@ impl AppContext {
                     .context("failed to create tokio runtime")?;
                 runtime.block_on(Self::call_llm_api(
                     config, api_key, system_prompt, user_prompt,
+                    temperature, max_tokens, seed,
                 ))?
             }
         };

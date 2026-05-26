@@ -133,6 +133,7 @@ dependencies = [
  "signal-engine",
  "strategy-engine",
  "tokio",
+ "toml 0.8.2",
  "uuid",
  "wiremock",
 ]
@@ -3488,6 +3489,7 @@ name = "research-skills"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-openai",
  "async-trait",
  "chrono",
  "core-domain",
@@ -3495,6 +3497,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "tokio",
 ]
 
 [[package]]

@@ -251,6 +251,18 @@ enum Command {
         #[arg(long)]
         date: Option<NaiveDate>,
     },
+    /// Show current LLM configuration and its source
+    ShowLlmConfig {
+        /// Also validate the configuration
+        #[arg(long)]
+        validate: bool,
+    },
+    /// Migrate LLM config from SQLite/Keyring to TOML file
+    MigrateLlmConfig {
+        /// Force overwrite if config file already exists
+        #[arg(long)]
+        force: bool,
+    },
     /// Analyze market using a skill
     Analyze {
         /// Skill name to use
@@ -597,6 +609,55 @@ fn main() -> Result<()> {
                     );
                 }
             }
+        }
+        Command::ShowLlmConfig { validate } => {
+            let resolved = context.show_llm_config()?;
+
+            // 构建输出 JSON
+            let mut output = serde_json::json!({
+                "base_url": resolved.base_url,
+                "model": resolved.model,
+                "timeout_secs": resolved.timeout_secs,
+                "temperature": resolved.temperature,
+                "max_tokens": resolved.max_tokens,
+                "api_key_set": resolved.api_key.is_some(),
+                "source": {
+                    "base_url": resolved.source.base_url,
+                    "model": resolved.source.model,
+                    "api_key": resolved.source.api_key,
+                    "config_file": resolved.source.config_file,
+                }
+            });
+
+            // 可选：seed
+            if let Some(seed) = resolved.seed {
+                output["seed"] = serde_json::json!(seed);
+            }
+
+            // 验证模式
+            if validate {
+                let validation = context.validate_llm_config();
+                output["validation"] = serde_json::json!({
+                    "file_exists": validation.file_exists,
+                    "file_parseable": validation.file_parseable,
+                    "env_vars_resolved": validation.env_vars_resolved,
+                    "missing_env_vars": validation.missing_env_vars,
+                    "url_format_valid": validation.url_format_valid,
+                    "api_key_set": validation.api_key_set,
+                });
+            }
+
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        }
+        Command::MigrateLlmConfig { force } => {
+            let result = context.migrate_llm_config_to_toml(force)?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "status": "ok",
+                    "message": result,
+                }))?
+            );
         }
     }
 

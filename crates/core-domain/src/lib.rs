@@ -307,6 +307,86 @@ pub struct LlmConfig {
     pub timeout_secs: u64,
 }
 
+// ============================================================
+// TOML-based LLM Configuration (Phase 1: Config Migration)
+// ============================================================
+
+/// LLM 文件配置结构体（从 TOML 加载）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmFileConfig {
+    pub llm: LlmSection,
+}
+
+/// LLM 配置主段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmSection {
+    pub base_url: String,
+    pub model: String,
+    #[serde(default = "default_timeout")]
+    pub timeout_secs: u64,
+    #[serde(default)]
+    pub auth: AuthSection,
+    #[serde(default)]
+    pub defaults: DefaultsSection,
+}
+
+/// 认证配置段
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AuthSection {
+    #[serde(default)]
+    pub api_key: Option<String>,
+}
+
+/// 默认参数段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DefaultsSection {
+    #[serde(default = "default_temperature")]
+    pub temperature: f64,
+    #[serde(default = "default_max_tokens")]
+    pub max_tokens: usize,
+    pub seed: Option<u64>,
+}
+
+fn default_timeout() -> u64 {
+    60
+}
+fn default_temperature() -> f64 {
+    0.7
+}
+fn default_max_tokens() -> usize {
+    4096
+}
+
+impl Default for DefaultsSection {
+    fn default() -> Self {
+        Self {
+            temperature: default_temperature(),
+            max_tokens: default_max_tokens(),
+            seed: None,
+        }
+    }
+}
+
+impl Default for LlmSection {
+    fn default() -> Self {
+        Self {
+            base_url: "https://api.openai.com/v1".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            timeout_secs: 60,
+            auth: AuthSection::default(),
+            defaults: DefaultsSection::default(),
+        }
+    }
+}
+
+impl Default for LlmFileConfig {
+    fn default() -> Self {
+        Self {
+            llm: LlmSection::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmAnalysisResult {
     pub report_date: String,

@@ -11,6 +11,11 @@
 *.db
 *.sqlite
 
+# LLM config (may contain API keys)
+config/llm.toml
+config/llm.*.toml
+!config/llm.toml.example
+
 # Reports / generated outputs
 /reports/*.md
 /reports/*.png
