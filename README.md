@@ -62,7 +62,7 @@
 - **Tauri**：桌面端容器
 - **ClickHouse**：分析型时序数据
 - **SQLite**：本地轻状态
-- **Vite + Plain JS**：桌面前端
+- **Vite + Vue 3**：桌面前端（渐进式迁移中，Vue 3 + Composition API）
 
 ---
 

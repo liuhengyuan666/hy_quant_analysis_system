@@ -37,6 +37,19 @@ import {
   trustTone,
 } from './lib/dashboard-utils.js';
 import { createEnvironmentBreadthRenderers } from './renderers/environment-breadth.js';
+import {
+  updateSnapshot as syncSnapshotToStore,
+  updateStatus as syncStatusToStore,
+  updateScope as syncScopeToStore,
+  updateReportDate as syncReportDateToStore,
+  updateAvailableDates as syncAvailableDatesToStore,
+  updateLoading as syncLoadingToStore,
+  updateError as syncErrorToStore,
+  updateExporting as syncExportingToStore,
+  updateExportResult as syncExportResultToStore,
+  updateRefreshStatus as syncRefreshStatusToStore,
+  initEventBridge,
+} from './store.js';
 import './styles.css';
 
 const app = document.querySelector('#app');
@@ -1380,7 +1393,7 @@ function commitRender() {
             </p>
           </div>
           <div class="hero__actions">
-            ${renderDateSelector()}
+            <!-- DateSelector now rendered by Vue in #vue-app -->
             ${usageGuides.renderUsageEntry()}
             <div class="hero__action-row">
               <select
@@ -1411,35 +1424,30 @@ function commitRender() {
         <div class="hero__ambient" aria-hidden="true"></div>
       </section>
 
-      ${renderRefreshProgress()}
+      <!-- RefreshProgress now rendered by Vue in #vue-app -->
 
-      ${state.error ? `<section class="notice notice--error"><div><strong>Data load failed</strong><p>${escapeHtml(state.error)}</p></div></section>` : ''}
-      ${renderNotice(state.exportResult)}
-      ${renderTrustSummaryPanel(snapshot, state.pipelineDates, dataHealthSummary)}
-      ${renderHealthStrip(status, snapshot)}
+      <!-- Error/Export notices now rendered by Vue in #vue-app -->
 
-      ${renderTimeContext(snapshot)}
+      <!-- TrustSummaryPanel now rendered by Vue in #vue-app -->
+      <!-- HealthStrip now rendered by Vue in #vue-app -->
+      <!-- TimeContext now rendered by Vue in #vue-app -->
+      <!-- Skeleton now rendered by Vue in #vue-app -->
 
-      ${state.loading ? renderSkeleton() : ''}
-
-      <section class="dashboard-grid ${(state.loading || state.refreshing || state.refreshStatus.running) ? 'dashboard-grid--dimmed' : ''}">
-        <div class="dashboard-grid__status">${renderStatusPanel(status, state.pipelineDates)}</div>
-        <div class="dashboard-grid__regime">${renderRegimePanel(snapshot)}</div>
-          <div class="dashboard-grid__environment">${environmentBreadthRenderers.renderEnvironmentPanel(snapshot)}</div>
-          <div class="dashboard-grid__breadth">${environmentBreadthRenderers.renderWatchlistBreadthPanel(snapshot)}</div>
-        <div class="dashboard-grid__rotation">${renderRotationPanel(snapshot)}</div>
-        <div class="dashboard-grid__signals">${renderSignalsPanel(snapshot)}</div>
-        <div class="dashboard-grid__backtest">${renderBacktestPanel(snapshot)}</div>
-        <div class="dashboard-grid__reports">${recentReports.renderRecentReportsPanel()}</div>
-        <div class="dashboard-grid__data-health">${dataHealth.renderPanel(dataHealthSummary)}</div>
+      <!-- Remaining Plain JS panels: Recent Reports, Data Health -->
+      <section class="plain-js-panels">
+        <div class="plain-js-panels__recent-reports">${recentReports.renderRecentReportsPanel({ limit: 3, showViewAll: true })}</div>
+      </section>
+      <section class="plain-js-panels plain-js-panels--single">
+        <div class="plain-js-panels__data-health">${dataHealth.renderPanel(dataHealthSummary)}</div>
       </section>
     </main>
     ${usageGuides.renderUsageGuidesViewer()}
-    ${renderSignalDetailModal(state.selectedSignalDetail)}
+    <!-- SignalDetailModal now rendered by Vue in #vue-app -->
   `;
 
   document.body.classList.toggle('body--guide-viewer-open', state.isUsageGuideOpen);
-  document.body.classList.toggle('body--signal-modal-open', Boolean(state.selectedSignalDetail));
+  // Scroll lock now managed by Vue App.vue watcher
+  // document.body.classList.toggle('body--signal-modal-open', Boolean(state.selectedSignalDetail));
 
   document.querySelector('#refreshButton').onclick = () => {
     startRefreshJob(state.selectedRefreshStartStage);
@@ -1450,97 +1458,15 @@ function commitRender() {
     render();
   };
 
-  document.querySelector('#reportDateSelect').onchange = (event) => {
-    const nextDate = event.target.value;
-    if (!nextDate || nextDate === state.selectedReportDate || state.loading) return;
-
-    state.selectedReportDate = nextDate;
-    state.exportResult = null;
-    state.selectedSignalDetail = null;
-    savePreference('last_analysis_date', nextDate);
-    loadSelectedSnapshot();
-  };
-
-  document.querySelector('#scopeSelect').onchange = (event) => {
-    const nextScope = normalizeScope(event.target.value);
-    if (nextScope === state.selectedScope || state.loading) return;
-
-    state.selectedScope = nextScope;
-    state.selectedReportDate = '';
-    state.snapshot = null;
-    state.exportResult = null;
-    state.selectedSignalDetail = null;
-    savePreference('default_scope', nextScope);
-    loadDashboard();
-  };
-
-  document.querySelector('#jumpToLatestButton').onclick = () => {
-    const latestAvailableDate = getLatestAvailableDate(state.snapshot);
-    if (!latestAvailableDate || latestAvailableDate === getActiveReportDate() || state.loading) return;
-
-    state.selectedReportDate = latestAvailableDate;
-    state.exportResult = null;
-    state.selectedSignalDetail = null;
-    savePreference('last_analysis_date', latestAvailableDate);
-    loadSelectedSnapshot();
-  };
+  // reportDateSelect, scopeSelect, jumpToLatestButton now handled by Vue in #vue-app
 
   document.querySelector('#exportButton').onclick = () => {
     exportReport();
   };
 
-  const retryRefreshButton = document.querySelector('#retryRefreshButton');
-  if (retryRefreshButton) {
-    retryRefreshButton.onclick = () => {
-      retryFailedRefresh();
-    };
-  }
+  // retryRefreshButton, resumeRefreshButton, cancelRefreshButton now handled by Vue in #vue-app
 
-  const resumeRefreshButton = document.querySelector('#resumeRefreshButton');
-  if (resumeRefreshButton) {
-    resumeRefreshButton.onclick = () => {
-      retryFailedRefresh();
-    };
-  }
-
-  const cancelRefreshButton = document.querySelector('#cancelRefreshButton');
-  if (cancelRefreshButton) {
-    cancelRefreshButton.onclick = () => {
-      cancelRefreshJob();
-    };
-  }
-
-  document.querySelectorAll('.signal-card--interactive').forEach((button) => {
-    button.onclick = () => {
-      const group = button.dataset.signalGroup;
-      const index = Number(button.dataset.signalIndex);
-      const signals = group === 'bullish'
-        ? state.snapshot?.bullish_signals
-        : group === 'defensive'
-          ? state.snapshot?.defensive_signals
-          : state.snapshot?.top_signals;
-      const signal = Array.isArray(signals) ? signals[index] : null;
-      if (!signal) return;
-
-      state.selectedSignalDetail = signal;
-      render();
-    };
-  });
-
-  const closeSignalDetail = () => {
-    state.selectedSignalDetail = null;
-    render();
-  };
-
-  const signalDetailBackdrop = document.querySelector('.signal-detail__backdrop');
-  if (signalDetailBackdrop) {
-    signalDetailBackdrop.onclick = closeSignalDetail;
-  }
-
-  const closeSignalDetailButton = document.querySelector('#closeSignalDetailButton');
-  if (closeSignalDetailButton) {
-    closeSignalDetailButton.onclick = closeSignalDetail;
-  }
+  // signal-card--interactive, signal-detail__backdrop, closeSignalDetailButton now handled by Vue in #vue-app
 
   dataHealth.bindEvents(document);
   recentReports.bindEvents(document);
@@ -1574,6 +1500,7 @@ async function pollRefreshStatus() {
   try {
     state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.refreshStatus));
     state.refreshing = state.refreshStatus.running;
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
 
     if (state.refreshStatus.running) {
@@ -1594,6 +1521,7 @@ async function pollRefreshStatus() {
       status: 'error',
       error: getErrorMessage(error),
     };
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
   }
 }
@@ -1611,6 +1539,7 @@ async function startRefreshJob(startStage = 'full') {
       startStage: startStage === 'full' ? null : startStage,
     }));
     state.refreshing = state.refreshStatus.running;
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
     scheduleRefreshPoll(500);
   } catch (error) {
@@ -1621,6 +1550,7 @@ async function startRefreshJob(startStage = 'full') {
       status: 'error',
       error: getErrorMessage(error),
     };
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
   }
 }
@@ -1636,6 +1566,7 @@ async function retryFailedRefresh() {
   try {
     state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.retryRefresh));
     state.refreshing = state.refreshStatus.running;
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
     scheduleRefreshPoll(500);
   } catch (error) {
@@ -1646,6 +1577,7 @@ async function retryFailedRefresh() {
       status: 'error',
       error: getErrorMessage(error),
     };
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
   }
 }
@@ -1658,12 +1590,14 @@ async function cancelRefreshJob() {
     cancelling: true,
     stage: 'Cancelling after current stage completes...',
   };
+  syncRefreshStatusToStore(state.refreshStatus);
   render();
 
   try {
     await invoke(COMMANDS.cancelRefresh);
     state.refreshStatus = normalizeRefreshStatus(await invoke(COMMANDS.refreshStatus));
     state.refreshing = state.refreshStatus.running;
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
     scheduleRefreshPoll(500);
   } catch (error) {
@@ -1672,6 +1606,7 @@ async function cancelRefreshJob() {
       cancelling: false,
       error: getErrorMessage(error),
     };
+    syncRefreshStatusToStore(state.refreshStatus);
     render();
   }
 }
@@ -1680,6 +1615,8 @@ async function loadDashboard() {
   state.loading = true;
   state.error = '';
   state.selectedSignalDetail = null;
+  syncLoadingToStore(true);
+  syncErrorToStore('');
   render();
 
   try {
@@ -1707,6 +1644,14 @@ async function loadDashboard() {
       if (state.refreshStatus.running) {
         scheduleRefreshPoll(1000);
       }
+
+      // Sync to shared store for Vue components
+      syncSnapshotToStore(state.snapshot);
+      syncStatusToStore(state.status);
+      syncScopeToStore(state.selectedScope);
+      syncReportDateToStore(state.selectedReportDate);
+      syncAvailableDatesToStore(state.availableDates);
+      syncRefreshStatusToStore(state.refreshStatus);
     }
 
     if (previousSelectedReportDate !== state.selectedReportDate) {
@@ -1722,12 +1667,15 @@ async function loadDashboard() {
 
     if (errors.length) {
       state.error = errors.join(' · ');
+      syncErrorToStore(state.error);
     }
   } catch (error) {
     state.snapshot = null;
     state.error = getErrorMessage(error);
+    syncErrorToStore(state.error);
   } finally {
     state.loading = false;
+    syncLoadingToStore(false);
     render();
     if (!dataHealth.isCacheFresh()) {
       void dataHealth.loadSummary();
@@ -1739,6 +1687,8 @@ async function loadSelectedSnapshot() {
   state.loading = true;
   state.error = '';
   state.selectedSignalDetail = null;
+  syncLoadingToStore(true);
+  syncErrorToStore('');
   render();
 
   try {
@@ -1755,11 +1705,21 @@ async function loadSelectedSnapshot() {
     }
 
     state.lastUpdatedAt = new Date().toISOString();
+
+    // Sync to shared store
+    syncSnapshotToStore(state.snapshot);
+    syncScopeToStore(state.selectedScope);
+    syncReportDateToStore(state.selectedReportDate);
   } catch (error) {
     state.snapshot = null;
     state.error = `Dashboard snapshot: ${getErrorMessage(error)}`;
+
+    // Sync error to shared store
+    syncSnapshotToStore(null);
+    syncErrorToStore(state.error);
   } finally {
     state.loading = false;
+    syncLoadingToStore(false);
     render();
   }
 }
@@ -1771,6 +1731,8 @@ async function exportReport() {
 
   state.exporting = true;
   state.exportResult = null;
+  syncExportingToStore(true);
+  syncExportResultToStore(null);
   render();
 
   try {
@@ -1783,6 +1745,7 @@ async function exportReport() {
       output_path: result.output_path,
       failed_items: Array.isArray(result.failed_items) ? result.failed_items : [],
     };
+    syncExportResultToStore(state.exportResult);
     if (result.output_path) {
       const reportType = activeScope === 'cn'
         ? 'DAILY_REPORT_CN'
@@ -1797,8 +1760,10 @@ async function exportReport() {
       title: 'Export failed',
       message: getErrorMessage(error),
     };
+    syncExportResultToStore(state.exportResult);
   } finally {
     state.exporting = false;
+    syncExportingToStore(false);
     render();
   }
 }
@@ -1812,6 +1777,16 @@ document.addEventListener('keydown', (event) => {
     state.selectedSignalDetail = null;
     render();
   }
+});
+
+// Initialize event bridge for Vue components to call back into main.js
+initEventBridge({
+  loadDashboard: () => loadDashboard(),
+  loadSelectedSnapshot: () => loadSelectedSnapshot(),
+  startRefresh: (stage) => startRefreshJob(stage),
+  retryRefresh: () => retryFailedRefresh(),
+  cancelRefresh: () => cancelRefreshJob(),
+  exportReport: () => exportReport(),
 });
 
 render();

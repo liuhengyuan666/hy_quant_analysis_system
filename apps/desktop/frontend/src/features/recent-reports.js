@@ -133,24 +133,38 @@ export function createRecentReportsSlice({
     await loadDashboard();
   }
 
-  function renderRecentReportsPanel() {
+  function renderRecentReportsPanel({ limit = 3, showViewAll = true } = {}) {
+    const totalReports = state.recentReports.length;
+    const displayReports = limit ? state.recentReports.slice(0, limit) : state.recentReports;
+    const hasMore = totalReports > limit;
+
     return `
       <article class="panel panel--soft">
         <div class="panel__header">
           <div>
             <p class="eyebrow">Research results</p>
             <h2>Recent reports</h2>
-            <p class="panel__lede">Recent exported artifacts can now reopen matching analysis snapshots, open the generated artifact directly, or provide quick artifact-path access.</p>
+            <p class="panel__lede">Recent exported artifacts can reopen matching analysis snapshots, open the generated artifact directly, or provide quick artifact-path access.</p>
           </div>
-          <span class="panel__meta">Latest ${escapeHtml(formatInteger(state.recentReports.length))} exports</span>
+          <div class="panel__header-actions">
+            <span class="panel__meta">Latest ${escapeHtml(formatInteger(totalReports))} exports</span>
+            ${hasMore && showViewAll ? `
+              <button
+                class="button button--secondary button--compact"
+                data-report-view-all="true"
+              >
+                View All (${escapeHtml(formatInteger(totalReports))})
+              </button>
+            ` : ''}
+          </div>
         </div>
 
         ${renderNotice(state.recentReportActionResult, 'notice--inline')}
 
-        ${state.recentReports.length
+        ${displayReports.length
           ? `
             <div class="report-history" aria-label="Recent report history">
-              ${state.recentReports
+              ${displayReports
                 .map((item, index) => {
                   const reportScope = getRecentReportScope(item.report_type);
                   const canOpenSnapshot = Boolean(reportScope);
@@ -228,6 +242,52 @@ export function createRecentReportsSlice({
         void copyArtifactPath(item);
       };
     });
+
+    // View All button - open modal with all reports
+    root.querySelectorAll('[data-report-view-all]').forEach((element) => {
+      element.onclick = () => {
+        openAllReportsModal();
+      };
+    });
+  }
+
+  function openAllReportsModal() {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'reports-modal-overlay';
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    };
+
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'reports-modal';
+
+    const header = document.createElement('div');
+    header.className = 'reports-modal__header';
+    header.innerHTML = `
+      <h2>All Recent Reports</h2>
+      <button class="reports-modal__close" aria-label="Close">×</button>
+    `;
+
+    const content = document.createElement('div');
+    content.className = 'reports-modal__content';
+    content.innerHTML = renderRecentReportsPanel({ limit: null, showViewAll: false });
+
+    modal.appendChild(header);
+    modal.appendChild(content);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close button handler
+    header.querySelector('.reports-modal__close').onclick = () => {
+      document.body.removeChild(overlay);
+    };
+
+    // Bind events for the modal content
+    bindEvents(content);
   }
 
   return {
