@@ -1,10 +1,21 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatDate, formatDateTime, formatInteger } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 
+const { t } = useI18n();
 const refresh = computed(() => dashboardStore.refreshStatus);
 const loading = computed(() => dashboardStore.loading);
+
+// Translate raw backend stage names to locale keys
+function translateStage(stage) {
+  if (!stage) return '';
+  const key = `refreshStages.${stage}`;
+  const translated = t(key);
+  // If key not found, vue-i18n returns the key itself; fall back to prettified raw value
+  return translated === key ? stage : translated;
+}
 
 const isVisible = computed(() => {
   return refresh.value.running || ['error', 'success', 'cancelled'].includes(refresh.value.status);
@@ -23,20 +34,20 @@ const rangeText = computed(() => {
   if (refresh.value.refresh_from && refresh.value.refresh_to) {
     return `${formatDate(refresh.value.refresh_from)} → ${formatDate(refresh.value.refresh_to)}`;
   }
-  return 'Preparing refresh range';
+  return t('refresh.preparing');
 });
 
 const timingText = computed(() => {
-  if (refresh.value.running) return `Started ${formatDateTime(refresh.value.started_at)}`;
-  if (refresh.value.finished_at) return `Finished ${formatDateTime(refresh.value.finished_at)}`;
-  return 'Waiting to start';
+  if (refresh.value.running) return t('refresh.started', { time: formatDateTime(refresh.value.started_at) });
+  if (refresh.value.finished_at) return t('refresh.finished', { time: formatDateTime(refresh.value.finished_at) });
+  return t('refresh.waitingToStart');
 });
 
 const title = computed(() => {
-  if (refresh.value.running) return refresh.value.cancelling ? 'Cancelling refresh' : 'Refreshing analysis pipeline';
-  if (refresh.value.status === 'error') return 'Refresh failed';
-  if (refresh.value.status === 'cancelled') return 'Refresh cancelled';
-  return 'Refresh completed';
+  if (refresh.value.running) return refresh.value.cancelling ? t('refresh.cancelling') : t('refresh.refreshing');
+  if (refresh.value.status === 'error') return t('refresh.refreshFailed');
+  if (refresh.value.status === 'cancelled') return t('refresh.refreshCancelled');
+  return t('refresh.refreshCompleted');
 });
 
 const emit = defineEmits(['cancel', 'retry', 'resume']);
@@ -46,16 +57,16 @@ const emit = defineEmits(['cancel', 'retry', 'resume']);
   <section v-if="isVisible" class="refresh-progress" :class="`refresh-progress--${tone}`" aria-live="polite">
     <div class="refresh-progress__header">
       <div>
-        <p class="eyebrow">Background refresh</p>
+        <p class="eyebrow">{{ t('refresh.eyebrow') }}</p>
         <h2>{{ title }}</h2>
-        <p class="panel__lede">{{ refresh.stage || 'Waiting' }}</p>
+        <p class="panel__lede">{{ refresh.stage || t('refresh.waiting') }}</p>
       </div>
       <div class="panel__actions">
-        <span class="pill pill--outline">Run from · {{ refresh.start_stage }}</span>
+        <span class="pill pill--outline">{{ t('refresh.runFrom', { stage: translateStage(refresh.start_stage) }) }}</span>
         <span v-if="refresh.retry_from_stage" class="pill pill--warning">
-          Retry from · {{ refresh.retry_from_stage }}
+          {{ t('refresh.retryFrom', { stage: translateStage(refresh.retry_from_stage) }) }}
         </span>
-        <span v-if="refresh.cancelling" class="pill pill--warning">Cancelling...</span>
+        <span v-if="refresh.cancelling" class="pill pill--warning">{{ t('refresh.cancellingDots') }}</span>
         <span class="pill" :class="`pill--${tone}`">{{ formatInteger(progress) }}%</span>
       </div>
     </div>
@@ -75,14 +86,14 @@ const emit = defineEmits(['cancel', 'retry', 'resume']);
         :disabled="loading"
         @click="emit('cancel')"
       >
-        Cancel
+        {{ t('refresh.cancel') }}
       </button>
     </div>
 
     <section v-if="refresh.status === 'cancelled'" class="notice notice--warning notice--inline">
       <div>
-        <strong>Refresh was cancelled</strong>
-        <p>Last successful stage: {{ refresh.last_successful_stage || 'none' }}</p>
+        <strong>{{ t('refresh.wasCancelled') }}</strong>
+        <p>{{ t('refresh.lastSuccessful', { stage: refresh.last_successful_stage || 'none' }) }}</p>
       </div>
     </section>
 
@@ -92,7 +103,7 @@ const emit = defineEmits(['cancel', 'retry', 'resume']);
         :disabled="loading || refresh.running"
         @click="emit('resume')"
       >
-        Resume
+        {{ t('refresh.resume') }}
       </button>
     </div>
 
@@ -102,7 +113,7 @@ const emit = defineEmits(['cancel', 'retry', 'resume']);
         :disabled="loading || refresh.running"
         @click="emit('retry')"
       >
-        Retry failed stage
+        {{ t('refresh.retryFailed') }}
       </button>
     </div>
 

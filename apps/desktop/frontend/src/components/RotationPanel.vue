@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatNumber } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
+
+const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const topRotation = computed(() => snapshot.value?.top_rotation || []);
@@ -13,35 +16,35 @@ const hasRotation = computed(() => topRotation.value.length > 0);
   <article class="panel">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Leadership</p>
-        <h2>Top rotation</h2>
+        <p class="eyebrow">{{ t('rotation.eyebrow') }}</p>
+        <h2>{{ t('rotation.title') }}</h2>
         <p v-if="hasRotation" class="panel__lede">
-          Leaders and laggards ranked by momentum score for the current report date.
+          {{ t('rotation.lede') }}
         </p>
       </div>
-      <span v-if="hasRotation" class="panel__meta">Momentum-ranked leaders and laggards</span>
+      <span v-if="hasRotation" class="panel__meta">{{ t('rotation.momentumRanked') }}</span>
     </div>
 
     <div v-if="!hasRotation" class="empty-state">
-      <p>No rotation leaders are available for the latest report date.</p>
+      <p>{{ t('rotation.noLeaders') }}</p>
     </div>
 
     <div v-else class="rotation-dual-grid">
       <section>
         <div class="panel__subheader">
-          <p class="panel__section-title">Leaders</p>
-          <span class="panel__meta">Top 5 strength</span>
+          <p class="panel__section-title">{{ t('rotation.leaders') }}</p>
+          <span class="panel__meta">{{ t('rotation.top5Strength') }}</span>
         </div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Rank</th>
-                <th>Symbol</th>
-                <th>Momentum</th>
-                <th>RS 20</th>
-                <th>RS 60</th>
-                <th>RS 120</th>
+                <th>{{ t('rotation.rank') }}</th>
+                <th>{{ t('rotation.symbol') }}</th>
+                <th>{{ t('rotation.momentum') }}</th>
+                <th>{{ t('rotation.rs20') }}</th>
+                <th>{{ t('rotation.rs60') }}</th>
+                <th>{{ t('rotation.rs120') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -60,19 +63,19 @@ const hasRotation = computed(() => topRotation.value.length > 0);
 
       <section>
         <div class="panel__subheader">
-          <p class="panel__section-title">Laggards</p>
-          <span class="panel__meta">Bottom 5 momentum</span>
+          <p class="panel__section-title">{{ t('rotation.laggards') }}</p>
+          <span class="panel__meta">{{ t('rotation.bottom5Momentum') }}</span>
         </div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Rank</th>
-                <th>Symbol</th>
-                <th>Momentum</th>
-                <th>RS 20</th>
-                <th>RS 60</th>
-                <th>RS 120</th>
+                <th>{{ t('rotation.rank') }}</th>
+                <th>{{ t('rotation.symbol') }}</th>
+                <th>{{ t('rotation.momentum') }}</th>
+                <th>{{ t('rotation.rs20') }}</th>
+                <th>{{ t('rotation.rs60') }}</th>
+                <th>{{ t('rotation.rs120') }}</th>
               </tr>
             </thead>
             <tbody>

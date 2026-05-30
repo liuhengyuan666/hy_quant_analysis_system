@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   dashboardStore,
   updateScope,
@@ -9,7 +10,12 @@ import {
   startRefresh as bridgeStartRefresh,
   retryRefresh as bridgeRetryRefresh,
   cancelRefresh as bridgeCancelRefresh,
+  exportReport as bridgeExportReport,
 } from './store.js';
+import DashboardHero from './components/DashboardHero.vue';
+import RecentReportsPanel from './components/RecentReportsPanel.vue';
+import DataHealthPanel from './components/DataHealthPanel.vue';
+import UsageGuidesPanel from './components/UsageGuidesPanel.vue';
 import BreadthPanel from './components/BreadthPanel.vue';
 import MetricCard from './components/MetricCard.vue';
 import HealthStrip from './components/HealthStrip.vue';
@@ -26,28 +32,46 @@ import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
 import DateSelector from './components/DateSelector.vue';
 import SignalDetailModal from './components/SignalDetailModal.vue';
+import LanguageToggle from './components/LanguageToggle.vue';
+
+const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const loading = computed(() => dashboardStore.loading);
 const error = computed(() => dashboardStore.error);
 const exportResult = computed(() => dashboardStore.exportResult);
+const selectedRefreshStartStage = computed(() => dashboardStore.selectedRefreshStartStage);
 
 const selectedSignal = ref(null);
+const usageGuidesRef = ref(null);
 
 // Body scroll lock - managed at App level to handle component lifecycle correctly
 watch(selectedSignal, (newSignal) => {
   document.body.classList.toggle('body--signal-modal-open', Boolean(newSignal));
 });
 
+// Keyboard: ESC to close signal detail
+function handleKeydown(event) {
+  if (event.key === 'Escape' && selectedSignal.value) {
+    selectedSignal.value = null;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown);
+});
+
 function handleScopeChange(scope) {
   updateScope(scope);
-  // Trigger data reload via event bridge
   bridgeLoadDashboard();
 }
 
 function handleDateChange(date) {
   updateReportDate(date);
-  // Trigger snapshot reload via event bridge
   bridgeLoadSelectedSnapshot();
 }
 
@@ -78,24 +102,48 @@ function handleRetryRefresh() {
 function handleResumeRefresh() {
   bridgeRetryRefresh();
 }
+
+function handleRefresh(stage) {
+  bridgeStartRefresh(stage || selectedRefreshStartStage.value);
+}
+
+function handleExport() {
+  bridgeExportReport();
+}
+
+function handleOpenGuides() {
+  if (usageGuidesRef.value) {
+    usageGuidesRef.value.openUsageGuides();
+  }
+}
 </script>
 
 <template>
   <div id="vue-app" v-cloak>
+    <!-- Hero section -->
+    <DashboardHero
+      @refresh="handleRefresh"
+      @export="handleExport"
+      @open-guides="handleOpenGuides"
+    />
+
     <!-- Top section: full width -->
     <header class="dashboard-header">
-      <DateSelector
-        @update:scope="handleScopeChange"
-        @update:date="handleDateChange"
-        @jump-to-latest="handleJumpToLatest"
-      />
+      <div class="header-top">
+        <DateSelector
+          @update:scope="handleScopeChange"
+          @update:date="handleDateChange"
+          @jump-to-latest="handleJumpToLatest"
+        />
+        <LanguageToggle />
+      </div>
       <RefreshProgress
         @cancel="handleCancelRefresh"
         @retry="handleRetryRefresh"
         @resume="handleResumeRefresh"
       />
       <Transition name="fade">
-        <Notice v-if="error" :result="{ kind: 'error', title: 'Data load failed', message: error }" />
+        <Notice v-if="error" :result="{ kind: 'error', title: t('common.dataLoadFailed'), message: error }" />
       </Transition>
       <Transition name="fade">
         <Notice v-if="exportResult" :result="exportResult" />
@@ -132,7 +180,20 @@ function handleResumeRefresh() {
         <EnvironmentPanel />
         <StatusPanel />
       </section>
+
+      <!-- Row 5: Recent Reports -->
+      <section class="grid-row grid-row--1">
+        <RecentReportsPanel />
+      </section>
+
+      <!-- Row 6: Data Health -->
+      <section class="grid-row grid-row--1">
+        <DataHealthPanel />
+      </section>
     </main>
+
+    <!-- Usage guides full-screen viewer -->
+    <UsageGuidesPanel ref="usageGuidesRef" />
 
     <!-- Signal detail side panel -->
     <Transition name="slide">
@@ -158,6 +219,12 @@ function handleResumeRefresh() {
   flex-direction: column;
   gap: var(--space-4);
   margin-bottom: var(--space-5);
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .dashboard-grid {

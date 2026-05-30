@@ -13,11 +13,15 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 | Shared helpers | `src/lib/dashboard-utils.js` | formatting, normalization, scope/report helpers |
 | Trust entry panel | `src/main.js::renderTrustSummaryPanel` | primary trust verdict with freshness + health evidence summaries |
 | Refresh UI | `src/main.js::renderRefreshProgress` + `startRefreshJob` | full refresh CTA, stage selector, retry flow |
-| Recent-reports slice | `src/features/recent-reports.js` | snapshot jump, artifact open, copy path |
-| Data-health slice | `src/features/data-health.js` | cache, load, export, render |
-| Usage-guides slice | `src/features/usage-guides.js` | guide loading and viewer state |
-| Environment/breadth renderers | `src/renderers/environment-breadth.js` | paired environment explanation + breadth proxy panels |
-| Vue components | `src/components/*.vue` | 15 Vue panels (BreadthPanel, MetricCard, DateSelector, etc.) |
+| Recent reports panel | `src/components/RecentReportsPanel.vue` | Vue component, reads from store |
+| Data health panel    | `src/components/DataHealthPanel.vue`    | Vue component, reads from store |
+| Usage guides panel   | `src/components/UsageGuidesPanel.vue`   | Vue component, reads from store |
+| Environment panel    | `src/components/EnvironmentPanel.vue`   | Vue component, reads from store |
+| Breadth panel        | `src/components/BreadthPanel.vue`       | Vue component, reads from store |
+| i18n infrastructure  | `src/i18n.js`                           | vue-i18n@11 config, setLocale/getLocale |
+| Language toggle      | `src/components/LanguageToggle.vue`     | Top-right corner toggle |
+| Locale files         | `src/locales/zh.json`, `src/locales/en.json` | ~280 translation keys each |
+| Vue components | `src/components/*.vue` | 20+ Vue panels (BreadthPanel, MetricCard, DateSelector, LanguageToggle, etc.) |
 | Visual system | `src/styles.css` | panel/grid/pill/refresh/report-history styles + Vue CSS variable bridge |
 
 ## CONVENTIONS
@@ -50,10 +54,13 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 - Do **not** use CSS variable names that don't match the bridge in styles.css.
 - Do **not** render `{{ item.reason }}` directly; use `{{ item.reason?.summary }}` since reason is an object.
 - Do **not** forget to call sync*ToStore() when updating state in main.js.
+- Do **not** hardcode UI strings in Vue components; use `t('key')` from `useI18n()`.
+- Do **not** add new locale keys without updating both `zh.json` and `en.json`.
 
 ## NOTES
-- `main.js` is still large, but pure helper logic and several interaction areas have already moved out into dedicated slices.
-- Phase 2 complete: all 14 panels migrated to Vue components.
+- `main.js` retains root state and global orchestration; all panel rendering migrated to Vue components.
+- Phase 3 complete: all panels migrated to Vue components. i18n implemented with vue-i18n@11 (zh/en).
+- Phase 0 deleted ~700 lines dead code (`features/*.js`, `renderers/*.js`).
 - Store has 10 synced properties covering all Vue component dependencies.
-- App.vue wires all component events (DateSelector, SignalsPanel, RefreshProgress, SignalDetailModal).
+- App.vue wires all component events (DateSelector, SignalsPanel, RefreshProgress, SignalDetailModal, LanguageToggle).
 - `node_modules/` and `dist/` are generated artifacts.

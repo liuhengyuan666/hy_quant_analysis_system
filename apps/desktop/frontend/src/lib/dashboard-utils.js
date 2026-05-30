@@ -6,6 +6,18 @@
  * - `renderMarkdownContent()` returns an HTML fragment intended for controlled dashboard insertion.
  * - `formatDate()` / `formatDateTime()` return safe fallback text for invalid raw values.
  */
+import { i18n } from '../i18n.js';
+
+// Helper to get current locale
+function getLocale() {
+  return i18n.global.locale.value;
+}
+
+// Helper to translate
+function t(key) {
+  return i18n.global.t(key);
+}
+
 export function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -16,7 +28,7 @@ export function escapeHtml(value) {
 }
 
 export function formatDate(value) {
-  if (!value) return 'Unavailable';
+  if (!value) return t('utils.unavailable');
   const dateOnlyMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const date = dateOnlyMatch
     ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
@@ -24,7 +36,7 @@ export function formatDate(value) {
   if (Number.isNaN(date.getTime())) {
     return escapeHtml(value);
   }
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(getLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -32,12 +44,12 @@ export function formatDate(value) {
 }
 
 export function formatDateTime(value) {
-  if (!value) return 'Not yet synced';
+  if (!value) return t('utils.notYetSynced');
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return escapeHtml(value);
   }
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(getLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -68,8 +80,8 @@ export function normalizeRefreshStatus(payload) {
 
 export function formatNumber(value, digits = 2) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat(undefined, {
+  if (!Number.isFinite(numeric)) return t('utils.noData');
+  return new Intl.NumberFormat(getLocale(), {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(numeric);
@@ -83,33 +95,33 @@ export function getFiniteNumber(value) {
 
 export function formatInteger(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat().format(numeric);
+  if (!Number.isFinite(numeric)) return t('utils.noData');
+  return new Intl.NumberFormat(getLocale()).format(numeric);
 }
 
 export function formatPercent(value, digits = 2) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
+  if (!Number.isFinite(numeric)) return t('utils.noData');
   return `${formatNumber(numeric * 100, digits)}%`;
 }
 
 export function formatDisplayPercent(value, digits = 1) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
+  if (!Number.isFinite(numeric)) return t('utils.noData');
   return `${formatNumber(numeric, digits)}%`;
 }
 
 export function formatDeltaPoints(value, digits = 1) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
+  if (!Number.isFinite(numeric)) return t('utils.noData');
   const sign = numeric > 0 ? '+' : '';
-  return `${sign}${formatNumber(numeric, digits)} pts`;
+  return `${sign}${formatNumber(numeric, digits)} ${t('utils.points')}`;
 }
 
 export function formatCurrency(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return '—';
-  return new Intl.NumberFormat(undefined, {
+  if (!Number.isFinite(numeric)) return t('utils.noData');
+  return new Intl.NumberFormat(getLocale(), {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
@@ -131,7 +143,7 @@ export function prettifyToken(value) {
 
 export function formatCanonicalAdjustment(value) {
   const adjustment = String(value ?? '').trim();
-  if (!adjustment) return 'Unknown';
+  if (!adjustment) return t('utils.unknown');
   return adjustment.length <= 5 ? adjustment.toUpperCase() : prettifyToken(adjustment);
 }
 
@@ -215,7 +227,7 @@ export function getFlaggedMacroSources(summary) {
 }
 
 export function formatDateRange(start, end) {
-  if (!start && !end) return 'Date range unavailable';
+  if (!start && !end) return t('utils.dateRangeUnavailable');
   return `${formatDate(start)} → ${formatDate(end)}`;
 }
 
@@ -281,10 +293,10 @@ export function resolveSelectedReportDate(availableDates, currentDate) {
 export function formatReportType(value) {
   const normalized = String(value ?? '').trim().toUpperCase();
 
-  if (normalized === 'DAILY_REPORT') return 'Daily report';
-  if (normalized === 'DAILY_REPORT_CN') return 'Daily report (CN)';
-  if (normalized === 'DAILY_REPORT_HK') return 'Daily report (HK)';
-  if (normalized === 'DATA_HEALTH_REPORT') return 'Data health';
+  if (normalized === 'DAILY_REPORT') return t('reportTypes.dailyReport');
+  if (normalized === 'DAILY_REPORT_CN') return t('reportTypes.dailyReportCn');
+  if (normalized === 'DAILY_REPORT_HK') return t('reportTypes.dailyReportHk');
+  if (normalized === 'DATA_HEALTH_REPORT') return t('reportTypes.dataHealth');
 
   return prettifyToken(value);
 }
@@ -322,9 +334,9 @@ export function normalizeScope(value) {
 
 export function formatScopeLabel(value) {
   const normalized = normalizeScope(value);
-  if (normalized === 'cn') return 'CN';
-  if (normalized === 'hk') return 'HK';
-  return 'GLOBAL';
+  if (normalized === 'cn') return t('scope.cn');
+  if (normalized === 'hk') return t('scope.hk');
+  return t('scope.global');
 }
 
 export function getDayDifference(earlier, later) {
@@ -339,9 +351,9 @@ export function getDayDifference(earlier, later) {
 }
 
 export function formatFallbackState(value) {
-  if (value === true) return 'Fallback ok';
-  if (value === false) return 'Fallback down';
-  return 'Fallback n/a';
+  if (value === true) return t('utils.fallbackOk');
+  if (value === false) return t('utils.fallbackDown');
+  return t('utils.fallbackNa');
 }
 
 export function getErrorMessage(error) {
@@ -349,7 +361,7 @@ export function getErrorMessage(error) {
   if (error && typeof error === 'object' && 'message' in error) {
     return String(error.message);
   }
-  return 'Unable to complete the request.';
+  return t('utils.unableToComplete');
 }
 
 function renderMarkdownInline(value) {

@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatDate } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
+
+const { t } = useI18n();
 
 const status = computed(() => dashboardStore.status);
 const snapshot = computed(() => dashboardStore.snapshot);
@@ -16,28 +19,28 @@ const exportTone = computed(() => {
 
 const items = computed(() => [
   {
-    label: 'Runtime',
-    value: status.value ? 'Connected' : 'Awaiting runtime',
+    label: t('healthStrip.runtime'),
+    value: status.value ? t('healthStrip.connected') : t('healthStrip.awaitingRuntime'),
     tone: status.value ? 'positive' : 'neutral',
   },
   {
-    label: 'Snapshot',
+    label: t('healthStrip.snapshot'),
     value: snapshot.value?.report_date
-      ? `Loaded · ${formatDate(snapshot.value.report_date)}`
-      : 'No report snapshot yet',
+      ? t('healthStrip.loaded', { date: formatDate(snapshot.value.report_date) })
+      : t('healthStrip.noSnapshot'),
     tone: snapshot.value?.report_date ? 'positive' : 'neutral',
   },
   {
-    label: 'Export',
+    label: t('healthStrip.export'),
     value: exporting.value
-      ? 'Export in progress'
+      ? t('healthStrip.exportInProgress')
       : exportResult.value?.kind === 'success'
-        ? 'Last export succeeded'
+        ? t('healthStrip.lastExportSuccess')
         : exportResult.value?.kind === 'error'
-          ? 'Last export failed'
+          ? t('healthStrip.lastExportFailed')
           : snapshot.value
-            ? 'Ready to export'
-            : 'Waiting for snapshot',
+            ? t('healthStrip.readyToExport')
+            : t('healthStrip.waitingForSnapshot'),
     tone: exporting.value ? 'neutral' : exportTone.value,
   },
 ]);

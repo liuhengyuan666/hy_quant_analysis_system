@@ -66,6 +66,15 @@ export const dashboardStore = reactive({
 
   /** Last successful update timestamp */
   lastUpdatedAt: null,
+
+  /** Whether a refresh job is currently in progress */
+  refreshing: false,
+
+  /** Selected refresh start stage */
+  selectedRefreshStartStage: 'full',
+
+  /** Recent report artifacts */
+  recentReports: [],
 });
 
 /**
@@ -143,6 +152,27 @@ export function updateRefreshStatus(status) {
 }
 
 /**
+ * Update refreshing state.
+ */
+export function updateRefreshing(refreshing) {
+  dashboardStore.refreshing = refreshing;
+}
+
+/**
+ * Update selected refresh start stage.
+ */
+export function updateSelectedRefreshStartStage(stage) {
+  dashboardStore.selectedRefreshStartStage = stage || 'full';
+}
+
+/**
+ * Update recent reports list.
+ */
+export function updateRecentReports(reports) {
+  dashboardStore.recentReports = reports || [];
+}
+
+/**
  * Reset store to initial state.
  */
 export function resetStore() {
@@ -173,6 +203,9 @@ export function resetStore() {
     last_successful_stage: null,
   };
   dashboardStore.lastUpdatedAt = null;
+  dashboardStore.refreshing = false;
+  dashboardStore.selectedRefreshStartStage = 'full';
+  dashboardStore.recentReports = [];
 }
 
 /**

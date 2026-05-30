@@ -1,4 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 defineProps({
   result: {
     type: Object,
@@ -16,10 +20,10 @@ defineProps({
         <code>{{ result.output_path }}</code>
       </p>
       <p v-if="result.failed_items?.length" class="notice__detail">
-        Warnings: {{ result.failed_items.join(' · ') }}
+        {{ t('notice.warnings', { warnings: result.failed_items.join(' · ') }) }}
       </p>
       <p v-else-if="result.kind === 'success'" class="notice__detail">
-        All report artifacts completed without warnings.
+        {{ t('notice.allCompleted') }}
       </p>
     </div>
   </section>

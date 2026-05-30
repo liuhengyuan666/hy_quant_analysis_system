@@ -1,5 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   breadthTone,
   clampScore,
@@ -12,6 +13,8 @@ import {
 } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 
+const { t } = useI18n();
+
 const snapshot = computed(() => dashboardStore.snapshot);
 const loading = computed(() => dashboardStore.loading);
 const error = computed(() => dashboardStore.error);
@@ -20,7 +23,7 @@ const breadth = computed(() => snapshot.value?.watchlist_breadth);
 const markets = computed(() => breadth.value?.markets || []);
 const hasMarkets = computed(() => markets.value.length > 0);
 const methodologyNote = computed(
-  () => breadth.value?.methodology_note || 'Eligible tracked instruments require both close and MA30 on the selected date.',
+  () => breadth.value?.methodology_note || t('participation.methodologyNote'),
 );
 
 function getMarketStatus(market) {
@@ -31,12 +34,12 @@ function getMarketStatus(market) {
 }
 
 function getBreadthValue(market, unavailable) {
-  return unavailable ? 'Unavailable' : formatDisplayPercent(market?.breadth_pct, 1);
+  return unavailable ? t('utils.unavailable') : formatDisplayPercent(market?.breadth_pct, 1);
 }
 
 function getSummaryText(market, unavailable, eligibleCount) {
   if (unavailable) {
-    return 'No eligible instruments with both close and MA30 on this date.';
+    return t('participation.noEligible');
   }
   const aboveCount = Number(market?.above_count ?? 0);
   return `${formatInteger(aboveCount)} / ${formatInteger(eligibleCount)} above MA30`;
@@ -51,17 +54,17 @@ function getRangePosition(market) {
   <article class="panel panel--soft" v-cloak>
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Participation</p>
-        <h2>Watchlist Breadth (MA30)</h2>
+        <p class="eyebrow">{{ t('participation.eyebrow') }}</p>
+        <h2>{{ t('participation.title') }}</h2>
         <p class="panel__lede">
-          Tracked INDEX + ETF participation above MA30 for the selected report date.
+          {{ t('participation.lede') }}
         </p>
       </div>
-      <span class="pill pill--outline">Proxy only · not full-market stock breadth</span>
+      <span class="pill pill--outline">{{ t('participation.proxyOnly') }}</span>
     </div>
 
     <div v-if="loading" class="empty-state">
-      <p>Loading breadth data…</p>
+      <p>{{ t('participation.loadingBreadth') }}</p>
     </div>
 
     <div v-else-if="error" class="empty-state">
@@ -69,7 +72,7 @@ function getRangePosition(market) {
     </div>
 
     <div v-else-if="!hasMarkets" class="empty-state">
-      <p>Watchlist breadth is unavailable for this dashboard snapshot.</p>
+      <p>{{ t('participation.unavailable') }}</p>
     </div>
 
     <template v-else>
@@ -103,19 +106,19 @@ function getRangePosition(market) {
 
           <div class="breadth-market__metrics">
             <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">SMA5</span>
+              <span class="breadth-market__metric-label">{{ t('participation.sma5') }}</span>
               <strong class="breadth-market__metric-value">
                 {{ formatDisplayPercent(market?.breadth_pct_sma5, 1) }}
               </strong>
             </article>
             <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">5d delta</span>
+              <span class="breadth-market__metric-label">{{ t('participation.delta5d') }}</span>
               <strong class="breadth-market__metric-value">
                 {{ formatDeltaPoints(market?.breadth_5d_delta, 1) }}
               </strong>
             </article>
             <article class="breadth-market__metric">
-              <span class="breadth-market__metric-label">60d range</span>
+              <span class="breadth-market__metric-label">{{ t('participation.range60d') }}</span>
               <strong class="breadth-market__metric-value">
                 {{ getRangePosition(market) === null ? 'N/A' : formatPercent(getRangePosition(market), 0) }}
               </strong>
@@ -124,7 +127,7 @@ function getRangePosition(market) {
 
           <div class="score-row breadth-market__range-row">
             <div class="score-row__meta">
-              <span>Current breadth</span>
+              <span>{{ t('participation.currentBreadth') }}</span>
               <strong>
                 {{ getMarketStatus(market).unavailable ? 'N/A' : formatDisplayPercent(market?.breadth_pct, 1) }}
               </strong>

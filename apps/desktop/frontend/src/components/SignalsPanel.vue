@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatNumber, prettifyToken, signalTone } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
+
+const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const topSignals = computed(() => snapshot.value?.top_signals || []);
@@ -40,37 +43,37 @@ function handleSignalClick(group, index) {
   <article class="panel">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Signal stack</p>
-        <h2>Buy & defensive groups</h2>
+        <p class="eyebrow">{{ t('signals.eyebrow') }}</p>
+        <h2>{{ t('signals.title') }}</h2>
         <p v-if="hasSignals" class="panel__lede">
-          Bullish opportunities separated from defensive or sell-side signals for the selected report date.
+          {{ t('signals.lede') }}
         </p>
       </div>
       <div v-if="hasSignals" class="panel__actions">
-        <span class="panel__meta">Grouped signal view for {{ snapshot?.report_date }}</span>
+        <span class="panel__meta">{{ t('signals.groupedView', { date: snapshot?.report_date }) }}</span>
       </div>
     </div>
 
     <div v-if="signalBasis" class="panel__meta-row">
-      <span class="panel__meta">Dashboard scope · {{ signalBasis.snapshotScope }}</span>
-      <span class="panel__meta">Signal analysis scope · {{ signalBasis.analysisScope }}</span>
-      <span class="panel__meta">Signal regime basis · {{ signalBasis.regimeBasisScope }}</span>
+      <span class="panel__meta">{{ t('signals.dashboardScope', { scope: signalBasis.snapshotScope }) }}</span>
+      <span class="panel__meta">{{ t('signals.analysisScope', { scope: signalBasis.analysisScope }) }}</span>
+      <span class="panel__meta">{{ t('signals.regimeBasis', { scope: signalBasis.regimeBasisScope }) }}</span>
     </div>
 
     <section v-if="signalBasis?.mismatched" class="staleness-banner staleness-banner--warning" aria-label="Signal provenance notice">
-      <strong>Signal scoring basis differs from the selected scope</strong>
-      <p>This {{ signalBasis.snapshotScope }} view is currently showing signals with analysis scope {{ signalBasis.analysisScope }} and regime basis {{ signalBasis.regimeBasisScope }}.</p>
+      <strong>{{ t('signals.basisDiffers') }}</strong>
+      <p>{{ t('signals.showingSignals', { scope: signalBasis.snapshotScope, analysis: signalBasis.analysisScope, regime: signalBasis.regimeBasisScope }) }}</p>
     </section>
 
     <div v-if="!hasSignals" class="empty-state">
-      <p>No signal candidates are available for the latest report date.</p>
+      <p>{{ t('signals.noSignals') }}</p>
     </div>
 
     <template v-else>
       <section v-if="topSignals.length" class="signal-focus-section">
         <div class="panel__subheader">
-          <p class="panel__section-title">Top signals</p>
-          <span class="panel__meta">Highest conviction across labels</span>
+          <p class="panel__section-title">{{ t('signals.topSignals') }}</p>
+          <span class="panel__meta">{{ t('signals.highestConviction') }}</span>
         </div>
         <div class="signal-list">
           <button
@@ -83,7 +86,7 @@ function handleSignalClick(group, index) {
             <div class="signal-card__header">
               <div>
                 <strong class="signal-card__symbol">{{ item.symbol }}</strong>
-                <p class="signal-card__score">Score {{ formatNumber(item.final_score, 2) }}</p>
+                <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
               </div>
               <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
                 {{ prettifyToken(item.signal_label) }}
@@ -97,8 +100,8 @@ function handleSignalClick(group, index) {
       <div class="signal-groups-grid">
         <section>
           <div class="panel__subheader">
-            <p class="panel__section-title">Bullish opportunities</p>
-            <span class="panel__meta">StrongBuy / Buy</span>
+            <p class="panel__section-title">{{ t('signals.bullishOpportunities') }}</p>
+            <span class="panel__meta">{{ t('signals.strongBuyBuy') }}</span>
           </div>
           <div v-if="bullishSignals.length" class="signal-list">
             <button
@@ -111,7 +114,7 @@ function handleSignalClick(group, index) {
               <div class="signal-card__header">
                 <div>
                   <strong class="signal-card__symbol">{{ item.symbol }}</strong>
-                  <p class="signal-card__score">Score {{ formatNumber(item.final_score, 2) }}</p>
+                  <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
                 <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
                   {{ prettifyToken(item.signal_label) }}
@@ -121,14 +124,14 @@ function handleSignalClick(group, index) {
             </button>
           </div>
           <div v-else class="empty-state empty-state--compact">
-            <p>No bullish signals for this date.</p>
+            <p>{{ t('signals.noBullish') }}</p>
           </div>
         </section>
 
         <section>
           <div class="panel__subheader">
-            <p class="panel__section-title">Defensive / sell watch</p>
-            <span class="panel__meta">Watch / Hold / Reduce / Sell</span>
+            <p class="panel__section-title">{{ t('signals.defensiveSell') }}</p>
+            <span class="panel__meta">{{ t('signals.watchHoldReduceSell') }}</span>
           </div>
           <div v-if="defensiveSignals.length" class="signal-list">
             <button
@@ -141,7 +144,7 @@ function handleSignalClick(group, index) {
               <div class="signal-card__header">
                 <div>
                   <strong class="signal-card__symbol">{{ item.symbol }}</strong>
-                  <p class="signal-card__score">Score {{ formatNumber(item.final_score, 2) }}</p>
+                  <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
                 <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
                   {{ prettifyToken(item.signal_label) }}
@@ -151,7 +154,7 @@ function handleSignalClick(group, index) {
             </button>
           </div>
           <div v-else class="empty-state empty-state--compact">
-            <p>No defensive or sell-side signals for this date.</p>
+            <p>{{ t('signals.noDefensive') }}</p>
           </div>
         </section>
       </div>

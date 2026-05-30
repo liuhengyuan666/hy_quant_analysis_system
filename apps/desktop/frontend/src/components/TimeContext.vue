@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatDate } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 import MetricCard from './MetricCard.vue';
+
+const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const selectedReportDate = computed(() => dashboardStore.selectedReportDate);
@@ -25,36 +28,36 @@ const regimeFreshness = computed(() => {
 
 const viewMode = computed(() => {
   if (!selectedDate.value || !latestAvailableDate.value) {
-    return { value: 'Awaiting snapshot', meta: 'Load a dashboard snapshot to inspect a report date.', tone: 'neutral' };
+    return { value: t('timeContext.awaitingSnapshot'), meta: t('timeContext.loadToInspect'), tone: 'neutral' };
   }
   if (selectedDate.value === latestAvailableDate.value) {
-    return { value: 'Latest snapshot', meta: 'Selected analysis date matches the newest available analysis.', tone: 'positive' };
+    return { value: t('timeContext.latestSnapshot'), meta: t('timeContext.viewingNewest'), tone: 'positive' };
   }
-  return { value: 'Historical view', meta: 'Selected analysis is behind the latest available analysis.', tone: 'neutral' };
+  return { value: t('timeContext.historicalView'), meta: t('timeContext.behindLatest'), tone: 'neutral' };
 });
 </script>
 
 <template>
   <section class="overview-grid" aria-label="Dashboard time context">
     <MetricCard
-      label="Selected analysis date"
-      :value="selectedDate ? formatDate(selectedDate) : 'Unavailable'"
-      :meta="selectedDate ? 'All dashboard panels below reflect this analysis snapshot.' : 'Load a dashboard snapshot to inspect a report date.'"
+      :label="t('timeContext.selectedDate')"
+      :value="selectedDate ? formatDate(selectedDate) : t('timeContext.unavailable')"
+      :meta="selectedDate ? t('timeContext.reflectSnapshot') : t('timeContext.loadToInspect')"
     />
     <MetricCard
-      label="Latest available analysis"
-      :value="latestAvailableDate ? formatDate(latestAvailableDate) : 'Unavailable'"
-      :meta="latestAvailableDate ? (selectedDate === latestAvailableDate ? 'You are viewing the newest analysis currently available.' : 'Newest stored analysis date available from the selector.') : 'No analysis dates are available yet.'"
+      :label="t('timeContext.latestAnalysis')"
+      :value="latestAvailableDate ? formatDate(latestAvailableDate) : t('timeContext.unavailable')"
+      :meta="latestAvailableDate ? (selectedDate === latestAvailableDate ? t('timeContext.viewingNewest') : t('timeContext.newestStored')) : t('timeContext.noDates')"
       :tone="selectedDate && latestAvailableDate && selectedDate === latestAvailableDate ? 'positive' : 'neutral'"
     />
     <MetricCard
-      label="Regime as-of date"
-      :value="regimeAsOfDate ? formatDate(regimeAsOfDate) : 'Unavailable'"
-      :meta="regimeAsOfDate ? (regimeFreshness?.stale ? 'Macro posture inputs were last refreshed before the selected analysis date.' : 'Macro posture inputs are aligned with the selected analysis date.') : 'Macro posture timestamp is unavailable.'"
+      :label="t('timeContext.regimeAsOf')"
+      :value="regimeAsOfDate ? formatDate(regimeAsOfDate) : t('timeContext.unavailable')"
+      :meta="regimeAsOfDate ? (regimeFreshness?.stale ? t('timeContext.macroRefreshedBefore') : t('timeContext.macroAligned')) : t('timeContext.macroUnavailable')"
       :tone="regimeFreshness?.tone || 'neutral'"
     />
     <MetricCard
-      label="View mode"
+      :label="t('timeContext.viewMode')"
       :value="viewMode.value"
       :meta="viewMode.meta"
       :tone="viewMode.tone"

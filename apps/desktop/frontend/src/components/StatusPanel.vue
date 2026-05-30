@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { prettifyToken } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 
+const { t } = useI18n();
 const status = computed(() => dashboardStore.status);
 </script>
 
@@ -10,38 +12,38 @@ const status = computed(() => dashboardStore.status);
   <article class="panel panel--soft">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Runtime</p>
-        <h2>App status</h2>
+        <p class="eyebrow">{{ t('status.eyebrow') }}</p>
+        <h2>{{ t('status.title') }}</h2>
         <p v-if="status" class="panel__lede">
-          Storage targets and active profile wired through the desktop runtime.
+          {{ t('status.lede') }}
         </p>
       </div>
       <span v-if="status" class="pill pill--outline">{{ prettifyToken(status.profile) }}</span>
     </div>
 
     <div v-if="!status" class="empty-state">
-      <p>Status data is unavailable.</p>
+      <p>{{ t('status.unavailable') }}</p>
     </div>
 
     <dl v-else class="detail-grid">
       <div class="detail-item">
-        <dt>Profile</dt>
+        <dt>{{ t('status.profile') }}</dt>
         <dd>{{ status.profile }}</dd>
       </div>
       <div class="detail-item">
-        <dt>Database</dt>
+        <dt>{{ t('status.database') }}</dt>
         <dd>{{ status.clickhouse_database }}</dd>
       </div>
       <div class="detail-item detail-item--full">
-        <dt>ClickHouse URL</dt>
+        <dt>{{ t('status.clickhouseUrl') }}</dt>
         <dd><code>{{ status.clickhouse_url }}</code></dd>
       </div>
       <div class="detail-item detail-item--full">
-        <dt>SQLite path</dt>
+        <dt>{{ t('status.sqlitePath') }}</dt>
         <dd><code>{{ status.sqlite_path }}</code></dd>
       </div>
       <div class="detail-item detail-item--full">
-        <dt>Universe path</dt>
+        <dt>{{ t('status.universePath') }}</dt>
         <dd><code>{{ status.universe_path }}</code></dd>
       </div>
     </dl>

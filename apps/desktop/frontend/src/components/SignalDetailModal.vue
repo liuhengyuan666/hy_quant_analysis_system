@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatInteger, formatNumber, prettifyToken, signalTone } from '../lib/dashboard-utils.js';
+
+const { t } = useI18n();
 
 const props = defineProps({
   signal: {
@@ -35,77 +38,77 @@ const rotationRank = computed(() => {
 
 <template>
   <div class="signal-detail" role="dialog" aria-modal="true" aria-labelledby="signalDetailTitle">
-    <button class="signal-detail__backdrop" type="button" aria-label="Close signal detail" @click="emit('close')"></button>
+    <button class="signal-detail__backdrop" type="button" :aria-label="t('signalDetail.closeSignalDetail')" @click="emit('close')"></button>
     <article class="signal-detail__panel panel">
       <div class="panel__header signal-detail__header">
         <div>
-          <p class="eyebrow">Signal drilldown</p>
-          <h2 id="signalDetailTitle">{{ signal.symbol || 'Unknown symbol' }}</h2>
-          <p class="panel__lede">{{ reason.summary || 'No structured summary is available for this signal.' }}</p>
+          <p class="eyebrow">{{ t('signalDetail.eyebrow') }}</p>
+          <h2 id="signalDetailTitle">{{ signal.symbol || t('signalDetail.unknownSymbol') }}</h2>
+          <p class="panel__lede">{{ reason.summary || t('signalDetail.noSummary') }}</p>
         </div>
         <div class="panel__actions signal-detail__actions">
           <span class="pill" :class="`pill--${signalTone(label)}`">{{ prettifyToken(label) }}</span>
-          <span class="pill pill--outline">Score {{ formatNumber(finalScore, 2) }}</span>
-          <button class="signal-detail__close" type="button" aria-label="Close signal detail" @click="emit('close')">×</button>
+          <span class="pill pill--outline">{{ t('signalDetail.score', { score: formatNumber(finalScore, 2) }) }}</span>
+          <button class="signal-detail__close" type="button" :aria-label="t('signalDetail.closeSignalDetail')" @click="emit('close')">×</button>
         </div>
       </div>
 
       <div class="signal-detail__sections">
         <section class="signal-detail__section">
-          <h3>Strategy (45% weight)</h3>
+          <h3>{{ t('signalDetail.strategyWeight') }}</h3>
           <dl>
-            <dt>Best strategy</dt>
+            <dt>{{ t('signalDetail.bestStrategy') }}</dt>
             <dd>{{ prettifyToken(reason.best_strategy || 'N/A') }}</dd>
-            <dt>Strategy score</dt>
+            <dt>{{ t('signalDetail.strategyScore') }}</dt>
             <dd>{{ formatNumber(reason.strategy_score, 2) }}</dd>
-            <dt>Contribution</dt>
+            <dt>{{ t('signalDetail.contribution') }}</dt>
             <dd>{{ formatNumber(reason.strategy_contribution, 2) }}</dd>
           </dl>
         </section>
 
         <section class="signal-detail__section">
-          <h3>Alignment (15% weight)</h3>
+          <h3>{{ t('signalDetail.alignmentWeight') }}</h3>
           <dl>
-            <dt>Alignment count</dt>
+            <dt>{{ t('signalDetail.alignmentCount') }}</dt>
             <dd>{{ alignmentCount }}</dd>
-            <dt>Aligned strategies</dt>
+            <dt>{{ t('signalDetail.alignedStrategies') }}</dt>
             <dd>
               <div v-if="alignedStrategies.length" class="signal-detail__pill-row">
                 <span v-for="strategy in alignedStrategies" :key="strategy" class="pill pill--neutral">
                   {{ prettifyToken(strategy) }}
                 </span>
               </div>
-              <span v-else class="panel__meta">No aligned strategies</span>
+              <span v-else class="panel__meta">{{ t('signalDetail.noAlignedStrategies') }}</span>
             </dd>
-            <dt>Contribution</dt>
+            <dt>{{ t('signalDetail.contribution') }}</dt>
             <dd>{{ formatNumber(reason.alignment_contribution, 2) }}</dd>
           </dl>
         </section>
 
         <section class="signal-detail__section">
-          <h3>Regime (20% weight)</h3>
+          <h3>{{ t('signalDetail.regimeWeight') }}</h3>
           <dl>
-            <dt>Trend score</dt>
+            <dt>{{ t('signalDetail.trendScore') }}</dt>
             <dd>{{ formatNumber(reason.regime?.trend_score, 2) }}</dd>
-            <dt>Risk score</dt>
+            <dt>{{ t('signalDetail.riskScore') }}</dt>
             <dd>{{ formatNumber(reason.regime?.risk_score, 2) }}</dd>
-            <dt>Combined score</dt>
+            <dt>{{ t('signalDetail.combinedScore') }}</dt>
             <dd>{{ formatNumber(reason.regime?.combined_score, 2) }}</dd>
-            <dt>Contribution</dt>
+            <dt>{{ t('signalDetail.contribution') }}</dt>
             <dd>{{ formatNumber(reason.regime?.contribution, 2) }}</dd>
           </dl>
         </section>
 
         <section class="signal-detail__section">
-          <h3>Rotation (20% weight)</h3>
+          <h3>{{ t('signalDetail.rotationWeight') }}</h3>
           <dl>
-            <dt>Momentum score</dt>
+            <dt>{{ t('signalDetail.momentumScore') }}</dt>
             <dd>{{ formatNumber(reason.rotation?.momentum_score, 2) }}</dd>
-            <dt>Rank</dt>
+            <dt>{{ t('signalDetail.rank') }}</dt>
             <dd>{{ rotationRank }}</dd>
-            <dt>Combined score</dt>
+            <dt>{{ t('signalDetail.combinedScore') }}</dt>
             <dd>{{ formatNumber(reason.rotation?.combined_score, 2) }}</dd>
-            <dt>Contribution</dt>
+            <dt>{{ t('signalDetail.contribution') }}</dt>
             <dd>{{ formatNumber(reason.rotation?.contribution, 2) }}</dd>
           </dl>
         </section>

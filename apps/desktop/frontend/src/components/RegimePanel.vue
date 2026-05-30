@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   clampScore,
   formatDate,
@@ -10,12 +11,14 @@ import {
 } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 
+const { t } = useI18n();
+
 const snapshot = computed(() => dashboardStore.snapshot);
 
 const scores = computed(() => [
-  ['Trend score', snapshot.value?.trend_score],
-  ['Liquidity score', snapshot.value?.liquidity_score],
-  ['Risk score', snapshot.value?.risk_score],
+  [t('regime.trendScore'), snapshot.value?.trend_score],
+  [t('regime.liquidityScore'), snapshot.value?.liquidity_score],
+  [t('regime.riskScore'), snapshot.value?.risk_score],
 ]);
 
 const freshness = computed(() => {
@@ -35,9 +38,9 @@ const latestAvailableDate = computed(() => snapshot.value?.latest_available_date
 const freshnessMessage = computed(() => {
   if (!freshness.value?.stale) return '';
   if (freshness.value.lagDays > 0) {
-    return `Macro regime inputs lag the selected report by ${formatInteger(freshness.value.lagDays)} day${freshness.value.lagDays === 1 ? '' : 's'}. Posture is shown as of ${formatDate(freshness.value.asOfDate)} while rotation and signal data reflect ${formatDate(snapshot.value?.report_date)}.`;
+    return t('regime.laggingDetail', { days: formatInteger(freshness.value.lagDays), asOfDate: formatDate(freshness.value.asOfDate), reportDate: formatDate(snapshot.value?.report_date) });
   }
-  return `Macro regime inputs were last updated on ${formatDate(freshness.value.asOfDate)} while this dashboard view reflects ${formatDate(snapshot.value?.report_date)}.`;
+  return t('regime.lastUpdated', { date: formatDate(freshness.value.asOfDate), reportDate: formatDate(snapshot.value?.report_date) });
 });
 </script>
 
@@ -45,29 +48,29 @@ const freshnessMessage = computed(() => {
   <article class="panel panel--accent">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Market regime</p>
-        <h2>{{ snapshot ? prettifyToken(snapshot.regime_label) : 'Waiting for snapshot' }}</h2>
+        <p class="eyebrow">{{ t('regime.eyebrow') }}</p>
+        <h2>{{ snapshot ? prettifyToken(snapshot.regime_label) : t('regime.waiting') }}</h2>
       </div>
       <div v-if="snapshot" class="panel__actions">
         <span
           class="pill"
           :class="`pill--${snapshot.report_date === latestAvailableDate ? 'positive' : regimeTone(snapshot.regime_label)}`"
         >
-          Selected analysis · {{ formatDate(snapshot.report_date) }}
+          {{ t('regime.selectedAnalysis', { date: formatDate(snapshot.report_date) }) }}
         </span>
         <span v-if="latestAvailableDate" class="pill pill--outline">
-          Latest available · {{ formatDate(latestAvailableDate) }}
+          {{ t('regime.latestAvailable', { date: formatDate(latestAvailableDate) }) }}
         </span>
         <span class="pill" :class="`pill--${freshness?.stale ? 'warning' : 'outline'}`">
-          Regime as-of · {{ formatDate(freshness?.asOfDate || snapshot.report_date) }}
+          {{ t('regime.regimeAsOf', { date: formatDate(freshness?.asOfDate || snapshot.report_date) }) }}
         </span>
       </div>
     </div>
 
-    <p class="panel__lede">Latest inferred posture across macro trend, liquidity, and risk inputs.</p>
+    <p class="panel__lede">{{ t('regime.lede') }}</p>
 
     <section v-if="freshness?.stale" class="staleness-banner staleness-banner--warning" aria-label="Regime staleness notice">
-      <strong>Macro regime is lagging the selected report</strong>
+      <strong>{{ t('regime.lagging') }}</strong>
       <p>{{ freshnessMessage }}</p>
     </section>
 
@@ -84,7 +87,7 @@ const freshnessMessage = computed(() => {
     </div>
 
     <div v-else class="empty-state">
-      <p>Run the analysis pipeline to populate the dashboard snapshot.</p>
+      <p>{{ t('regime.runPipeline') }}</p>
     </div>
   </article>
 </template>

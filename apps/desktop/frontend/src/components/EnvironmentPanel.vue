@@ -1,5 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   breadthTone,
   clampScore,
@@ -13,13 +14,15 @@ import {
 import { dashboardStore } from '../store.js';
 import MetricCard from './MetricCard.vue';
 
+const { t } = useI18n();
+
 const snapshot = computed(() => dashboardStore.snapshot);
 const environment = computed(() => snapshot.value?.environment);
 
 const scores = computed(() => [
-  ['Environment score', environment.value?.environment_score],
-  ['Liquidity proxy', environment.value?.liquidity_proxy_score],
-  ['Stress proxy', environment.value?.stress_proxy_score],
+  ['environment.environmentScore', environment.value?.environment_score],
+  ['environment.liquidityProxy', environment.value?.liquidity_proxy_score],
+  ['environment.stressProxy', environment.value?.stress_proxy_score],
 ]);
 </script>
 
@@ -27,54 +30,54 @@ const scores = computed(() => [
   <article class="panel panel--soft">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Environment layer</p>
-        <h2>{{ environment ? prettifyToken(environment.environment_label) : 'Unavailable' }}</h2>
+        <p class="eyebrow">{{ t('environment.eyebrow') }}</p>
+        <h2>{{ environment ? prettifyToken(environment.environment_label) : t('environment.unavailable') }}</h2>
         <p v-if="environment" class="panel__lede">
-          Scope-aware participation, liquidity proxy, and stress posture for the selected report date.
+          {{ t('environment.lede') }}
         </p>
       </div>
       <div v-if="environment" class="panel__actions">
         <span class="pill" :class="`pill--${breadthTone(environment.breadth_state)}`">
-          Breadth · {{ prettifyToken(environment.breadth_state) }}
+          {{ t('environment.breadthLabel', { state: prettifyToken(environment.breadth_state) }) }}
         </span>
         <span class="pill pill--outline">
-          Regime as-of · {{ formatDate(environment.regime_as_of_date) }}
+          {{ t('environment.regimeAsOf', { date: formatDate(environment.regime_as_of_date) }) }}
         </span>
       </div>
     </div>
 
     <div v-if="!environment" class="empty-state">
-      <p>No environment snapshot is available for the selected report date.</p>
+      <p>{{ t('environment.noSnapshot') }}</p>
     </div>
 
     <template v-else>
       <div class="mini-metrics">
         <MetricCard
-          label="Breadth"
+          :label="t('environment.breadth')"
           :value="formatDisplayPercent(environment.breadth_pct, 1)"
-          :meta="`${formatInteger(environment.breadth_above_count)} / ${formatInteger(environment.breadth_eligible_count)} above MA30`"
+          :meta="t('environment.aboveMa30', { above: formatInteger(environment.breadth_above_count), total: formatInteger(environment.breadth_eligible_count) })"
         />
         <MetricCard
-          label="Breadth SMA5"
+          :label="t('environment.breadthSma5')"
           :value="formatDisplayPercent(environment.breadth_pct_sma5, 1)"
-          meta="Smoothed participation"
+          :meta="t('environment.smoothedParticipation')"
         />
         <MetricCard
-          label="Breadth 5d"
+          :label="t('environment.breadth5d')"
           :value="formatDeltaPoints(environment.breadth_5d_delta, 1)"
-          meta="Repair or deterioration speed"
+          :meta="t('environment.repairDeterioration')"
         />
         <MetricCard
-          label="Volume expansion"
+          :label="t('environment.volumeExpansion')"
           :value="formatDisplayPercent(environment.volume_expansion_pct, 1)"
-          meta="Share of tracked symbols above vol_ma20"
+          :meta="t('environment.shareAboveVolMa20')"
         />
       </div>
 
       <div class="score-stack">
         <div v-for="[label, value] in scores" :key="label" class="score-row">
           <div class="score-row__meta">
-            <span>{{ label }}</span>
+            <span>{{ t(label) }}</span>
             <strong>{{ formatNumber(value, 1) }}</strong>
           </div>
           <div class="score-bar">
@@ -84,7 +87,7 @@ const scores = computed(() => [
       </div>
 
       <p class="panel__note">
-        Tracked-universe proxy only. Environment breadth remains based on enabled INDEX + ETF instruments, not a full stock-universe breadth series.
+        {{ t('environment.trackedProxy') }}
       </p>
     </template>
   </article>

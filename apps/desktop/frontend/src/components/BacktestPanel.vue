@@ -1,5 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   formatCurrency,
   formatDate,
@@ -9,6 +10,8 @@ import {
 } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 import MetricCard from './MetricCard.vue';
+
+const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const backtest = computed(() => snapshot.value?.latest_backtest);
@@ -34,10 +37,10 @@ const provenance = computed(() => {
   <article class="panel panel--soft">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Validation</p>
-        <h2>Latest backtest</h2>
+        <p class="eyebrow">{{ t('backtest.eyebrow') }}</p>
+        <h2>{{ t('backtest.title') }}</h2>
         <p v-if="backtest" class="panel__lede">
-          Recent strategy validation snapshot generated from the same pipeline.
+          {{ t('backtest.lede') }}
         </p>
       </div>
       <div v-if="backtest" class="panel__actions">
@@ -47,29 +50,29 @@ const provenance = computed(() => {
           class="pill"
           :class="`pill--${provenance.matchesCurrentSnapshot ? 'positive' : 'warning'}`"
         >
-          {{ provenance.matchesCurrentSnapshot ? 'Matches current snapshot' : 'Snapshot mismatch' }}
+          {{ provenance.matchesCurrentSnapshot ? t('backtest.matchesSnapshot') : t('backtest.snapshotMismatch') }}
         </span>
       </div>
     </div>
 
     <div v-if="provenance" class="panel__meta-row">
-      <span class="panel__meta">Analysis scope · {{ provenance.analysisScope }}</span>
-      <span class="panel__meta">Signal scope · {{ provenance.signalScope }}</span>
-      <span class="panel__meta">Regime basis · {{ provenance.regimeBasisScope }}</span>
-      <span class="panel__meta">Signal end · {{ provenance.signalEndDate ? formatDate(provenance.signalEndDate) : 'N/A' }}</span>
+      <span class="panel__meta">{{ t('backtest.analysisScope', { scope: provenance.analysisScope }) }}</span>
+      <span class="panel__meta">{{ t('backtest.signalScope', { scope: provenance.signalScope }) }}</span>
+      <span class="panel__meta">{{ t('backtest.regimeBasis', { scope: provenance.regimeBasisScope }) }}</span>
+      <span class="panel__meta">{{ t('backtest.signalEnd', { date: provenance.signalEndDate ? formatDate(provenance.signalEndDate) : 'N/A' }) }}</span>
     </div>
 
     <div v-if="backtest" class="mini-metrics">
-      <MetricCard label="CAGR" :value="formatPercent(backtest.cagr)" meta="Annualized return" tone="positive" />
-      <MetricCard label="Max drawdown" :value="formatPercent(backtest.max_drawdown)" meta="Peak-to-trough" tone="negative" />
-      <MetricCard label="Sharpe" :value="formatNumber(backtest.sharpe, 2)" meta="Risk-adjusted" />
-      <MetricCard label="Final equity" :value="formatCurrency(backtest.final_equity)" :meta="`${formatInteger(backtest.trades)} trades · ${formatInteger(backtest.trading_days)} days`" />
+      <MetricCard :label="t('backtest.cagr')" :value="formatPercent(backtest.cagr)" :meta="t('backtest.annualizedReturn')" tone="positive" />
+      <MetricCard :label="t('backtest.maxDrawdown')" :value="formatPercent(backtest.max_drawdown)" :meta="t('backtest.peakToTrough')" tone="negative" />
+      <MetricCard :label="t('backtest.sharpe')" :value="formatNumber(backtest.sharpe, 2)" :meta="t('backtest.riskAdjusted')" />
+      <MetricCard :label="t('backtest.finalEquity')" :value="formatCurrency(backtest.final_equity)" :meta="t('backtest.tradesDays', { trades: formatInteger(backtest.trades), days: formatInteger(backtest.trading_days) })" />
     </div>
 
-    <p v-if="backtest?.config_summary" class="panel__note">Config · {{ backtest.config_summary }}</p>
+    <p v-if="backtest?.config_summary" class="panel__note">{{ t('backtest.config', { config: backtest.config_summary }) }}</p>
 
     <div v-if="!backtest" class="empty-state">
-      <p>No backtest result is available yet.</p>
+      <p>{{ t('backtest.noBacktest') }}</p>
     </div>
   </article>
 </template>

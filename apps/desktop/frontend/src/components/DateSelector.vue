@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatDate, formatScopeLabel } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
 
+const { t } = useI18n();
 const availableDates = computed(() => dashboardStore.availableDates || []);
 const selectedScope = computed(() => dashboardStore.selectedScope);
 const selectedReportDate = computed(() => dashboardStore.selectedReportDate);
@@ -20,13 +22,13 @@ const emit = defineEmits(['update:scope', 'update:date', 'jump-to-latest']);
   <div class="hero__control">
     <div class="control-field">
       <div class="control-field__header">
-        <label class="control-field__label" for="scopeSelect">Scope & analysis date</label>
+        <label class="control-field__label" for="scopeSelect">{{ t('dateSelector.scopeDate') }}</label>
         <button
           class="button button--secondary button--compact"
           :disabled="!hasDates || loading || !latestAvailableDate || isLatestSelected"
           @click="emit('jump-to-latest')"
         >
-          {{ isLatestSelected ? 'Latest selected' : 'Jump to latest' }}
+          {{ isLatestSelected ? t('dateSelector.latestSelected') : t('dateSelector.jumpToLatest') }}
         </button>
       </div>
 
@@ -37,9 +39,9 @@ const emit = defineEmits(['update:scope', 'update:date', 'jump-to-latest']);
         :disabled="loading"
         @change="emit('update:scope', $event.target.value)"
       >
-        <option value="global">GLOBAL · Shared latest date</option>
-        <option value="cn">CN · A-share complete latest date</option>
-        <option value="hk">HK · Hong Kong complete latest date</option>
+        <option value="global">{{ t('dateSelector.globalShared') }}</option>
+        <option value="cn">{{ t('dateSelector.cnComplete') }}</option>
+        <option value="hk">{{ t('dateSelector.hkComplete') }}</option>
       </select>
 
       <select
@@ -49,27 +51,27 @@ const emit = defineEmits(['update:scope', 'update:date', 'jump-to-latest']);
         :disabled="!hasDates || loading"
         @change="emit('update:date', $event.target.value)"
       >
-        <option v-if="!hasDates" value="">No analysis dates available</option>
+        <option v-if="!hasDates" value="">{{ t('dateSelector.noDates') }}</option>
         <option
           v-for="(date, index) in availableDates"
           :key="date"
           :value="date"
         >
-          {{ formatDate(date) }}{{ index === 0 ? ' · Latest' : '' }}
+          {{ formatDate(date) }}{{ index === 0 ? t('dateSelector.latestSuffix') : '' }}
         </option>
       </select>
 
       <div class="control-field__toolbar">
-        <span class="panel__meta">Scope · {{ formatScopeLabel(selectedScope) }}</span>
+        <span class="panel__meta">{{ t('dateSelector.scopeLabel', { scope: formatScopeLabel(selectedScope) }) }}</span>
         <span class="panel__meta">
-          {{ latestAvailableDate ? `Latest available · ${formatDate(latestAvailableDate)}` : 'Latest available date unavailable' }}
+          {{ latestAvailableDate ? t('dateSelector.latestAvailable', { date: formatDate(latestAvailableDate) }) : t('dateSelector.latestUnavailable') }}
         </span>
       </div>
 
       <span class="control-field__hint">
         {{ hasDates
-          ? `Scope controls which market set defines the latest complete report date. Selected analysis date drives every panel below. ${availableDates.length} selectable date${availableDates.length === 1 ? '' : 's'}.`
-          : 'No dashboard analysis dates are available yet.'
+          ? t('dateSelector.scopeHint', { count: availableDates.length })
+          : t('dateSelector.noDashboardDates')
         }}
       </span>
     </div>

@@ -1,15 +1,31 @@
 # Current Phase
-- 阶段：执行模式 - 当前目标： - Oracle 数据质量复核报告问题修复（P0-P5）已全部完成并验证。 - Dashboard 性能优化已完成并提交（commit `2a4a875`）。 - Memory 体系清理与状态同步（当前会话）。
+implement
 
 # Active Tasks
-- [Todo] [TASK-000] ✅ P0：宏观因子历史回填（`compute-macro --from 2020` → 7,149 macro 行）。
-- [Todo] [TASK-001] ✅ P5：修复 `fetch_market_regimes` GLOBAL-only 过滤（`regime_missing` 17,195 → 152）。
-- [Todo] [TASK-002] ✅ P1：`compute-signals` 重跑（`data_starved` 52.6% → 2.9%）。
-- [Todo] [TASK-003] ✅ P2：Tencent turnover 解析（`turnover: None` → `row.get(6)`，代码已修复，存量数据待 `ingest-daily` 回填）。
-- [Todo] [TASK-004] ✅ P4：注册制板块指数跳变阈值差异化（科创50/100/创业板指/50 → 22% 阈值）。
-- [Todo] [TASK-005] ✅ P3：HSAHP 调研（Tencent 无 K 线，Eastmoney 不可达，待用户决策）。
-- [Todo] [TASK-006] ✅ 全链路验证：`pipeline-dates` 全部对齐、`dashboard-snapshot` 正常、`export-report` 成功。
-- [Todo] [TASK-007] ✅ 代码提交：P0-P5 修复 (`12b17bb`) + Dashboard 性能优化 (`2a4a875`) 已分别提交。
+- [Done] [TASK-010] ✅ V4 Research Cognition Layer 完整实现（6 Waves + Oracle D1-D4 修复）
+- [Done] [TASK-001] Wave 1: ResearchContext + ContextBuilder + FeatureEngine
+- [Done] [TASK-002] Wave 2: Skill 基础设施（Registry/Router/Executor/Provider）
+- [Done] [TASK-003] Wave 3: market-regime-reasoning 完整链路
+- [Done] [TASK-004] Wave 4: 6 个 Skills（liquidity-shock, sector-rotation, macro-linkage, factor-composite, volatility-tail）
+- [Done] [TASK-005] Wave 5: AgentProfile（macro-strategist, risk-manager, technical-analyst）
+- [Done] [TASK-006] Wave 6: 结构化输出 + Desktop 集成 + V3 迁移
+- [Done] [TASK-007] Branch: `v4`（31 个提交，已推送 origin）
+- [Done] [TASK-008] Oracle: 全面评审通过（D1-D4 已修复）
+- [Done] [TASK-000] ✅ P0：宏观因子历史回填（`compute-macro --from 2020` → 7,149 macro 行）。
+- [Done] [TASK-001] ✅ P5：修复 `fetch_market_regimes` GLOBAL-only 过滤（`regime_missing` 17,195 → 152）。
+- [Done] [TASK-002] ✅ P1：`compute-signals` 重跑（`data_starved` 52.6% → 2.9%）。
+- [Done] [TASK-003] ✅ P2：Tencent turnover 解析（`turnover: None` → `row.get(6)`，代码已修复，存量数据待 `ingest-daily` 回填）。
+- [Done] [TASK-004] ✅ P4：注册制板块指数跳变阈值差异化（科创50/100/创业板指/50 → 22% 阈值）。
+- [Done] [TASK-005] ✅ P3：HSAHP 调研（Tencent 无 K 线，Eastmoney 不可达，待用户决策）。
+- [Done] [TASK-006] ✅ 全链路验证：`pipeline-dates` 全部对齐、`dashboard-snapshot` 正常、`export-report` 成功。
+- [Done] [TASK-007] ✅ 代码提交：P0-P5 修复 (`12b17bb`) + Dashboard 性能优化 (`2a4a875`) 已分别提交。
+- [Done] [TASK-011] Phase 1: Vue 3 脚手架 + breadth-ma30 试点组件（1周）
+- [Done] [TASK-012] Phase 2: 逐面板迁移 14 个 Vue 组件（3-4周）
+- [Done] [TASK-013] Phase 3: 响应式网格布局 + 简约风格优化（1-2周）
+- [Done] [TASK-020] Phase 0: Vue migration pre-i18n (delete dead code, extract hero, migrate 3 plain JS slices, eliminate commitRender)
+- [Done] [TASK-021] Phase 1-4: Implement i18n with vue-i18n@11 (infrastructure, message extraction, language toggle, polish)
+- [Done] [TASK-022] Phase 2: i18n - dashboard-utils.js fallback strings + date/number formatting locale integration
+- [Done] [TASK-023] Phase 3: i18n - backend-originated strings + main.js export messages
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

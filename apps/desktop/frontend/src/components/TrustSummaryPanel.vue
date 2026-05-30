@@ -1,5 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   formatDateTime,
   formatInteger,
@@ -9,6 +10,8 @@ import {
 import { dashboardStore } from '../store.js';
 import MetricCard from './MetricCard.vue';
 
+const { t } = useI18n();
+
 const snapshot = computed(() => dashboardStore.snapshot);
 const trust = computed(() => snapshot.value?.trust_summary);
 
@@ -17,10 +20,10 @@ const trustLevelTone = computed(() => trust.value ? trustTone(trust.value.level)
 const freshnessValue = computed(() => {
   if (!trust.value) return '';
   return trust.value.pipeline_has_stale_stage
-    ? `${formatInteger(trust.value.pipeline_stale_stage_count)} stale stage${trust.value.pipeline_stale_stage_count === 1 ? '' : 's'}`
+    ? t('trust.staleStage', { count: formatInteger(trust.value.pipeline_stale_stage_count) })
     : trust.value.pipeline_has_partial_latest
-      ? `${formatInteger(trust.value.pipeline_partial_latest_stage_count)} partial latest`
-      : 'Decision stages fresh';
+      ? t('trust.partialLatest', { count: formatInteger(trust.value.pipeline_partial_latest_stage_count) })
+      : t('trust.decisionStagesFresh');
 });
 
 const freshnessTone = computed(() => {
@@ -36,14 +39,14 @@ const hasDataHealth = computed(() => trust.value?.data_health_generated_at !== n
 
 const dataHealthValue = computed(() => {
   if (!trust.value) return '';
-  if (!hasDataHealth.value) return 'Data health not yet checked';
+  if (!hasDataHealth.value) return t('trust.dataHealthNotChecked');
   if (trust.value.data_health_critical_symbols > 0 || trust.value.data_health_critical_macro_sources > 0) {
-    return `${formatInteger(trust.value.data_health_critical_symbols)} symbol / ${formatInteger(trust.value.data_health_critical_macro_sources)} macro critical`;
+    return t('trust.symbolMacroCritical', { symbols: formatInteger(trust.value.data_health_critical_symbols), macro: formatInteger(trust.value.data_health_critical_macro_sources) });
   }
   if (trust.value.data_health_review_symbols > 0 || trust.value.data_health_review_macro_sources > 0) {
-    return `${formatInteger(trust.value.data_health_review_symbols)} symbol / ${formatInteger(trust.value.data_health_review_macro_sources)} macro review`;
+    return t('trust.symbolMacroReview', { symbols: formatInteger(trust.value.data_health_review_symbols), macro: formatInteger(trust.value.data_health_review_macro_sources) });
   }
-  return 'No critical health warnings';
+  return t('trust.noCriticalWarnings');
 });
 
 const dataHealthToneValue = computed(() => {
@@ -60,7 +63,7 @@ const latestAvailableDate = computed(() => trust.value?.latest_available_date ||
 const historicalEvidenceNote = computed(() => {
   if (!snapshot.value?.report_date || !trust.value?.latest_available_date) return '';
   if (snapshot.value.report_date === trust.value.latest_available_date) return '';
-  return `This trust summary combines the selected historical snapshot with current operational freshness/data-health evidence as of ${trust.value.latest_available_date}.`;
+  return t('trust.historicalNote', { date: trust.value.latest_available_date });
 });
 </script>
 
@@ -68,10 +71,10 @@ const historicalEvidenceNote = computed(() => {
   <article v-if="trust" class="panel panel--accent">
     <div class="panel__header">
       <div>
-        <p class="eyebrow">Trust summary</p>
+        <p class="eyebrow">{{ t('trust.eyebrow') }}</p>
         <h2>{{ trust.headline }}</h2>
         <p class="panel__lede">
-          Primary trust verdict for the currently selected snapshot. Use the evidence sections below before acting on environment, signal, or backtest output.
+          {{ t('trust.lede') }}
         </p>
       </div>
       <div class="panel__actions">
@@ -84,11 +87,11 @@ const historicalEvidenceNote = computed(() => {
     <p>{{ trust.message }}</p>
 
     <div class="panel__meta-row">
-      <span class="panel__meta">Dashboard scope · {{ snapshot?.scope }}</span>
-      <span class="panel__meta">Signal analysis scope · {{ trust.signal_analysis_scope || 'N/A' }}</span>
-      <span class="panel__meta">Signal regime basis · {{ trust.signal_regime_basis_scope || 'N/A' }}</span>
+      <span class="panel__meta">{{ t('trust.dashboardScope', { scope: snapshot?.scope }) }}</span>
+      <span class="panel__meta">{{ t('trust.signalAnalysisScope', { scope: trust.signal_analysis_scope || 'N/A' }) }}</span>
+      <span class="panel__meta">{{ t('trust.signalRegimeBasisScope', { scope: trust.signal_regime_basis_scope || 'N/A' }) }}</span>
       <span class="panel__meta">
-        Backtest matches snapshot · {{ trust.backtest_matches_snapshot == null ? 'N/A' : trust.backtest_matches_snapshot ? 'yes' : 'no' }}
+        {{ t('trust.backtestMatches', { matches: trust.backtest_matches_snapshot == null ? 'N/A' : trust.backtest_matches_snapshot ? 'yes' : 'no' }) }}
       </span>
     </div>
 
@@ -96,47 +99,47 @@ const historicalEvidenceNote = computed(() => {
 
     <div class="mini-metrics">
       <MetricCard
-        label="Trust level"
+        :label="t('trust.trustLevel')"
         :value="prettifyToken(trust.level)"
         :meta="trust.headline"
         :tone="trustLevelTone"
       />
       <MetricCard
-        label="Latest-day coverage"
+        :label="t('trust.latestDayCoverage')"
         :value="`${formatInteger(trust.scoped_symbols_on_freshest_market_date)}/${formatInteger(trust.scoped_symbols_expected)}`"
-        :meta="`Freshest market date · ${freshestMarketDate}`"
+        :meta="t('trust.freshestMarketDate', { date: freshestMarketDate })"
         :tone="trust.latest_day_complete ? 'positive' : 'warning'"
       />
       <MetricCard
-        label="Pipeline evidence"
+        :label="t('trust.pipelineEvidence')"
         :value="freshnessValue"
-        :meta="`Latest available · ${latestAvailableDate}`"
+        :meta="t('trust.latestAvailableMeta', { date: latestAvailableDate })"
         :tone="freshnessTone"
       />
       <MetricCard
-        label="Data health evidence"
+        :label="t('trust.dataHealthEvidence')"
         :value="dataHealthValue"
-        :meta="trust.data_health_generated_at ? `Generated ${formatDateTime(trust.data_health_generated_at)}` : 'Detailed health summary not loaded yet'"
+        :meta="trust.data_health_generated_at ? `Generated ${formatDateTime(trust.data_health_generated_at)}` : t('trust.detailedHealthNotLoaded')"
         :tone="dataHealthToneValue"
       />
     </div>
 
     <section>
       <div class="panel__subheader">
-        <p class="panel__section-title">Freshness evidence</p>
+        <p class="panel__section-title">{{ t('trust.freshnessEvidence') }}</p>
       </div>
       <p class="panel__note">
-        Pipeline freshness remains the stage-level evidence layer. Current verdict: {{ freshnessValue }}. Latest-day complete: {{ trust.latest_day_complete ? 'yes' : 'no' }}.
+        {{ t('trust.freshnessVerdict', { verdict: freshnessValue, complete: trust.latest_day_complete ? 'yes' : 'no' }) }}
       </p>
     </section>
 
     <section>
       <div class="panel__subheader">
-        <p class="panel__section-title">Data-health evidence</p>
-        <span class="panel__meta">Macro status · {{ prettifyToken(trust.macro_status) }}</span>
+        <p class="panel__section-title">{{ t('trust.dataHealthSection') }}</p>
+        <span class="panel__meta">{{ t('trust.macroStatus', { status: prettifyToken(trust.macro_status) }) }}</span>
       </div>
       <p class="panel__note">
-        Data health remains the symbol/provider evidence layer. Current digest: {{ dataHealthValue }}.
+        {{ t('trust.dataHealthVerdict', { digest: dataHealthValue }) }}
       </p>
     </section>
 

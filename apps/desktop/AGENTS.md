@@ -17,7 +17,7 @@ apps/desktop/
 | Shared reactive state | `frontend/src/store.js` | Vue reactive store with 10 synced properties |
 | Vue components | `frontend/src/components/*.vue` | 15 Vue panels (BreadthPanel, MetricCard, DateSelector, etc.) |
 | Vue root | `frontend/src/App.vue` | Composes all panels, wires events |
-| Feature-specific UI | `frontend/src/features/*.js` | recent reports, data health, usage guides |
+| Feature-specific UI | `frontend/src/components/*.vue` | Vue components (DataHealth, RecentReports, UsageGuides, etc.) |
 | Frontend-only rules | `frontend/AGENTS.md` | nearest guidance for slice work |
 | Native command boundary | `src-tauri/src/lib.rs` | bundle/snapshot/export, refresh coordination, safe artifact opening |
 | Tauri config | `src-tauri/tauri.conf.json` | packaging assumes `../frontend/dist` exists |
@@ -46,5 +46,5 @@ apps/desktop/
 - `frontend/node_modules/` and `frontend/dist/` are generated artifacts.
 - Help / Usage docs are loaded in-app from project markdown through Tauri.
 - Scoped desktop views use scoped regime + scoped environment, while upstream signal/backtest provenance still needs explicit reading in Phase 1.
-- Phase 2 complete: all 14 panels migrated to Vue, store fully synced (10 properties).
+- Phase 3 complete. i18n with vue-i18n@11 (zh/en). Dead code deleted from `features/` and `renderers/`.
 - Keep this file cross-boundary; push frontend-only detail into `frontend/AGENTS.md` and Tauri-native detail into `src-tauri/AGENTS.md`.
