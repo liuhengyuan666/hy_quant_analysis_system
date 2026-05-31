@@ -142,6 +142,8 @@ pub struct EnvironmentSnapshot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Rotation rank row. Persisted to ClickHouse as JSON; fields added later MUST
+/// carry `#[serde(default)]` to avoid breaking deserialization of old rows.
 pub struct RotationRankSnapshot {
     pub date: NaiveDate,
     pub symbol: String,
@@ -178,6 +180,8 @@ pub enum SignalLabel {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Signal snapshot row. Persisted to ClickHouse as JSON; fields added later MUST
+/// carry `#[serde(default)]` to avoid breaking deserialization of old rows.
 pub struct SignalSnapshot {
     pub date: NaiveDate,
     pub symbol: String,
@@ -225,6 +229,9 @@ pub struct RotationReason {
     pub contribution: f64,
 }
 
+/// Signal reason breakdown. Stored as JSON blob in the `explanation` column.
+/// Any new field MUST carry `#[serde(default)]` (or a struct-level Default impl)
+/// to avoid breaking deserialization of old stored rows.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignalReason {
     pub best_strategy: StrategyKind,

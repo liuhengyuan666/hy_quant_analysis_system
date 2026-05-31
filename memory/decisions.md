@@ -286,3 +286,18 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 8. 刷新按钮文字固定为 "刷新数据"，不再随下拉选项变化
 
 **Tags:** frontend, vue3, layout, ui-ux, responsive
+
+## ADR-047: Signal/Rotation 中文名称显示 + Schema-Evolution 重构（2026-06-01）
+
+**Status:** active
+
+### Context
+用户要求：1) 信号栈中买入/防御组的每个模块显示对应中文名称；2) 轮动排行榜因篇幅限制采用悬浮样式显示中文名称。实施过程中引发 schema-evolution 问题：在 `RotationRankSnapshot` / `SignalSnapshot` 上新增 `name` 字段导致旧 ClickHouse JSON 行反序列化崩溃。
+
+### Decision
+1. **前端显示**：SignalsPanel 中 `top`/`bullish`/`defensive` 信号卡均在代码旁显示中文名；RotationPanel 中鼠标悬浮在代码单元格上显示中文名 tooltip
+2. **架构重构**：将 `name` 从 `RotationRankSnapshot` 和 `SignalSnapshot` 移除，改为 `DashboardSnapshot.symbol_names: HashMap<String, String>`，由 `app-service` 从 universe 配置一次性填充
+3. **Schema-evolution 政策**：所有从 ClickHouse JSON 反序列化的 DTO 字段必须携带 `#[serde(default)]`，或在 fetch 函数中手动 remap。已在 `market-store/AGENTS.md` 正式文档化
+4. **Markdown 报告同步**：`render_markdown_report` 的信号行现在也输出 `symbol (name)` 格式
+
+**Tags:** frontend, backend, schema-evolution, i18n, ui-ux, oracle-reviewed

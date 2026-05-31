@@ -11,6 +11,7 @@ const topSignals = computed(() => snapshot.value?.top_signals || []);
 const bullishSignals = computed(() => snapshot.value?.bullish_signals || []);
 const defensiveSignals = computed(() => snapshot.value?.defensive_signals || []);
 const hasSignals = computed(() => topSignals.value.length > 0 || bullishSignals.value.length > 0 || defensiveSignals.value.length > 0);
+const symbolNames = computed(() => snapshot.value?.symbol_names || {});
 
 const signalBasis = computed(() => {
   if (!snapshot.value) return null;
@@ -83,9 +84,10 @@ function handleSignalClick(group, index) {
             type="button"
             @click="handleSignalClick('top', index)"
           >
-            <div class="signal-card__header">
+                <div class="signal-card__header">
               <div>
                 <strong class="signal-card__symbol">{{ item.symbol }}</strong>
+                <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
                 <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
               </div>
               <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
@@ -114,6 +116,7 @@ function handleSignalClick(group, index) {
               <div class="signal-card__header">
                 <div>
                   <strong class="signal-card__symbol">{{ item.symbol }}</strong>
+                  <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
                   <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
                 <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
@@ -144,6 +147,7 @@ function handleSignalClick(group, index) {
               <div class="signal-card__header">
                 <div>
                   <strong class="signal-card__symbol">{{ item.symbol }}</strong>
+                  <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
                   <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
                 <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
@@ -256,10 +260,17 @@ function handleSignalClick(group, index) {
 }
 
 .signal-card__symbol {
-  display: block;
+  display: inline;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.signal-card__name {
+  display: inline;
+  margin-left: var(--space-2);
+  font-size: var(--font-size-label);
+  color: var(--text-secondary);
 }
 
 .signal-card__score {

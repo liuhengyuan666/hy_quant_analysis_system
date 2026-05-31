@@ -52,3 +52,17 @@ crates/market-store/
 - `instrument` schema now includes `display_symbol`; keep config, schema, and insert payload in lockstep.
 - If startup timings regress, inspect scoped helper query count first, then parse cost.
 - Empty scoped max-date queries should resolve to `None`, not synthetic `1970-01-01`-style placeholders.
+
+## SCHEMA EVOLUTION POLICY
+
+Any struct deserialized from ClickHouse `JSONEachRow` (e.g., `RotationRankSnapshot`, `SignalSnapshot`, `StrategyPreferenceSnapshot`, `IndicatorSnapshot`, `DailyBar`, `MacroSnapshot`) is a persisted JSON schema. Adding a new field to such a struct without a backward-compatibility mechanism will break deserialization of existing rows.
+
+**Rule**: Every new field on a persisted DTO MUST use one of these three patterns:
+
+1. **`#[serde(default)]` on the field** — serde fills the default when the key is missing in stored JSON. Preferred for primitive types and `String`.
+2. **Struct-level `#[serde(default)]` with a `Default` impl** — used when most fields have sensible defaults.
+3. **Manual `serde_json::Value` remap in the fetch function** — patch missing keys before calling `serde_json::from_value`. Documented example: `fetch_strategy_preferences` (lines 2021-2037).
+
+**Anti-pattern**: Adding a required field with no default and no remap. This causes runtime deserialization crashes on old data.
+
+**When in doubt**: Add `#[serde(default)]`.

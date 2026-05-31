@@ -2784,6 +2784,11 @@ impl AppContext {
             scope_label(scope),
         );
         snapshot.environment = environment;
+        // Enrich snapshot with symbol-to-name mapping from universe
+        snapshot.symbol_names = scoped_instruments
+            .iter()
+            .map(|instrument| (instrument.symbol.clone(), instrument.name.clone()))
+            .collect();
         let assembly_ms = elapsed_ms(assembly_started_at);
         let breadth_started_at = Instant::now();
         snapshot.watchlist_breadth = self.compute_watchlist_breadth_snapshot(report_date, scope)?;

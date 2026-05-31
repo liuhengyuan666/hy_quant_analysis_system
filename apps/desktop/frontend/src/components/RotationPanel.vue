@@ -10,6 +10,7 @@ const snapshot = computed(() => dashboardStore.snapshot);
 const topRotation = computed(() => snapshot.value?.top_rotation || []);
 const bottomRotation = computed(() => snapshot.value?.bottom_rotation || []);
 const hasRotation = computed(() => topRotation.value.length > 0);
+const symbolNames = computed(() => snapshot.value?.symbol_names || {});
 </script>
 
 <template>
@@ -50,7 +51,10 @@ const hasRotation = computed(() => topRotation.value.length > 0);
             <tbody>
               <tr v-for="item in topRotation" :key="item.rank">
                 <td>#{{ item.rank }}</td>
-                <td class="data-table__symbol">{{ item.symbol }}</td>
+                <td class="data-table__symbol tooltip-container">
+                  {{ item.symbol }}
+                  <span v-if="symbolNames[item.symbol]" class="tooltip">{{ symbolNames[item.symbol] }}</span>
+                </td>
                 <td>{{ formatNumber(item.momentum_score, 2) }}</td>
                 <td>{{ formatNumber(item.rs_20, 2) }}</td>
                 <td>{{ formatNumber(item.rs_60, 2) }}</td>
@@ -81,7 +85,10 @@ const hasRotation = computed(() => topRotation.value.length > 0);
             <tbody>
               <tr v-for="item in bottomRotation" :key="item.rank">
                 <td>#{{ item.rank }}</td>
-                <td class="data-table__symbol">{{ item.symbol }}</td>
+                <td class="data-table__symbol tooltip-container">
+                  {{ item.symbol }}
+                  <span v-if="symbolNames[item.symbol]" class="tooltip">{{ symbolNames[item.symbol] }}</span>
+                </td>
                 <td>{{ formatNumber(item.momentum_score, 2) }}</td>
                 <td>{{ formatNumber(item.rs_20, 2) }}</td>
                 <td>{{ formatNumber(item.rs_60, 2) }}</td>
@@ -174,6 +181,37 @@ const hasRotation = computed(() => topRotation.value.length > 0);
 
 .data-table__symbol {
   font-weight: 600;
+}
+
+.tooltip-container {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip-container .tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--panel-radius);
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  color: var(--text-primary);
+  font-size: var(--font-size-meta);
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition-base), visibility var(--transition-base);
+  z-index: 10;
+  box-shadow: var(--shadow-soft);
+}
+
+.tooltip-container:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .eyebrow {
