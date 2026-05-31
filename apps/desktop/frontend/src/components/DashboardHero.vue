@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dashboardStore, updateSelectedRefreshStartStage } from '../store.js';
 import { formatDateTime } from '../lib/dashboard-utils.js';
+import LanguageToggle from './LanguageToggle.vue';
 
 const { t } = useI18n();
 
@@ -34,11 +35,6 @@ const selectedRefreshStartStage = computed({
 
 const isBusy = computed(() => loading.value || refreshing.value || refreshStatus.value.running);
 
-function formatRefreshStageLabel(value) {
-  const normalized = String(value ?? 'full').trim().toLowerCase();
-  return REFRESH_START_STAGE_OPTIONS.value.find((opt) => opt.value === normalized)?.label || t('refreshStages.full');
-}
-
 function handleRefresh() {
   emit('refresh', selectedRefreshStartStage.value);
 }
@@ -61,10 +57,13 @@ function handleStageChange(event) {
       <div class="hero__actions">
         <div class="hero__control hero__control--guide">
           <div class="control-field">
-            <div class="control-field__header">
-              <span class="control-field__label">{{ t('dashboardHero.helpUsage') }}</span>
-              <span class="pill pill--outline">{{ t('dashboardHero.guideViewer') }}</span>
-            </div>
+        <div class="control-field__header">
+          <span class="control-field__label">{{ t('dashboardHero.helpUsage') }}</span>
+          <div class="control-field__actions">
+            <span class="pill pill--outline">{{ t('dashboardHero.guideViewer') }}</span>
+            <LanguageToggle />
+          </div>
+        </div>
             <span class="control-field__hint">
               {{ t('dashboardHero.guideHint') }}
             </span>
@@ -93,12 +92,7 @@ function handleStageChange(event) {
             :disabled="isBusy"
             @click="handleRefresh"
           >
-            {{ (refreshing || refreshStatus.running)
-              ? t('hero.refreshing')
-              : selectedRefreshStartStage === 'full'
-                ? t('hero.refreshData')
-                : t('dashboardHero.runFrom', { stage: formatRefreshStageLabel(selectedRefreshStartStage) })
-            }}
+            {{ (refreshing || refreshStatus.running) ? t('hero.refreshing') : t('hero.refreshData') }}
           </button>
           <button
             class="button button--primary"
@@ -117,4 +111,16 @@ function handleStageChange(event) {
 
 <style scoped>
 /* Uses global styles from styles.css for .hero, .hero__frame, .hero__copy, etc. */
+
+.hero__actions {
+  flex: 0 1 26rem;
+}
+
+.control-field__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+
 </style>

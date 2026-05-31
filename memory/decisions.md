@@ -267,3 +267,22 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 1. Fixed 22 key mismatches in DataHealthPanel.vue. 2. Fixed 5 key mismatches in RecentReportsPanel.vue. 3. Fixed 3 parameter name mismatches (gaps/jumps/healthStatusMeta). 4. Fixed hardcoded strings in main.js and BreadthPanel.vue. 5. Added dashboardSnapshot key to locale files.
 
 **Tags:** i18n, bugfix, critical
+
+## ADR-046: 前端布局精细调整（2026-05-31）
+
+**Status:** active
+
+### Context
+用户在实际使用中发现 Vue 3 迁移后的前端存在若干布局问题：1) `#app` 遗留空 div 导致顶部一整页空白；2) DateSelector 宽度不足，两个 select 未并排；3) TimeContext 与 Regime/Breadth 同列导致高度不均；4) Backtest 与 Signals 并列使信号区域拥挤；5) LanguageToggle 占据 DateSelector 同行空间；6) Hero 右侧 action 区宽度不足，select 选项和按钮文字显示不全。
+
+### Decision
+1. 移除 `index.html` 中遗留的空 `#app` div 及其 CSS，消除顶部空白
+2. DateSelector 内两个 select 横向 flex 排列，`.header-top` 让 DateSelector 独占整行宽度
+3. TimeContext 从 3 列行移出，独占一行（4 个 MetricCard 全宽展示）
+4. Regime + Breadth 改为 2 列行
+5. BacktestPanel 和 SignalsPanel 拆分为独立行，Signals 内部 buy/sale 保持半宽
+6. LanguageToggle 从 `.header-top` 移至 DashboardHero 的 Help/Usage 卡片内，与 Guide viewer pill 并排
+7. `.hero__actions` 宽度从 22rem 加宽至 26rem，使 select 选项（5 个汉字）和按钮文字（单行）均可完整显示
+8. 刷新按钮文字固定为 "刷新数据"，不再随下拉选项变化
+
+**Tags:** frontend, vue3, layout, ui-ux, responsive

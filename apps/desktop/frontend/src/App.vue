@@ -32,7 +32,7 @@ import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
 import DateSelector from './components/DateSelector.vue';
 import SignalDetailModal from './components/SignalDetailModal.vue';
-import LanguageToggle from './components/LanguageToggle.vue';
+
 
 const { t } = useI18n();
 
@@ -135,7 +135,6 @@ function handleOpenGuides() {
           @update:date="handleDateChange"
           @jump-to-latest="handleJumpToLatest"
         />
-        <LanguageToggle />
       </div>
       <RefreshProgress
         @cancel="handleCancelRefresh"
@@ -157,36 +156,44 @@ function handleOpenGuides() {
 
     <!-- Main grid -->
     <main class="dashboard-grid">
-      <!-- Row 1: Regime, Breadth, Time Context -->
-      <section class="grid-row grid-row--3">
-        <RegimePanel />
-        <BreadthPanel />
+      <!-- Row 1: Time Context (full width, 4 metadata cards) -->
+      <section class="grid-row grid-row--1">
         <TimeContext />
       </section>
 
-      <!-- Row 2: Top Rotation (full width, limited height) -->
+      <!-- Row 2: Regime, Breadth -->
+      <section class="grid-row grid-row--2">
+        <RegimePanel />
+        <BreadthPanel />
+      </section>
+
+      <!-- Row 3: Top Rotation (full width, limited height) -->
       <section class="grid-row grid-row--1">
         <RotationPanel class="rotation-panel--limited" />
       </section>
 
-      <!-- Row 3: Signals + Backtest (side by side) -->
-      <section class="grid-row grid-row--2">
-        <SignalsPanel @select-signal="handleSelectSignal" />
+      <!-- Row 4: Backtest (full width) -->
+      <section class="grid-row grid-row--1">
         <BacktestPanel />
       </section>
 
-      <!-- Row 4: Environment, Status -->
+      <!-- Row 5: Signals (full width, internal buy/sale half-width) -->
+      <section class="grid-row grid-row--1">
+        <SignalsPanel @select-signal="handleSelectSignal" />
+      </section>
+
+      <!-- Row 6: Environment, Status -->
       <section class="grid-row grid-row--2">
         <EnvironmentPanel />
         <StatusPanel />
       </section>
 
-      <!-- Row 5: Recent Reports -->
+      <!-- Row 7: Recent Reports -->
       <section class="grid-row grid-row--1">
         <RecentReportsPanel />
       </section>
 
-      <!-- Row 6: Data Health -->
+      <!-- Row 8: Data Health -->
       <section class="grid-row grid-row--1">
         <DataHealthPanel />
       </section>
@@ -225,6 +232,12 @@ function handleOpenGuides() {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.header-top > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 
 .dashboard-grid {

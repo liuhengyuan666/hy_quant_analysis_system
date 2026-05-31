@@ -32,34 +32,36 @@ const emit = defineEmits(['update:scope', 'update:date', 'jump-to-latest']);
         </button>
       </div>
 
-      <select
-        id="scopeSelect"
-        class="select-control"
-        :value="selectedScope"
-        :disabled="loading"
-        @change="emit('update:scope', $event.target.value)"
-      >
-        <option value="global">{{ t('dateSelector.globalShared') }}</option>
-        <option value="cn">{{ t('dateSelector.cnComplete') }}</option>
-        <option value="hk">{{ t('dateSelector.hkComplete') }}</option>
-      </select>
-
-      <select
-        id="reportDateSelect"
-        class="select-control"
-        :value="selectedReportDate"
-        :disabled="!hasDates || loading"
-        @change="emit('update:date', $event.target.value)"
-      >
-        <option v-if="!hasDates" value="">{{ t('dateSelector.noDates') }}</option>
-        <option
-          v-for="(date, index) in availableDates"
-          :key="date"
-          :value="date"
+      <div class="select-row">
+        <select
+          id="scopeSelect"
+          class="select-control"
+          :value="selectedScope"
+          :disabled="loading"
+          @change="emit('update:scope', $event.target.value)"
         >
-          {{ formatDate(date) }}{{ index === 0 ? t('dateSelector.latestSuffix') : '' }}
-        </option>
-      </select>
+          <option value="global">{{ t('dateSelector.globalShared') }}</option>
+          <option value="cn">{{ t('dateSelector.cnComplete') }}</option>
+          <option value="hk">{{ t('dateSelector.hkComplete') }}</option>
+        </select>
+
+        <select
+          id="reportDateSelect"
+          class="select-control"
+          :value="selectedReportDate"
+          :disabled="!hasDates || loading"
+          @change="emit('update:date', $event.target.value)"
+        >
+          <option v-if="!hasDates" value="">{{ t('dateSelector.noDates') }}</option>
+          <option
+            v-for="(date, index) in availableDates"
+            :key="date"
+            :value="date"
+          >
+            {{ formatDate(date) }}{{ index === 0 ? t('dateSelector.latestSuffix') : '' }}
+          </option>
+        </select>
+      </div>
 
       <div class="control-field__toolbar">
         <span class="panel__meta">{{ t('dateSelector.scopeLabel', { scope: formatScopeLabel(selectedScope) }) }}</span>
@@ -110,6 +112,16 @@ const emit = defineEmits(['update:scope', 'update:date', 'jump-to-latest']);
 .control-field__hint {
   font-size: var(--font-size-label);
   color: var(--text-secondary);
+}
+
+.select-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.select-row .select-control {
+  flex: 1;
+  min-width: 0;
 }
 
 .select-control {

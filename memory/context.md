@@ -26,6 +26,7 @@ implement
 - [Done] [TASK-021] Phase 1-4: Implement i18n with vue-i18n@11 (infrastructure, message extraction, language toggle, polish)
 - [Done] [TASK-022] Phase 2: i18n - dashboard-utils.js fallback strings + date/number formatting locale integration
 - [Done] [TASK-023] Phase 3: i18n - backend-originated strings + main.js export messages
+- [Done] [TASK-024] 前端布局调整：修复顶部空白、DateSelector 全宽并排、Hero 加宽、TimeContext 独占一行、Backtest/Signals 分行、LanguageToggle 移至 Help/Usage 区域
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。
