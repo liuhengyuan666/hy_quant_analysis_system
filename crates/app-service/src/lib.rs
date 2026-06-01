@@ -3696,7 +3696,8 @@ impl AppContext {
         let context = self.research_context(scope)?;
 
         // 2. Load skill from registry
-        let skill_dir = std::path::PathBuf::from("crates/research-skills/skills");
+        let root = StorageConfig::project_root()?;
+        let skill_dir = root.join("crates/research-skills/skills");
         let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
 
         let skill = registry
@@ -3733,10 +3734,14 @@ impl AppContext {
         let llm_output = executor.execute(skill, &context, &provider, profile).await?;
 
         // 6. Merge deterministic + LLM results
+        let is_placeholder = llm_output.response.as_ref().map_or(false, |r| {
+            r.contains("This is a placeholder response")
+        });
         let result = serde_json::json!({
             "skill": skill_name,
             "triggered": true,
             "scope": scope.as_str(),
+            "placeholder": is_placeholder,
             "regime_analysis": {
                 "current_state": format!("{:?}", current_state),
                 "transition": transition,

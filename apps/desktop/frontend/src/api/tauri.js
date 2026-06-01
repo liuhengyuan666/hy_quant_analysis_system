@@ -21,6 +21,10 @@ export const COMMANDS = {
   openReportArtifact: 'open_report_artifact',
   getUserPreferences: 'get_user_preferences',
   setUserPreference: 'set_user_preference',
+  getLlmStatus: 'get_llm_status',
+  listAgentProfiles: 'list_agent_profiles',
+  listSkills: 'list_skills',
+  analyzeWithSkill: 'analyze_with_skill',
 };
 
 /**
@@ -67,5 +71,30 @@ export const refreshApi = {
 
   async cancel() {
     return tauriInvoke(COMMANDS.cancelRefresh);
+  },
+};
+
+/**
+ * LLM analysis API.
+ */
+export const llmApi = {
+  async getStatus() {
+    return tauriInvoke(COMMANDS.getLlmStatus);
+  },
+
+  async listAgentProfiles() {
+    return tauriInvoke(COMMANDS.listAgentProfiles);
+  },
+
+  async listSkills() {
+    return tauriInvoke(COMMANDS.listSkills);
+  },
+
+  async analyzeWithSkill(scope, skillName, agentName) {
+    return tauriInvoke(COMMANDS.analyzeWithSkill, {
+      scope,
+      skillName,
+      agentName,
+    });
   },
 };

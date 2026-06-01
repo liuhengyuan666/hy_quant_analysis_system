@@ -75,6 +75,27 @@ export const dashboardStore = reactive({
 
   /** Recent report artifacts */
   recentReports: [],
+
+  /** LLM analysis result */
+  llmAnalysis: null,
+
+  /** LLM analysis loading state */
+  llmLoading: false,
+
+  /** LLM analysis error message */
+  llmError: '',
+
+  /** LLM configuration status */
+  llmConfig: null,
+
+  /** Selected agent profile for LLM analysis */
+  selectedAgent: 'macro-strategist',
+
+  /** Available agent profiles */
+  availableAgents: [],
+
+  /** Whether LLM analysis panel is visible */
+  showLlmPanel: false,
 });
 
 /**
@@ -173,6 +194,55 @@ export function updateRecentReports(reports) {
 }
 
 /**
+ * Update LLM analysis state.
+ */
+export function updateLlmAnalysis(analysis) {
+  dashboardStore.llmAnalysis = analysis;
+}
+
+/**
+ * Update LLM loading state.
+ */
+export function updateLlmLoading(loading) {
+  dashboardStore.llmLoading = loading;
+}
+
+/**
+ * Update LLM error state.
+ */
+export function updateLlmError(error) {
+  dashboardStore.llmError = error || '';
+}
+
+/**
+ * Update LLM config status.
+ */
+export function updateLlmConfig(config) {
+  dashboardStore.llmConfig = config;
+}
+
+/**
+ * Update selected agent profile.
+ */
+export function updateSelectedAgent(agent) {
+  dashboardStore.selectedAgent = agent || 'macro-strategist';
+}
+
+/**
+ * Update available agent profiles.
+ */
+export function updateAvailableAgents(agents) {
+  dashboardStore.availableAgents = agents || [];
+}
+
+/**
+ * Toggle LLM analysis panel visibility.
+ */
+export function toggleLlmPanel(show) {
+  dashboardStore.showLlmPanel = show !== undefined ? show : !dashboardStore.showLlmPanel;
+}
+
+/**
  * Reset store to initial state.
  */
 export function resetStore() {
@@ -206,6 +276,13 @@ export function resetStore() {
   dashboardStore.refreshing = false;
   dashboardStore.selectedRefreshStartStage = 'full';
   dashboardStore.recentReports = [];
+  dashboardStore.llmAnalysis = null;
+  dashboardStore.llmLoading = false;
+  dashboardStore.llmError = '';
+  dashboardStore.llmConfig = null;
+  dashboardStore.selectedAgent = 'macro-strategist';
+  dashboardStore.availableAgents = [];
+  dashboardStore.showLlmPanel = false;
 }
 
 /**

@@ -1,45 +1,145 @@
 {
-  "current_phase": "- 阶段：执行模式 - 当前目标： - Oracle 数据质量复核报告问题修复（P0-P5）已全部完成并验证。 - Dashboard 性能优化已完成并提交（commit `2a4a875`）。 - Memory 体系清理与状态同步（当前会话）。",
+  "current_phase": "implement",
   "active_tasks": [
+    {
+      "id": "TASK-010",
+      "description": "✅ V4 Research Cognition Layer 完整实现（6 Waves + Oracle D1-D4 修复）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-001",
+      "description": "Wave 1: ResearchContext + ContextBuilder + FeatureEngine",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Wave 2: Skill 基础设施（Registry/Router/Executor/Provider）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Wave 3: market-regime-reasoning 完整链路",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Wave 4: 6 个 Skills（liquidity-shock, sector-rotation, macro-linkage, factor-composite, volatility-tail）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-005",
+      "description": "Wave 5: AgentProfile（macro-strategist, risk-manager, technical-analyst）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-006",
+      "description": "Wave 6: 结构化输出 + Desktop 集成 + V3 迁移",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-007",
+      "description": "Branch: `v4`（31 个提交，已推送 origin）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-008",
+      "description": "Oracle: 全面评审通过（D1-D4 已修复）",
+      "status": "Done"
+    },
     {
       "id": "TASK-000",
       "description": "✅ P0：宏观因子历史回填（`compute-macro --from 2020` → 7,149 macro 行）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-001",
       "description": "✅ P5：修复 `fetch_market_regimes` GLOBAL-only 过滤（`regime_missing` 17,195 → 152）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-002",
       "description": "✅ P1：`compute-signals` 重跑（`data_starved` 52.6% → 2.9%）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-003",
       "description": "✅ P2：Tencent turnover 解析（`turnover: None` → `row.get(6)`，代码已修复，存量数据待 `ingest-daily` 回填）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-004",
       "description": "✅ P4：注册制板块指数跳变阈值差异化（科创50/100/创业板指/50 → 22% 阈值）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-005",
       "description": "✅ P3：HSAHP 调研（Tencent 无 K 线，Eastmoney 不可达，待用户决策）。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-006",
       "description": "✅ 全链路验证：`pipeline-dates` 全部对齐、`dashboard-snapshot` 正常、`export-report` 成功。",
-      "status": "Todo"
+      "status": "Done"
     },
     {
       "id": "TASK-007",
       "description": "✅ 代码提交：P0-P5 修复 (`12b17bb`) + Dashboard 性能优化 (`2a4a875`) 已分别提交。",
-      "status": "Todo"
+      "status": "Done"
+    },
+    {
+      "id": "TASK-011",
+      "description": "Phase 1: Vue 3 脚手架 + breadth-ma30 试点组件（1周）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-012",
+      "description": "Phase 2: 逐面板迁移 14 个 Vue 组件（3-4周）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-013",
+      "description": "Phase 3: 响应式网格布局 + 简约风格优化（1-2周）",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-020",
+      "description": "Phase 0: Vue migration pre-i18n (delete dead code, extract hero, migrate 3 plain JS slices, eliminate commitRender)",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-021",
+      "description": "Phase 1-4: Implement i18n with vue-i18n@11 (infrastructure, message extraction, language toggle, polish)",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-022",
+      "description": "Phase 2: i18n - dashboard-utils.js fallback strings + date/number formatting locale integration",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-023",
+      "description": "Phase 3: i18n - backend-originated strings + main.js export messages",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-024",
+      "description": "前端布局调整：修复顶部空白、DateSelector 全宽并排、Hero 加宽、TimeContext 独占一行、Backtest/Signals 分行、LanguageToggle 移至 Help/Usage 区域",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-025",
+      "description": "信号/轮动面板中文名称显示：SignalsPanel symbol_names 映射 + RotationPanel hover tooltip",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-026",
+      "description": "Schema-evolution 修复：Oracle 评审后移除 `name` ghost field，改为 `DashboardSnapshot.symbol_names` HashMap，补充 serde(default) 文档与 AGENTS.md 策略",
+      "status": "Done"
+    },
+    {
+      "id": "TASK-048",
+      "description": "前端 LLM 智能分析面板集成：3 个 Tauri 命令 + 2 个 Vue 组件 + store 扩展 + i18n + Oracle 评审后修复（路径、placeholder、XSS、DTO、死代码、事件桥接）",
+      "status": "Done"
     }
   ],
   "constraints": [

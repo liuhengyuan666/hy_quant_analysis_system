@@ -2,6 +2,7 @@
   "adrs": [
     {
       "id": "ADR-026",
+      "status": "active",
       "tags": [
         "memory",
         "maintenance",
@@ -11,46 +12,7 @@
     },
     {
       "id": "ADR-027",
-      "tags": [
-        "performance",
-        "clickhouse",
-        "caching",
-        "dashboard"
-      ],
-      "title": "ClickHouse 日期查询性能优化"
-    },
-    {
-      "id": "ADR-028",
-      "tags": [
-        "rotation",
-        "signal",
-        "data-quality",
-        "expected-behavior"
-      ],
-      "title": "rotation_missing 根因分析：历史窗口不足导致的预期行为"
-    },
-    {
-      "id": "ADR-029",
-      "tags": [
-        "HSAHP",
-        "data-source",
-        "HK-scope",
-        "disabled"
-      ],
-      "title": "HSAHP 暂时禁用决策"
-    },
-    {
-      "id": "ADR-030",
-      "tags": [
-        "turnover",
-        "backfill",
-        "data-quality",
-        "manual-execution"
-      ],
-      "title": "Turnover 存量回填待执行"
-    },
-    {
-      "id": "ADR-027",
+      "status": "active",
       "tags": [
         "performance",
         "clickhouse",
@@ -61,7 +23,41 @@
       "title": "ClickHouse 日期查询性能优化（Oracle 复核修正）"
     },
     {
+      "id": "ADR-028",
+      "status": "active",
+      "tags": [
+        "rotation",
+        "signal",
+        "data-quality",
+        "expected-behavior"
+      ],
+      "title": "rotation_missing 根因分析：历史窗口不足导致的预期行为"
+    },
+    {
+      "id": "ADR-029",
+      "status": "active",
+      "tags": [
+        "HSAHP",
+        "data-source",
+        "HK-scope",
+        "disabled"
+      ],
+      "title": "HSAHP 暂时禁用决策"
+    },
+    {
+      "id": "ADR-030",
+      "status": "active",
+      "tags": [
+        "turnover",
+        "backfill",
+        "data-quality",
+        "manual-execution"
+      ],
+      "title": "Turnover 存量回填待执行"
+    },
+    {
       "id": "ADR-031",
+      "status": "active",
       "tags": [
         "HSAHP",
         "data-source",
@@ -70,6 +66,203 @@
         "tencent"
       ],
       "title": "HSAHP 数据失效根因分析"
+    },
+    {
+      "id": "ADR-032",
+      "status": "active",
+      "tags": [
+        "llm",
+        "config",
+        "toml",
+        "security",
+        "architecture"
+      ],
+      "title": "LLM 配置从 SQLite+Keyring 迁移到 TOML+Env"
+    },
+    {
+      "id": "ADR-033",
+      "status": "active",
+      "tags": [
+        "llm",
+        "config",
+        "toml",
+        "security",
+        "architecture"
+      ],
+      "title": "LLM 配置从 SQLite+Keyring 迁移到 TOML+Env"
+    },
+    {
+      "id": "ADR-034",
+      "status": "active",
+      "tags": [
+        "frontend",
+        "vue3",
+        "migration",
+        "ui-ux",
+        "layout"
+      ],
+      "title": "前端改进方案：Vue 3 迁移 + 布局优化"
+    },
+    {
+      "id": "ADR-035",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "state-management",
+        "progressive-migration",
+        "css-bridge"
+      ],
+      "title": "Vue 3 共享状态架构：reactive store + CSS 变量桥接"
+    },
+    {
+      "id": "ADR-036",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "store",
+        "state-sync",
+        "phase2-fix"
+      ],
+      "title": "Vue Store 完整同步架构：10 属性全覆盖"
+    },
+    {
+      "id": "ADR-037",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "layout",
+        "css-grid",
+        "responsive",
+        "transitions",
+        "phase3"
+      ],
+      "title": "Phase 3 布局优化：CSS Grid + 简约风格 + 侧边面板"
+    },
+    {
+      "id": "ADR-038",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "scroll-lock",
+        "lifecycle",
+        "phase3-fix"
+      ],
+      "title": "滚动锁定统一管理：App.vue 层级 watcher"
+    },
+    {
+      "id": "ADR-039",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "event-bridge",
+        "state-sync",
+        "critical-fix"
+      ],
+      "title": "事件桥接架构：Vue 组件回调 main.js 数据加载"
+    },
+    {
+      "id": "ADR-040",
+      "status": "active",
+      "tags": [
+        "vue3",
+        "layout",
+        "responsive",
+        "width-alignment"
+      ],
+      "title": "前端布局优化：宽度对齐 + 面板重组"
+    },
+    {
+      "id": "ADR-041",
+      "status": "active",
+      "tags": [
+        "i18n",
+        "vue3",
+        "frontend",
+        "tauri",
+        "migration"
+      ],
+      "title": "Frontend i18n: vue-i18n@11 + Vue migration first"
+    },
+    {
+      "id": "ADR-042",
+      "status": "active",
+      "tags": [
+        "i18n",
+        "vue3",
+        "frontend",
+        "completed"
+      ],
+      "title": "Frontend i18n Phase 1 complete: vue-i18n@11 + all Vue components migrated"
+    },
+    {
+      "id": "ADR-043",
+      "status": "active",
+      "tags": [
+        "i18n",
+        "vue3",
+        "frontend",
+        "completed"
+      ],
+      "title": "Frontend i18n Phase 2 complete: dashboard-utils.js locale-aware formatting"
+    },
+    {
+      "id": "ADR-044",
+      "status": "active",
+      "tags": [
+        "i18n",
+        "vue3",
+        "frontend",
+        "completed"
+      ],
+      "title": "Frontend i18n Phase 3 complete: main.js export messages + dead code cleanup"
+    },
+    {
+      "id": "ADR-045",
+      "status": "active",
+      "tags": [
+        "i18n",
+        "bugfix",
+        "critical"
+      ],
+      "title": "i18n key mismatch fixes: 26+ keys corrected across DataHealthPanel and RecentReportsPanel"
+    },
+    {
+      "id": "ADR-046",
+      "status": "active",
+      "tags": [
+        "frontend",
+        "vue3",
+        "layout",
+        "ui-ux",
+        "responsive"
+      ],
+      "title": "前端布局精细调整（2026-05-31）"
+    },
+    {
+      "id": "ADR-047",
+      "status": "active",
+      "tags": [
+        "frontend",
+        "backend",
+        "schema-evolution",
+        "i18n",
+        "ui-ux",
+        "oracle-reviewed"
+      ],
+      "title": "Signal/Rotation 中文名称显示 + Schema-Evolution 重构（2026-06-01）"
+    },
+    {
+      "id": "ADR-048",
+      "status": "active",
+      "tags": [
+        "frontend",
+        "llm",
+        "tauri",
+        "vue3",
+        "architecture",
+        "oracle-reviewed"
+      ],
+      "title": "前端 LLM 智能分析面板集成（LLM Desktop Integration）"
     }
   ],
   "traps": []

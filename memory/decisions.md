@@ -301,3 +301,15 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 4. **Markdown 报告同步**：`render_markdown_report` 的信号行现在也输出 `symbol (name)` 格式
 
 **Tags:** frontend, backend, schema-evolution, i18n, ui-ux, oracle-reviewed
+
+## ADR-048: 前端 LLM 智能分析面板集成（LLM Desktop Integration）
+
+**Status:** active
+
+### Context
+项目后端已具备完整的 research-skills LLM 引擎（OpenAI provider、Skill Registry、Agent Profile、Reasoning Graph），CLI 已支持 analyze-with-llm 和 analyze --skill 命令，但桌面端前端没有任何 LLM 交互入口。需要在 Dashboard 中增加一键触发 AI 分析、查看结构化结果的完整链路。
+
+### Decision
+1. 在 Dashboard Hero 下方的 header-top 区域放置 LlmAnalysisTrigger 组件（Agent 下拉选择 + AI 分析按钮）。2. 点击分析后从右侧滑出 LlmAnalysisPanel（520px，与 SignalDetailModal 同模式），含 4 个 Tab：分析结论 / Regime 研判 / 执行详情 / 风险提示。3. Tauri 层新增 3 个命令：get_llm_status、list_agent_profiles、list_skills；复用已有的 analyze_with_skill。4. Store 扩展 7 个新属性（llmAnalysis、llmLoading、llmError、llmConfig、selectedAgent、availableAgents、showLlmPanel），遵循现有 reactive store 模式。5. 对 PlaceholderProvider 返回的占位数据添加 placeholder: true 标识，前端渲染黄色警告横幅，避免误导操作者。6. 定义类型化 DTO（LlmStatus、AgentProfileSummary、SkillSummary）替代 serde_json::Value，保持前后端契约一致。
+
+**Tags:** frontend, llm, tauri, vue3, architecture, oracle-reviewed

@@ -38,6 +38,30 @@ struct DashboardBundlePayload {
     refresh_status: DashboardRefreshStatus,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct LlmStatus {
+    configured: bool,
+    model: String,
+    base_url: String,
+    timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct AgentProfileSummary {
+    name: String,
+    description: String,
+    risk_tolerance: String,
+    output_depth: String,
+    tone: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SkillSummary {
+    name: String,
+    description: String,
+    version: String,
+}
+
 impl Default for DashboardRefreshStatus {
     fn default() -> Self {
         Self {
@@ -845,6 +869,75 @@ fn retry_dashboard_refresh(
 }
 
 #[tauri::command]
+fn get_llm_status() -> Result<LlmStatus, String> {
+    let context = AppContext::new(StorageConfig::default());
+    let config = context.get_llm_config().map_err(|e| e.to_string())?;
+    let has_api_key = context
+        .get_llm_api_key()
+        .map_err(|e| e.to_string())?
+        .is_some();
+    Ok(LlmStatus {
+        configured: has_api_key,
+        model: config.model,
+        base_url: config.base_url,
+        timeout_secs: config.timeout_secs,
+    })
+}
+
+#[tauri::command]
+fn list_agent_profiles() -> Result<Vec<AgentProfileSummary>, String> {
+    let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+    let agents_dir = root.join("research/agents");
+    if !agents_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut profiles = Vec::new();
+    for entry in std::fs::read_dir(&agents_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
+            let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            match research_skills::AgentProfile::from_yaml(&content) {
+                Ok(profile) => {
+                    profiles.push(AgentProfileSummary {
+                        name: profile.name,
+                        description: profile.description,
+                        risk_tolerance: format!("{:?}", profile.risk_tolerance).to_lowercase(),
+                        output_depth: format!("{:?}", profile.output_depth).to_lowercase(),
+                        tone: format!("{:?}", profile.analysis_constraints.tone).to_lowercase(),
+                    });
+                }
+                Err(e) => {
+                    eprintln!("[WARN] Failed to parse agent profile {:?}: {}", path, e);
+                }
+            }
+        }
+    }
+    Ok(profiles)
+}
+
+#[tauri::command]
+fn list_skills() -> Result<Vec<SkillSummary>, String> {
+    let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+    let skill_dir = root.join("crates/research-skills/skills");
+    let registry =
+        research_skills::registry::SkillRegistry::new(skill_dir).map_err(|e| e.to_string())?;
+
+    let mut skills = Vec::new();
+    for name in registry.list() {
+        if let Some(skill) = registry.get(name) {
+            skills.push(SkillSummary {
+                name: skill.definition.name.clone(),
+                description: skill.definition.description.clone(),
+                version: skill.definition.version.clone(),
+            });
+        }
+    }
+    Ok(skills)
+}
+
+#[tauri::command]
 async fn analyze_with_skill(
     scope: Option<String>,
     skill_name: String,
@@ -901,6 +994,9 @@ pub fn run() {
             retry_dashboard_refresh,
             get_user_preferences,
             set_user_preference,
+            get_llm_status,
+            list_agent_profiles,
+            list_skills,
             analyze_with_skill
         ])
         .run(tauri::generate_context!())

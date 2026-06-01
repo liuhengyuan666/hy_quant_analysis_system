@@ -5,6 +5,10 @@ import {
   dashboardStore,
   updateScope,
   updateReportDate,
+  updateLlmAnalysis,
+  updateLlmLoading,
+  updateLlmError,
+  toggleLlmPanel,
   loadDashboard as bridgeLoadDashboard,
   loadSelectedSnapshot as bridgeLoadSelectedSnapshot,
   startRefresh as bridgeStartRefresh,
@@ -12,7 +16,10 @@ import {
   cancelRefresh as bridgeCancelRefresh,
   exportReport as bridgeExportReport,
 } from './store.js';
+import { llmApi } from './api/tauri.js';
 import DashboardHero from './components/DashboardHero.vue';
+import LlmAnalysisTrigger from './components/LlmAnalysisTrigger.vue';
+import LlmAnalysisPanel from './components/LlmAnalysisPanel.vue';
 import RecentReportsPanel from './components/RecentReportsPanel.vue';
 import DataHealthPanel from './components/DataHealthPanel.vue';
 import UsageGuidesPanel from './components/UsageGuidesPanel.vue';
@@ -45,15 +52,25 @@ const selectedRefreshStartStage = computed(() => dashboardStore.selectedRefreshS
 const selectedSignal = ref(null);
 const usageGuidesRef = ref(null);
 
+const showLlmPanel = computed(() => dashboardStore.showLlmPanel);
+
 // Body scroll lock - managed at App level to handle component lifecycle correctly
 watch(selectedSignal, (newSignal) => {
   document.body.classList.toggle('body--signal-modal-open', Boolean(newSignal));
 });
 
-// Keyboard: ESC to close signal detail
+watch(showLlmPanel, (show) => {
+  document.body.classList.toggle('body--llm-panel-open', show);
+});
+
+// Keyboard: ESC to close modals
 function handleKeydown(event) {
-  if (event.key === 'Escape' && selectedSignal.value) {
-    selectedSignal.value = null;
+  if (event.key === 'Escape') {
+    if (selectedSignal.value) {
+      selectedSignal.value = null;
+    } else if (showLlmPanel.value) {
+      toggleLlmPanel(false);
+    }
   }
 }
 
@@ -116,6 +133,33 @@ function handleOpenGuides() {
     usageGuidesRef.value.openUsageGuides();
   }
 }
+
+function handleOpenLlmPanel() {
+  toggleLlmPanel(true);
+}
+
+function handleCloseLlmPanel() {
+  toggleLlmPanel(false);
+}
+
+async function handleAnalyzeWithLlm(agentName) {
+  updateLlmLoading(true);
+  updateLlmError('');
+  try {
+    const result = await llmApi.analyzeWithSkill(
+      dashboardStore.selectedScope,
+      'market-regime-reasoning',
+      agentName
+    );
+    updateLlmAnalysis(result);
+    toggleLlmPanel(true);
+  } catch (err) {
+    console.error('[App] LLM analysis failed:', err);
+    updateLlmError(err?.toString?.() || t('llm.analysisFailed'));
+  } finally {
+    updateLlmLoading(false);
+  }
+}
 </script>
 
 <template>
@@ -134,6 +178,10 @@ function handleOpenGuides() {
           @update:scope="handleScopeChange"
           @update:date="handleDateChange"
           @jump-to-latest="handleJumpToLatest"
+        />
+        <LlmAnalysisTrigger
+          @open-panel="handleOpenLlmPanel"
+          @analyze="handleAnalyzeWithLlm"
         />
       </div>
       <RefreshProgress
@@ -208,6 +256,15 @@ function handleOpenGuides() {
         v-if="selectedSignal"
         :signal="selectedSignal"
         @close="handleCloseSignalDetail"
+      />
+    </Transition>
+
+    <!-- LLM analysis side panel -->
+    <Transition name="slide">
+      <LlmAnalysisPanel
+        v-if="showLlmPanel"
+        @close="handleCloseLlmPanel"
+        @reanalyze="handleAnalyzeWithLlm"
       />
     </Transition>
   </div>

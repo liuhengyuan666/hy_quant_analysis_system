@@ -109,7 +109,8 @@ body {
 }
 
 body.body--guide-viewer-open,
-body.body--signal-modal-open {
+body.body--signal-modal-open,
+body.body--llm-panel-open {
   overflow: hidden;
 }
 
