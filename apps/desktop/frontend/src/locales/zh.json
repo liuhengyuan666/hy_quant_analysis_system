@@ -525,7 +525,8 @@
       "title": "对比分析",
       "selectAgent": "选择对比 Agent",
       "run": "运行对比",
-      "running": "对比中..."
+      "running": "对比中...",
+      "failed": "对比失败"
     },
     "editor": {
       "title": "Agent Profile 编辑器",

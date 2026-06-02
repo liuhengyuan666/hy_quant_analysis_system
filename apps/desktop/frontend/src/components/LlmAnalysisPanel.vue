@@ -8,7 +8,6 @@ import {
   updateLlmError,
   updateLlmConfig,
   toggleLlmPanel,
-  updateCompareAgent,
   updateCompareAnalysis,
   updateCompareLoading,
   toggleAgentEditor,
@@ -93,6 +92,7 @@ async function handleCompare() {
     updateCompareAnalysis(result);
   } catch (err) {
     console.error('[LlmPanel] Compare failed:', err);
+    updateLlmError(t('llm.comparison.failed') + ': ' + (err?.toString?.() || ''));
   } finally {
     updateCompareLoading(false);
   }
@@ -498,6 +498,7 @@ function loadHistoryItem(item) {
     <AgentProfileEditor
       v-if="dashboardStore.showAgentEditor"
       @close="toggleAgentEditor(false)"
+      @saved="toggleAgentEditor(false)"
     />
   </div>
 </template>

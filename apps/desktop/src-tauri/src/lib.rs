@@ -895,6 +895,14 @@ fn list_agent_profiles() -> Result<Vec<AgentProfileSummary>, String> {
 }
 
 #[tauri::command]
+fn read_agent_profile(name: String) -> Result<String, String> {
+    let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+    let profile_path = root.join("research/agents").join(format!("{}.yaml", name));
+    std::fs::read_to_string(&profile_path)
+        .map_err(|e| format!("Failed to read agent profile '{}': {}", name, e))
+}
+
+#[tauri::command]
 fn save_agent_profile(name: String, content: String) -> Result<(), String> {
     let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
     let agents_dir = root.join("research/agents");
@@ -1077,6 +1085,7 @@ pub fn run() {
             set_user_preference,
             get_llm_status,
             list_agent_profiles,
+            read_agent_profile,
             save_agent_profile,
             list_skills,
             set_llm_config,

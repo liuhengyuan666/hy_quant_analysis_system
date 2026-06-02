@@ -23,6 +23,7 @@ export const COMMANDS = {
   setUserPreference: 'set_user_preference',
   getLlmStatus: 'get_llm_status',
   listAgentProfiles: 'list_agent_profiles',
+  readAgentProfile: 'read_agent_profile',
   saveAgentProfile: 'save_agent_profile',
   listSkills: 'list_skills',
   setLlmConfig: 'set_llm_config',
@@ -109,6 +110,10 @@ export const llmApi = {
       scope,
       agentName,
     });
+  },
+
+  async readAgentProfile(name) {
+    return tauriInvoke(COMMANDS.readAgentProfile, { name });
   },
 
   async saveAgentProfile(name, content) {

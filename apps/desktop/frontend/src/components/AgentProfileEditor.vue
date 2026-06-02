@@ -22,17 +22,15 @@ async function loadAgentContent(name) {
     return;
   }
   try {
-    const root = await window.__TAURI__.path.appDir().catch(() => '');
-    // Fetch via a simple read — we'll use the Tauri FS API if available,
-    // otherwise rely on the user pasting YAML.
-    // Since we don't have a read_agent_profile command, prompt the user
-    // to paste the existing YAML or start from a template.
+    const yaml = await llmApi.readAgentProfile(name);
+    content.value = yaml;
+  } catch (error) {
+    console.error('[AgentEditor] Failed to load agent:', error);
+    // Fallback: generate a minimal template from metadata
     const agent = availableAgents.value.find((a) => a.name === name);
     if (agent) {
       content.value = `# ${agent.name}\n# ${agent.description || ''}\nname: ${agent.name}\ndescription: ${agent.description || ''}\n`;
     }
-  } catch (error) {
-    console.error('[AgentEditor] Failed to load agent:', error);
   }
 }
 

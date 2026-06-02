@@ -525,7 +525,8 @@
       "title": "Comparative Analysis",
       "selectAgent": "Select comparison agent",
       "run": "Run comparison",
-      "running": "Comparing..."
+      "running": "Comparing...",
+      "failed": "Comparison failed"
     },
     "editor": {
       "title": "Agent Profile Editor",
