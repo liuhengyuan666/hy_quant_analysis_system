@@ -40,6 +40,7 @@
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
+- **V4**：桌面端 LLM 智能分析面板（Agent 选择、技能路由、比较分析、历史记录、配置管理）
 
 ### 当前适用场景
 
@@ -422,6 +423,7 @@ cargo run -p quant-desktop
 - Data health summary
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
+- **V4**：LLM 智能分析面板（Agent / 技能选择、6 标签页分析、历史记录、比较分析）
 
 ---
 
@@ -553,10 +555,19 @@ cargo run -p quant-cli -- export-report --date 2026-05-07
 cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
 cargo run -p quant-cli -- export-data-health-report
 
-# V3 LLM 智能分析
+# V3 LLM 智能分析（CLI）
 cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
 cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
 cargo run -p quant-cli -- analyze-with-llm --scope global
+
+# V4 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
+cargo run -p quant-desktop -- get-llm-status
+cargo run -p quant-desktop -- list-agent-profiles
+cargo run -p quant-desktop -- list-skills
+cargo run -p quant-desktop -- evaluate-skill-triggers
+cargo run -p quant-desktop -- save-agent-profile --name default --config "..."
+cargo run -p quant-desktop -- read-agent-profile --name default
+cargo run -p quant-desktop -- analyze-with-llm --scope global --agent default --skill market-regime-reasoning
 
 # 回测
 cargo run -p quant-cli -- run-backtest
