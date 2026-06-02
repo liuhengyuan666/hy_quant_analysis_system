@@ -520,6 +520,25 @@
     "triggerEvalFailed": "触发条件评估失败",
     "configSaveFailed": "配置保存失败",
     "exportFailed": "导出 Markdown 失败",
-    "noSkillsAvailable": "暂无可用技能"
+    "noSkillsAvailable": "暂无可用技能",
+    "comparison": {
+      "title": "对比分析",
+      "selectAgent": "选择对比 Agent",
+      "run": "运行对比",
+      "running": "对比中..."
+    },
+    "editor": {
+      "title": "Agent Profile 编辑器",
+      "open": "编辑 Agent",
+      "selectAgent": "选择 Agent",
+      "newAgent": "新建 Agent",
+      "yamlContent": "YAML 内容",
+      "yamlPlaceholder": "输入 Agent Profile YAML...",
+      "save": "保存",
+      "saving": "保存中...",
+      "saved": "Agent Profile 已保存",
+      "saveFailed": "保存失败",
+      "missingFields": "请填写 Agent 名称和 YAML 内容"
+    }
   }
 }

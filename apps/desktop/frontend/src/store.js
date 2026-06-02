@@ -105,6 +105,18 @@ export const dashboardStore = reactive({
 
   /** LLM analysis history (localStorage-backed) */
   llmHistory: [],
+
+  /** Comparative analysis: second agent for side-by-side comparison */
+  compareAgent: '',
+
+  /** Comparative analysis results */
+  compareAnalysis: null,
+
+  /** Comparative analysis loading state */
+  compareLoading: false,
+
+  /** Whether agent profile editor is visible */
+  showAgentEditor: false,
 });
 
 /**
@@ -266,6 +278,34 @@ export function toggleLlmPanel(show) {
 }
 
 /**
+ * Update comparative analysis agent.
+ */
+export function updateCompareAgent(agent) {
+  dashboardStore.compareAgent = agent || '';
+}
+
+/**
+ * Update comparative analysis result.
+ */
+export function updateCompareAnalysis(analysis) {
+  dashboardStore.compareAnalysis = analysis;
+}
+
+/**
+ * Update comparative analysis loading state.
+ */
+export function updateCompareLoading(loading) {
+  dashboardStore.compareLoading = loading;
+}
+
+/**
+ * Toggle agent profile editor visibility.
+ */
+export function toggleAgentEditor(show) {
+  dashboardStore.showAgentEditor = show !== undefined ? show : !dashboardStore.showAgentEditor;
+}
+
+/**
  * Update LLM analysis history.
  */
 export function updateLlmHistory(history) {
@@ -348,6 +388,10 @@ export function resetStore() {
   dashboardStore.selectedSkill = 'market-regime-reasoning';
   dashboardStore.availableSkills = [];
   dashboardStore.showLlmPanel = false;
+  dashboardStore.compareAgent = '';
+  dashboardStore.compareAnalysis = null;
+  dashboardStore.compareLoading = false;
+  dashboardStore.showAgentEditor = false;
 }
 
 /**

@@ -304,7 +304,7 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 
 ## ADR-048: 前端 LLM 智能分析面板集成（LLM Desktop Integration）
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 项目后端已具备完整的 research-skills LLM 引擎（OpenAI provider、Skill Registry、Agent Profile、Reasoning Graph），CLI 已支持 analyze-with-llm 和 analyze --skill 命令，但桌面端前端没有任何 LLM 交互入口。需要在 Dashboard 中增加一键触发 AI 分析、查看结构化结果的完整链路。
@@ -313,3 +313,23 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 1. 在 Dashboard Hero 下方的 header-top 区域放置 LlmAnalysisTrigger 组件（Agent 下拉选择 + AI 分析按钮）。2. 点击分析后从右侧滑出 LlmAnalysisPanel（520px，与 SignalDetailModal 同模式），含 4 个 Tab：分析结论 / Regime 研判 / 执行详情 / 风险提示。3. Tauri 层新增 3 个命令：get_llm_status、list_agent_profiles、list_skills；复用已有的 analyze_with_skill。4. Store 扩展 7 个新属性（llmAnalysis、llmLoading、llmError、llmConfig、selectedAgent、availableAgents、showLlmPanel），遵循现有 reactive store 模式。5. 对 PlaceholderProvider 返回的占位数据添加 placeholder: true 标识，前端渲染黄色警告横幅，避免误导操作者。6. 定义类型化 DTO（LlmStatus、AgentProfileSummary、SkillSummary）替代 serde_json::Value，保持前后端契约一致。
 
 **Tags:** frontend, llm, tauri, vue3, architecture, oracle-reviewed
+
+## ADR-049: LLM Desktop Integration Phase 2 — Skill Selector, Real Provider, Config UI, Export
+
+**Status:** Accepted
+
+### Context
+Following ADR-048 (Phase 1 MVP), the LLM desktop integration needed enhancement: Skill selection, real OpenAI provider wiring, frontend configuration UI, markdown export, XSS protection, typed DTOs, and event bridge unification. Oracle review (D1-D6) identified path safety, placeholder handling, markdown bugs, XSS, type safety, and dead code issues — all fixed in Phase 2.
+
+### Decision
+1. Skill Selector: LlmAnalysisTrigger.vue adds second dropdown populated from list_skills Tauri command; labels use skill.description || skill.name for readability; selectedSkill stored in reactive store.
+2. Real OpenAI Provider: analyze_with_skill conditionally uses OpenAiProvider::from_config(&config, &key) when config + API key present; falls back to PlaceholderProvider when missing; placeholder: true flag in response JSON triggers yellow warning banner in UI.
+3. LLM Config Frontend UI: LlmAnalysisPanel.vue empty-state shows three-field form (base_url, model, api_key) with Save button; calls set_llm_config + set_llm_api_key Tauri commands; refreshes llmConfig status after save; form pre-populates from existing config via watch(immediate: true); apiKey never pre-filled for security.
+4. Markdown Export: LlmAnalysisPanel.vue footer adds "Export Markdown" button; calls export_llm_analysis Tauri command which writes reports/llm-analysis-{scope}-{date}.md and registers via market_store::insert_report_snapshot("LLM_ANALYSIS", ...).
+5. XSS Sanitization: renderMarkdown uses three-layer defense — escape raw HTML entities first, then convert markdown syntax to HTML, then strip dangerous tags (script/iframe/object/embed/form/event handlers/javascript:).
+6. Typed DTOs: LlmStatus, AgentProfileSummary, SkillSummary defined in core-domain/src/lib.rs; Tauri commands return these strong types instead of serde_json::Value; inline struct definitions removed from src-tauri/src/lib.rs.
+7. Event Bridge Unification: analyzeWithLlm added to initEventBridge in store.js/main.js; App.vue imports bridgeAnalyzeWithLlm instead of direct llmApi; consistent with refresh/export patterns.
+8. Agent Profile Path Safety: analyze_with_skill Tauri command uses StorageConfig::project_root()?.join("research/agents") instead of relative path, preventing CWD-dependent failures in packaged builds.
+9. i18n: 35+ new keys added to zh.json and en.json covering skill/config/export actions.
+
+**Tags:** frontend, llm, tauri, vue3, architecture, oracle-reviewed, phase2

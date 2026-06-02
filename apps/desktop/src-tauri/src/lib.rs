@@ -895,6 +895,53 @@ fn list_agent_profiles() -> Result<Vec<AgentProfileSummary>, String> {
 }
 
 #[tauri::command]
+fn save_agent_profile(name: String, content: String) -> Result<(), String> {
+    let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+    let agents_dir = root.join("research/agents");
+    std::fs::create_dir_all(&agents_dir).map_err(|e| e.to_string())?;
+    let profile_path = agents_dir.join(format!("{}.yaml", name));
+    // Basic validation: try parsing before writing
+    research_skills::AgentProfile::from_yaml(&content)
+        .map_err(|e| format!("Invalid agent profile YAML: {}", e))?;
+    std::fs::write(&profile_path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn analyze_with_llm(
+    scope: Option<String>,
+    agent_name: Option<String>,
+) -> Result<serde_json::Value, String> {
+    // Wrapper that uses the default skill (market-regime-reasoning)
+    let skill_name = "market-regime-reasoning".to_string();
+    let scope = scope.unwrap_or_else(|| "global".to_string());
+
+    let profile = if let Some(ref agent) = agent_name {
+        let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+        let profile_path = root.join("research/agents").join(format!("{}.yaml", agent));
+        let profile_yaml = std::fs::read_to_string(&profile_path)
+            .map_err(|e| format!("Failed to load agent profile '{}': {}", agent, e))?;
+        let profile = research_skills::AgentProfile::from_yaml(&profile_yaml)
+            .map_err(|e| format!("Failed to parse agent profile '{}': {}", agent, e))?;
+        Some(profile)
+    } else {
+        None
+    };
+
+    let report_scope = match scope.as_str() {
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        _ => app_service::ReportScope::Global,
+    };
+
+    let context = AppContext::new(StorageConfig::default());
+    context
+        .analyze_with_skill(&skill_name, report_scope, profile.as_ref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn list_skills() -> Result<Vec<SkillSummary>, String> {
     let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
     let skill_dir = root.join("crates/research-skills/skills");
@@ -1030,11 +1077,13 @@ pub fn run() {
             set_user_preference,
             get_llm_status,
             list_agent_profiles,
+            save_agent_profile,
             list_skills,
             set_llm_config,
             set_llm_api_key,
             export_llm_analysis,
             analyze_with_skill,
+            analyze_with_llm,
             evaluate_skill_triggers
         ])
         .run(tauri::generate_context!())

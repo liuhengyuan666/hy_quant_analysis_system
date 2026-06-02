@@ -8,11 +8,16 @@ import {
   updateLlmError,
   updateLlmConfig,
   toggleLlmPanel,
+  updateCompareAgent,
+  updateCompareAnalysis,
+  updateCompareLoading,
+  toggleAgentEditor,
 } from '../store.js';
 import { llmApi } from '../api/tauri.js';
 import { formatNumber } from '../lib/dashboard-utils.js';
 import SkillBadge from './SkillBadge.vue';
 import SkillRouterPanel from './SkillRouterPanel.vue';
+import AgentProfileEditor from './AgentProfileEditor.vue';
 
 const { t } = useI18n();
 
@@ -73,6 +78,28 @@ function handleClose() {
 
 function handleReanalyze() {
   emit('reanalyze', selectedAgent.value);
+}
+
+async function handleCompare() {
+  const compareAgent = dashboardStore.compareAgent;
+  if (!compareAgent || !analysis.value) return;
+  updateCompareLoading(true);
+  updateCompareAnalysis(null);
+  try {
+    const result = await llmApi.analyzeWithLlm(
+      dashboardStore.selectedScope,
+      compareAgent
+    );
+    updateCompareAnalysis(result);
+  } catch (err) {
+    console.error('[LlmPanel] Compare failed:', err);
+  } finally {
+    updateCompareLoading(false);
+  }
+}
+
+function handleOpenAgentEditor() {
+  toggleAgentEditor(true);
 }
 
 async function handleExportMarkdown() {
@@ -396,6 +423,54 @@ function loadHistoryItem(item) {
         </div>
       </div>
 
+      <!-- Comparison section -->
+      <div v-if="analysis && !loading && !error" class="llm-panel__compare-section">
+        <div class="llm-panel__compare-header">
+          <h4>{{ t('llm.comparison.title') }}</h4>
+          <button class="button button--ghost button--sm" @click="handleOpenAgentEditor">
+            {{ t('llm.editor.open') }}
+          </button>
+        </div>
+        <div class="llm-panel__compare-controls">
+          <select
+            v-model="dashboardStore.compareAgent"
+            class="select-control select-control--compact"
+          >
+            <option value="">{{ t('llm.comparison.selectAgent') }}</option>
+            <option
+              v-for="agent in dashboardStore.availableAgents"
+              :key="agent.name"
+              :value="agent.name"
+            >
+              {{ agent.name }}
+            </option>
+          </select>
+          <button
+            class="button button--secondary button--sm"
+            :disabled="!dashboardStore.compareAgent || dashboardStore.compareLoading"
+            @click="handleCompare"
+          >
+            {{ dashboardStore.compareLoading ? t('llm.comparison.running') : t('llm.comparison.run') }}
+          </button>
+        </div>
+        <div v-if="dashboardStore.compareAnalysis" class="llm-panel__compare-result">
+          <div class="llm-panel__compare-pane">
+            <h5>{{ selectedAgent }}</h5>
+            <div
+              class="llm-panel__markdown"
+              v-html="renderMarkdown(analysis.llm_analysis || '')"
+            ></div>
+          </div>
+          <div class="llm-panel__compare-pane">
+            <h5>{{ dashboardStore.compareAgent }}</h5>
+            <div
+              class="llm-panel__markdown"
+              v-html="renderMarkdown(dashboardStore.compareAnalysis.llm_analysis || '')"
+            ></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div v-if="analysis && !loading && !error" class="llm-panel__footer">
         <div class="llm-panel__footer-actions">
@@ -418,6 +493,12 @@ function loadHistoryItem(item) {
         </span>
       </div>
     </article>
+
+    <!-- Agent Profile Editor Modal -->
+    <AgentProfileEditor
+      v-if="dashboardStore.showAgentEditor"
+      @close="toggleAgentEditor(false)"
+    />
   </div>
 </template>
 
@@ -831,5 +912,71 @@ h2 {
 .button--accent:hover:not(:disabled) {
   background: var(--color-accent);
   color: var(--color-bg);
+}
+
+.llm-panel__compare-section {
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--panel-border);
+  background: var(--panel-bg-secondary);
+}
+
+.llm-panel__compare-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.llm-panel__compare-header h4 {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.llm-panel__compare-controls {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.llm-panel__compare-result {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-bg);
+  padding: var(--space-3);
+}
+
+.llm-panel__compare-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.llm-panel__compare-pane h5 {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.button--sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-label);
+}
+
+.button--ghost {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.button--ghost:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
 }
 </style>

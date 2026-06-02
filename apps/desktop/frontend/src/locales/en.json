@@ -520,6 +520,25 @@
     "triggerEvalFailed": "Trigger evaluation failed",
     "configSaveFailed": "Config save failed",
     "exportFailed": "Export markdown failed",
-    "noSkillsAvailable": "No skills available"
+    "noSkillsAvailable": "No skills available",
+    "comparison": {
+      "title": "Comparative Analysis",
+      "selectAgent": "Select comparison agent",
+      "run": "Run comparison",
+      "running": "Comparing..."
+    },
+    "editor": {
+      "title": "Agent Profile Editor",
+      "open": "Edit Agent",
+      "selectAgent": "Select Agent",
+      "newAgent": "New Agent",
+      "yamlContent": "YAML Content",
+      "yamlPlaceholder": "Enter Agent Profile YAML...",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Agent Profile saved",
+      "saveFailed": "Save failed",
+      "missingFields": "Please fill in agent name and YAML content"
+    }
   }
 }

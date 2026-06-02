@@ -23,11 +23,13 @@ export const COMMANDS = {
   setUserPreference: 'set_user_preference',
   getLlmStatus: 'get_llm_status',
   listAgentProfiles: 'list_agent_profiles',
+  saveAgentProfile: 'save_agent_profile',
   listSkills: 'list_skills',
   setLlmConfig: 'set_llm_config',
   setLlmApiKey: 'set_llm_api_key',
   exportLlmAnalysis: 'export_llm_analysis',
   analyzeWithSkill: 'analyze_with_skill',
+  analyzeWithLlm: 'analyze_with_llm',
   evaluateSkillTriggers: 'evaluate_skill_triggers',
 };
 
@@ -99,6 +101,20 @@ export const llmApi = {
       scope,
       skillName,
       agentName,
+    });
+  },
+
+  async analyzeWithLlm(scope, agentName) {
+    return tauriInvoke(COMMANDS.analyzeWithLlm, {
+      scope,
+      agentName,
+    });
+  },
+
+  async saveAgentProfile(name, content) {
+    return tauriInvoke(COMMANDS.saveAgentProfile, {
+      name,
+      content,
     });
   },
 

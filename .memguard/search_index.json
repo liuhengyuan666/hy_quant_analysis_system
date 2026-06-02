@@ -263,6 +263,20 @@
         "oracle-reviewed"
       ],
       "title": "前端 LLM 智能分析面板集成（LLM Desktop Integration）"
+    },
+    {
+      "id": "ADR-049",
+      "status": "active",
+      "tags": [
+        "frontend",
+        "llm",
+        "tauri",
+        "vue3",
+        "architecture",
+        "oracle-reviewed",
+        "phase2"
+      ],
+      "title": "LLM Desktop Integration Phase 2 — Skill Selector, Real Provider, Config UI, Export"
     }
   ],
   "traps": []
