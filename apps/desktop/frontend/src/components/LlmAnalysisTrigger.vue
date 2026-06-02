@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { dashboardStore, updateSelectedAgent, updateLlmConfig, updateAvailableAgents } from '../store.js';
+import { dashboardStore, updateSelectedAgent, updateSelectedSkill, updateLlmConfig, updateAvailableAgents, updateAvailableSkills } from '../store.js';
 import { llmApi } from '../api/tauri.js';
 
 const { t } = useI18n();
@@ -13,7 +13,12 @@ const selectedAgent = computed({
   get: () => dashboardStore.selectedAgent,
   set: (value) => updateSelectedAgent(value),
 });
+const selectedSkill = computed({
+  get: () => dashboardStore.selectedSkill,
+  set: (value) => updateSelectedSkill(value),
+});
 const availableAgents = computed(() => dashboardStore.availableAgents);
+const availableSkills = computed(() => dashboardStore.availableSkills);
 const llmLoading = computed(() => dashboardStore.llmLoading);
 const isConfigured = computed(() => llmConfig.value?.configured ?? false);
 
@@ -28,6 +33,15 @@ const AGENT_OPTIONS = computed(() =>
         { value: 'risk-manager', label: t('llm.agents.riskManager') },
         { value: 'technical-analyst', label: t('llm.agents.technicalAnalyst') },
       ]
+);
+
+const SKILL_OPTIONS = computed(() =>
+  availableSkills.value.length > 0
+    ? availableSkills.value.map((s) => ({
+        value: s.name,
+        label: s.name,
+      }))
+    : [{ value: 'market-regime-reasoning', label: 'market-regime-reasoning' }]
 );
 
 async function loadLlmStatus() {
@@ -49,12 +63,21 @@ async function loadAgentProfiles() {
   }
 }
 
+async function loadSkills() {
+  try {
+    const skills = await llmApi.listSkills();
+    updateAvailableSkills(skills);
+  } catch (error) {
+    console.error('[LlmTrigger] Failed to load skills:', error);
+  }
+}
+
 function handleAnalyze() {
   if (!isConfigured.value) {
     emit('open-panel');
     return;
   }
-  emit('analyze', selectedAgent.value);
+  emit('analyze');
 }
 
 function handleOpenPanel() {
@@ -64,12 +87,23 @@ function handleOpenPanel() {
 onMounted(() => {
   loadLlmStatus();
   loadAgentProfiles();
+  loadSkills();
 });
 </script>
 
 <template>
   <div class="llm-trigger">
     <div class="llm-trigger__row">
+      <select
+        class="select-control select-control--compact"
+        :value="selectedSkill"
+        :disabled="llmLoading"
+        @change="selectedSkill = $event.target.value"
+      >
+        <option v-for="opt in SKILL_OPTIONS" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
       <select
         class="select-control select-control--compact"
         :value="selectedAgent"

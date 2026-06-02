@@ -16,6 +16,12 @@ const { t } = useI18n();
 const emit = defineEmits(['close', 'reanalyze']);
 
 const activeTab = ref('conclusion');
+const exporting = ref(false);
+const configForm = ref({
+  baseUrl: '',
+  model: '',
+  apiKey: '',
+});
 
 const analysis = computed(() => dashboardStore.llmAnalysis);
 const loading = computed(() => dashboardStore.llmLoading);
@@ -48,6 +54,45 @@ function handleClose() {
 
 function handleReanalyze() {
   emit('reanalyze', selectedAgent.value);
+}
+
+async function handleExportMarkdown() {
+  if (!analysis.value || exporting.value) return;
+  exporting.value = true;
+  try {
+    const result = await llmApi.exportLlmAnalysis(
+      dashboardStore.selectedScope,
+      snapshot.value?.report_date || new Date().toISOString().slice(0, 10),
+      analysis.value
+    );
+    updateLlmError('');
+    alert(t('llm.markdownExported') + ': ' + result.output_path);
+  } catch (err) {
+    console.error('[LlmPanel] Export failed:', err);
+    updateLlmError(err?.toString?.() || t('llm.exportFailed'));
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function handleSaveConfig() {
+  try {
+    await llmApi.setLlmConfig(
+      configForm.value.baseUrl,
+      configForm.value.model,
+      60
+    );
+    if (configForm.value.apiKey) {
+      await llmApi.setLlmApiKey(configForm.value.apiKey);
+    }
+    alert(t('llm.configSaved'));
+    // Refresh status
+    const status = await llmApi.getStatus();
+    updateLlmConfig(status);
+  } catch (err) {
+    console.error('[LlmPanel] Config save failed:', err);
+    updateLlmError(err?.toString?.() || t('llm.configSaveFailed'));
+  }
 }
 
 /**
@@ -155,12 +200,40 @@ function renderMarkdown(text) {
         </button>
       </div>
 
-      <!-- Empty -->
+      <!-- Empty / Config -->
       <div v-else-if="!analysis" class="llm-panel__empty">
-        <p>{{ t('llm.noAnalysisYet') }}</p>
-        <button class="button button--accent" @click="handleReanalyze">
-          {{ t('llm.startAnalysis') }}
-        </button>
+        <template v-if="!isConfigured">
+          <p>{{ t('llm.notConfigured') }}</p>
+          <div class="llm-panel__config-form">
+            <input
+              v-model="configForm.baseUrl"
+              class="input-control"
+              type="text"
+              :placeholder="t('llm.baseUrl')"
+            />
+            <input
+              v-model="configForm.model"
+              class="input-control"
+              type="text"
+              :placeholder="t('llm.model')"
+            />
+            <input
+              v-model="configForm.apiKey"
+              class="input-control"
+              type="password"
+              :placeholder="t('llm.apiKey')"
+            />
+            <button class="button button--accent" @click="handleSaveConfig">
+              {{ t('llm.saveConfig') }}
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <p>{{ t('llm.noAnalysisYet') }}</p>
+          <button class="button button--accent" @click="handleReanalyze">
+            {{ t('llm.startAnalysis') }}
+          </button>
+        </template>
       </div>
 
       <!-- Content -->
@@ -263,9 +336,18 @@ function renderMarkdown(text) {
 
       <!-- Footer -->
       <div v-if="analysis && !loading && !error" class="llm-panel__footer">
-        <button class="button button--secondary" @click="handleReanalyze">
-          {{ t('llm.reanalyze') }}
-        </button>
+        <div class="llm-panel__footer-actions">
+          <button class="button button--secondary" @click="handleReanalyze">
+            {{ t('llm.reanalyze') }}
+          </button>
+          <button
+            class="button button--secondary"
+            :disabled="exporting"
+            @click="handleExportMarkdown"
+          >
+            {{ exporting ? t('llm.exportingMarkdown') : t('llm.exportMarkdown') }}
+          </button>
+        </div>
         <span v-if="tokenUsage" class="llm-panel__token-summary">
           {{ t('llm.tokenSummary', {
             input: (tokenUsage.system_tokens || 0) + (tokenUsage.context_tokens || 0) + (tokenUsage.reasoning_tokens || 0),
@@ -522,6 +604,32 @@ function renderMarkdown(text) {
 
 .llm-panel__placeholder-icon {
   font-size: 1.1rem;
+}
+
+.llm-panel__config-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 24rem;
+}
+
+.input-control {
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  font-size: var(--font-size-meta);
+}
+
+.input-control::placeholder {
+  color: var(--text-secondary);
+}
+
+.llm-panel__footer-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .llm-panel__footer {

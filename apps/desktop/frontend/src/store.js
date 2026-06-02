@@ -94,6 +94,12 @@ export const dashboardStore = reactive({
   /** Available agent profiles */
   availableAgents: [],
 
+  /** Selected skill for LLM analysis */
+  selectedSkill: 'market-regime-reasoning',
+
+  /** Available research skills */
+  availableSkills: [],
+
   /** Whether LLM analysis panel is visible */
   showLlmPanel: false,
 });
@@ -236,6 +242,20 @@ export function updateAvailableAgents(agents) {
 }
 
 /**
+ * Update selected skill.
+ */
+export function updateSelectedSkill(skill) {
+  dashboardStore.selectedSkill = skill || 'market-regime-reasoning';
+}
+
+/**
+ * Update available skills.
+ */
+export function updateAvailableSkills(skills) {
+  dashboardStore.availableSkills = skills || [];
+}
+
+/**
  * Toggle LLM analysis panel visibility.
  */
 export function toggleLlmPanel(show) {
@@ -282,6 +302,8 @@ export function resetStore() {
   dashboardStore.llmConfig = null;
   dashboardStore.selectedAgent = 'macro-strategist';
   dashboardStore.availableAgents = [];
+  dashboardStore.selectedSkill = 'market-regime-reasoning';
+  dashboardStore.availableSkills = [];
   dashboardStore.showLlmPanel = false;
 }
 

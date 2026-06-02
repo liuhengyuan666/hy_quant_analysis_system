@@ -938,6 +938,48 @@ fn list_skills() -> Result<Vec<SkillSummary>, String> {
 }
 
 #[tauri::command]
+fn set_llm_config(
+    base_url: String,
+    model: String,
+    timeout_secs: u64,
+) -> Result<(), String> {
+    let context = AppContext::new(StorageConfig::default());
+    context
+        .set_llm_config(&base_url, &model, timeout_secs)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_llm_api_key(key: String) -> Result<(), String> {
+    let context = AppContext::new(StorageConfig::default());
+    context
+        .set_llm_api_key(&key)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn export_llm_analysis(
+    scope: Option<String>,
+    date: String,
+    analysis: serde_json::Value,
+) -> Result<app_service::ReportSummary, String> {
+    let parsed_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+        .map_err(|e| e.to_string())?;
+    let parsed_scope = match scope.as_deref().unwrap_or("global") {
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        _ => app_service::ReportScope::Global,
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.export_llm_analysis(parsed_scope, parsed_date, &analysis)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn analyze_with_skill(
     scope: Option<String>,
     skill_name: String,
@@ -997,6 +1039,9 @@ pub fn run() {
             get_llm_status,
             list_agent_profiles,
             list_skills,
+            set_llm_config,
+            set_llm_api_key,
+            export_llm_analysis,
             analyze_with_skill
         ])
         .run(tauri::generate_context!())

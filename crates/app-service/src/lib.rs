@@ -3226,6 +3226,132 @@ impl AppContext {
         })
     }
 
+    /// Render LLM analysis JSON as markdown report.
+    fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
+        let mut md = String::new();
+
+        // Title
+        let skill = analysis["skill"].as_str().unwrap_or("unknown");
+        let scope = analysis["scope"].as_str().unwrap_or("global");
+        md.push_str(&format!("# LLM Analysis: {}\n\n", skill));
+        md.push_str(&format!("**Scope**: {}\n\n", scope));
+
+        // Triggered status
+        let triggered = analysis["triggered"].as_bool().unwrap_or(false);
+        md.push_str(&format!(
+            "**Triggered**: {}\n\n",
+            if triggered { "Yes" } else { "No" }
+        ));
+
+        // Placeholder warning
+        if analysis["placeholder"].as_bool().unwrap_or(false) {
+            md.push_str(
+                "> **Warning**: This analysis was generated in placeholder mode. \
+                 No real LLM provider was configured.\n\n",
+            );
+        }
+
+        // Regime Analysis
+        if let Some(regime) = analysis["regime_analysis"].as_object() {
+            md.push_str("## Regime Analysis\n\n");
+            if let Some(state) = regime.get("current_state").and_then(|v| v.as_str()) {
+                md.push_str(&format!("- **Current State**: {}\n", state));
+            }
+            if let Some(transition) = regime.get("transition").and_then(|v| v.as_f64()) {
+                md.push_str(&format!("- **Transition Score**: {:.2}\n", transition));
+            }
+            if let Some(confidence) = regime.get("confidence").and_then(|v| v.as_f64()) {
+                md.push_str(&format!("- **Confidence**: {:.1}%\n", confidence * 100.0));
+            }
+            if let Some(drivers) = regime.get("key_drivers").and_then(|v| v.as_array()) {
+                if !drivers.is_empty() {
+                    md.push_str("- **Key Drivers**:\n");
+                    for d in drivers {
+                        if let Some(s) = d.as_str() {
+                            md.push_str(&format!("  - {}\n", s));
+                        }
+                    }
+                }
+            }
+            if let Some(risk) = regime.get("risk_assessment") {
+                if let Some(level) = risk.get("level").and_then(|v| v.as_str()) {
+                    md.push_str(&format!("- **Risk Level**: {}\n", level));
+                }
+                if let Some(factors) = risk.get("factors").and_then(|v| v.as_array()) {
+                    if !factors.is_empty() {
+                        md.push_str("- **Risk Factors**:\n");
+                        for f in factors {
+                            if let Some(s) = f.as_str() {
+                                md.push_str(&format!("  - {}\n", s));
+                            }
+                        }
+                    }
+                }
+                if let Some(rec) = risk.get("recommendation").and_then(|v| v.as_str()) {
+                    md.push_str(&format!("- **Recommendation**: {}\n", rec));
+                }
+            }
+            md.push('\n');
+        }
+
+        // LLM Analysis
+        if let Some(llm) = analysis["llm_analysis"].as_str() {
+            if !llm.is_empty() {
+                md.push_str("## LLM Analysis\n\n");
+                md.push_str(llm);
+                md.push_str("\n\n");
+            }
+        }
+
+        // Token Usage
+        if let Some(tokens) = analysis["token_usage"].as_object() {
+            md.push_str("## Token Usage\n\n");
+            if let Some(input) = tokens.get("system_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **System Tokens**: {}\n", input));
+            }
+            if let Some(input) = tokens.get("context_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Context Tokens**: {}\n", input));
+            }
+            if let Some(input) = tokens.get("reasoning_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Reasoning Tokens**: {}\n", input));
+            }
+            if let Some(output) = tokens.get("output_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Output Tokens**: {}\n", output));
+            }
+            md.push('\n');
+        }
+
+        md
+    }
+
+    /// Export LLM analysis result as markdown report.
+    pub fn export_llm_analysis(
+        &self,
+        scope: ReportScope,
+        date: NaiveDate,
+        analysis: &serde_json::Value,
+    ) -> Result<ReportSummary> {
+        let md = Self::render_llm_analysis_markdown(analysis);
+        let root = StorageConfig::project_root()?;
+        let report_dir = root.join("reports");
+        fs::create_dir_all(&report_dir).with_context(|| {
+            format!(
+                "failed to create report directory: {}",
+                report_dir.display()
+            )
+        })?;
+        let filename = format!("llm-analysis-{}-{}.md", scope.as_str(), date);
+        let output_path = report_dir.join(&filename);
+        fs::write(&output_path, md).with_context(|| {
+            format!("failed to write LLM analysis report: {}", output_path.display())
+        })?;
+        Ok(ReportSummary {
+            report_date: date.to_string(),
+            output_path: output_path.display().to_string(),
+            failed_items: Vec::new(),
+        })
+    }
+
     pub fn sync_and_export(
         &self,
         date: Option<NaiveDate>,
@@ -3729,14 +3855,24 @@ impl AppContext {
         let budget = research_skills::token_budget::TokenBudget::default();
         let deterministic = research_skills::deterministic::DeterministicConfig::default();
         let executor = research_skills::executor::SkillExecutor::new(budget, deterministic);
-        let provider = PlaceholderProvider;
 
-        let llm_output = executor.execute(skill, &context, &provider, profile).await?;
+        let config = self.get_llm_config()?;
+        let api_key = self.get_llm_api_key()?;
+        let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
+            let provider = research_skills::OpenAiProvider::from_config(&config, key);
+            (
+                executor.execute(skill, &context, &provider, profile).await?,
+                false,
+            )
+        } else {
+            let provider = PlaceholderProvider;
+            (
+                executor.execute(skill, &context, &provider, profile).await?,
+                true,
+            )
+        };
 
         // 6. Merge deterministic + LLM results
-        let is_placeholder = llm_output.response.as_ref().map_or(false, |r| {
-            r.contains("This is a placeholder response")
-        });
         let result = serde_json::json!({
             "skill": skill_name,
             "triggered": true,

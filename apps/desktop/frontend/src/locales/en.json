@@ -502,6 +502,14 @@
     "riskFactors": "Risk Factors",
     "recommendation": "Recommendation",
     "analysisFailed": "Analysis failed",
-    "placeholderWarning": "Demo mode — LLM is not connected to a real provider. Placeholder data is shown."
+    "placeholderWarning": "Demo mode — LLM is not connected to a real provider. Placeholder data is shown.",
+    "selectSkill": "Select Skill",
+    "baseUrl": "Base URL",
+    "model": "Model",
+    "apiKey": "API Key",
+    "saveConfig": "Save Config",
+    "configSaved": "Config saved",
+    "exportingMarkdown": "Exporting...",
+    "markdownExported": "Markdown exported"
   }
 }

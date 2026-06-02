@@ -24,6 +24,9 @@ export const COMMANDS = {
   getLlmStatus: 'get_llm_status',
   listAgentProfiles: 'list_agent_profiles',
   listSkills: 'list_skills',
+  setLlmConfig: 'set_llm_config',
+  setLlmApiKey: 'set_llm_api_key',
+  exportLlmAnalysis: 'export_llm_analysis',
   analyzeWithSkill: 'analyze_with_skill',
 };
 
@@ -95,6 +98,26 @@ export const llmApi = {
       scope,
       skillName,
       agentName,
+    });
+  },
+
+  async setLlmConfig(baseUrl, model, timeoutSecs) {
+    return tauriInvoke(COMMANDS.setLlmConfig, {
+      baseUrl,
+      model,
+      timeoutSecs,
+    });
+  },
+
+  async setLlmApiKey(key) {
+    return tauriInvoke(COMMANDS.setLlmApiKey, { key });
+  },
+
+  async exportLlmAnalysis(scope, date, analysis) {
+    return tauriInvoke(COMMANDS.exportLlmAnalysis, {
+      scope,
+      date,
+      analysis,
     });
   },
 };

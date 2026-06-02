@@ -142,14 +142,14 @@ function handleCloseLlmPanel() {
   toggleLlmPanel(false);
 }
 
-async function handleAnalyzeWithLlm(agentName) {
+async function handleAnalyzeWithLlm() {
   updateLlmLoading(true);
   updateLlmError('');
   try {
     const result = await llmApi.analyzeWithSkill(
       dashboardStore.selectedScope,
-      'market-regime-reasoning',
-      agentName
+      dashboardStore.selectedSkill,
+      dashboardStore.selectedAgent
     );
     updateLlmAnalysis(result);
     toggleLlmPanel(true);

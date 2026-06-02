@@ -502,6 +502,14 @@
     "riskFactors": "风险因素",
     "recommendation": "建议",
     "analysisFailed": "分析失败",
-    "placeholderWarning": "当前为演示模式 — LLM 未接入真实 provider，返回的是占位数据。"
+    "placeholderWarning": "当前为演示模式 — LLM 未接入真实 provider，返回的是占位数据。",
+    "selectSkill": "选择 Skill",
+    "baseUrl": "API 地址",
+    "model": "模型",
+    "apiKey": "API 密钥",
+    "saveConfig": "保存配置",
+    "configSaved": "配置已保存",
+    "exportingMarkdown": "导出中...",
+    "markdownExported": "Markdown 已导出"
   }
 }
