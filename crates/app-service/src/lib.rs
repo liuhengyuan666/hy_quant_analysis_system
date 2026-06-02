@@ -3340,7 +3340,7 @@ impl AppContext {
                 report_dir.display()
             )
         })?;
-        let filename = format!("llm-analysis-{}-{}.md", scope.as_str(), date);
+        let filename = format!("llm-analysis-{}-{}.md", scope_label(scope).to_lowercase(), date);
         let output_path = report_dir.join(&filename);
         fs::write(&output_path, md).with_context(|| {
             format!("failed to write LLM analysis report: {}", output_path.display())
@@ -4673,5 +4673,150 @@ mod tests {
             .and_then(|c| c.message.content.clone())
             .unwrap_or_default();
         assert!(content.is_empty());
+    }
+
+    fn build_research_context(
+        breadth_pct: f64,
+        breadth_delta: f64,
+        liquidity_pressure: research_context::LiquidityPressure,
+        macro_stale_days: i32,
+    ) -> research_context::ResearchContext {
+        research_context::ResearchContext {
+            market: research_context::MarketContext {
+                current_state: "bullish".to_string(),
+                previous_state: None,
+                confidence: 0.8,
+                drivers: vec![],
+                transition: None,
+            },
+            liquidity: research_context::LiquidityContext {
+                pressure: liquidity_pressure,
+                spread: None,
+                yield_curve_status: None,
+                dollar_strength: None,
+            },
+            breadth: research_context::BreadthContext {
+                condition: research_context::BreadthCondition::Strong,
+                breadth_pct,
+                breadth_delta,
+            },
+            rotation: research_context::RotationContext {
+                state: research_context::RotationState::Broad,
+                top_sectors: vec![],
+                bottom_sectors: vec![],
+                leadership_stability: 0.7,
+                momentum_factor: None,
+                value_factor: None,
+                quality_factor: None,
+                crowding_factor: None,
+            },
+            regime: research_context::RegimeContext {
+                current: "expansion".to_string(),
+                confidence: 0.75,
+                macro_stale_days,
+            },
+            signals: research_context::SignalsContext {
+                bullish_count: 3,
+                defensive_count: 2,
+                data_starved_count: 0,
+            },
+            macro_: research_context::MacroContext {
+                spread_10y: None,
+                dxy_index: None,
+                foreign_flow: None,
+                vix: None,
+            },
+            risk: research_context::RiskContext {
+                skewness: None,
+                kurtosis: None,
+                tail_index: None,
+            },
+        }
+    }
+
+    #[test]
+    fn extract_key_drivers_detects_breadth_collapse() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(25.0, -5.0, research_context::LiquidityPressure::Moderate, 1);
+        let drivers = ctx.extract_key_drivers(&context);
+        assert!(drivers.contains(&"breadth_collapse".to_string()));
+        assert!(!drivers.contains(&"breadth_deteriorating".to_string()));
+    }
+
+    #[test]
+    fn extract_key_drivers_detects_deteriorating_and_liquidity_critical() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, -15.0, research_context::LiquidityPressure::Critical, 5);
+        let drivers = ctx.extract_key_drivers(&context);
+        assert!(drivers.contains(&"breadth_deteriorating".to_string()));
+        assert!(drivers.contains(&"liquidity_critical".to_string()));
+        assert!(drivers.contains(&"macro_stale".to_string()));
+    }
+
+    #[test]
+    fn assess_risk_level_critical_when_breadth_below_20() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "critical");
+    }
+
+    #[test]
+    fn assess_risk_level_high_when_liquidity_critical() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "critical");
+    }
+
+    #[test]
+    fn assess_risk_level_medium_when_breadth_between_30_and_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(35.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "medium");
+    }
+
+    #[test]
+    fn assess_risk_level_low_when_breadth_above_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "low");
+    }
+
+    #[test]
+    fn identify_risk_factors_detects_extreme_collapse() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let factors = ctx.identify_risk_factors(&context);
+        assert!(factors.contains(&"breadth_below_30".to_string()));
+        assert!(factors.contains(&"breadth_extreme_collapse".to_string()));
+    }
+
+    #[test]
+    fn identify_risk_factors_detects_liquidity_and_macro_stale() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 10);
+        let factors = ctx.identify_risk_factors(&context);
+        assert!(factors.contains(&"liquidity_critical".to_string()));
+        assert!(factors.contains(&"macro_severely_stale".to_string()));
+    }
+
+    #[test]
+    fn generate_recommendation_exit_when_breadth_below_20() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "exit");
+    }
+
+    #[test]
+    fn generate_recommendation_reduce_exposure_when_breadth_below_30() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(25.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "reduce_exposure");
+    }
+
+    #[test]
+    fn generate_recommendation_maintain_when_breadth_above_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "maintain");
     }
 }

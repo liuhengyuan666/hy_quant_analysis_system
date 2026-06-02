@@ -517,6 +517,9 @@
     "triggeredSkills": "已触发技能",
     "inactiveSkills": "未触发技能",
     "evaluatingTriggers": "正在评估触发条件...",
-    "triggerEvalFailed": "触发条件评估失败"
+    "triggerEvalFailed": "触发条件评估失败",
+    "configSaveFailed": "配置保存失败",
+    "exportFailed": "导出 Markdown 失败",
+    "noSkillsAvailable": "暂无可用技能"
   }
 }

@@ -517,6 +517,9 @@
     "triggeredSkills": "Triggered Skills",
     "inactiveSkills": "Inactive Skills",
     "evaluatingTriggers": "Evaluating triggers...",
-    "triggerEvalFailed": "Trigger evaluation failed"
+    "triggerEvalFailed": "Trigger evaluation failed",
+    "configSaveFailed": "Config save failed",
+    "exportFailed": "Export markdown failed",
+    "noSkillsAvailable": "No skills available"
   }
 }

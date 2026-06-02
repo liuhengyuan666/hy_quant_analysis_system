@@ -3,7 +3,6 @@ import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dashboardStore, updateSelectedAgent, updateSelectedSkill, updateLlmConfig, updateAvailableAgents, updateAvailableSkills } from '../store.js';
 import { llmApi } from '../api/tauri.js';
-import SkillBadge from './SkillBadge.vue';
 
 const { t } = useI18n();
 
@@ -30,9 +29,9 @@ const AGENT_OPTIONS = computed(() =>
         label: t(`llm.agents.${a.name}`, a.name),
       }))
     : [
-        { value: 'macro-strategist', label: t('llm.agents.macroStrategist') },
-        { value: 'risk-manager', label: t('llm.agents.riskManager') },
-        { value: 'technical-analyst', label: t('llm.agents.technicalAnalyst') },
+        { value: 'macro-strategist', label: t('llm.agents.macro-strategist') },
+        { value: 'risk-manager', label: t('llm.agents.risk-manager') },
+        { value: 'technical-analyst', label: t('llm.agents.technical-analyst') },
       ]
 );
 
@@ -42,7 +41,7 @@ const SKILL_OPTIONS = computed(() =>
         value: s.name,
         label: s.description || s.name,
       }))
-    : [{ value: 'market-regime-reasoning', label: 'market-regime-reasoning' }]
+    : [{ value: 'market-regime-reasoning', label: t('llm.noSkillsAvailable') }]
 );
 
 async function loadLlmStatus() {
