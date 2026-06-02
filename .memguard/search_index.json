@@ -253,7 +253,7 @@
     },
     {
       "id": "ADR-048",
-      "status": "active",
+      "status": "Accepted",
       "tags": [
         "frontend",
         "llm",
@@ -266,7 +266,7 @@
     },
     {
       "id": "ADR-049",
-      "status": "active",
+      "status": "Accepted",
       "tags": [
         "frontend",
         "llm",
