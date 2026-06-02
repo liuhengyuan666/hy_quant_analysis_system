@@ -11,6 +11,7 @@ import {
 } from '../store.js';
 import { llmApi } from '../api/tauri.js';
 import { formatNumber } from '../lib/dashboard-utils.js';
+import SkillBadge from './SkillBadge.vue';
 
 const { t } = useI18n();
 
@@ -168,7 +169,8 @@ function renderMarkdown(text) {
           <p class="eyebrow">{{ t('llm.eyebrow') }}</p>
           <h2>{{ t('llm.panelTitle') }}</h2>
           <p class="panel__lede">
-            {{ snapshot?.report_date || '' }} &middot; {{ scope }} &middot; {{ skillName }}
+            {{ snapshot?.report_date || '' }} &middot; {{ scope }}
+            <SkillBadge :name="skillName" size="sm" />
           </p>
         </div>
         <div class="llm-panel__actions">

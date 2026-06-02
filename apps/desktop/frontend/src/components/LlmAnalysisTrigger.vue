@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dashboardStore, updateSelectedAgent, updateSelectedSkill, updateLlmConfig, updateAvailableAgents, updateAvailableSkills } from '../store.js';
 import { llmApi } from '../api/tauri.js';
+import SkillBadge from './SkillBadge.vue';
 
 const { t } = useI18n();
 
