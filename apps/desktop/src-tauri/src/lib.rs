@@ -992,6 +992,20 @@ async fn analyze_with_skill(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn evaluate_skill_triggers(scope: Option<String>) -> Result<Vec<core_domain::SkillTriggerResult>, String> {
+    let scope = scope.unwrap_or_else(|| "global".to_string());
+    let report_scope = match scope.as_str() {
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        _ => app_service::ReportScope::Global,
+    };
+    let context = AppContext::new(StorageConfig::default());
+    context
+        .evaluate_skill_triggers(report_scope)
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1020,7 +1034,8 @@ pub fn run() {
             set_llm_config,
             set_llm_api_key,
             export_llm_analysis,
-            analyze_with_skill
+            analyze_with_skill,
+            evaluate_skill_triggers
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

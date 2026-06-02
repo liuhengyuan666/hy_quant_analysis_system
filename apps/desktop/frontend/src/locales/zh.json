@@ -512,6 +512,11 @@
     "exportingMarkdown": "导出中...",
     "markdownExported": "Markdown 已导出",
     "history": "历史记录",
-    "noHistory": "暂无历史记录，开始分析后将自动保存。"
+    "noHistory": "暂无历史记录，开始分析后将自动保存。",
+    "router": "技能路由",
+    "triggeredSkills": "已触发技能",
+    "inactiveSkills": "未触发技能",
+    "evaluatingTriggers": "正在评估触发条件...",
+    "triggerEvalFailed": "触发条件评估失败"
   }
 }

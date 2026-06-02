@@ -3903,6 +3903,48 @@ impl AppContext {
         Ok(result)
     }
 
+    /// Evaluate all skill triggers against the current research context.
+    /// Returns a list of skills with their trigger status and weights.
+    pub fn evaluate_skill_triggers(
+        &self,
+        scope: ReportScope,
+    ) -> Result<Vec<core_domain::SkillTriggerResult>> {
+        let context = self.research_context(scope)?;
+        let root = StorageConfig::project_root()?;
+        let skill_dir = root.join("crates/research-skills/skills");
+        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
+
+        let mut results = Vec::new();
+        for name in registry.list() {
+            if let Some(skill) = registry.get(name) {
+                let triggered = research_skills::router::SkillRouter::evaluate_trigger(
+                    &skill.definition.trigger,
+                    &context,
+                );
+                let weight = research_skills::router::SkillRouter::calculate_weight(
+                    &skill.definition.trigger,
+                );
+                results.push(core_domain::SkillTriggerResult {
+                    name: skill.definition.name.clone(),
+                    description: skill.definition.description.clone(),
+                    triggered,
+                    weight,
+                });
+            }
+        }
+
+        // Sort by weight descending, triggered first
+        results.sort_by(|a, b| {
+            let triggered_cmp = b.triggered.cmp(&a.triggered);
+            if triggered_cmp != std::cmp::Ordering::Equal {
+                return triggered_cmp;
+            }
+            b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        Ok(results)
+    }
+
     /// Extract key drivers from context
     fn extract_key_drivers(&self, context: &research_context::ResearchContext) -> Vec<String> {
         let mut drivers = Vec::new();

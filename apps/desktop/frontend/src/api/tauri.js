@@ -28,6 +28,7 @@ export const COMMANDS = {
   setLlmApiKey: 'set_llm_api_key',
   exportLlmAnalysis: 'export_llm_analysis',
   analyzeWithSkill: 'analyze_with_skill',
+  evaluateSkillTriggers: 'evaluate_skill_triggers',
 };
 
 /**
@@ -119,5 +120,9 @@ export const llmApi = {
       date,
       analysis,
     });
+  },
+
+  async evaluateSkillTriggers(scope) {
+    return tauriInvoke(COMMANDS.evaluateSkillTriggers, { scope });
   },
 };

@@ -436,3 +436,11 @@ pub struct SkillSummary {
     pub description: String,
     pub version: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillTriggerResult {
+    pub name: String,
+    pub description: String,
+    pub triggered: bool,
+    pub weight: f64,
+}

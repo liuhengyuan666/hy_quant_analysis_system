@@ -12,6 +12,7 @@ import {
 import { llmApi } from '../api/tauri.js';
 import { formatNumber } from '../lib/dashboard-utils.js';
 import SkillBadge from './SkillBadge.vue';
+import SkillRouterPanel from './SkillRouterPanel.vue';
 
 const { t } = useI18n();
 
@@ -37,6 +38,7 @@ const tabs = computed(() => [
   { key: 'execution', label: t('llm.execution') },
   { key: 'risk', label: t('llm.risk') },
   { key: 'history', label: t('llm.history') },
+  { key: 'router', label: t('llm.router') },
 ]);
 
 const skillName = computed(() => analysis.value?.skill || '');
@@ -386,6 +388,11 @@ function loadHistoryItem(item) {
               <p class="llm-panel__history-summary">{{ item.summary }}</p>
             </div>
           </div>
+        </div>
+
+        <!-- Tab: Router -->
+        <div v-if="activeTab === 'router'" class="llm-panel__tab-content">
+          <SkillRouterPanel />
         </div>
       </div>
 

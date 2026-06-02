@@ -512,6 +512,11 @@
     "exportingMarkdown": "Exporting...",
     "markdownExported": "Markdown exported",
     "history": "History",
-    "noHistory": "No history yet. Analysis results will be saved automatically."
+    "noHistory": "No history yet. Analysis results will be saved automatically.",
+    "router": "Skill Router",
+    "triggeredSkills": "Triggered Skills",
+    "inactiveSkills": "Inactive Skills",
+    "evaluatingTriggers": "Evaluating triggers...",
+    "triggerEvalFailed": "Trigger evaluation failed"
   }
 }

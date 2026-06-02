@@ -187,7 +187,7 @@ impl SkillRouter {
     }
 
     /// Calculate weight from trigger weight map
-    fn calculate_weight(trigger: &Trigger) -> f64 {
+    pub fn calculate_weight(trigger: &Trigger) -> f64 {
         if trigger.weight.is_empty() {
             return 0.5; // Default weight
         }
