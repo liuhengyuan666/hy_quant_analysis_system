@@ -144,7 +144,7 @@
     {
       "id": "TASK-049",
       "description": "Oracle 二次复核：修复 i18n key mismatch、missing keys、dead import、export filename case、skill fallback i18n、unit tests（11 tests）。Commit `7bb65f1` 已推送 origin/v4。Oracle verdict: VERIFIED。",
-      "status": "Todo"
+      "status": "Done"
     }
   ],
   "constraints": [

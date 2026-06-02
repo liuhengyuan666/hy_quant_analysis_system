@@ -30,7 +30,7 @@ implement
 - [Done] [TASK-025] 信号/轮动面板中文名称显示：SignalsPanel symbol_names 映射 + RotationPanel hover tooltip
 - [Done] [TASK-026] Schema-evolution 修复：Oracle 评审后移除 `name` ghost field，改为 `DashboardSnapshot.symbol_names` HashMap，补充 serde(default) 文档与 AGENTS.md 策略
 - [Done] [TASK-048] 前端 LLM 智能分析面板集成：3 个 Tauri 命令 + 2 个 Vue 组件 + store 扩展 + i18n + Oracle 评审后修复（路径、placeholder、XSS、DTO、死代码、事件桥接）
-- [Done] [TASK-049] Oracle 二次复核：修复 i18n key mismatch、missing keys、dead import、export filename case、skill fallback i18n、unit tests（11 tests）。Commit `7bb65f1` 已推送 origin/v4。Oracle  verdict: VERIFIED。
+- [Done] [TASK-049] Oracle 二次复核：修复 i18n key mismatch、missing keys、dead import、export filename case、skill fallback i18n、unit tests（11 tests）。Commit `7bb65f1` 已推送 origin/v4。Oracle verdict: VERIFIED。
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。
