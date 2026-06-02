@@ -39,7 +39,7 @@ const SKILL_OPTIONS = computed(() =>
   availableSkills.value.length > 0
     ? availableSkills.value.map((s) => ({
         value: s.name,
-        label: s.name,
+        label: s.description || s.name,
       }))
     : [{ value: 'market-regime-reasoning', label: 'market-regime-reasoning' }]
 );

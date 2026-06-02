@@ -989,7 +989,8 @@ async fn analyze_with_skill(
 
     // Load agent profile if provided
     let profile = if let Some(ref agent) = agent_name {
-        let profile_path = format!("research/agents/{}.yaml", agent);
+        let root = StorageConfig::project_root().map_err(|e| e.to_string())?;
+        let profile_path = root.join("research/agents").join(format!("{}.yaml", agent));
         let profile_yaml = std::fs::read_to_string(&profile_path)
             .map_err(|e| format!("Failed to load agent profile '{}': {}", agent, e))?;
         let profile = research_skills::AgentProfile::from_yaml(&profile_yaml)

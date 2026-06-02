@@ -3345,6 +3345,12 @@ impl AppContext {
         fs::write(&output_path, md).with_context(|| {
             format!("failed to write LLM analysis report: {}", output_path.display())
         })?;
+        market_store::insert_report_snapshot(
+            &self.storage,
+            &date.to_string(),
+            "LLM_ANALYSIS",
+            &output_path.display().to_string(),
+        )?;
         Ok(ReportSummary {
             report_date: date.to_string(),
             output_path: output_path.display().to_string(),

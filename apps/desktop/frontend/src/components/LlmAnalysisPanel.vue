@@ -1,11 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   dashboardStore,
   updateLlmAnalysis,
   updateLlmLoading,
   updateLlmError,
+  updateLlmConfig,
   toggleLlmPanel,
 } from '../store.js';
 import { llmApi } from '../api/tauri.js';
@@ -45,8 +46,21 @@ const llmAnalysisText = computed(() => analysis.value?.llm_analysis || '');
 const tokenUsage = computed(() => analysis.value?.token_usage || {});
 const riskAssessment = computed(() => regimeAnalysis.value?.risk_assessment || {});
 const isPlaceholder = computed(() => analysis.value?.placeholder === true);
+const isConfigured = computed(() => dashboardStore.llmConfig?.configured ?? false);
 
 const keyDrivers = computed(() => regimeAnalysis.value?.key_drivers || []);
+
+// Pre-populate config form from existing llmConfig (never pre-fill apiKey)
+watch(
+  () => dashboardStore.llmConfig,
+  (cfg) => {
+    if (cfg) {
+      configForm.value.baseUrl = cfg.base_url || '';
+      configForm.value.model = cfg.model || '';
+    }
+  },
+  { immediate: true }
+);
 
 function handleClose() {
   emit('close');
