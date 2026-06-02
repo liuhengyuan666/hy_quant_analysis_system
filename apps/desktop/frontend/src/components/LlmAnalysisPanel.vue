@@ -36,6 +36,7 @@ const tabs = computed(() => [
   { key: 'regime', label: t('llm.regime') },
   { key: 'execution', label: t('llm.execution') },
   { key: 'risk', label: t('llm.risk') },
+  { key: 'history', label: t('llm.history') },
 ]);
 
 const skillName = computed(() => analysis.value?.skill || '');
@@ -48,6 +49,7 @@ const tokenUsage = computed(() => analysis.value?.token_usage || {});
 const riskAssessment = computed(() => regimeAnalysis.value?.risk_assessment || {});
 const isPlaceholder = computed(() => analysis.value?.placeholder === true);
 const isConfigured = computed(() => dashboardStore.llmConfig?.configured ?? false);
+const llmHistory = computed(() => dashboardStore.llmHistory || []);
 
 const keyDrivers = computed(() => regimeAnalysis.value?.key_drivers || []);
 
@@ -150,6 +152,12 @@ function renderMarkdown(text) {
   });
 
   return html;
+}
+
+function loadHistoryItem(item) {
+  if (!item?.full) return;
+  updateLlmAnalysis(item.full);
+  activeTab.value = 'conclusion';
 }
 </script>
 
@@ -354,6 +362,29 @@ function renderMarkdown(text) {
                 {{ factor }}
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Tab: History -->
+        <div v-if="activeTab === 'history'" class="llm-panel__tab-content">
+          <div v-if="!llmHistory.length" class="llm-panel__empty">
+            <p>{{ t('llm.noHistory') }}</p>
+          </div>
+          <div v-else class="llm-panel__history-list">
+            <div
+              v-for="item in llmHistory"
+              :key="item.timestamp"
+              class="llm-panel__history-item"
+              @click="loadHistoryItem(item)"
+            >
+              <div class="llm-panel__history-meta">
+                <span class="llm-panel__history-date">{{ item.date }}</span>
+                <SkillBadge :name="item.skill" size="sm" />
+                <span class="pill pill--outline">{{ item.agent }}</span>
+                <span v-if="item.triggered" class="pill pill--positive">{{ t('llm.triggered') }}</span>
+              </div>
+              <p class="llm-panel__history-summary">{{ item.summary }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -704,6 +735,49 @@ function renderMarkdown(text) {
   border: 1px solid var(--pill-outline-border);
   color: var(--text-secondary);
   background: transparent;
+}
+
+.llm-panel__history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.llm-panel__history-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-bg-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.llm-panel__history-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.llm-panel__history-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.llm-panel__history-date {
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.llm-panel__history-summary {
+  font-size: var(--font-size-meta);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .pill--positive {

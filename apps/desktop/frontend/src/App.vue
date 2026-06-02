@@ -9,6 +9,8 @@ import {
   updateLlmLoading,
   updateLlmError,
   toggleLlmPanel,
+  saveLlmAnalysisToHistory,
+  loadLlmHistoryFromStorage,
   loadDashboard as bridgeLoadDashboard,
   loadSelectedSnapshot as bridgeLoadSelectedSnapshot,
   startRefresh as bridgeStartRefresh,
@@ -76,6 +78,7 @@ function handleKeydown(event) {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
+  loadLlmHistoryFromStorage();
 });
 
 onBeforeUnmount(() => {
@@ -152,6 +155,7 @@ async function handleAnalyzeWithLlm() {
       dashboardStore.selectedAgent
     );
     updateLlmAnalysis(result);
+    saveLlmAnalysisToHistory(result);
     toggleLlmPanel(true);
   } catch (err) {
     console.error('[App] LLM analysis failed:', err);

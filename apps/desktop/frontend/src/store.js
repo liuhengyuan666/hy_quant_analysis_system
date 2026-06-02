@@ -102,6 +102,9 @@ export const dashboardStore = reactive({
 
   /** Whether LLM analysis panel is visible */
   showLlmPanel: false,
+
+  /** LLM analysis history (localStorage-backed) */
+  llmHistory: [],
 });
 
 /**
@@ -263,6 +266,49 @@ export function toggleLlmPanel(show) {
 }
 
 /**
+ * Update LLM analysis history.
+ */
+export function updateLlmHistory(history) {
+  dashboardStore.llmHistory = history || [];
+}
+
+/**
+ * Save a completed LLM analysis to localStorage history.
+ */
+export function saveLlmAnalysisToHistory(analysis) {
+  if (!analysis) return;
+  const entry = {
+    timestamp: Date.now(),
+    date: analysis.date || new Date().toISOString().slice(0, 10),
+    scope: analysis.scope || dashboardStore.selectedScope,
+    skill: analysis.skill || dashboardStore.selectedSkill,
+    agent: analysis.agent || dashboardStore.selectedAgent,
+    triggered: analysis.triggered ?? false,
+    summary: analysis.llm_analysis
+      ? String(analysis.llm_analysis).slice(0, 200)
+      : '',
+    full: analysis,
+  };
+  const current = JSON.parse(localStorage.getItem('llmHistory') || '[]');
+  current.unshift(entry);
+  const trimmed = current.slice(0, 50);
+  localStorage.setItem('llmHistory', JSON.stringify(trimmed));
+  dashboardStore.llmHistory = trimmed;
+}
+
+/**
+ * Load LLM analysis history from localStorage.
+ */
+export function loadLlmHistoryFromStorage() {
+  try {
+    const raw = localStorage.getItem('llmHistory');
+    dashboardStore.llmHistory = raw ? JSON.parse(raw) : [];
+  } catch {
+    dashboardStore.llmHistory = [];
+  }
+}
+
+/**
  * Reset store to initial state.
  */
 export function resetStore() {
@@ -288,14 +334,11 @@ export function resetStore() {
     started_at: null,
     finished_at: null,
     error: null,
-    cancelling: false,
-    job_id: null,
-    last_successful_stage: null,
   };
+  dashboardStore.recentReports = [];
   dashboardStore.lastUpdatedAt = null;
   dashboardStore.refreshing = false;
   dashboardStore.selectedRefreshStartStage = 'full';
-  dashboardStore.recentReports = [];
   dashboardStore.llmAnalysis = null;
   dashboardStore.llmLoading = false;
   dashboardStore.llmError = '';

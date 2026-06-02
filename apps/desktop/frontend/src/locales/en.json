@@ -510,6 +510,8 @@
     "saveConfig": "Save Config",
     "configSaved": "Config saved",
     "exportingMarkdown": "Exporting...",
-    "markdownExported": "Markdown exported"
+    "markdownExported": "Markdown exported",
+    "history": "History",
+    "noHistory": "No history yet. Analysis results will be saved automatically."
   }
 }

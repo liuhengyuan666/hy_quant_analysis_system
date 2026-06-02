@@ -510,6 +510,8 @@
     "saveConfig": "保存配置",
     "configSaved": "配置已保存",
     "exportingMarkdown": "导出中...",
-    "markdownExported": "Markdown 已导出"
+    "markdownExported": "Markdown 已导出",
+    "history": "历史记录",
+    "noHistory": "暂无历史记录，开始分析后将自动保存。"
   }
 }
