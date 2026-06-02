@@ -318,6 +318,7 @@ export let startRefresh = (stage) => console.warn('[Store] startRefresh not yet 
 export let retryRefresh = () => console.warn('[Store] retryRefresh not yet initialized');
 export let cancelRefresh = () => console.warn('[Store] cancelRefresh not yet initialized');
 export let exportReport = () => console.warn('[Store] exportReport not yet initialized');
+export let analyzeWithLlm = () => console.warn('[Store] analyzeWithLlm not yet initialized');
 
 /**
  * Initialize event bridge with actual implementations from main.js.
@@ -330,4 +331,5 @@ export function initEventBridge(handlers) {
   if (handlers.retryRefresh) retryRefresh = handlers.retryRefresh;
   if (handlers.cancelRefresh) cancelRefresh = handlers.cancelRefresh;
   if (handlers.exportReport) exportReport = handlers.exportReport;
+  if (handlers.analyzeWithLlm) analyzeWithLlm = handlers.analyzeWithLlm;
 }

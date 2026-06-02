@@ -15,8 +15,8 @@ import {
   retryRefresh as bridgeRetryRefresh,
   cancelRefresh as bridgeCancelRefresh,
   exportReport as bridgeExportReport,
+  analyzeWithLlm as bridgeAnalyzeWithLlm,
 } from './store.js';
-import { llmApi } from './api/tauri.js';
 import DashboardHero from './components/DashboardHero.vue';
 import LlmAnalysisTrigger from './components/LlmAnalysisTrigger.vue';
 import LlmAnalysisPanel from './components/LlmAnalysisPanel.vue';
@@ -146,7 +146,7 @@ async function handleAnalyzeWithLlm() {
   updateLlmLoading(true);
   updateLlmError('');
   try {
-    const result = await llmApi.analyzeWithSkill(
+    const result = await bridgeAnalyzeWithLlm(
       dashboardStore.selectedScope,
       dashboardStore.selectedSkill,
       dashboardStore.selectedAgent

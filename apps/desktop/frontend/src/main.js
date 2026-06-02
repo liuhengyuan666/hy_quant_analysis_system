@@ -24,6 +24,7 @@ import {
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
+import { llmApi } from './api/tauri.js';
 
 // Helper to translate
 function t(key, params) {
@@ -372,6 +373,7 @@ initEventBridge({
   retryRefresh: () => retryFailedRefresh(),
   cancelRefresh: () => cancelRefreshJob(),
   exportReport: () => exportReport(),
+  analyzeWithLlm: (scope, skill, agent) => llmApi.analyzeWithSkill(scope, skill, agent),
 });
 
 // ── Bootstrap ───────────────────────────────────────────────────────────

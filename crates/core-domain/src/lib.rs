@@ -408,3 +408,31 @@ pub struct UserPreference {
     pub value: String,
     pub updated_at: String,
 }
+
+// ============================================================
+// LLM Desktop Integration DTOs (ADR-048 Phase 2)
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmStatus {
+    pub configured: bool,
+    pub base_url: String,
+    pub model: String,
+    pub timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentProfileSummary {
+    pub name: String,
+    pub description: String,
+    pub risk_tolerance: String,
+    pub output_depth: String,
+    pub tone: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillSummary {
+    pub name: String,
+    pub description: String,
+    pub version: String,
+}

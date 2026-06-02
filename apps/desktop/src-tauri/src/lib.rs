@@ -1,5 +1,6 @@
 use app_service::{pipeline_stages, AppContext};
 use chrono::{Local, NaiveDate};
+use core_domain::{AgentProfileSummary, LlmStatus, SkillSummary};
 use market_store::StorageConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -36,30 +37,6 @@ struct DashboardBundlePayload {
     recent_reports: Vec<app_service::RecentReportItem>,
     pipeline_dates: app_service::PipelineDateDiagnostics,
     refresh_status: DashboardRefreshStatus,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct LlmStatus {
-    configured: bool,
-    model: String,
-    base_url: String,
-    timeout_secs: u64,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct AgentProfileSummary {
-    name: String,
-    description: String,
-    risk_tolerance: String,
-    output_depth: String,
-    tone: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct SkillSummary {
-    name: String,
-    description: String,
-    version: String,
 }
 
 impl Default for DashboardRefreshStatus {

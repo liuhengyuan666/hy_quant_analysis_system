@@ -111,13 +111,21 @@ async function handleSaveConfig() {
 
 /**
  * Lightweight markdown-to-HTML renderer with XSS sanitization.
- * Strips dangerous tags before rendering LLM output.
+ * Two-layer defense: 1) escape raw HTML, 2) convert markdown, 3) strip dangerous tags.
  */
 function renderMarkdown(text) {
   if (!text) return '';
 
-  // Step 1: Convert markdown to HTML
-  let html = text
+  // Step 1: Escape raw HTML entities so any HTML in the LLM output is rendered as text
+  let html = String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+  // Step 2: Convert markdown syntax to HTML (on already-escaped text)
+  html = html
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -126,7 +134,7 @@ function renderMarkdown(text) {
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>');
 
-  // Step 2: Sanitize HTML — strip script/iframe/object/event handlers
+  // Step 3: Defense-in-depth — strip any dangerous tags that might have slipped through
   const unsafePatterns = [
     /<script[^>]*>[\s\S]*?<\/script>/gi,
     /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
