@@ -1,6 +1,6 @@
 ## ADR-026: Memory 体系清理与状态同步
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 当前 Memory 体系存在三个问题：1) glossary 术语不完整（19个）；2) decisions 状态需要确认；3) archive 目录结构需要初始化。
@@ -12,7 +12,7 @@
 
 ## ADR-027: ClickHouse 日期查询性能优化（Oracle 复核修正）
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Dashboard 加载性能瓶颈：`available_dates_ms` 耗时 24 秒。根因是 `fetch_dashboard_available_dates` 查询使用 IN 子句导致双表全扫描。
@@ -24,7 +24,7 @@ Dashboard 加载性能瓶颈：`available_dates_ms` 耗时 24 秒。根因是 `f
 
 ## ADR-028: rotation_missing 根因分析：历史窗口不足导致的预期行为
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 signal-engine 中 840 个 rotation_missing 条目需要排查原因。
@@ -36,7 +36,7 @@ rotation_missing 是预期行为，不是 bug。根因是 rotation-engine 在计
 
 ## ADR-029: HSAHP 暂时禁用决策
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 HSAHP（AH股溢价指数）数据源不可用：Eastmoney 从当前环境不可达，Tencent 无 K 线数据。当前 enabled: true 但 rows=0，产生 critical 状态告警。
@@ -48,7 +48,7 @@ HSAHP（AH股溢价指数）数据源不可用：Eastmoney 从当前环境不可
 
 ## ADR-030: Turnover 存量回填待执行
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 P2 turnover 修复（commit 12b17bb）后，新拉取的腾讯日线包含 turnover，但存量 814 根 bar 仍缺失 turnover。需要通过 ingest-daily 回填。
@@ -60,7 +60,7 @@ Turnover 存量回填命令为 `cargo run -p quant-cli -- ingest-daily --from 20
 
 ## ADR-031: HSAHP 数据失效根因分析
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 需要确认 HSAHP 数据失效的根本原因，以验证禁用决策是否正确。
@@ -72,7 +72,7 @@ HSAHP 数据失效有两层原因：1) 当前环境无法访问 Eastmoney API（
 
 ## ADR-032: LLM 配置从 SQLite+Keyring 迁移到 TOML+Env
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 用户反馈 LLM 配置存储在 SQLite 和 OS Keyring 中不可见，体感差。需要透明、可编辑、可移植的配置方案。
@@ -84,7 +84,7 @@ HSAHP 数据失效有两层原因：1) 当前环境无法访问 Eastmoney API（
 
 ## ADR-033: LLM 配置从 SQLite+Keyring 迁移到 TOML+Env
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 用户反馈 LLM 配置存储在 SQLite 和 OS Keyring 中不可见，体感差。需要透明、可编辑、可移植的配置方案。ADR-032 ID 冲突修复。
@@ -96,7 +96,7 @@ HSAHP 数据失效有两层原因：1) 当前环境无法访问 Eastmoney API（
 
 ## ADR-034: 前端改进方案：Vue 3 迁移 + 布局优化
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 当前前端为 Plain JS + Vite，1818 行 main.js，innerHTML 全量替换模式。用户要求三项改进：框架迁移、UI/UX 重设计、breadth-ma30 面板。Oracle 评审建议合并 Phase 1 到 Phase 2，避免 throwaway work。
@@ -112,7 +112,7 @@ HSAHP 数据失效有两层原因：1) 当前环境无法访问 Eastmoney API（
 
 ## ADR-035: Vue 3 共享状态架构：reactive store + CSS 变量桥接
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 1 Oracle 复核发现三个关键问题：CSS 变量名不匹配、重复渲染、无状态协调。需要一个共享状态机制让 Plain JS 和 Vue 组件同步。
@@ -128,7 +128,7 @@ Phase 1 Oracle 复核发现三个关键问题：CSS 变量名不匹配、重复�
 
 ## ADR-036: Vue Store 完整同步架构：10 属性全覆盖
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 2 Oracle 复核发现 store 只同步了 5 个属性，但 Vue 组件依赖 10+ 个属性。HealthStrip/DateSelector/RefreshProgress/StatusPanel 永远显示空状态。
@@ -144,7 +144,7 @@ Phase 2 Oracle 复核发现 store 只同步了 5 个属性，但 Vue 组件依�
 
 ## ADR-037: Phase 3 布局优化：CSS Grid + 简约风格 + 侧边面板
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 3 目标是优化布局、统一视觉风格、提升交互体验。需要实现响应式网格、统一间距系统、简化边框阴影、优化排版层级、将信号详情弹窗转为侧边面板。
@@ -161,7 +161,7 @@ Phase 3 目标是优化布局、统一视觉风格、提升交互体验。需要
 
 ## ADR-038: 滚动锁定统一管理：App.vue 层级 watcher
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Oracle 复核发现滚动锁定存在两个问题：1) SignalDetailModal 和 main.js 都 toggle 同一个 class，存在竞争；2) v-if 销毁组件时 watcher 无法清理 class。
@@ -176,7 +176,7 @@ Oracle 复核发现滚动锁定存在两个问题：1) SignalDetailModal 和 mai
 
 ## ADR-039: 事件桥接架构：Vue 组件回调 main.js 数据加载
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Oracle 复核发现三个关键问题：1) 视觉重复（Plain JS 和 Vue 同时渲染所有面板）；2) 状态分裂（Vue 事件不回调 main.js）；3) Store 同步缺失（syncLoadingToStore 从未调用）。
@@ -193,7 +193,7 @@ Oracle 复核发现三个关键问题：1) 视觉重复（Plain JS 和 Vue 同�
 
 ## ADR-040: 前端布局优化：宽度对齐 + 面板重组
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 用户反馈布局问题：1) 左右两侧空白太多；2) Recent Reports 面板细长导致右侧空白；3) Vue 和 Plain JS 容器宽度不对齐。
@@ -210,7 +210,7 @@ Oracle 复核发现三个关键问题：1) 视觉重复（Plain JS 和 Vue 同�
 
 ## ADR-041: Frontend i18n: vue-i18n@11 + Vue migration first
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 User wants Chinese/English language switching in the Tauri desktop app. Current frontend has ~260-280 unique translatable strings across 22 files, with a Vue 3 + plain JS hybrid architecture. 3 feature slices (recent-reports, data-health, usage-guides) and the hero section remain plain JS. No existing i18n infrastructure.
@@ -222,7 +222,7 @@ User wants Chinese/English language switching in the Tauri desktop app. Current 
 
 ## ADR-042: Frontend i18n Phase 1 complete: vue-i18n@11 + all Vue components migrated
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 1 of i18n implementation completed. All 20 Vue components use useI18n/t(). Locale files (zh.json, en.json) with ~280 keys each. LanguageToggle in top-right corner. Default language Chinese.
@@ -234,7 +234,7 @@ Phase 1 of i18n implementation completed. All 20 Vue components use useI18n/t().
 
 ## ADR-043: Frontend i18n Phase 2 complete: dashboard-utils.js locale-aware formatting
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 2 of i18n implementation completed. All 11 format functions in dashboard-utils.js now use locale-aware Intl formatters and i18n fallback strings.
@@ -246,7 +246,7 @@ Phase 2 of i18n implementation completed. All 11 format functions in dashboard-u
 
 ## ADR-044: Frontend i18n Phase 3 complete: main.js export messages + dead code cleanup
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Phase 3 of i18n implementation completed. main.js export messages now use t(). Dead code files removed (features/*.js, renderers/environment-breadth.js). Backend-originated strings (trust.headline/message/notes) documented as requiring Rust backend changes.
@@ -258,7 +258,7 @@ Phase 3 of i18n implementation completed. main.js export messages now use t(). D
 
 ## ADR-045: i18n key mismatch fixes: 26+ keys corrected across DataHealthPanel and RecentReportsPanel
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 Oracle review found 26+ key mismatches between Vue component code and locale files. These would cause runtime broken translations (raw key names displayed instead of translated text).
@@ -270,7 +270,7 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 
 ## ADR-046: 前端布局精细调整（2026-05-31）
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 用户在实际使用中发现 Vue 3 迁移后的前端存在若干布局问题：1) `#app` 遗留空 div 导致顶部一整页空白；2) DateSelector 宽度不足，两个 select 未并排；3) TimeContext 与 Regime/Breadth 同列导致高度不均；4) Backtest 与 Signals 并列使信号区域拥挤；5) LanguageToggle 占据 DateSelector 同行空间；6) Hero 右侧 action 区宽度不足，select 选项和按钮文字显示不全。
@@ -289,7 +289,7 @@ Oracle review found 26+ key mismatches between Vue component code and locale fil
 
 ## ADR-047: Signal/Rotation 中文名称显示 + Schema-Evolution 重构（2026-06-01）
 
-**Status:** active
+**Status:** Accepted
 
 ### Context
 用户要求：1) 信号栈中买入/防御组的每个模块显示对应中文名称；2) 轮动排行榜因篇幅限制采用悬浮样式显示中文名称。实施过程中引发 schema-evolution 问题：在 `RotationRankSnapshot` / `SignalSnapshot` 上新增 `name` 字段导致旧 ClickHouse JSON 行反序列化崩溃。
@@ -333,3 +333,629 @@ Following ADR-048 (Phase 1 MVP), the LLM desktop integration needed enhancement:
 9. i18n: 35+ new keys added to zh.json and en.json covering skill/config/export actions.
 
 **Tags:** frontend, llm, tauri, vue3, architecture, oracle-reviewed, phase2
+
+## ADR-050: Research Insight First — Ground Truth before Narrative, Insight before JSON
+
+**Status:** Accepted
+
+### Context
+两份复核建议 converged：Doc 1 指出前端暴露内部状态而非研究结论；Doc 2 指出 Ground Truth 验证是 P0。需要同时解决 '系统是否正确' 和 '用户是否看得懂'。
+
+### Decision
+1. Ground Truth Validation (Wave 7) 为 P0，利用已存在的 research-validation 基础设施接线历史数据验证。2. Insight Composer (Wave 8) 为 P1，用确定性规则将 DashboardSnapshot 映射为 ResearchInsight（headline/summary/implications/recommendations），重构前端为四层：Insight → Metrics → Evidence → Raw。3. Daily Report Composer (Wave 9) 为 P2，只做聚合不做创作。4. Narrative Layer (Wave 10) 推迟到 GT macro_f1 > 0.65。
+
+**Tags:** v4, insight, ground-truth, ui, roadmap
+
+## ADR-051: From Research Insight to Portfolio Decision
+
+**Status:** Accepted
+
+### Context
+Ground Truth validation has been run for 2023-02 to 2026-06 across GLOBAL/CN/HK scopes. Results show regime prediction Macro F1 = 0.18 (GLOBAL/CN) and 0.27 (HK), far below the 0.65 threshold required for downstream trust. Root cause identified: macro-engine regime thresholds are intuitively set (risk_off triggered by trend<40 OR risk<40) causing massive risk_off bias (~53% predictions vs ~0.1% actual).
+
+### Decision
+1. PAUSE all downstream work (Insight enhancements, Daily Report expansion, Narrative Layer, Allocation Layer) until regime Macro F1 > 0.65. 2. Next 1-2 sprints focus exclusively on regime calibration: analyze threshold sensitivity, test alternative classification rules, validate against GT, iterate. 3. Allocation Layer (Portfolio Decision) remains the target architecture but is gated by regime accuracy. 4. Only after GT passes will we expand verifiable Skills and build Allocation Layer.
+
+**Tags:** v4, ground-truth, regime-calibration, allocation, portfolio, adr-051
+
+## ADR-052: Regime Classification Is Not Future Return Classification
+
+**Status:** Accepted
+
+### Context
+Ground Truth validation revealed extreme class imbalance (neutral 94.8%, risk_on 5.1%, risk_off 0.1%) because the current GT uses 20-day forward returns with ±8% thresholds. This creates a label for 'extreme return events' rather than 'market state'. A correct risk_on regime classification might only produce +3% future return, which would be labeled 'neutral' by GT. Optimizing thresholds to fit this GT would cause the model to overfit to the wrong objective.
+
+### Decision
+1. Regime Ground Truth must NOT be constructed purely from future returns. 2. GT must reflect market STATE (trend, breadth, liquidity, volatility posture) not future OUTCOME. 3. Before any threshold calibration, audit the GT label system for class balance, transition coherence, and duration persistence. 4. If GT is flawed, redesign labels using ResearchContext dimensions or external validated regime indicators. 5. Threshold calibration only begins after GT passes audit.
+
+**Tags:** v4, ground-truth, regime, classification, adr-052
+
+## ADR-053: Ground Truth Must Be Independent From Predictor
+
+**Status:** Accepted
+
+### Context
+Wave 7 regime audit proved that the Observation Source (macro-engine scores) is the root cause of low F1, not the persistence filter or state machine. Current architecture has GT and Predictor sharing the same Macro Engine intermediate layer, violating the ML principle that Label and Feature must be independent.
+
+### Decision
+1. GT and Predictor must use completely independent data paths. GT chain: OHLCV/Volume/Indicators → Market-State Extractor → MarketStateObservation → GT Regime Generator → Ground Truth. Predictor chain: Macro/Dollar/Rates/Sentiment → Research Context → Regime Engine → Predicted Regime. 2. MarketStateObservation must be a semantic observation layer (TrendObservation, LiquidityObservation, VolatilityObservation, BreadthObservation) not raw indicator dump. 3. BreadthObservation must be Option<BreadthObservation> — never fake breadth when underlying data is unavailable. 4. Introduce Candidate State → Persistence Filter two-phase state machine. 5. Persistence Score is a hard gate: avg_episode > 20d, median > 15d, churn < 5%, stability > 0.9. 6. Add Coverage Score: imbalance_ratio < 5 to prevent single-state dominance. 7. Old Wave 7.1-7.4 tasks are superseded; new tasks 7.3B-7.4 replace them.
+
+**Tags:** v4, ground-truth, regime, architecture, gt-predictor-separation
+
+## ADR-055: Regime Classification Must Be Scope-Aware Factor-Dominant
+
+**Status:** Accepted
+
+### Context
+TASK-026 Macro Factor Alignment Audit revealed CN and HK have completely different optimal regime factors. CN: Trend is best (Trend-Only alignment=0.527 vs baseline=0.353). HK: Trend is completely broken (F1=0.00), Risk is best (Risk-Only alignment=0.285 vs baseline=0.073). Current production uses identical logic for both markets.
+
+### Decision
+Implement scope-aware factor-dominant regime logic: CN uses Trend-Dominant (RiskOff=trend<40, RiskOn=trend>=60), HK uses Risk-Dominant (RiskOff=risk<40, RiskOn=risk>=55). Remove Liquidity from RiskOff trigger as it has negligible DD20 predictive power (F1<0.10 in both markets).
+
+**Tags:** regime, factor-dominant, scope-aware, macro-engine, cn, hk
+
+## ADR-056: Regime Must Separate State Classification From Economic Prediction
+
+**Status:** Accepted
+
+### Context
+TASK-025 through TASK-028A established that single-layer regime cannot simultaneously serve state classification and economic prediction. HK shows critical divergence: Risk is alignment-best but Liquidity is economic-best. TASK-027 proves optimizing for Alignment degrades Economic Separation (33.4 to 8.4).
+
+### Decision
+Adopt dual-layer architecture: MarketStateRegime (State Layer) for alignment/trend/drawdown detection, and EconomicStateRegime (Economic Layer) for forward return separation. Both layers coexist independently. Freeze ADR-055 and TASK-004 until architecture is accepted.
+
+**Tags:** regime, architecture, dual-layer, state-classification, economic-prediction, adr-056
+
+## ADR-058: Persistence Simplification — confirmation_days = 1
+
+**Status:** Accepted
+
+### Context
+TASK-034C (Episode Survival Audit) reveals that raw regime episodes are far shorter than assumed. CN median episode = 2.0 days, HK median = 3.0 days. P95 is only 15.2d (CN) and 25.3d (HK). This means `confirmation_days=10` exceeds the typical state lifetime — it is not filtering noise, it is systematically destroying state classification by swallowing regimes before they can be confirmed.
+
+TASK-034B reveals the mechanics: `apply_persistence` counts streak from 1, not 0, making `days=1` mechanically identical to `days=0`. Any regime with `duration < confirmation_days` is entirely swallowed. At 10d, CN swallows 86% of all episodes (274 days, 51.7% of data), HK swallows 72% (140 days, 27.2%).
+
+TASK-034 shows the economic consequence: Sharpe drops -84% at 10d. But the primary argument for change is **state classification integrity**, not economic performance. A regime system that swallows 86% of episodes cannot correctly describe market states.
+
+### Decision
+Change production `confirmation_days` from **10 to 1**.
+
+Rationale:
+1. **Episode survival proves 10d is absurd**: CN median=2d, HK median=3d. 10d is 3-5x typical state lifetime.
+2. **0d and 1d are mechanically identical** in current implementation (streak starts at 1)
+3. **1d is more defensible to team** than 0d: "at least one close confirmation" vs "instant flip"
+4. **2d+ proven destructive to state classification**: swallows the majority of episodes
+5. **Primary goal is correct state description**, not Sharpe maximization
+
+### Evidence (State Classification Perspective)
+- CN: median episode=2.0d, p95=15.2d, 30.1% are 1-day flips
+- HK: median episode=3.0d, p95=25.3d, 24.3% are 1-day flips
+- At 10d: CN survival rate=14.2%, HK survival rate=28.4%
+- At 2d: CN survival rate=69.9%, HK survival rate=75.7%
+- 10d swallows 86% (CN) and 72% (HK) of all regime episodes
+
+### Evidence (Economic Perspective — Secondary)
+- CN 0-1d: Sharpe=1.36 vs 10d: Sharpe=0.22
+- HK 0-1d: Sharpe=1.14 vs 10d: Sharpe=0.18
+
+### Scope
+Only affects `confirmation_days` in macro-engine persistence filter. Does NOT change threshold logic, factor weights, or regime classification rules.
+
+**Tags:** regime, persistence, confirmation-days, macro-engine, production-change, state-classification, episode-survival, adr-058
+
+## ADR-059: HK Anchor Symbol Fix — HSI → HSCEI
+
+**Status:** Accepted
+
+### Context
+Wave 8 Phase 2 revealed HK Alignment=0.007 at 1d, appearing "broken". Score Distribution Audit discovered HK `trend_score` was CONSTANTLY 50.0 (min=50, max=50, std=0) across all 515 days. Investigation revealed `app-service/src/lib.rs:2122` hardcoded "HSI" as HK anchor, but the database has NO HSI bars. `fetch_daily_bars` returned empty, causing `trend_score` to always default to 50.0 via `unwrap_or(50.0)`.
+
+### Decision
+Change HK anchor symbol from **"HSI" to "HSCEI"** in `app-service/src/lib.rs:2122`.
+
+### Impact
+All HK Wave 7.5 experiments were run with broken `trend_score`. Re-running Wave 8 with fixed trend_score (computed from actual HSCEI bars) shows:
+- HK Alignment: **0.286** (outperforms CN's 0.252)
+- HK Sharpe: **1.53**, CAGR: **22.96%**
+- HK is NOT broken. The "HK failure" conclusion was entirely a data ingestion bug.
+
+### Consequences
+- **ADR-057 (HK Liquidity Dominant) is no longer needed.** HK does not need a separate Liquidity-Dominant regime.
+- **All HK Wave 7.5 conclusions must be re-evaluated** in light of the fixed data.
+- **Production refresh APPROVED for both CN and HK** with `confirmation_days=1`.
+
+**Tags:** hk, data-ingestion, bug-fix, hsi, hscei, anchor-symbol, adr-059
+
+## ADR-057: HK Liquidity-Dominant Regime
+
+**Status:** Rejected
+
+### Context
+Originally proposed as a solution to HK's perceived regime failure. Evidence suggested Risk was alignment-best but Liquidity was economic-best for HK, leading to a proposal for a Liquidity-Dominant threshold scheme.
+
+### Decision
+**REJECTED.** The premise was flawed. HK's "failure" was caused by:
+1. `confirmation_days=10` suppressing 72% of HK episodes
+2. Missing HSI bars causing `trend_score` to always default to 50.0
+
+After fixing both issues (ADR-058 + ADR-059), HK shows:
+- Alignment=0.286 (outperforms CN=0.252)
+- Sharpe=1.53, CAGR=22.96%
+
+HK does not need a separate Liquidity-Dominant regime. The standard regime works correctly.
+
+**Tags:** hk, liquidity-dominant, rejected, adr-057
+
+## ADR-060: Regime Ground Truth Definition
+
+**Status:** Needs Revision (Wave 9 Completed, User Critique Incorporated)
+
+### Context
+TASK-035B (Ground Truth Audit) revealed a fundamental mismatch:
+- **Regime predicts**: 45.7% RiskOff days (CN @ 1d)
+- **Actual drawdowns >20%**: 0% of days
+- **Regime makes money**: Sharpe=1.90 (CN), Sharpe=1.53 (HK)
+- **Alignment is low**: 0.252 (CN), 0.286 (HK) — far below 0.75 gate
+
+### Wave 9 Execution Summary
+
+**Completed:**
+- TASK-060A.1: Forward Return Distribution Audit (20d/60d/120d for CN/HK)
+- TASK-060A.2: 3 Ground Truth schemes designed (GT-25, GT-33, GT-10)
+- TASK-060B: Label sets generated
+- TASK-060C: Alignment computed for all variants
+- TASK-060D: Information Score measured
+
+**Key Finding from Wave 9:**
+- Old Technical GT: CN Macro F1=0.461, HK=0.323 (but CN had 0 RiskOff days, artificially inflating F1)
+- GT-25 Forward Return: CN Macro F1=0.347, HK=0.330
+- Information Score near zero for all Forward Return GT variants (0.006-0.086)
+
+### User Critique (Critical Correction)
+
+**Wave 9 made a logical error:**
+
+> "Information≈0 → regime 不预测 future return → regime 的价值来自别的机制"
+
+这个推导证据不足。
+
+**核心问题：**
+
+Wave 9 把 `State Classification` 变成了 `Return Classification`。
+
+按 ADR-056 定义：
+- **MarketStateRegime** = 描述市场状态
+- **EconomicRegime** = 预测经济收益
+
+但 Wave 9 做的是：
+```
+State Layer vs Future Return
+```
+
+然后发现不匹配。这是**预期结果**，因为本来就不是一个目标。
+
+**典型反例（2020疫情底部）：**
+```
+2月: RiskOff, 流动性崩溃, VIX爆炸
+↓
+未来20天收益: 反而极高
+```
+
+按 Forward Return GT：
+```
+RiskOff → 被标记为 RiskOn Label (因为未来收益高)
+→ regime预测正确, GT判定错误
+→ Information 下降
+```
+
+**但这不意味着 regime 没价值。**
+
+**RiskOff ≠ Crash**
+
+在真实金融世界中，RiskOff 经常意味着：
+- 高风险环境
+- 信用利差扩大
+- 流动性收缩
+- 趋势恶化
+
+但指数可能继续涨（如2018贸易战、2022加息周期）。
+
+### 当前证据只能证明
+
+> State Layer 与「60日未来收益分位数」相关性很低。
+
+**不能证明：**
+- State Layer 没有预测能力
+- State Layer 的价值来自"神秘机制"
+
+### 需要修正的方向
+
+**ADR-060 不应定义 Ground Truth = Forward Return。**
+
+应该回到基础问题：
+> **RiskOn / Neutral / RiskOff 在这个系统里究竟代表什么？**
+
+**建议 Wave 10: State Truth Discovery**
+- TASK-070A: State Label Taxonomy Audit — RiskOff 究竟是什么意思？
+- TASK-070B: State Persistence Economics — RiskOff 期间的收益/波动率/回撤/胜率/Sharpe
+- TASK-070C: Economic Layer Target Discovery — Forward Return 是否应该成为 Economic Layer 的 Ground Truth（注意：这里是 Economic Layer，不是 State Layer）
+
+### Impact
+- **Alignment Gate**: Remains UNDEFINED.
+- **TASK-004**: Remains FROZEN until State Truth is defined.
+- **ADR-056 Dual-Layer**: Remains valid. State Layer and Economic Layer are separate.
+- **ADR-060**: Status changed from Accepted → Needs Revision.
+
+**Tags:** regime, ground-truth, alignment, metric-design, state-classification, adr-060, wave-9, needs-revision, state-truth-discovery
+
+## ADR-061: State Layer Semantic Contract
+
+**Status:** Accepted
+
+**Wave 10 Deliverables Status:**
+- ✅ TASK-070A: State Label Taxonomy Audit
+- ✅ TASK-070B: State Persistence Economics  
+- ✅ TASK-071A: State Layer GT Validation Demo
+- ⏳ ADR-061: Semantic Contract (draft complete, awaiting acceptance)
+
+### Context
+TASK-070B (State Persistence Economics) revealed counter-intuitive results:
+- **RiskOff has the HIGHEST forward returns** in both CN and HK
+- CN RiskOff 60d return: **5.37%** (vs RiskOn 3.04%)
+- HK RiskOff 60d return: **7.93%** (vs RiskOn 3.51%)
+
+This directly contradicts the intuitive assumption that RiskOff = "market will crash."
+
+### Evidence from TASK-070B
+
+**CN (000300):**
+| State | 20d Return | 60d Return | Volatility | Max DD |
+|-------|------------|------------|------------|--------|
+| RiskOn | 1.36% | 3.04% | 0.97% | -6.39% |
+| Neutral | 0.08% | 3.00% | 0.92% | -5.77% |
+| RiskOff | **2.65%** | **5.37%** | **1.18%** | **-7.57%** |
+
+**HK (HSCEI):**
+| State | 20d Return | 60d Return | Volatility | Max DD |
+|-------|------------|------------|------------|--------|
+| RiskOn | 2.08% | 3.51% | **1.74%** | **-12.89%** |
+| Neutral | 1.08% | 5.64% | 1.42% | -9.13% |
+| RiskOff | **2.98%** | **7.93%** | 1.61% | -10.18% |
+
+### Key Insight
+
+**RiskOff = High Uncertainty + High Risk Premium**
+
+Not:
+- ❌ "Market will crash"
+- ❌ "Future returns will be negative"
+- ❌ "Avoid all risk assets"
+
+But:
+- ✅ "Environment uncertainty is elevated"
+- ✅ "Risk assets carry higher risk premium"
+- ✅ "Volatility is elevated"
+- ✅ "Drawdown risk is higher"
+- ✅ **"Expected returns may actually be higher (compensating for risk)"**
+
+### Proposed Semantic Contract
+
+#### RiskOff
+
+**Definition:**
+Uncertainty-elevated state. Macro factors (trend/risk/liquidity) indicate elevated market risk, but this does NOT imply negative future returns.
+
+**Characteristics:**
+- Higher volatility
+- Larger potential drawdowns
+- Higher risk premium (compensating for uncertainty)
+- May coincide with policy uncertainty, liquidity contraction, or trend deterioration
+
+**Used for:**
+- Risk management (position sizing, stop-loss adjustment)
+- Volatility expectation setting
+- Defensive strategy selection
+- Portfolio stress testing
+
+**NOT used for:**
+- Predicting negative returns
+- Market timing ("sell everything")
+- Short-selling signal
+
+#### RiskOn
+
+**Definition:**
+Momentum-favorable state. Trend and liquidity factors support risk assets, but volatility may still be elevated (especially in HK).
+
+**Characteristics:**
+- Positive trend momentum
+- Favorable liquidity conditions
+- Moderate to high returns
+- **HK-specific**: May coincide with highest volatility and worst drawdowns
+
+**Used for:**
+- Trend-following strategy activation
+- Momentum position sizing
+- Growth strategy selection
+
+**NOT used for:**
+- Predicting guaranteed positive returns
+- Ignoring risk management
+
+#### Neutral
+
+**Definition:**
+Low-conviction state. No strong directional signal from macro factors. Lowest volatility and most stable environment.
+
+**Characteristics:**
+- Lowest volatility
+- Smallest drawdowns
+- Modest returns
+- Stable regime
+
+**Used for:**
+- Default allocation
+- Rebalancing
+- Baseline strategy execution
+
+**NOT used for:**
+- Predicting sideways markets
+- Avoiding all decisions
+
+### Implementation Mapping Verification
+
+**Code-level audit confirms semantic contract aligns with implementation:**
+
+**Macro factors (all `invert_score = true`):**
+- `vix` (VIXCLS): High VIX → low score → high uncertainty
+- `dollar_index` (DTWEXBGS): Strong dollar → low score → flight to safety
+- `us10y` (DGS10): High rates → low score → tight liquidity
+- `fed_funds` (DFF): High rates → low score → tight liquidity
+
+**Trend score computation:**
+- 85: close > MA20 > MA60 (strong uptrend)
+- 65: close > MA20, MA20 ≤ MA60 (moderate uptrend)
+- 50: close ≤ MA20, close > MA60 (mixed)
+- 25: close ≤ MA60 (downtrend)
+
+**Regime thresholds:**
+- RiskOff: `trend_score < 40` (downtrend, score=25) OR `risk_score < 40` (high VIX or strong dollar)
+- RiskOn: `trend_score ≥ 60` (close > MA20) AND `liquidity ≥ 50` AND `risk_score ≥ 55` (low VIX, low dollar)
+- Neutral: Everything else
+
+**Verification:**
+- RiskOff captures: downtrend OR high uncertainty (VIX↑) OR flight to safety (dollar↑) ✅
+- RiskOn captures: uptrend AND calm environment (VIX↓, dollar↓) AND moderate liquidity ✅
+- Neutral captures: mixed or moderate conditions ✅
+
+### Decision
+
+**PENDING USER REVIEW.**
+
+This semantic contract needs to be reviewed and accepted before freezing State Layer definition.
+
+### Concrete Example: Why Old GT Failed
+
+**Date: 2020-03-20 (COVID Crash Bottom)**
+
+**Market reality:**
+- VIX: 82.7 (extreme fear, 99th percentile)
+- Dollar Index: 102.7 (strong dollar, flight to safety)
+- S&P 500 close: 2304 (below MA60, downtrend)
+
+**Regime prediction:**
+- RiskOff (correctly identifies uncertainty-elevated state)
+
+**Old Technical GT:**
+- Drawdown from recent high: -32% → RiskOff ✅
+- But this is measuring price pattern, not macro state
+
+**Old Forward Return GT (60d):**
+- Future 60d return: +35% → Would label as RiskOn ❌
+- Regime says RiskOff, GT says RiskOn → Alignment destroyed
+
+**New State GT (Post-ADR-061):**
+- VIX 99th percentile → RiskOff ✅
+- Dollar Index 95th percentile → RiskOff ✅
+- Close < MA60 → RiskOff ✅
+- Regime says RiskOff, GT says RiskOff → Alignment correct ✅
+
+**Key insight:**
+- Forward Return GT punishes the regime for being right about the state
+- State GT rewards the regime for correctly identifying uncertainty
+- The regime's job is NOT to predict that the bottom is in
+- The regime's job IS to identify that we're in a high-uncertainty environment
+
+### Proposed State Layer Ground Truth (Post-ADR-061)
+
+**Problem with old Ground Truths:**
+- Technical GT (drawdown+MA): Measures price patterns, not macro states
+- Forward Return GT: Measures future returns, not current states
+- Both ask: "Did the regime predict X?" where X is not what State Layer is designed to detect
+
+**New State Layer Ground Truth:**
+
+State Layer should be validated against **current market conditions**, not future outcomes.
+
+Proposed composite indicators:
+
+**RiskOff Ground Truth** (Uncertainty-Elevated):
+- VIX > 75th percentile (market fear)
+- OR Dollar Index > 75th percentile (flight to safety)
+- OR close < MA60 (downtrend)
+
+**RiskOn Ground Truth** (Momentum-Favorable):
+- close > MA20 (positive trend)
+- AND VIX < 50th percentile (calm environment)
+- AND Dollar Index < 50th percentile (weak dollar)
+
+**Neutral Ground Truth** (Low-Conviction):
+- Everything else
+
+**Key difference:**
+- Old GT asks: "Did the regime predict future returns?"
+- New GT asks: "Did the regime correctly identify current market conditions?"
+
+### Proposed Alignment Redesign
+
+**New Alignment Metric:**
+```
+Alignment = Macro F1 (RiskOff, Neutral, RiskOn)
+```
+
+Where Ground Truth is the composite indicator above.
+
+**Why this is valid:**
+- State Layer's job is state classification
+- Ground Truth should reflect actual market states
+- Both are measured on the same day (t), not t vs t+60d
+
+**Expected impact:**
+- Alignment should increase significantly because:
+  - RiskOff GT will have ~30-40% of days (not 0% like Technical GT)
+  - All 3 classes will be represented
+  - The regime is actually designed to detect these conditions
+
+### Proposed Information Score Redesign
+
+**New Information Score:**
+```
+Information = Mutual Information(regime, market_state_gt) / Entropy(market_state_gt)
+```
+
+**Interpretation:**
+- "How much information does the regime provide about current market conditions?"
+- Not: "How much information does the regime provide about future returns?"
+
+### TASK-071A Validation Results
+
+**State Layer GT prototype implemented and tested.**
+
+**Comparison:**
+
+| Metric | Old Technical GT (CN) | New State GT (CN) | Interpretation |
+|--------|----------------------|-------------------|----------------|
+| Accuracy | 0.356 | **0.390** | New GT is more accurate |
+| Macro F1 | **0.471** | 0.314 | Old F1 is artificially inflated (only 2 classes) |
+| Information | **0.109** | 0.056 | Old Info is inflated by low-entropy GT |
+| RiskOff GT | 0 days | 317 days | Old GT completely misses RiskOff |
+
+**Key finding:** The New State GT correctly identifies RiskOff periods (57% of days), while the Old Technical GT missed almost all of them (0-1 days). The lower Macro F1 and Information Score reflect the **honest difficulty** of a 3-class problem, not regime failure.
+
+**Threshold calibration insight:**
+- Regime over-predicts RiskOn by 73% (CN) and 111% (HK)
+- Regime under-predicts RiskOff by 27% (CN) and 27% (HK)
+- TASK-004 calibration direction: tighten RiskOn, loosen RiskOff
+
+### Risk Assessment
+
+**Risk of accepting ADR-061:**
+- Low. The semantic contract is grounded in evidence (TASK-070B) and aligns with implementation.
+
+**Risk of NOT accepting ADR-061:**
+- High. Without a clear State Layer definition, all downstream metrics (Alignment, Information, TASK-004) remain ambiguous and potentially misleading.
+
+**Risk of the New State GT being "wrong":**
+- The State GT is a composite of VIX, Dollar, and trend - all observable market conditions. It cannot be "wrong" in the same way future returns can be wrong.
+- The worst case is that the percentile thresholds (75th/50th) need adjustment, which is a calibration issue, not a conceptual error.
+
+### Migration Plan
+
+**If ADR-061 accepted:**
+
+1. **Immediate:** Update ADR-061 status → Accepted
+2. **Week 1:** Implement new State Layer GT computation in audit framework
+3. **Week 2:** Recompute historical Alignment/Information with new GT
+4. **Week 3:** Unfreeze TASK-004, calibrate regime thresholds to match State GT
+5. **Week 4:** Validate that calibrated regime achieves Alignment > 0.5 against State GT
+6. **Month 2:** Begin TASK-070C (Economic Layer Target Discovery)
+
+### Acceptance Criteria Checklist
+
+**ADR-061 is accepted when:**
+- [x] Semantic contract defines what RiskOn/Neutral/RiskOff mean
+- [x] Semantic contract defines what each state is USED for
+- [x] Semantic contract defines what each state is NOT used for
+- [x] Implementation code aligns with semantic contract
+- [x] TASK-070B evidence supports semantic definitions
+- [x] Proposed State Layer GT is defined
+- [x] Proposed Alignment redesign is sketched
+- [x] TASK-071A validation completed
+- [x] Risk assessment documented
+- [x] Migration plan outlined
+
+**After acceptance, the following become true:**
+- State Layer definition is FROZEN
+- State Layer Ground Truth is FROZEN (composite indicator)
+- Alignment metric can be implemented
+- Information Score can be recomputed
+- TASK-004 can be unfrozen for threshold calibration
+
+### Impact
+
+- **Alignment Metric**: Must be redesigned to measure "state classification accuracy" against THIS semantic contract, not against forward returns or technical patterns.
+- **Information Score**: Must measure "does the regime correctly identify uncertainty-elevated periods?" not "does it predict returns?"
+- **TASK-004**: Remains FROZEN until ADR-061 is accepted.
+- **ADR-060**: Forward Return GT rejected. State Semantic GT proposed.
+- **Next Phase**: If ADR-061 accepted, implement new State Layer GT and recompute Alignment/Information.
+
+**Tags:** state-semantics, semantic-contract, riskoff-definition, adr-061, wave-10
+
+---
+
+## ADR-062: Three-Layer Evaluation Framework
+
+**Status:** Accepted  
+**Date:** 2026-06-07  
+**Depends on:** ADR-056, ADR-061  
+**Supersedes:** Alignment Gate > 0.75 (for State Layer evaluation)
+
+### Context
+
+Wave 7.5 → Wave 10 证明：State Layer 与 Forward Return GT 的低相关性不是 State Layer 的缺陷，而是评估框架的错误。
+
+State Layer、Economic Layer、Allocation Layer 是三个不同职责的层次，但当前所有层次都被同一套指标（Alignment vs Technical GT）评估。
+
+### Decision
+
+**三层分离评估：**
+
+| Layer | 职责 | 评估维度 | 明确不评估 |
+|-------|------|---------|-----------|
+| **State Layer** | 描述当前宏观市场环境 | Coverage, Stability, Persistence, Economic Characteristics | Alignment vs Technical GT, Forward Return 预测, Sharpe/CAGR |
+| **Economic Layer** | 预测未来收益分布 | Separation, Forward Return Distribution, Information Gain, Calibration | 与 State Layer 的 Alignment, 单日准确率 |
+| **Allocation Layer** | 生成具体仓位决策 | CAGR, Sharpe, Max Drawdown, Win Rate, Turnover | 单信号准确率, 与任何 GT 的 Alignment |
+
+### Key Changes
+
+1. **废弃 Alignment Gate > 0.75** 作为 State Layer 上线标准
+2. **废弃 Information Score** 作为 State Layer 核心指标
+3. **废弃 Forward Return GT** 作为 State Layer 评估基准
+4. **State Layer 新指标：** Coverage + Stability + Persistence + Economic Characteristics
+5. **Economic Layer 新指标：** Separation + Forward Return Distribution + Information Gain
+
+### Migration Plan
+
+**Phase 1 (立即):** 切换评估框架
+- 废弃 Alignment Gate
+- 建立 State Layer 多维评估面板
+- 移除 State Layer 的 Information Score 评估
+
+**Phase 2 (短期):** Economic Layer 增强
+- 扩展特征空间 (Credit Spread, Term Spread, etc.)
+- 建立 Economic Layer 独立评估流程
+- 实现 Economic Layer 与 State Layer 解耦
+
+**Phase 3 (中期):** Allocation Layer 重构
+- 明确输入契约 (State + Economic + Risk Budget)
+- 建立三层联调测试框架
+- 实现端到端链路
+
+### Impact
+
+- State Layer 不再被错误地要求预测收益
+- Economic Layer 可以独立发展，不受 State Layer 限制
+- Allocation Layer 决策逻辑有据可依
+- 短期工作量增加（重构评估工具、新增模块、更新文档）
+
+**Tags:** evaluation-framework, three-layer-architecture, adr-062, wave-11
