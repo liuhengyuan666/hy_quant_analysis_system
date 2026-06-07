@@ -458,6 +458,13 @@
     "dailyReportHk": "日报 (HK)",
     "dataHealth": "数据健康"
   },
+  "insight": {
+    "confidenceHigh": "高置信度",
+    "confidenceMedium": "中等置信度",
+    "confidenceLow": "低置信度",
+    "implications": "关键判断",
+    "recommendations": "建议行动"
+  },
   "llm": {
     "analyze": "AI 分析",
     "analyzing": "分析中...",
@@ -497,11 +504,13 @@
     "contextTokens": "Context Tokens",
     "reasoningTokens": "Reasoning Tokens",
     "outputTokens": "Output Tokens",
+    "researchSummary": "研究摘要",
     "riskAssessment": "风险评估",
     "riskLevel": "风险等级",
     "riskFactors": "风险因素",
     "recommendation": "建议",
     "analysisFailed": "分析失败",
+    "analysisTimeout": "分析请求超时（65秒）。请检查网络连接或稍后重试。",
     "placeholderWarning": "当前为演示模式 — LLM 未接入真实 provider，返回的是占位数据。",
     "selectSkill": "选择 Skill",
     "baseUrl": "API 地址",

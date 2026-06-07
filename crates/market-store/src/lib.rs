@@ -10,7 +10,8 @@ use core_domain::{
     MarketRegimeSnapshot, RefreshJobRecord, RegimeReason, RotationRankSnapshot, RotationReason,
     SignalReason, SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
 };
-use reqwest::blocking::Client;
+use attohttpc::Session;
+use base64::Engine;
 use rusqlite::Connection;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -360,9 +361,14 @@ pub fn get_all_user_preferences(
     Ok(map)
 }
 
-fn clickhouse_client() -> &'static Client {
-    static CLIENT: OnceLock<Client> = OnceLock::new();
-    CLIENT.get_or_init(Client::new)
+fn clickhouse_client() -> &'static Session {
+    static SESSION: OnceLock<Session> = OnceLock::new();
+    SESSION.get_or_init(|| Session::new())
+}
+
+fn clickhouse_auth_header(user: &str, password: &str) -> String {
+    let credentials = format!("{}:{}", user, password);
+    format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(credentials))
 }
 
 fn parse_json_each_row<T: DeserializeOwned>(body: &str, row_context: &str) -> Result<Vec<T>> {
@@ -605,11 +611,11 @@ fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> 
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch ClickHouse text response")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "ClickHouse text query failed with status {}",
             response.status()
@@ -646,11 +652,11 @@ pub fn execute_clickhouse_query(config: &StorageConfig, query: &str) -> Result<(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to execute ClickHouse query")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!("ClickHouse query failed with status {}", response.status());
     }
     Ok(())
@@ -709,11 +715,11 @@ pub fn insert_instruments(config: &StorageConfig, instruments: &[Instrument]) ->
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert instruments")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!("instrument insert failed with status {}", response.status());
     }
     Ok(())
@@ -770,11 +776,11 @@ pub fn insert_daily_bars(config: &StorageConfig, symbol: &str, bars: &[DailyBar]
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert daily bars")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!("daily bar insert failed with status {}", response.status());
     }
     Ok(())
@@ -793,11 +799,11 @@ pub fn fetch_daily_bars(config: &StorageConfig, symbol: &str) -> Result<Vec<Dail
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch daily bars")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!("daily bar fetch failed with status {}", response.status());
     }
     let body = response
@@ -908,11 +914,11 @@ pub fn insert_indicator_snapshots(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert indicator snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "indicator snapshot insert failed with status {}",
             response.status()
@@ -975,11 +981,11 @@ pub fn insert_macro_snapshots(config: &StorageConfig, rows: &[MacroSnapshot]) ->
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert macro snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "macro snapshot insert failed with status {}",
             response.status()
@@ -1061,11 +1067,11 @@ pub fn insert_market_regimes(config: &StorageConfig, rows: &[MarketRegimeSnapsho
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert market regimes")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "market regime insert failed with status {}",
             response.status()
@@ -1144,11 +1150,11 @@ pub fn insert_environment_snapshots(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert environment snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "environment snapshot insert failed with status {}",
             response.status()
@@ -1216,11 +1222,11 @@ pub fn insert_strategy_states(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert strategy states")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "strategy state insert failed with status {}",
             response.status()
@@ -1317,11 +1323,11 @@ pub fn insert_rotation_ranks(config: &StorageConfig, rows: &[RotationRankSnapsho
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert rotation ranks")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "rotation rank insert failed with status {}",
             response.status()
@@ -1346,11 +1352,11 @@ pub fn fetch_indicator_snapshots(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch indicator snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "indicator snapshot fetch failed with status {}",
             response.status()
@@ -1398,11 +1404,11 @@ pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSn
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch market regimes")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "market regime fetch failed with status {}",
             response.status()
@@ -1473,6 +1479,22 @@ pub fn fetch_latest_environment_date_for_scope(
 ) -> Result<Option<NaiveDate>> {
     ensure_environment_snapshot_table(config)?;
     fetch_max_date_for_table_with_filter(config, "environment_snapshot", "scope", scope.as_str())
+}
+
+/// Fetch all environment snapshots for a scope within a date range.
+pub fn fetch_environment_snapshots_for_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<EnvironmentSnapshot>> {
+    ensure_environment_snapshot_table(config)?;
+    let query = format!(
+        "SELECT date,scope,regime_as_of_date,breadth_as_of_date,stress_as_of_date,breadth_eligible_count,breadth_above_count,breadth_pct,breadth_pct_sma5,breadth_5d_delta,breadth_state,volume_expansion_pct,turnover_coverage_pct,liquidity_proxy_score,stress_proxy_score,environment_score,environment_label FROM quant.environment_snapshot WHERE scope = '{}' AND date BETWEEN '{}' AND '{}' ORDER BY date FORMAT JSONEachRow",
+        scope.as_str(), from, to
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse environment snapshot row")
 }
 
 pub fn fetch_dashboard_available_dates(config: &StorageConfig) -> Result<Vec<NaiveDate>> {
@@ -1561,11 +1583,11 @@ pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSn
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch rotation ranks")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "rotation rank fetch failed with status {}",
             response.status()
@@ -1665,11 +1687,11 @@ pub fn insert_strategy_preferences(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert strategy preferences")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "strategy preference insert failed with status {}",
             response.status()
@@ -1946,11 +1968,11 @@ pub fn insert_report_snapshot(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert report snapshot")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "report snapshot insert failed with status {}",
             response.status()
@@ -2003,11 +2025,11 @@ pub fn fetch_strategy_preferences(
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch strategy preferences")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "strategy preference fetch failed with status {}",
             response.status()
@@ -2107,11 +2129,11 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(payload)
         .send()
         .context("failed to insert signal snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "signal snapshot insert failed with status {}",
             response.status()
@@ -2131,11 +2153,11 @@ pub fn fetch_signal_snapshots(config: &StorageConfig) -> Result<Vec<SignalSnapsh
     );
     let response = clickhouse_client()
         .post(url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(String::new())
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text("")
         .send()
         .context("failed to fetch signal snapshots")?;
-    if !response.status().is_success() {
+    if !response.is_success() {
         anyhow::bail!(
             "signal snapshot fetch failed with status {}",
             response.status()
@@ -2290,11 +2312,11 @@ pub fn insert_backtest_result(
     );
     let run_response = clickhouse_client()
         .post(run_url)
-        .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-        .body(run_payload)
+        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+        .text(run_payload)
         .send()
         .context("failed to insert backtest run")?;
-    if !run_response.status().is_success() {
+    if !run_response.is_success() {
         anyhow::bail!(
             "backtest run insert failed with status {}",
             run_response.status()
@@ -2327,11 +2349,11 @@ pub fn insert_backtest_result(
         );
         let response = clickhouse_client()
             .post(url)
-            .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-            .body(payload)
+            .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+            .text(payload)
             .send()
             .context("failed to insert backtest trades")?;
-        if !response.status().is_success() {
+        if !response.is_success() {
             anyhow::bail!(
                 "backtest trade insert failed with status {}",
                 response.status()
@@ -2362,11 +2384,11 @@ pub fn insert_backtest_result(
         );
         let response = clickhouse_client()
             .post(url)
-            .basic_auth(&config.clickhouse_user, Some(&config.clickhouse_password))
-            .body(payload)
+            .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
+            .text(payload)
             .send()
             .context("failed to insert backtest equity curve")?;
-        if !response.status().is_success() {
+        if !response.is_success() {
             anyhow::bail!(
                 "backtest equity insert failed with status {}",
                 response.status()

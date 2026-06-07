@@ -34,6 +34,7 @@ struct DashboardBundlePayload {
     status: app_service::AppStatus,
     available_dates: Vec<String>,
     snapshot: Option<report_engine::DashboardSnapshot>,
+    insight: Option<app_service::ResearchInsight>,
     recent_reports: Vec<app_service::RecentReportItem>,
     pipeline_dates: app_service::PipelineDateDiagnostics,
     refresh_status: DashboardRefreshStatus,
@@ -604,6 +605,7 @@ async fn dashboard_bundle(
         status: bundle.status,
         available_dates: bundle.available_dates,
         snapshot: bundle.snapshot,
+        insight: bundle.insight,
         recent_reports: bundle.recent_reports,
         pipeline_dates: bundle.pipeline_dates,
         refresh_status,
@@ -848,17 +850,7 @@ fn retry_dashboard_refresh(
 #[tauri::command]
 fn get_llm_status() -> Result<LlmStatus, String> {
     let context = AppContext::new(StorageConfig::default());
-    let config = context.get_llm_config().map_err(|e| e.to_string())?;
-    let has_api_key = context
-        .get_llm_api_key()
-        .map_err(|e| e.to_string())?
-        .is_some();
-    Ok(LlmStatus {
-        configured: has_api_key,
-        model: config.model,
-        base_url: config.base_url,
-        timeout_secs: config.timeout_secs,
-    })
+    context.get_llm_status().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -944,7 +936,7 @@ async fn analyze_with_llm(
 
     let context = AppContext::new(StorageConfig::default());
     context
-        .analyze_with_skill(&skill_name, report_scope, profile.as_ref())
+        .analyze_with_skill(&skill_name, report_scope, profile.as_ref(), None)
         .await
         .map_err(|e| e.to_string())
 }
@@ -1042,7 +1034,7 @@ async fn analyze_with_skill(
     // Build context and run skill-based analysis
     let context = AppContext::new(StorageConfig::default());
     context
-        .analyze_with_skill(&skill_name, report_scope, profile.as_ref())
+        .analyze_with_skill(&skill_name, report_scope, profile.as_ref(), None)
         .await
         .map_err(|e| e.to_string())
 }

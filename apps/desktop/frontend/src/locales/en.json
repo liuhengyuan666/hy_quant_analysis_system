@@ -458,6 +458,13 @@
     "dailyReportHk": "Daily report (HK)",
     "dataHealth": "Data health"
   },
+  "insight": {
+    "confidenceHigh": "High confidence",
+    "confidenceMedium": "Medium confidence",
+    "confidenceLow": "Low confidence",
+    "implications": "Key implications",
+    "recommendations": "Recommendations"
+  },
   "llm": {
     "analyze": "AI Analysis",
     "analyzing": "Analyzing...",
@@ -497,11 +504,13 @@
     "contextTokens": "Context Tokens",
     "reasoningTokens": "Reasoning Tokens",
     "outputTokens": "Output Tokens",
+    "researchSummary": "Research Summary",
     "riskAssessment": "Risk Assessment",
     "riskLevel": "Risk Level",
     "riskFactors": "Risk Factors",
     "recommendation": "Recommendation",
     "analysisFailed": "Analysis failed",
+    "analysisTimeout": "Analysis request timed out (65s). Please check your network connection or try again later.",
     "placeholderWarning": "Demo mode — LLM is not connected to a real provider. Placeholder data is shown.",
     "selectSkill": "Select Skill",
     "baseUrl": "Base URL",

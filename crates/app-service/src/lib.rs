@@ -4,7 +4,7 @@ use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
     EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
-    LlmFileConfig, Market, RefreshJobRecord, SignalSnapshot,
+    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
@@ -19,6 +19,7 @@ use report_engine::{
     DataHealthSymbolSummary, TrustSummary, WatchlistBreadthMarketSnapshot,
     WatchlistBreadthSnapshot,
 };
+use research_renderer::DashboardInsightComposer;
 use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
@@ -33,6 +34,7 @@ use strategy_engine::{build_strategy_preferences, AnalysisContext};
 pub mod config_loader;
 
 pub use core_domain::AnalysisScope as ReportScope;
+pub use research_renderer::ResearchInsight;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -396,6 +398,7 @@ pub struct DashboardLoadBundle {
     pub status: AppStatus,
     pub available_dates: Vec<String>,
     pub snapshot: Option<DashboardSnapshot>,
+    pub insight: Option<ResearchInsight>,
     pub recent_reports: Vec<RecentReportItem>,
     pub pipeline_dates: PipelineDateDiagnostics,
 }
@@ -2116,7 +2119,7 @@ impl AppContext {
 
         let cn_anchor = market_store::fetch_daily_bars(&self.storage, "000300")
             .context("failed to load CN anchor daily bars")?;
-        let hk_anchor = market_store::fetch_daily_bars(&self.storage, "HSI")
+        let hk_anchor = market_store::fetch_daily_bars(&self.storage, "HSCEI")
             .context("failed to load HK anchor daily bars")?;
         let regime_rows = build_market_regimes(&all_macro_rows, &cn_anchor, &hk_anchor)
             .into_iter()
@@ -2503,6 +2506,8 @@ impl AppContext {
             snapshot
         });
 
+        let insight = snapshot.as_ref().map(DashboardInsightComposer::compose);
+
         Ok(DashboardLoadBundle {
             status,
             available_dates: available_dates
@@ -2510,6 +2515,7 @@ impl AppContext {
                 .map(|date| date.to_string())
                 .collect(),
             snapshot,
+            insight,
             recent_reports,
             pipeline_dates,
         })
@@ -2965,14 +2971,14 @@ impl AppContext {
                 now,
             ) {
                 Ok(outcome) => {
-                    let status = if outcome.transport == "reqwest" {
+                    let status = if outcome.transport == "attohttpc" {
                         "healthy"
                     } else {
                         "review"
                     }
                     .to_string();
                     let mut notes = Vec::new();
-                    if outcome.transport != "reqwest" {
+                    if outcome.transport != "attohttpc" {
                         notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
                     }
                     macro_sources.push(DataHealthMacroSourceSummary {
@@ -3170,6 +3176,15 @@ impl AppContext {
         report_date: Option<NaiveDate>,
         scope: ReportScope,
     ) -> Result<ReportSummary> {
+        self.export_report_with_scope_and_format(report_date, scope, false)
+    }
+
+    pub fn export_report_with_scope_and_format(
+        &self,
+        report_date: Option<NaiveDate>,
+        scope: ReportScope,
+        concise: bool,
+    ) -> Result<ReportSummary> {
         if report_date.is_none() {
             let gate = self.explain_latest_gate(scope)?;
             if gate.latest_gate_advanced == Some(false) {
@@ -3191,7 +3206,14 @@ impl AppContext {
         let snapshot = self
             .dashboard_snapshot_with_scope(report_date, scope)?
             .context("no dashboard snapshot available for report export")?;
-        let markdown = render_markdown_report(&snapshot);
+
+        let insight = research_renderer::DashboardInsightComposer::compose(&snapshot);
+        let markdown = if concise {
+            research_renderer::DailyReportComposer::compose_markdown(&snapshot, Some(&insight))
+        } else {
+            render_markdown_report(&snapshot)
+        };
+
         let root = StorageConfig::project_root()?;
         let report_dir = root.join("reports");
         fs::create_dir_all(&report_dir).with_context(|| {
@@ -3201,14 +3223,20 @@ impl AppContext {
             )
         })?;
         let report_slug = match scope {
+            ReportScope::Global if concise => format!("daily-report-concise-{}", snapshot.report_date),
             ReportScope::Global => format!("daily-report-{}", snapshot.report_date),
+            ReportScope::Cn if concise => format!("daily-report-cn-concise-{}", snapshot.report_date),
             ReportScope::Cn => format!("daily-report-cn-{}", snapshot.report_date),
+            ReportScope::Hk if concise => format!("daily-report-hk-concise-{}", snapshot.report_date),
             ReportScope::Hk => format!("daily-report-hk-{}", snapshot.report_date),
         };
-        let report_type = match scope {
-            ReportScope::Global => "DAILY_REPORT",
-            ReportScope::Cn => "DAILY_REPORT_CN",
-            ReportScope::Hk => "DAILY_REPORT_HK",
+        let report_type = match (scope, concise) {
+            (ReportScope::Global, true) => "DAILY_REPORT_CONCISE",
+            (ReportScope::Global, false) => "DAILY_REPORT",
+            (ReportScope::Cn, true) => "DAILY_REPORT_CN_CONCISE",
+            (ReportScope::Cn, false) => "DAILY_REPORT_CN",
+            (ReportScope::Hk, true) => "DAILY_REPORT_HK_CONCISE",
+            (ReportScope::Hk, false) => "DAILY_REPORT_HK",
         };
         let output_path = report_dir.join(format!("{}.md", report_slug));
         fs::write(&output_path, markdown)
@@ -3529,7 +3557,10 @@ impl AppContext {
         let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME)?;
         match entry.set_password(api_key) {
             Ok(()) => {
-                let _ = market_store::insert_credential(&self.storage, "llm_api_key", "");
+                // FIX: Also write to SQLite as fallback; do NOT clear it.
+                // Windows keyring reads often fail even after successful writes,
+                // so SQLite must retain the key for the fallback chain to work.
+                let _ = market_store::insert_credential(&self.storage, "llm_api_key", api_key);
             }
             Err(keyring_err) => {
                 eprintln!("WARN: keyring storage failed ({keyring_err}), falling back to SQLite credential_store. API key will be stored in local database.");
@@ -3573,6 +3604,64 @@ impl AppContext {
                 Ok(market_store::fetch_credential(&self.storage, "llm_api_key")?.filter(|s| !s.is_empty()))
             }
         }
+    }
+
+    /// Unified LLM status for desktop UI.
+    ///
+    /// Implements ADR-033 resolution chain:
+    /// - base_url / model / timeout: TOML (primary) → SQLite legacy fallback
+    /// - api_key: TOML (plaintext or resolved ${VAR}) → keyring → SQLite
+    pub fn get_llm_status(&self) -> Result<LlmStatus> {
+        // 1. Resolve TOML (primary per ADR-033)
+        let resolved = self.get_resolved_llm_config(None).unwrap_or_else(|_| {
+            config_loader::ResolvedLlmConfig {
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                timeout_secs: 60,
+                api_key: None,
+                temperature: 0.7,
+                max_tokens: 2048,
+                seed: None,
+                source: config_loader::ConfigSource {
+                    base_url: "default".to_string(),
+                    model: "default".to_string(),
+                    api_key: "none".to_string(),
+                    config_file: None,
+                },
+            }
+        });
+
+        // 2. Determine effective non-secret config
+        //    TOML first, then legacy SQLite fallback for backward compatibility
+        let (base_url, model, timeout_secs) = if resolved.source.config_file.is_some() {
+            (resolved.base_url, resolved.model, resolved.timeout_secs)
+        } else {
+            let legacy = self.get_llm_config().unwrap_or_else(|_| LlmConfig {
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                timeout_secs: 60,
+            });
+            (legacy.base_url, legacy.model, legacy.timeout_secs)
+        };
+
+        // 3. Determine API key presence per ADR-033 fallback chain:
+        //    TOML (plaintext or resolved env var) → keyring → SQLite
+        let api_key = if let Some(ref key) = resolved.api_key {
+            if !key.is_empty() {
+                Some(key.clone())
+            } else {
+                self.get_llm_api_key()?
+            }
+        } else {
+            self.get_llm_api_key()?
+        };
+
+        Ok(LlmStatus {
+            configured: api_key.is_some(),
+            base_url,
+            model,
+            timeout_secs,
+        })
     }
 
     // ============================================================
@@ -3823,6 +3912,7 @@ impl AppContext {
         skill_name: &str,
         scope: ReportScope,
         profile: Option<&research_skills::AgentProfile>,
+        inference_override: Option<research_skills::InferenceConfig>,
     ) -> anyhow::Result<serde_json::Value> {
         // 1. Build ResearchContext
         let context = self.research_context(scope)?;
@@ -3859,11 +3949,28 @@ impl AppContext {
 
         // 5. Create executor and run LLM pipeline
         let budget = research_skills::token_budget::TokenBudget::default();
-        let deterministic = research_skills::deterministic::DeterministicConfig::default();
-        let executor = research_skills::executor::SkillExecutor::new(budget, deterministic);
+        let resolved = self.get_resolved_llm_config(None)?;
+        let inference = if let Some(inference) = inference_override {
+            inference
+        } else {
+            research_skills::InferenceConfig {
+                temperature: resolved.temperature,
+                seed: resolved.seed,
+                max_tokens: resolved.max_tokens,
+            }
+        };
+        let executor = research_skills::executor::SkillExecutor::new(budget, inference);
 
         let config = self.get_llm_config()?;
-        let api_key = self.get_llm_api_key()?;
+        let api_key = if let Some(ref key) = resolved.api_key {
+            if !key.is_empty() {
+                Some(key.clone())
+            } else {
+                self.get_llm_api_key()?
+            }
+        } else {
+            self.get_llm_api_key()?
+        };
         let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
             let provider = research_skills::OpenAiProvider::from_config(&config, key);
             (
@@ -3878,7 +3985,17 @@ impl AppContext {
             )
         };
 
-        // 6. Merge deterministic + LLM results
+        // 6. Compose ResearchSummary from LLM output (Machine Layer)
+        let research_summary = llm_output.response.as_ref().and_then(|response_text| {
+            serde_json::from_str::<serde_json::Value>(response_text).ok().and_then(|parsed| {
+                let registry = research_renderer::ComposerRegistry::default();
+                registry.compose(skill_name, &parsed).ok().map(|summary| {
+                    serde_json::to_value(summary).unwrap_or(serde_json::Value::Null)
+                })
+            })
+        });
+
+        // 7. Merge deterministic + LLM results
         let result = serde_json::json!({
             "skill": skill_name,
             "triggered": true,
@@ -3896,6 +4013,7 @@ impl AppContext {
                 }
             },
             "llm_analysis": llm_output.response,
+            "research_summary": research_summary,
             "token_usage": llm_output.token_usage,
             "context": context
         });

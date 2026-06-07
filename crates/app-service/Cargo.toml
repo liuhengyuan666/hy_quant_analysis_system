@@ -19,6 +19,7 @@ macro-engine = { path = "../macro-engine" }
 market-store = { path = "../market-store" }
 report-engine = { path = "../report-engine" }
 research-context = { path = "../research-context" }
+research-renderer = { path = "../research-renderer" }
 research-skills = { path = "../research-skills" }
 rotation-engine = { path = "../rotation-engine" }
 signal-engine = { path = "../signal-engine" }

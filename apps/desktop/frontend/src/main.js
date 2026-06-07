@@ -10,6 +10,7 @@ import {
 import {
   dashboardStore,
   updateSnapshot as syncSnapshotToStore,
+  updateInsight as syncInsightToStore,
   updateStatus as syncStatusToStore,
   updateScope as syncScopeToStore,
   updateReportDate as syncReportDateToStore,
@@ -246,6 +247,7 @@ async function loadDashboard() {
       dashboardStore.availableDates = normalizeAvailableDates(bundleResult.available_dates);
       dashboardStore.recentReports = normalizeRecentReports(bundleResult.recent_reports, RECENT_REPORT_LIMIT);
       dashboardStore.snapshot = bundleResult.snapshot || null;
+      dashboardStore.insight = bundleResult.insight || null;
       dashboardStore.selectedScope = normalizeScope(dashboardStore.snapshot?.scope || activeScope);
       dashboardStore.selectedReportDate = dashboardStore.snapshot?.report_date
         || resolveSelectedReportDate(dashboardStore.availableDates, previousSelectedReportDate);
@@ -257,6 +259,7 @@ async function loadDashboard() {
 
       // Sync to shared store for Vue components
       syncSnapshotToStore(dashboardStore.snapshot);
+      syncInsightToStore(dashboardStore.insight);
       syncStatusToStore(dashboardStore.status);
       syncScopeToStore(dashboardStore.selectedScope);
       syncReportDateToStore(dashboardStore.selectedReportDate);

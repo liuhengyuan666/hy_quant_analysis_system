@@ -36,6 +36,7 @@ import BacktestPanel from './components/BacktestPanel.vue';
 import EnvironmentPanel from './components/EnvironmentPanel.vue';
 import SignalsPanel from './components/SignalsPanel.vue';
 import TrustSummaryPanel from './components/TrustSummaryPanel.vue';
+import InsightPanel from './components/InsightPanel.vue';
 import RefreshProgress from './components/RefreshProgress.vue';
 import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
@@ -148,12 +149,19 @@ function handleCloseLlmPanel() {
 async function handleAnalyzeWithLlm() {
   updateLlmLoading(true);
   updateLlmError('');
+  const TIMEOUT_MS = 65000; // 65s — slightly longer than backend 60s timeout
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(t('llm.analysisTimeout'))), TIMEOUT_MS);
+  });
   try {
-    const result = await bridgeAnalyzeWithLlm(
-      dashboardStore.selectedScope,
-      dashboardStore.selectedSkill,
-      dashboardStore.selectedAgent
-    );
+    const result = await Promise.race([
+      bridgeAnalyzeWithLlm(
+        dashboardStore.selectedScope,
+        dashboardStore.selectedSkill,
+        dashboardStore.selectedAgent
+      ),
+      timeoutPromise,
+    ]);
     updateLlmAnalysis(result);
     saveLlmAnalysisToHistory(result);
     toggleLlmPanel(true);
@@ -203,6 +211,7 @@ async function handleAnalyzeWithLlm() {
         <Skeleton v-if="loading" />
       </Transition>
       <TrustSummaryPanel />
+      <InsightPanel />
       <HealthStrip />
     </header>
 

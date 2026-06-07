@@ -21,6 +21,9 @@ export const dashboardStore = reactive({
   /** Current dashboard snapshot data */
   snapshot: null,
 
+  /** Research insight (Insight First layer) */
+  insight: null,
+
   /** App status (profile, clickhouse_url, etc.) */
   status: null,
 
@@ -126,6 +129,13 @@ export const dashboardStore = reactive({
 export function updateSnapshot(snapshot) {
   dashboardStore.snapshot = snapshot;
   dashboardStore.lastUpdatedAt = new Date().toISOString();
+}
+
+/**
+ * Update the research insight.
+ */
+export function updateInsight(insight) {
+  dashboardStore.insight = insight;
 }
 
 /**
@@ -353,6 +363,7 @@ export function loadLlmHistoryFromStorage() {
  */
 export function resetStore() {
   dashboardStore.snapshot = null;
+  dashboardStore.insight = null;
   dashboardStore.status = null;
   dashboardStore.selectedScope = 'global';
   dashboardStore.selectedReportDate = '';

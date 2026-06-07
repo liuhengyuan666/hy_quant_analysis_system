@@ -10,6 +10,6 @@ anyhow.workspace = true
 chrono.workspace = true
 core-domain = { path = "../core-domain" }
 macro-engine = { path = "../macro-engine" }
-reqwest.workspace = true
+attohttpc.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -53,6 +53,7 @@ const regimeAnalysis = computed(() => analysis.value?.regime_analysis || {});
 const llmAnalysisText = computed(() => analysis.value?.llm_analysis || '');
 const tokenUsage = computed(() => analysis.value?.token_usage || {});
 const riskAssessment = computed(() => regimeAnalysis.value?.risk_assessment || {});
+const researchSummary = computed(() => analysis.value?.research_summary || null);
 const isPlaceholder = computed(() => analysis.value?.placeholder === true);
 const isConfigured = computed(() => dashboardStore.llmConfig?.configured ?? false);
 const llmHistory = computed(() => dashboardStore.llmHistory || []);
@@ -131,10 +132,16 @@ async function handleSaveConfig() {
     if (configForm.value.apiKey) {
       await llmApi.setLlmApiKey(configForm.value.apiKey);
     }
-    alert(t('llm.configSaved'));
-    // Refresh status
+    // Verify status BEFORE alerting to avoid false "saved" UX
     const status = await llmApi.getStatus();
     updateLlmConfig(status);
+    if (status.configured) {
+      alert(t('llm.configSaved'));
+    } else {
+      alert(
+        (t('llm.configSavedButKeyUnavailable') || 'Config saved, but API key verification failed. Please check system keyring or re-enter the key.')
+      );
+    }
   } catch (err) {
     console.error('[LlmPanel] Config save failed:', err);
     updateLlmError(err?.toString?.() || t('llm.configSaveFailed'));
@@ -301,6 +308,32 @@ function loadHistoryItem(item) {
       <div v-else class="llm-panel__content">
         <!-- Tab: Conclusion -->
         <div v-if="activeTab === 'conclusion'" class="llm-panel__tab-content">
+          <!-- Research Summary (Machine Layer) -->
+          <div v-if="researchSummary" class="llm-panel__section llm-panel__research-summary">
+            <h3>{{ t('llm.researchSummary') }}</h3>
+            <dl>
+              <dt>Regime</dt>
+              <dd>{{ researchSummary.regime }}</dd>
+              <dt>Confidence</dt>
+              <dd>{{ formatNumber(researchSummary.confidence * 100, 1) }}%</dd>
+              <dt>Breadth</dt>
+              <dd>{{ researchSummary.breadth_condition }}</dd>
+              <dt>Risk Level</dt>
+              <dd>{{ researchSummary.risk_level }}</dd>
+              <dt v-if="researchSummary.key_drivers?.length">Key Drivers</dt>
+              <dd v-if="researchSummary.key_drivers?.length">
+                <ul class="llm-panel__inline-list">
+                  <li v-for="d in researchSummary.key_drivers" :key="d" class="pill pill--outline">{{ d }}</li>
+                </ul>
+              </dd>
+              <dt v-if="researchSummary.recommendations?.length">Recommendations</dt>
+              <dd v-if="researchSummary.recommendations?.length">
+                <ul class="llm-panel__inline-list">
+                  <li v-for="r in researchSummary.recommendations" :key="r" class="pill pill--info">{{ r }}</li>
+                </ul>
+              </dd>
+            </dl>
+          </div>
           <div
             v-if="llmAnalysisText"
             class="llm-panel__markdown"
@@ -979,5 +1012,33 @@ h2 {
 .button--ghost:hover {
   color: var(--color-text);
   border-color: var(--color-border-strong);
+}
+
+.llm-panel__research-summary {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.llm-panel__research-summary h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-body);
+  color: var(--color-text);
+}
+
+.llm-panel__inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.llm-panel__inline-list li {
+  margin: 0;
 }
 </style>
