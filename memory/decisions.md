@@ -959,3 +959,61 @@ State Layer、Economic Layer、Allocation Layer 是三个不同职责的层次�
 - 短期工作量增加（重构评估工具、新增模块、更新文档）
 
 **Tags:** evaluation-framework, three-layer-architecture, adr-062, wave-11
+
+## ADR-063: 3-State Economic Taxonomy
+
+**Status:** Accepted (2026-06-07)
+
+### Context
+
+Economic Layer v2 requires a stable taxonomy for classifying macroeconomic environments. After TASK-080A through TASK-080F, we have established feature inventory, orthogonality, predictive power, and optimal state count.
+
+### Decision
+
+Adopt **3-State Economic Taxonomy** for Economic Layer v2:
+
+| State | Score Range | Centroid | % Time |
+|-------|-------------|----------|--------|
+| Favorable | 61.2 – 93.3 | 72.6 | 37.4% |
+| Neutral | 37.5 – 61.0 | 49.8 | 40.3% |
+| Unfavorable | 4.1 – 37.4 | 25.1 | 22.4% |
+
+**Variance Ratio:** 0.843 (strong separation)
+
+### Key Technical Decisions
+
+1. **Fed Funds Z-score normalization:** 252-day rolling Z-score with ±3 capping to eliminate temporal regime leakage
+2. **3 states vs 4/5:** 3-state provides optimal balance of granularity and stability
+3. **Continuous scores rejected:** Data shows clear multimodal distributions; discrete states preferred
+
+### Verification
+
+- TASK-080D: K-means clustering confirms 3-state optimal
+- TASK-080E: Fed Funds clustering identified as temporal regime leakage
+- TASK-080F: Z-score fix improves CN 120d IG from 0.474 → 0.964
+- Re-run 080D after fix: Variance ratio stable (0.843), structure intact
+
+### Layer Contract
+
+- **Input:** 4-10 macro factor scores (0-100, normalized)
+- **Output:** Economic State (Favorable/Neutral/Unfavorable) + Economic Score (0-100)
+- **Evaluation:** Information Gain vs Forward Return (20d/60d/120d)
+- **Non-goals:** Does NOT generate allocation decisions; does NOT replace State Layer
+
+### Maturity Assessment
+
+- State Layer: 9/10 (frozen)
+- Economic Layer: 7.5-8/10 (ready for Shadow Production)
+- Allocation Layer: 4/10 (not ready for production)
+
+### Next Phase
+
+**90-day Shadow Production:**
+- Daily auto-generation of CN State, HK State, Economic State, Suggested Allocation
+- Record T+20/T+60/T+120 forward returns
+- No real money execution
+- Weekly human review + monthly performance report
+
+### Tags
+
+economic-taxonomy, three-state, adr-063, shadow-production, wave-11
