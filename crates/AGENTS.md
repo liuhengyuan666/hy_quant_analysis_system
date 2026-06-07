@@ -6,18 +6,21 @@ Rust workspace implementation layer. Contracts, pure compute, persistence, orche
 ## STRUCTURE
 ```text
 crates/
-├── core-domain/      # shared models + enums
-├── data-ingestion/   # external market/macro fetch + canonical adjustment rules
-├── indicator-engine/ # technical indicators
-├── macro-engine/     # macro snapshots + per-scope regime scoring
-├── rotation-engine/  # RS / momentum ranking
-├── strategy-engine/  # four-strategy scoring
-├── signal-engine/    # final action labels
-├── backtest-engine/  # signal-driven simulation
-├── report-engine/    # dashboard/report payload + markdown rendering
-├── market-store/     # ClickHouse + SQLite IO
-├── app-service/      # orchestration facade, trust assembly, refresh guards
-└── task-runner/      # placeholder utility crate
+├── core-domain/        # shared models + enums
+├── data-ingestion/     # external market/macro fetch + canonical adjustment rules
+├── indicator-engine/   # technical indicators
+├── macro-engine/       # macro snapshots + per-scope regime scoring
+├── rotation-engine/    # RS / momentum ranking
+├── strategy-engine/    # four-strategy scoring
+├── signal-engine/      # final action labels
+├── backtest-engine/    # signal-driven simulation
+├── report-engine/      # dashboard/report payload + markdown rendering
+├── market-store/       # ClickHouse + SQLite IO
+├── app-service/        # orchestration facade, trust assembly, refresh guards
+├── research-context/   # ResearchContext builder from DashboardSnapshot
+├── research-skills/    # LLM-powered skill/agent analysis engine
+├── research-benchmark/ # skill benchmarking harness
+└── task-runner/        # placeholder utility crate
 ```
 
 ## WHERE TO LOOK
@@ -29,6 +32,9 @@ crates/
 | Add persistence | `market-store/` | fetch/insert pair, enum/string mapping, scoped date helpers |
 | Change trust / dashboard bootstrap / recent reports | `app-service/` + `report-engine/` | `app-service` assembles; `report-engine` shapes |
 | Add pipeline step | `app-service/` | expose summary DTO + CLI/Tauri hook |
+| Add LLM research skill | `research-skills/` + SKILL.md | YAML front matter + reasoning graph |
+| Change research context | `research-context/` | builder from DashboardSnapshot |
+| Benchmark research skills | `research-benchmark/` | WIP: Wave 3 harness |
 
 ## CONVENTIONS
 - `core-domain` owns serializable contracts; other crates depend inward on it.
@@ -50,6 +56,8 @@ crates/
 - `app-service/src/lib.rs` is still the orchestration monolith; review nearby helpers before adding more flow logic.
 - `data-ingestion/src/lib.rs` owns source semantics such as forward-adjustment and provider validation.
 - `report-engine/src/lib.rs` is a shared payload contract; field drift breaks CLI, Tauri, and frontend together.
+- `research-context/src/builder.rs` has 10 TODOs for unimplemented data-quality computations.
+- `research-skills/src/skill.rs` parses SKILL.md; YAML schema changes require updating all skill files.
 
 ## NOTES
 - `task-runner` is still placeholder-level.

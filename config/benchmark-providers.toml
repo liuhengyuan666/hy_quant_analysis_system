@@ -1,0 +1,21 @@
+# Benchmark Provider Configuration
+# Usage: cargo run -p quant-cli -- benchmark-skill --skill market-regime-reasoning --provider-config config/benchmark-providers.toml
+
+[[provider]]
+name = "deepseek"
+base_url = "https://api.deepseek.com"
+model = "deepseek-v4-flash"
+api_key = "${DEEPSEEK_API_KEY}"
+
+# Uncomment to benchmark against additional providers:
+# [[provider]]
+# name = "openai"
+# base_url = "https://api.openai.com/v1"
+# model = "gpt-4o"
+# api_key = "${OPENAI_API_KEY}"
+
+# [[provider]]
+# name = "claude"
+# base_url = "https://api.anthropic.com/v1"
+# model = "claude-sonnet-4-20250514"
+# api_key = "${ANTHROPIC_API_KEY}"

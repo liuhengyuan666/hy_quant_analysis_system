@@ -10,7 +10,8 @@ anyhow.workspace = true
 backtest-engine = { path = "../backtest-engine" }
 chrono.workspace = true
 core-domain = { path = "../core-domain" }
-reqwest.workspace = true
+attohttpc.workspace = true
+base64.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

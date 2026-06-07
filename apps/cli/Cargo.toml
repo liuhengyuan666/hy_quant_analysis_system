@@ -10,7 +10,18 @@ anyhow.workspace = true
 app-service = { path = "../../crates/app-service" }
 chrono.workspace = true
 clap.workspace = true
+core-domain = { path = "../../crates/core-domain" }
+indicator-engine = { path = "../../crates/indicator-engine" }
+market-state-extractor = { path = "../../crates/market-state-extractor" }
+gt-regime-generator = { path = "../../crates/gt-regime-generator" }
+regime-audit = { path = "../../crates/regime-audit" }
 market-store = { path = "../../crates/market-store" }
+research-skills = { path = "../../crates/research-skills" }
+research-benchmark = { path = "../../crates/research-benchmark" }
+research-validation = { path = "../../crates/research-validation" }
+serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
+toml.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

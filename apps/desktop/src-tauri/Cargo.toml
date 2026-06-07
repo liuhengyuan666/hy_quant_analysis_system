@@ -19,6 +19,7 @@ chrono.workspace = true
 core-domain = { path = "../../../crates/core-domain" }
 market-store = { path = "../../../crates/market-store" }
 report-engine = { path = "../../../crates/report-engine" }
+research-skills = { path = "../../../crates/research-skills" }
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = [] }

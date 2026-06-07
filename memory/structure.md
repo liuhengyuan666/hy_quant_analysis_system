@@ -13,18 +13,30 @@ hy_quant_analysis_system/
 │   ├── cli/                       #   quant-cli：clap 命令封装
 │   │   └── src/main.rs
 │   └── desktop/
-│       ├── frontend/              #   Vite + Plain JS 前端
+│       ├── frontend/              #   Vite + Vue 3 + vue-i18n@11 前端
 │       │   ├── src/
-│       │   │   ├── main.js        #     根状态、scope/date 流、refresh UI、顶层 render
-│       │   │   ├── styles.css
+│       │   │   ├── main.js        #     根状态、scope/date 流、refresh UI、全局渲染
+│       │   │   ├── main-vue.js    #     Vue 应用入口，挂载 App.vue 到 #vue-app
+│       │   │   ├── App.vue        #     Vue 根组件，组合所有面板
+│       │   │   ├── store.js       #     共享响应式状态（10 属性）+ 事件桥接
+│       │   │   ├── i18n.js        #     vue-i18n@11 配置 + setLocale/getLocale
+│       │   │   ├── styles.css     #     全局样式 + Vue CSS 变量桥接
 │       │   │   ├── lib/
-│       │   │   │   └── dashboard-utils.js   # 纯工具函数（格式化/规范化/markdown）
-│       │   │   ├── features/
-│       │   │   │   ├── data-health.js       # 数据健康：缓存、加载、导出、渲染
-│       │   │   │   ├── recent-reports.js    # 最近报告：Open snapshot/artifact、Copy path
-│       │   │   │   └── usage-guides.js      # 使用指南：加载、渲染、事件绑定
-│       │   │   └── renderers/
-│       │   │       └── environment-breadth.js  # 环境层 + 广度面板 paired renderers
+│       │   │   │   └── dashboard-utils.js   # locale-aware 格式化工具函数
+│       │   │   ├── components/    #     20+ Vue 面板组件
+│       │   │   │   ├── DashboardHero.vue / TrustSummaryPanel.vue / StatusPanel.vue
+│       │   │   │   ├── SignalsPanel.vue / SignalDetailModal.vue / BacktestPanel.vue
+│       │   │   │   ├── RotationPanel.vue / RegimePanel.vue / EnvironmentPanel.vue
+│       │   │   │   ├── BreadthPanel.vue / DataHealthPanel.vue / HealthStrip.vue
+│       │   │   │   ├── RecentReportsPanel.vue / UsageGuidesPanel.vue
+│       │   │   │   ├── RefreshProgress.vue / DateSelector.vue / TimeContext.vue
+│       │   │   │   ├── LanguageToggle.vue / MetricCard.vue / Notice.vue / Skeleton.vue
+│       │   │   │   └── App.vue
+│       │   │   ├── locales/       #     翻译文件
+│       │   │   │   ├── zh.json    #     中文翻译（~280 keys）
+│       │   │   │   └── en.json    #     英文翻译（~280 keys）
+│       │   │   ├── features/      #     已清空（Phase 0 删除 dead code）
+│       │   │   └── renderers/     #     已清空（Phase 0 删除 dead code）
 │       │   ├── dist/              #   Vite 构建产物（生成物）
 │       │   └── node_modules/
 │       └── src-tauri/             #   Tauri Rust 桥接层
@@ -145,7 +157,7 @@ hy_quant_analysis_system/
 
 | 层 | 位置 | 约束 |
 |---|---|---|
-| **前端** | `apps/desktop/frontend/src/` | Plain JS + Vite。不得包含量化逻辑。已按 `lib/ → features/ → renderers/` 渐进拆分。 |
+| **前端** | `apps/desktop/frontend/src/` | Vite + Vue 3 + Plain JS 混合架构。不得包含量化逻辑。Vue 组件迁移已完成（20+ 组件），Plain JS 保留 hero/trust/refresh/reports 入口。i18n 通过 vue-i18n@11 实现（默认中文）。 |
 | **桥接** | `apps/desktop/src-tauri/` | Tauri 命令注册 + refresh 协调。保持薄封装，不得包含业务逻辑。 |
 | **后端计算** | `crates/*` (engine crates) | 纯计算 crate 不 fetch、不 persist。`macro-engine` 严格执行此约束。 |
 | **持久化** | `crates/market-store/` | 唯一数据库访问边界。ClickHouse + SQLite 全部 IO 集中于此。 |

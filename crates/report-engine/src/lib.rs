@@ -5,7 +5,7 @@ use core_domain::{
     StrategyStateSnapshot,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportArtifact {
@@ -33,6 +33,7 @@ pub struct DashboardSnapshot {
     pub strategy_state: Option<StrategyStateSnapshot>,
     pub trust_summary: Option<TrustSummary>,
     pub watchlist_breadth: Option<WatchlistBreadthSnapshot>,
+    pub symbol_names: HashMap<String, String>,
     pub latest_backtest: Option<BacktestSummary>,
     pub load_metrics: Option<DashboardLoadMetrics>,
 }
@@ -267,6 +268,7 @@ pub fn build_dashboard_snapshot(
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
+        symbol_names: HashMap::new(),
     })
 }
 
@@ -346,6 +348,7 @@ pub fn build_dashboard_snapshot_for_date(
         watchlist_breadth: None,
         latest_backtest,
         load_metrics: None,
+        symbol_names: HashMap::new(),
     }
 }
 
@@ -593,9 +596,11 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     }
     output.push_str("\n## Top Signals\n\n");
     for item in &snapshot.top_signals {
+        let name = snapshot.symbol_names.get(&item.symbol).map(|s| s.as_str()).unwrap_or("");
         output.push_str(&format!(
-            "- {} | score={:.2} | label={:?} | {}\n",
+            "- {} ({}) | score={:.2} | label={:?} | {}\n",
             item.symbol,
+            name,
             item.final_score,
             item.signal_label,
             format_signal_breakdown(item)
@@ -606,9 +611,11 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     }
     output.push_str("\n## Bullish Signals\n\n");
     for item in &snapshot.bullish_signals {
+        let name = snapshot.symbol_names.get(&item.symbol).map(|s| s.as_str()).unwrap_or("");
         output.push_str(&format!(
-            "- {} | score={:.2} | label={:?} | {}\n",
+            "- {} ({}) | score={:.2} | label={:?} | {}\n",
             item.symbol,
+            name,
             item.final_score,
             item.signal_label,
             format_signal_breakdown(item)
@@ -616,9 +623,11 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     }
     output.push_str("\n## Defensive Signals\n\n");
     for item in &snapshot.defensive_signals {
+        let name = snapshot.symbol_names.get(&item.symbol).map(|s| s.as_str()).unwrap_or("");
         output.push_str(&format!(
-            "- {} | score={:.2} | label={:?} | {}\n",
+            "- {} ({}) | score={:.2} | label={:?} | {}\n",
             item.symbol,
+            name,
             item.final_score,
             item.signal_label,
             format_signal_breakdown(item)
@@ -912,6 +921,7 @@ mod tests {
                 state_trajectory: Vec::new(),
             }),
             load_metrics: None,
+            symbol_names: HashMap::new(),
         };
 
         let rendered = render_markdown_report(&snapshot);

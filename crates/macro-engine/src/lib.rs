@@ -26,6 +26,15 @@ fn rolling_min_max(values: &[f64], index: usize, lookback: usize) -> (f64, f64) 
     (min, max)
 }
 
+fn rolling_mean_std(values: &[f64], index: usize, lookback: usize) -> (f64, f64) {
+    let start = index.saturating_sub(lookback.saturating_sub(1));
+    let window = &values[start..=index];
+    let mean = window.iter().sum::<f64>() / window.len() as f64;
+    let variance = window.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / window.len() as f64;
+    let std = variance.sqrt();
+    (mean, std)
+}
+
 fn bounded_score(value: f64) -> f64 {
     value.clamp(0.0, 100.0)
 }
@@ -39,13 +48,30 @@ pub fn build_macro_snapshots(series: &[MacroFactorSeries], lookback: usize) -> V
             .map(|(_, value)| *value)
             .collect();
         for (index, (date, value)) in factor.observations.iter().enumerate() {
-            let (min, max) = rolling_min_max(&values, index, lookback);
-            let raw_score = if (max - min).abs() < f64::EPSILON {
-                50.0
-            } else if factor.invert_score {
-                ((max - value) / (max - min)) * 100.0
+            // TASK-080F: Fed Funds uses Z-score instead of min/max normalization
+            // to avoid regime clustering (zero-rate vs hiking period)
+            let raw_score = if factor.factor_name == "fed_funds" {
+                let (mean, std) = rolling_mean_std(&values, index, lookback);
+                if std < f64::EPSILON {
+                    50.0
+                } else {
+                    let z_score = (value - mean) / std;
+                    // TASK-080F: Cap Z-score to avoid regime clustering at extremes
+                    // Raw Z-scores can reach ±15 during regime transitions (e.g. 2020→2022)
+                    // Capping at ±3 maps to score range [5, 95] without 0/100 clustering
+                    let capped_z = z_score.clamp(-3.0, 3.0);
+                    // Invert: high Fed Funds (positive Z) = tight = bad → low score
+                    50.0 - capped_z * 15.0
+                }
             } else {
-                ((value - min) / (max - min)) * 100.0
+                let (min, max) = rolling_min_max(&values, index, lookback);
+                if (max - min).abs() < f64::EPSILON {
+                    50.0
+                } else if factor.invert_score {
+                    ((max - value) / (max - min)) * 100.0
+                } else {
+                    ((value - min) / (max - min)) * 100.0
+                }
             };
             snapshots.push(MacroSnapshot {
                 date: *date,

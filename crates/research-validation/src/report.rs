@@ -1,0 +1,164 @@
+use serde::{Deserialize, Serialize};
+
+use super::validator::ValidationResult;
+
+/// Aggregated accuracy report for a skill validation run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccuracyReport {
+    pub skill_name: String,
+    pub total_samples: usize,
+    pub correct_predictions: usize,
+    pub accuracy: f64,
+    pub macro_precision: f64,
+    pub macro_recall: f64,
+    pub macro_f1: f64,
+    pub per_regime: Vec<RegimeReport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegimeReport {
+    pub regime: String,
+    pub true_positives: usize,
+    pub false_positives: usize,
+    pub false_negatives: usize,
+    pub precision: f64,
+    pub recall: f64,
+    pub f1: f64,
+    pub support: usize,
+}
+
+pub struct ReportGenerator;
+
+impl ReportGenerator {
+    pub fn generate(skill_name: &str, result: &ValidationResult) -> AccuracyReport {
+        let total = result.total as f64;
+        let accuracy = if result.total > 0 {
+            result.correct as f64 / total
+        } else {
+            0.0
+        };
+
+        let mut per_regime = Vec::new();
+        let mut sum_precision = 0.0;
+        let mut sum_recall = 0.0;
+        let mut sum_f1 = 0.0;
+        let mut regime_count = 0usize;
+
+        for (regime, metrics) in &result.per_regime {
+            let tp = metrics.true_positives as f64;
+            let fp = metrics.false_positives as f64;
+            let fn_ = metrics.false_negatives as f64;
+            let support = metrics.true_positives + metrics.false_negatives;
+
+            let precision = if tp + fp > 0.0 {
+                tp / (tp + fp)
+            } else {
+                0.0
+            };
+            let recall = if tp + fn_ > 0.0 {
+                tp / (tp + fn_)
+            } else {
+                0.0
+            };
+            let f1 = if precision + recall > 0.0 {
+                2.0 * precision * recall / (precision + recall)
+            } else {
+                0.0
+            };
+
+            sum_precision += precision;
+            sum_recall += recall;
+            sum_f1 += f1;
+            regime_count += 1;
+
+            per_regime.push(RegimeReport {
+                regime: format!("{:?}", regime).to_lowercase(),
+                true_positives: metrics.true_positives,
+                false_positives: metrics.false_positives,
+                false_negatives: metrics.false_negatives,
+                precision,
+                recall,
+                f1,
+                support,
+            });
+        }
+
+        let regime_count_f = regime_count as f64;
+        let macro_precision = if regime_count > 0 {
+            sum_precision / regime_count_f
+        } else {
+            0.0
+        };
+        let macro_recall = if regime_count > 0 {
+            sum_recall / regime_count_f
+        } else {
+            0.0
+        };
+        let macro_f1 = if regime_count > 0 {
+            sum_f1 / regime_count_f
+        } else {
+            0.0
+        };
+
+        per_regime.sort_by(|a, b| b.support.cmp(&a.support));
+
+        AccuracyReport {
+            skill_name: skill_name.to_string(),
+            total_samples: result.total,
+            correct_predictions: result.correct,
+            accuracy,
+            macro_precision,
+            macro_recall,
+            macro_f1,
+            per_regime,
+        }
+    }
+
+    pub fn to_json(report: &AccuracyReport) -> anyhow::Result<String> {
+        Ok(serde_json::to_string_pretty(report)?)
+    }
+
+    pub fn to_markdown(report: &AccuracyReport) -> String {
+        let mut md = format!(
+            "# Accuracy Report: {}\n\n\
+             **Total Samples**: {}\n\n\
+             **Correct Predictions**: {}\n\n\
+             **Accuracy**: {:.1}%\n\n\
+             **Macro Precision**: {:.1}%\n\n\
+             **Macro Recall**: {:.1}%\n\n\
+             **Macro F1**: {:.1}%\n\n",
+            report.skill_name,
+            report.total_samples,
+            report.correct_predictions,
+            report.accuracy * 100.0,
+            report.macro_precision * 100.0,
+            report.macro_recall * 100.0,
+            report.macro_f1 * 100.0,
+        );
+
+        md.push_str("## Per-Regime Breakdown\n\n");
+        md.push_str(
+            "| Regime | Support | Precision | Recall | F1 | TP | FP | FN |\n"
+        );
+        md.push_str(
+            "|--------|---------|-----------|--------|----|----|----|----|\n"
+        );
+        for r in &report.per_regime {
+            md.push_str(&format!(
+                "| {} | {} | {:.1}% | {:.1}% | {:.1}% | {} | {} | {} |\n",
+                r.regime,
+                r.support,
+                r.precision * 100.0,
+                r.recall * 100.0,
+                r.f1 * 100.0,
+                r.true_positives,
+                r.false_positives,
+                r.false_negatives,
+            ));
+        }
+
+        md.push_str("\n---\n\n");
+        md.push_str("*Generated by research-validation Ground Truth Benchmark.*");
+        md
+    }
+}

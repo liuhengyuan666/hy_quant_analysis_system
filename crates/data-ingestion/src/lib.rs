@@ -2,15 +2,13 @@ use anyhow::Result;
 use chrono::NaiveDate;
 use core_domain::{DailyBar, Instrument, InstrumentType, Market};
 use macro_engine::MacroFactorSeries;
-use reqwest::blocking::Client;
-use reqwest::header::{ACCEPT, REFERER};
+use attohttpc::Session;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::time::Duration;
-
+use std::sync::OnceLock;
 #[derive(Debug, Clone)]
 pub struct MacroFetchOutcome {
     pub series: MacroFactorSeries,
@@ -38,14 +36,9 @@ impl DailyAdjustmentMode {
 
 const CANONICAL_DAILY_ADJUSTMENT: DailyAdjustmentMode = DailyAdjustmentMode::Forward;
 
-fn http_client() -> Result<Client> {
-    Client::builder()
-        .user_agent("rust-quant-analysis-system/0.1")
-        .timeout(Duration::from_secs(30))
-        .http1_only()
-        .no_proxy()
-        .build()
-        .map_err(Into::into)
+fn http_client() -> &'static Session {
+    static CACHED: OnceLock<Session> = OnceLock::new();
+    CACHED.get_or_init(|| Session::new())
 }
 
 fn fetch_text_via_curl(url: &str) -> Result<String> {
@@ -71,23 +64,28 @@ fn fetch_text_with_fallback(
     accept_header: Option<&str>,
     referer: Option<&str>,
 ) -> Result<(String, String)> {
-    let mut request = http_client()?.get(url);
+    let mut request = http_client().get(url);
     if let Some(accept) = accept_header {
-        request = request.header(ACCEPT, accept);
+        request = request.header("Accept", accept);
     }
     if let Some(referer) = referer {
-        request = request.header(REFERER, referer);
+        request = request.header("Referer", referer);
     }
 
     match request.send() {
-        Ok(response) => Ok((response.error_for_status()?.text()?, "reqwest".to_string())),
+        Ok(response) => {
+            if !response.is_success() {
+                anyhow::bail!("HTTP error: {}", response.status());
+            }
+            Ok((response.text()?, "attohttpc".to_string()))
+        }
         Err(primary_error) => {
             #[cfg(target_os = "windows")]
             {
                 match fetch_text_via_curl(url) {
                     Ok(body) => Ok((body, "curl".to_string())),
                     Err(fallback_error) => Err(anyhow::anyhow!(
-                        "primary reqwest fetch failed: {}; curl fallback failed: {}",
+                        "primary attohttpc fetch failed: {}; curl fallback failed: {}",
                         primary_error,
                         fallback_error
                     )),
@@ -266,7 +264,11 @@ pub fn fetch_tencent_daily_bars(
         to.format("%Y-%m-%d"),
         CANONICAL_DAILY_ADJUSTMENT.tencent_param()
     );
-    let payload: TencentResponse = http_client()?.get(url).send()?.error_for_status()?.json()?;
+    let response = http_client().get(url).send()?;
+    if !response.is_success() {
+        anyhow::bail!("Tencent fetch failed: {}", response.status());
+    }
+    let payload: TencentResponse = response.json()?;
     let rows = payload
         .data
         .get(tencent_symbol)

@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
-    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig, Market,
-    RefreshJobRecord, SignalSnapshot,
+    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
+    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
@@ -18,6 +19,7 @@ use report_engine::{
     DataHealthSymbolSummary, TrustSummary, WatchlistBreadthMarketSnapshot,
     WatchlistBreadthSnapshot,
 };
+use research_renderer::DashboardInsightComposer;
 use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
@@ -28,7 +30,11 @@ use std::sync::Mutex;
 use std::time::Instant;
 use strategy_engine::{build_strategy_preferences, AnalysisContext};
 
+/// TOML-based configuration loader module
+pub mod config_loader;
+
 pub use core_domain::AnalysisScope as ReportScope;
+pub use research_renderer::ResearchInsight;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -392,6 +398,7 @@ pub struct DashboardLoadBundle {
     pub status: AppStatus,
     pub available_dates: Vec<String>,
     pub snapshot: Option<DashboardSnapshot>,
+    pub insight: Option<ResearchInsight>,
     pub recent_reports: Vec<RecentReportItem>,
     pub pipeline_dates: PipelineDateDiagnostics,
 }
@@ -1292,6 +1299,26 @@ fn validate_sync_refresh_result(success: bool, blocking_alerts: &[String]) -> Re
     Ok(())
 }
 
+/// Placeholder LLM provider for testing.
+/// Returns structured dummy responses. Replace with a real provider
+/// (OpenAI, DeepSeek, etc.) for actual analysis.
+struct PlaceholderProvider;
+
+#[async_trait]
+impl research_skills::provider::LlmProvider for PlaceholderProvider {
+    async fn chat(
+        &self,
+        _system_prompt: &str,
+        _user_prompt: &str,
+        _config: &research_skills::provider::LlmCallConfig,
+    ) -> anyhow::Result<String> {
+        Ok(r#"{
+            "analysis": "Market regime analysis completed",
+            "note": "This is a placeholder response. Configure a real LLM provider for actual analysis."
+        }"#.to_string())
+    }
+}
+
 impl AppContext {
     pub fn new(storage: StorageConfig) -> Self {
         let calendar = match StorageConfig::project_root() {
@@ -2092,7 +2119,7 @@ impl AppContext {
 
         let cn_anchor = market_store::fetch_daily_bars(&self.storage, "000300")
             .context("failed to load CN anchor daily bars")?;
-        let hk_anchor = market_store::fetch_daily_bars(&self.storage, "HSI")
+        let hk_anchor = market_store::fetch_daily_bars(&self.storage, "HSCEI")
             .context("failed to load HK anchor daily bars")?;
         let regime_rows = build_market_regimes(&all_macro_rows, &cn_anchor, &hk_anchor)
             .into_iter()
@@ -2479,6 +2506,8 @@ impl AppContext {
             snapshot
         });
 
+        let insight = snapshot.as_ref().map(DashboardInsightComposer::compose);
+
         Ok(DashboardLoadBundle {
             status,
             available_dates: available_dates
@@ -2486,6 +2515,7 @@ impl AppContext {
                 .map(|date| date.to_string())
                 .collect(),
             snapshot,
+            insight,
             recent_reports,
             pipeline_dates,
         })
@@ -2760,6 +2790,11 @@ impl AppContext {
             scope_label(scope),
         );
         snapshot.environment = environment;
+        // Enrich snapshot with symbol-to-name mapping from universe
+        snapshot.symbol_names = scoped_instruments
+            .iter()
+            .map(|instrument| (instrument.symbol.clone(), instrument.name.clone()))
+            .collect();
         let assembly_ms = elapsed_ms(assembly_started_at);
         let breadth_started_at = Instant::now();
         snapshot.watchlist_breadth = self.compute_watchlist_breadth_snapshot(report_date, scope)?;
@@ -2936,14 +2971,14 @@ impl AppContext {
                 now,
             ) {
                 Ok(outcome) => {
-                    let status = if outcome.transport == "reqwest" {
+                    let status = if outcome.transport == "attohttpc" {
                         "healthy"
                     } else {
                         "review"
                     }
                     .to_string();
                     let mut notes = Vec::new();
-                    if outcome.transport != "reqwest" {
+                    if outcome.transport != "attohttpc" {
                         notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
                     }
                     macro_sources.push(DataHealthMacroSourceSummary {
@@ -3141,6 +3176,15 @@ impl AppContext {
         report_date: Option<NaiveDate>,
         scope: ReportScope,
     ) -> Result<ReportSummary> {
+        self.export_report_with_scope_and_format(report_date, scope, false)
+    }
+
+    pub fn export_report_with_scope_and_format(
+        &self,
+        report_date: Option<NaiveDate>,
+        scope: ReportScope,
+        concise: bool,
+    ) -> Result<ReportSummary> {
         if report_date.is_none() {
             let gate = self.explain_latest_gate(scope)?;
             if gate.latest_gate_advanced == Some(false) {
@@ -3162,7 +3206,14 @@ impl AppContext {
         let snapshot = self
             .dashboard_snapshot_with_scope(report_date, scope)?
             .context("no dashboard snapshot available for report export")?;
-        let markdown = render_markdown_report(&snapshot);
+
+        let insight = research_renderer::DashboardInsightComposer::compose(&snapshot);
+        let markdown = if concise {
+            research_renderer::DailyReportComposer::compose_markdown(&snapshot, Some(&insight))
+        } else {
+            render_markdown_report(&snapshot)
+        };
+
         let root = StorageConfig::project_root()?;
         let report_dir = root.join("reports");
         fs::create_dir_all(&report_dir).with_context(|| {
@@ -3172,14 +3223,20 @@ impl AppContext {
             )
         })?;
         let report_slug = match scope {
+            ReportScope::Global if concise => format!("daily-report-concise-{}", snapshot.report_date),
             ReportScope::Global => format!("daily-report-{}", snapshot.report_date),
+            ReportScope::Cn if concise => format!("daily-report-cn-concise-{}", snapshot.report_date),
             ReportScope::Cn => format!("daily-report-cn-{}", snapshot.report_date),
+            ReportScope::Hk if concise => format!("daily-report-hk-concise-{}", snapshot.report_date),
             ReportScope::Hk => format!("daily-report-hk-{}", snapshot.report_date),
         };
-        let report_type = match scope {
-            ReportScope::Global => "DAILY_REPORT",
-            ReportScope::Cn => "DAILY_REPORT_CN",
-            ReportScope::Hk => "DAILY_REPORT_HK",
+        let report_type = match (scope, concise) {
+            (ReportScope::Global, true) => "DAILY_REPORT_CONCISE",
+            (ReportScope::Global, false) => "DAILY_REPORT",
+            (ReportScope::Cn, true) => "DAILY_REPORT_CN_CONCISE",
+            (ReportScope::Cn, false) => "DAILY_REPORT_CN",
+            (ReportScope::Hk, true) => "DAILY_REPORT_HK_CONCISE",
+            (ReportScope::Hk, false) => "DAILY_REPORT_HK",
         };
         let output_path = report_dir.join(format!("{}.md", report_slug));
         fs::write(&output_path, markdown)
@@ -3192,6 +3249,138 @@ impl AppContext {
         )?;
         Ok(ReportSummary {
             report_date: snapshot.report_date,
+            output_path: output_path.display().to_string(),
+            failed_items: Vec::new(),
+        })
+    }
+
+    /// Render LLM analysis JSON as markdown report.
+    fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
+        let mut md = String::new();
+
+        // Title
+        let skill = analysis["skill"].as_str().unwrap_or("unknown");
+        let scope = analysis["scope"].as_str().unwrap_or("global");
+        md.push_str(&format!("# LLM Analysis: {}\n\n", skill));
+        md.push_str(&format!("**Scope**: {}\n\n", scope));
+
+        // Triggered status
+        let triggered = analysis["triggered"].as_bool().unwrap_or(false);
+        md.push_str(&format!(
+            "**Triggered**: {}\n\n",
+            if triggered { "Yes" } else { "No" }
+        ));
+
+        // Placeholder warning
+        if analysis["placeholder"].as_bool().unwrap_or(false) {
+            md.push_str(
+                "> **Warning**: This analysis was generated in placeholder mode. \
+                 No real LLM provider was configured.\n\n",
+            );
+        }
+
+        // Regime Analysis
+        if let Some(regime) = analysis["regime_analysis"].as_object() {
+            md.push_str("## Regime Analysis\n\n");
+            if let Some(state) = regime.get("current_state").and_then(|v| v.as_str()) {
+                md.push_str(&format!("- **Current State**: {}\n", state));
+            }
+            if let Some(transition) = regime.get("transition").and_then(|v| v.as_f64()) {
+                md.push_str(&format!("- **Transition Score**: {:.2}\n", transition));
+            }
+            if let Some(confidence) = regime.get("confidence").and_then(|v| v.as_f64()) {
+                md.push_str(&format!("- **Confidence**: {:.1}%\n", confidence * 100.0));
+            }
+            if let Some(drivers) = regime.get("key_drivers").and_then(|v| v.as_array()) {
+                if !drivers.is_empty() {
+                    md.push_str("- **Key Drivers**:\n");
+                    for d in drivers {
+                        if let Some(s) = d.as_str() {
+                            md.push_str(&format!("  - {}\n", s));
+                        }
+                    }
+                }
+            }
+            if let Some(risk) = regime.get("risk_assessment") {
+                if let Some(level) = risk.get("level").and_then(|v| v.as_str()) {
+                    md.push_str(&format!("- **Risk Level**: {}\n", level));
+                }
+                if let Some(factors) = risk.get("factors").and_then(|v| v.as_array()) {
+                    if !factors.is_empty() {
+                        md.push_str("- **Risk Factors**:\n");
+                        for f in factors {
+                            if let Some(s) = f.as_str() {
+                                md.push_str(&format!("  - {}\n", s));
+                            }
+                        }
+                    }
+                }
+                if let Some(rec) = risk.get("recommendation").and_then(|v| v.as_str()) {
+                    md.push_str(&format!("- **Recommendation**: {}\n", rec));
+                }
+            }
+            md.push('\n');
+        }
+
+        // LLM Analysis
+        if let Some(llm) = analysis["llm_analysis"].as_str() {
+            if !llm.is_empty() {
+                md.push_str("## LLM Analysis\n\n");
+                md.push_str(llm);
+                md.push_str("\n\n");
+            }
+        }
+
+        // Token Usage
+        if let Some(tokens) = analysis["token_usage"].as_object() {
+            md.push_str("## Token Usage\n\n");
+            if let Some(input) = tokens.get("system_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **System Tokens**: {}\n", input));
+            }
+            if let Some(input) = tokens.get("context_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Context Tokens**: {}\n", input));
+            }
+            if let Some(input) = tokens.get("reasoning_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Reasoning Tokens**: {}\n", input));
+            }
+            if let Some(output) = tokens.get("output_tokens").and_then(|v| v.as_u64()) {
+                md.push_str(&format!("- **Output Tokens**: {}\n", output));
+            }
+            md.push('\n');
+        }
+
+        md
+    }
+
+    /// Export LLM analysis result as markdown report.
+    pub fn export_llm_analysis(
+        &self,
+        scope: ReportScope,
+        date: NaiveDate,
+        analysis: &serde_json::Value,
+    ) -> Result<ReportSummary> {
+        let md = Self::render_llm_analysis_markdown(analysis);
+        let root = StorageConfig::project_root()?;
+        let report_dir = root.join("reports");
+        fs::create_dir_all(&report_dir).with_context(|| {
+            format!(
+                "failed to create report directory: {}",
+                report_dir.display()
+            )
+        })?;
+        let filename = format!("llm-analysis-{}-{}.md", scope_label(scope).to_lowercase(), date);
+        let output_path = report_dir.join(&filename);
+        fs::write(&output_path, md).with_context(|| {
+            format!("failed to write LLM analysis report: {}", output_path.display())
+        })?;
+        market_store::insert_report_snapshot(
+            &self.storage,
+            &date.to_string(),
+            "LLM_ANALYSIS",
+            &output_path.display().to_string(),
+        )?;
+        Ok(ReportSummary {
+            report_date: date.to_string(),
             output_path: output_path.display().to_string(),
             failed_items: Vec::new(),
         })
@@ -3328,13 +3517,28 @@ impl AppContext {
     }
 
     pub fn set_llm_config(&self, base_url: &str, model: &str, timeout_secs: u64) -> Result<()> {
+        // 1. 写入 SQLite（向后兼容）
         let config = LlmConfig {
             base_url: base_url.to_string(),
             model: model.to_string(),
             timeout_secs,
         };
         let json = serde_json::to_string(&config).context("failed to serialize llm_config")?;
-        market_store::insert_app_config(&self.storage, "llm_config", &json)
+        market_store::insert_app_config(&self.storage, "llm_config", &json)?;
+
+        // 2. 同步写入 TOML 文件
+        let toml_path = config_loader::default_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_config(&toml_path)
+        } else {
+            LlmFileConfig::default()
+        };
+        toml_config.llm.base_url = base_url.to_string();
+        toml_config.llm.model = model.to_string();
+        toml_config.llm.timeout_secs = timeout_secs;
+        config_loader::write_llm_config_to_file(&toml_path, &toml_config)?;
+
+        Ok(())
     }
 
     pub fn get_llm_config(&self) -> Result<LlmConfig> {
@@ -3349,17 +3553,43 @@ impl AppContext {
     }
 
     pub fn set_llm_api_key(&self, api_key: &str) -> Result<()> {
+        // 1. 写入 Keyring（优先）
         let entry = keyring::Entry::new(LLM_SERVICE_NAME, LLM_ACCOUNT_NAME)?;
         match entry.set_password(api_key) {
             Ok(()) => {
-                let _ = market_store::insert_credential(&self.storage, "llm_api_key", "");
-                Ok(())
+                // FIX: Also write to SQLite as fallback; do NOT clear it.
+                // Windows keyring reads often fail even after successful writes,
+                // so SQLite must retain the key for the fallback chain to work.
+                let _ = market_store::insert_credential(&self.storage, "llm_api_key", api_key);
             }
             Err(keyring_err) => {
                 eprintln!("WARN: keyring storage failed ({keyring_err}), falling back to SQLite credential_store. API key will be stored in local database.");
-                market_store::insert_credential(&self.storage, "llm_api_key", api_key)
+                market_store::insert_credential(&self.storage, "llm_api_key", api_key)?;
             }
         }
+
+        // 2. 同步写入 TOML 文件（使用环境变量引用格式）
+        let toml_path = config_loader::default_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_config(&toml_path)
+        } else {
+            LlmFileConfig::default()
+        };
+
+        // 检查是否是环境变量引用格式
+        if api_key.starts_with("${") && api_key.ends_with('}') {
+            toml_config.llm.auth.api_key = Some(api_key.to_string());
+        } else {
+            // 明文 key，建议使用环境变量
+            toml_config.llm.auth.api_key = Some(api_key.to_string());
+            #[cfg(windows)]
+            eprintln!("WARN: API key stored in plaintext. Consider using environment variable reference:");
+            eprintln!("      set-llm-api-key --key \"${{OPENAI_API_KEY}}\"");
+        }
+
+        config_loader::write_llm_config_to_file(&toml_path, &toml_config)?;
+
+        Ok(())
     }
 
     pub fn get_llm_api_key(&self) -> Result<Option<String>> {
@@ -3376,18 +3606,153 @@ impl AppContext {
         }
     }
 
+    /// Unified LLM status for desktop UI.
+    ///
+    /// Implements ADR-033 resolution chain:
+    /// - base_url / model / timeout: TOML (primary) → SQLite legacy fallback
+    /// - api_key: TOML (plaintext or resolved ${VAR}) → keyring → SQLite
+    pub fn get_llm_status(&self) -> Result<LlmStatus> {
+        // 1. Resolve TOML (primary per ADR-033)
+        let resolved = self.get_resolved_llm_config(None).unwrap_or_else(|_| {
+            config_loader::ResolvedLlmConfig {
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                timeout_secs: 60,
+                api_key: None,
+                temperature: 0.7,
+                max_tokens: 2048,
+                seed: None,
+                source: config_loader::ConfigSource {
+                    base_url: "default".to_string(),
+                    model: "default".to_string(),
+                    api_key: "none".to_string(),
+                    config_file: None,
+                },
+            }
+        });
+
+        // 2. Determine effective non-secret config
+        //    TOML first, then legacy SQLite fallback for backward compatibility
+        let (base_url, model, timeout_secs) = if resolved.source.config_file.is_some() {
+            (resolved.base_url, resolved.model, resolved.timeout_secs)
+        } else {
+            let legacy = self.get_llm_config().unwrap_or_else(|_| LlmConfig {
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                timeout_secs: 60,
+            });
+            (legacy.base_url, legacy.model, legacy.timeout_secs)
+        };
+
+        // 3. Determine API key presence per ADR-033 fallback chain:
+        //    TOML (plaintext or resolved env var) → keyring → SQLite
+        let api_key = if let Some(ref key) = resolved.api_key {
+            if !key.is_empty() {
+                Some(key.clone())
+            } else {
+                self.get_llm_api_key()?
+            }
+        } else {
+            self.get_llm_api_key()?
+        };
+
+        Ok(LlmStatus {
+            configured: api_key.is_some(),
+            base_url,
+            model,
+            timeout_secs,
+        })
+    }
+
+    // ============================================================
+    // TOML-based LLM Config (New)
+    // ============================================================
+
+    /// 获取解析后的 LLM 配置（TOML + 环境变量 + CLI 优先级合并）
+    ///
+    /// 优先级：CLI args > TOML file (with ${VAR}) > defaults
+    pub fn get_resolved_llm_config(
+        &self,
+        cli_args: Option<config_loader::CliLlmArgs>,
+    ) -> Result<config_loader::ResolvedLlmConfig> {
+        config_loader::ResolvedLlmConfig::resolve(cli_args)
+    }
+
+    /// 显示 LLM 配置来源信息
+    pub fn show_llm_config(&self) -> Result<config_loader::ResolvedLlmConfig> {
+        self.get_resolved_llm_config(None)
+    }
+
+    /// 验证 LLM 配置文件
+    pub fn validate_llm_config(&self) -> config_loader::ConfigValidation {
+        config_loader::validate_config()
+    }
+
+    /// 从 SQLite/Keyring 迁移配置到 TOML 文件
+    pub fn migrate_llm_config_to_toml(&self, force: bool) -> Result<String> {
+        let config_path = config_loader::default_config_path()?;
+
+        // 检查文件是否已存在
+        if config_path.exists() && !force {
+            anyhow::bail!(
+                "Config file already exists: {}. Use --force to overwrite.",
+                config_path.display()
+            );
+        }
+
+        // 从 SQLite 读取现有配置
+        let old_config = self.get_llm_config()?;
+
+        // 从 Keyring/SQLite 读取 API Key
+        let api_key = self.get_llm_api_key()?;
+
+        // 构建 TOML 配置
+        let toml_config = LlmFileConfig {
+            llm: core_domain::LlmSection {
+                base_url: old_config.base_url,
+                model: old_config.model,
+                timeout_secs: old_config.timeout_secs,
+                auth: core_domain::AuthSection {
+                    api_key: api_key.map(|k| {
+                        // 如果是明文 key，提示用户设置环境变量
+                        if k.starts_with("sk-") {
+                            eprintln!("WARN: Migrating plaintext API key. Consider using environment variable reference instead.");
+                            eprintln!("      Edit config/llm.toml and change to: api_key = \"${{OPENAI_API_KEY}}\"");
+                        }
+                        k
+                    }),
+                },
+                defaults: core_domain::DefaultsSection::default(),
+            },
+        };
+
+        // 写入 TOML 文件
+        config_loader::write_llm_config_to_file(&config_path, &toml_config)?;
+
+        Ok(format!(
+            "Config migrated to: {}",
+            config_path.display()
+        ))
+    }
+
     async fn call_llm_api(
         config: LlmConfig,
         api_key: String,
         system_prompt: &'static str,
         user_prompt: String,
+        temperature: f64,
+        max_tokens: usize,
+        seed: Option<u64>,
     ) -> Result<String> {
         let openai_config = async_openai::config::OpenAIConfig::new()
             .with_api_key(api_key)
             .with_api_base(config.base_url);
         let client = async_openai::Client::with_config(openai_config);
-        let request = async_openai::types::chat::CreateChatCompletionRequestArgs::default()
+        let mut request_builder = async_openai::types::chat::CreateChatCompletionRequestArgs::default();
+        request_builder
             .model(&config.model)
+            .temperature(temperature as f32)
+            .max_tokens(max_tokens as u32)
             .messages([
                 async_openai::types::chat::ChatCompletionRequestSystemMessageArgs::default()
                     .content(system_prompt)
@@ -3399,7 +3764,11 @@ impl AppContext {
                     .build()
                     .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
                     .into(),
-            ])
+            ]);
+        if let Some(seed_val) = seed {
+            request_builder.seed(seed_val as i64);
+        }
+        let request = request_builder
             .build()
             .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
 
@@ -3426,10 +3795,21 @@ impl AppContext {
         report_date: NaiveDate,
         scope: ReportScope,
     ) -> Result<LlmAnalysisResult> {
-        let config = self.get_llm_config()?;
-        let api_key = self
-            .get_llm_api_key()?
-            .context("LLM API key not configured. Use set_llm_api_key first.")?;
+        // P2: 从 TOML 配置读取（优先级：CLI > File > Default）
+        let resolved = self.get_resolved_llm_config(None)?;
+        let config = LlmConfig {
+            base_url: resolved.base_url,
+            model: resolved.model,
+            timeout_secs: resolved.timeout_secs,
+        };
+        // API Key 回退链：TOML → Keyring → SQLite credential_store
+        let api_key = resolved
+            .api_key
+            .or_else(|| self.get_llm_api_key().ok().flatten())
+            .context("LLM API key not configured. Use set_llm_api_key or config/llm.toml.")?;
+        let temperature = resolved.temperature;
+        let max_tokens = resolved.max_tokens;
+        let seed = resolved.seed;
 
         let snapshot = self
             .dashboard_snapshot_with_scope(Some(report_date), scope)?
@@ -3453,6 +3833,7 @@ impl AppContext {
                             .context("failed to create tokio runtime")?;
                         runtime.block_on(Self::call_llm_api(
                             config, api_key, system_prompt, user_prompt,
+                            temperature, max_tokens, seed,
                         ))
                     })
                     .join()
@@ -3464,6 +3845,7 @@ impl AppContext {
                     .context("failed to create tokio runtime")?;
                 runtime.block_on(Self::call_llm_api(
                     config, api_key, system_prompt, user_prompt,
+                    temperature, max_tokens, seed,
                 ))?
             }
         };
@@ -3498,6 +3880,277 @@ impl AppContext {
             output_path: output_path.display().to_string(),
             analysis_text,
         })
+    }
+
+    /// Build ResearchContext for a given scope
+    pub fn research_context(&self, scope: ReportScope) -> Result<research_context::ResearchContext> {
+        let snapshot = self
+            .dashboard_snapshot_with_scope(None, scope)?
+            .context("No dashboard data available")?;
+        Ok(research_context::ContextBuilder::build(&snapshot))
+    }
+
+    /// Compute semantic features for a given scope
+    pub fn research_features(
+        &self,
+        scope: ReportScope,
+    ) -> Result<Vec<research_context::SemanticFeature>> {
+        let context = self.research_context(scope)?;
+        let features = research_context::builtin_features();
+        Ok(features
+            .iter()
+            .filter_map(|f| f.compute(&context))
+            .collect())
+    }
+
+    /// Analyze market using a specific skill.
+    ///
+    /// Combines ResearchContext + SkillRouter + SkillExecutor into a
+    /// complete pipeline: build context → route skills → execute skill.
+    pub async fn analyze_with_skill(
+        &self,
+        skill_name: &str,
+        scope: ReportScope,
+        profile: Option<&research_skills::AgentProfile>,
+        inference_override: Option<research_skills::InferenceConfig>,
+    ) -> anyhow::Result<serde_json::Value> {
+        // 1. Build ResearchContext
+        let context = self.research_context(scope)?;
+
+        // 2. Load skill from registry
+        let root = StorageConfig::project_root()?;
+        let skill_dir = root.join("crates/research-skills/skills");
+        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
+
+        let skill = registry
+            .get(skill_name)
+            .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
+
+        // 3. Evaluate trigger
+        let should_run = research_skills::router::SkillRouter::evaluate_trigger(
+            &skill.definition.trigger,
+            &context,
+        );
+
+        if !should_run {
+            return Ok(serde_json::json!({
+                "skill": skill_name,
+                "triggered": false,
+                "reason": "Trigger conditions not met",
+                "context": context
+            }));
+        }
+
+        // 4. Run state machine for regime analysis (deterministic)
+        let current_state = research_skills::RegimeStateMachine::current_state(&context);
+        let transition =
+            research_skills::RegimeStateMachine::detect_transition(current_state, &context);
+        let confidence = research_skills::RegimeStateMachine::calculate_confidence(&context);
+
+        // 5. Create executor and run LLM pipeline
+        let budget = research_skills::token_budget::TokenBudget::default();
+        let resolved = self.get_resolved_llm_config(None)?;
+        let inference = if let Some(inference) = inference_override {
+            inference
+        } else {
+            research_skills::InferenceConfig {
+                temperature: resolved.temperature,
+                seed: resolved.seed,
+                max_tokens: resolved.max_tokens,
+            }
+        };
+        let executor = research_skills::executor::SkillExecutor::new(budget, inference);
+
+        let config = self.get_llm_config()?;
+        let api_key = if let Some(ref key) = resolved.api_key {
+            if !key.is_empty() {
+                Some(key.clone())
+            } else {
+                self.get_llm_api_key()?
+            }
+        } else {
+            self.get_llm_api_key()?
+        };
+        let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
+            let provider = research_skills::OpenAiProvider::from_config(&config, key);
+            (
+                executor.execute(skill, &context, &provider, profile).await?,
+                false,
+            )
+        } else {
+            let provider = PlaceholderProvider;
+            (
+                executor.execute(skill, &context, &provider, profile).await?,
+                true,
+            )
+        };
+
+        // 6. Compose ResearchSummary from LLM output (Machine Layer)
+        let research_summary = llm_output.response.as_ref().and_then(|response_text| {
+            serde_json::from_str::<serde_json::Value>(response_text).ok().and_then(|parsed| {
+                let registry = research_renderer::ComposerRegistry::default();
+                registry.compose(skill_name, &parsed).ok().map(|summary| {
+                    serde_json::to_value(summary).unwrap_or(serde_json::Value::Null)
+                })
+            })
+        });
+
+        // 7. Merge deterministic + LLM results
+        let result = serde_json::json!({
+            "skill": skill_name,
+            "triggered": true,
+            "scope": scope.as_str(),
+            "placeholder": is_placeholder,
+            "regime_analysis": {
+                "current_state": format!("{:?}", current_state),
+                "transition": transition,
+                "confidence": confidence,
+                "key_drivers": self.extract_key_drivers(&context),
+                "risk_assessment": {
+                    "level": self.assess_risk_level(&context),
+                    "factors": self.identify_risk_factors(&context),
+                    "recommendation": self.generate_recommendation(&context)
+                }
+            },
+            "llm_analysis": llm_output.response,
+            "research_summary": research_summary,
+            "token_usage": llm_output.token_usage,
+            "context": context
+        });
+
+        Ok(result)
+    }
+
+    /// Evaluate all skill triggers against the current research context.
+    /// Returns a list of skills with their trigger status and weights.
+    pub fn evaluate_skill_triggers(
+        &self,
+        scope: ReportScope,
+    ) -> Result<Vec<core_domain::SkillTriggerResult>> {
+        let context = self.research_context(scope)?;
+        let root = StorageConfig::project_root()?;
+        let skill_dir = root.join("crates/research-skills/skills");
+        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
+
+        let mut results = Vec::new();
+        for name in registry.list() {
+            if let Some(skill) = registry.get(name) {
+                let triggered = research_skills::router::SkillRouter::evaluate_trigger(
+                    &skill.definition.trigger,
+                    &context,
+                );
+                let weight = research_skills::router::SkillRouter::calculate_weight(
+                    &skill.definition.trigger,
+                );
+                results.push(core_domain::SkillTriggerResult {
+                    name: skill.definition.name.clone(),
+                    description: skill.definition.description.clone(),
+                    triggered,
+                    weight,
+                });
+            }
+        }
+
+        // Sort by weight descending, triggered first
+        results.sort_by(|a, b| {
+            let triggered_cmp = b.triggered.cmp(&a.triggered);
+            if triggered_cmp != std::cmp::Ordering::Equal {
+                return triggered_cmp;
+            }
+            b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        Ok(results)
+    }
+
+    /// Extract key drivers from context
+    fn extract_key_drivers(&self, context: &research_context::ResearchContext) -> Vec<String> {
+        let mut drivers = Vec::new();
+
+        if context.breadth.breadth_pct < 30.0 {
+            drivers.push("breadth_collapse".to_string());
+        }
+        if context.breadth.breadth_delta < -10.0 {
+            drivers.push("breadth_deteriorating".to_string());
+        }
+        if matches!(
+            context.liquidity.pressure,
+            research_context::LiquidityPressure::Critical
+        ) {
+            drivers.push("liquidity_critical".to_string());
+        }
+        if context.regime.macro_stale_days > 3 {
+            drivers.push("macro_stale".to_string());
+        }
+
+        drivers
+    }
+
+    /// Assess risk level from context
+    fn assess_risk_level(&self, context: &research_context::ResearchContext) -> String {
+        if context.breadth.breadth_pct < 20.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::Critical
+            )
+        {
+            "critical".to_string()
+        } else if context.breadth.breadth_pct < 30.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::High
+            )
+        {
+            "high".to_string()
+        } else if context.breadth.breadth_pct < 50.0 {
+            "medium".to_string()
+        } else {
+            "low".to_string()
+        }
+    }
+
+    /// Identify risk factors
+    fn identify_risk_factors(
+        &self,
+        context: &research_context::ResearchContext,
+    ) -> Vec<String> {
+        let mut factors = Vec::new();
+
+        if context.breadth.breadth_pct < 30.0 {
+            factors.push("breadth_below_30".to_string());
+        }
+        if context.breadth.breadth_pct < 20.0 {
+            factors.push("breadth_extreme_collapse".to_string());
+        }
+        if matches!(
+            context.liquidity.pressure,
+            research_context::LiquidityPressure::Critical
+        ) {
+            factors.push("liquidity_critical".to_string());
+        }
+        if context.regime.macro_stale_days > 5 {
+            factors.push("macro_severely_stale".to_string());
+        }
+
+        factors
+    }
+
+    /// Generate recommendation
+    fn generate_recommendation(&self, context: &research_context::ResearchContext) -> String {
+        if context.breadth.breadth_pct < 20.0 {
+            "exit".to_string()
+        } else if context.breadth.breadth_pct < 30.0
+            || matches!(
+                context.liquidity.pressure,
+                research_context::LiquidityPressure::Critical
+            )
+        {
+            "reduce_exposure".to_string()
+        } else if context.breadth.breadth_pct < 50.0 {
+            "increase_quality".to_string()
+        } else {
+            "maintain".to_string()
+        }
     }
 }
 
@@ -4138,5 +4791,150 @@ mod tests {
             .and_then(|c| c.message.content.clone())
             .unwrap_or_default();
         assert!(content.is_empty());
+    }
+
+    fn build_research_context(
+        breadth_pct: f64,
+        breadth_delta: f64,
+        liquidity_pressure: research_context::LiquidityPressure,
+        macro_stale_days: i32,
+    ) -> research_context::ResearchContext {
+        research_context::ResearchContext {
+            market: research_context::MarketContext {
+                current_state: "bullish".to_string(),
+                previous_state: None,
+                confidence: 0.8,
+                drivers: vec![],
+                transition: None,
+            },
+            liquidity: research_context::LiquidityContext {
+                pressure: liquidity_pressure,
+                spread: None,
+                yield_curve_status: None,
+                dollar_strength: None,
+            },
+            breadth: research_context::BreadthContext {
+                condition: research_context::BreadthCondition::Strong,
+                breadth_pct,
+                breadth_delta,
+            },
+            rotation: research_context::RotationContext {
+                state: research_context::RotationState::Broad,
+                top_sectors: vec![],
+                bottom_sectors: vec![],
+                leadership_stability: 0.7,
+                momentum_factor: None,
+                value_factor: None,
+                quality_factor: None,
+                crowding_factor: None,
+            },
+            regime: research_context::RegimeContext {
+                current: "expansion".to_string(),
+                confidence: 0.75,
+                macro_stale_days,
+            },
+            signals: research_context::SignalsContext {
+                bullish_count: 3,
+                defensive_count: 2,
+                data_starved_count: 0,
+            },
+            macro_: research_context::MacroContext {
+                spread_10y: None,
+                dxy_index: None,
+                foreign_flow: None,
+                vix: None,
+            },
+            risk: research_context::RiskContext {
+                skewness: None,
+                kurtosis: None,
+                tail_index: None,
+            },
+        }
+    }
+
+    #[test]
+    fn extract_key_drivers_detects_breadth_collapse() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(25.0, -5.0, research_context::LiquidityPressure::Moderate, 1);
+        let drivers = ctx.extract_key_drivers(&context);
+        assert!(drivers.contains(&"breadth_collapse".to_string()));
+        assert!(!drivers.contains(&"breadth_deteriorating".to_string()));
+    }
+
+    #[test]
+    fn extract_key_drivers_detects_deteriorating_and_liquidity_critical() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, -15.0, research_context::LiquidityPressure::Critical, 5);
+        let drivers = ctx.extract_key_drivers(&context);
+        assert!(drivers.contains(&"breadth_deteriorating".to_string()));
+        assert!(drivers.contains(&"liquidity_critical".to_string()));
+        assert!(drivers.contains(&"macro_stale".to_string()));
+    }
+
+    #[test]
+    fn assess_risk_level_critical_when_breadth_below_20() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "critical");
+    }
+
+    #[test]
+    fn assess_risk_level_high_when_liquidity_critical() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "critical");
+    }
+
+    #[test]
+    fn assess_risk_level_medium_when_breadth_between_30_and_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(35.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "medium");
+    }
+
+    #[test]
+    fn assess_risk_level_low_when_breadth_above_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.assess_risk_level(&context), "low");
+    }
+
+    #[test]
+    fn identify_risk_factors_detects_extreme_collapse() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let factors = ctx.identify_risk_factors(&context);
+        assert!(factors.contains(&"breadth_below_30".to_string()));
+        assert!(factors.contains(&"breadth_extreme_collapse".to_string()));
+    }
+
+    #[test]
+    fn identify_risk_factors_detects_liquidity_and_macro_stale() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 10);
+        let factors = ctx.identify_risk_factors(&context);
+        assert!(factors.contains(&"liquidity_critical".to_string()));
+        assert!(factors.contains(&"macro_severely_stale".to_string()));
+    }
+
+    #[test]
+    fn generate_recommendation_exit_when_breadth_below_20() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "exit");
+    }
+
+    #[test]
+    fn generate_recommendation_reduce_exposure_when_breadth_below_30() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(25.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "reduce_exposure");
+    }
+
+    #[test]
+    fn generate_recommendation_maintain_when_breadth_above_50() {
+        let ctx = AppContext::new(StorageConfig::default());
+        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        assert_eq!(ctx.generate_recommendation(&context), "maintain");
     }
 }

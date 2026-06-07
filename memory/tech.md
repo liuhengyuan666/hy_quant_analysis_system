@@ -4,7 +4,7 @@
 
 - Rust workspace：核心业务、计算与存储边界。
 - Tauri：桌面端宿主。
-- Plain JS + Vite：桌面前端。
+- Vite + Vue 3 + Composition API：桌面前端（vue-i18n@11 国际化）。
 - ClickHouse：分析型时序数据存储。
 - SQLite：本地轻状态。
 
@@ -28,9 +28,9 @@
 - 无正式 CI workflow。
 - 主要验证手段为 `cargo check`、局部 `cargo test` 与实际 CLI 流程。
 - `target/`、`reports/`、前端 `node_modules/`、前端 `dist/` 属于生成或运行时产物，不是源码事实来源。
-- 桌面前端当前是 `Vite + Plain JS`，且已移除直接 `vue` 依赖。
-- `apps/desktop/frontend/src/main.js` 已开始按“先纯工具层、后状态与视图层”的顺序渐进拆分；首批纯函数现位于 `apps/desktop/frontend/src/lib/dashboard-utils.js`。
-- guide viewer 相关状态流、渲染和事件绑定现已集中在 `apps/desktop/frontend/src/features/usage-guides.js`。
-- data-health 相关缓存判断、摘要加载、导出流程、渲染与按钮事件现已集中在 `apps/desktop/frontend/src/features/data-health.js`。
-- environment layer 与 watchlist breadth 的 paired renderers 现已集中在 `apps/desktop/frontend/src/renderers/environment-breadth.js`。
-- `Recent reports` 相关交互现已集中在 `apps/desktop/frontend/src/features/recent-reports.js`，当前最小可用能力是 `Open snapshot`、`Open artifact` 与 `Copy path`。
+- 桌面前端已完成 Vue 3 迁移，使用 Vite + Vue 3 + Composition API + vue-i18n@11。Plain JS（main.js）与 Vue 组件共存，通过 reactive store 桥接状态。
+- `apps/desktop/frontend/src/main.js` 保留根状态、命令调度与全局渲染；纯工具函数位于 `apps/desktop/frontend/src/lib/dashboard-utils.js`（已全部 locale-aware）。
+- 前端国际化使用 vue-i18n@11，默认中文，支持中英切换。i18n 基础设施位于 `i18n.js`，语言文件位于 `locales/zh.json` 和 `locales/en.json`。
+- `LanguageToggle.vue` 提供右上角语言切换按钮。
+- 20+ Vue 组件已迁移完成，覆盖所有 dashboard 面板（trust、signals、backtest、rotation、breadth、environment、data-health、recent-reports、usage-guides 等）。
+- `features/*.js` 与 `renderers/*.js` 已作为 dead code 删除（Phase 0），功能全部迁移至 Vue 组件。

@@ -62,6 +62,31 @@
   --signal-detail-height: calc(100vh - (var(--space-7) * 2));
   --layer-guide-viewer: 30;
   --layer-modal: 40;
+
+  /* Vue component semantic variable bridge.
+     Maps Vue component variable names to the global design tokens.
+     All future Vue components should consume these mapped names. */
+  --panel-bg: var(--color-surface);
+  --panel-bg-secondary: var(--color-surface-strong);
+  --panel-border: var(--color-border);
+  --panel-radius: var(--radius-sm);
+  --panel-padding: var(--space-5);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --accent-primary: var(--color-accent);
+  --score-bar-bg: var(--color-border);
+  --pill-outline-border: var(--color-border-strong);
+  --tone-positive: var(--color-positive);
+  --tone-positive-bg: var(--color-positive-soft);
+  --tone-negative: var(--color-negative);
+  --tone-negative-bg: var(--color-negative-soft);
+  --tone-neutral: var(--color-neutral);
+  --tone-neutral-bg: var(--color-neutral-soft);
+}
+
+/* Vue mount helper: prevent flash of unstyled content */
+[v-cloak] {
+  display: none;
 }
 
 * {
@@ -84,7 +109,8 @@ body {
 }
 
 body.body--guide-viewer-open,
-body.body--signal-modal-open {
+body.body--signal-modal-open,
+body.body--llm-panel-open {
   overflow: hidden;
 }
 
@@ -112,12 +138,8 @@ code {
   font-size: 0.92em;
 }
 
-#app {
-  min-height: 100vh;
-}
-
 .shell {
-  width: min(calc(100% - (var(--space-6) * 2)), var(--container-width));
+  width: 100%;
   margin: 0 auto;
   padding: var(--space-8) 0 var(--space-7);
 }
@@ -847,6 +869,106 @@ code {
   grid-column: span 12;
 }
 
+/* Plain JS panels layout (Recent Reports, Data Health) */
+.plain-js-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.plain-js-panels--single {
+  grid-template-columns: 1fr;
+}
+
+.plain-js-panels__recent-reports,
+.plain-js-panels__data-health {
+  min-width: 0;
+}
+
+/* Panel header actions alignment */
+.panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 1080px) {
+  .plain-js-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reports Modal */
+.reports-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: var(--layer-modal, 40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.reports-modal {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-strong);
+}
+
+.reports-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.reports-modal__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reports-modal__close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  line-height: 1;
+}
+
+.reports-modal__close:hover {
+  color: var(--text-primary);
+}
+
+.reports-modal__content {
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  flex: 1;
+}
+
+.reports-modal__content .panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.reports-modal__content .panel__header {
+  display: none;
+}
+
 .panel {
   height: 100%;
   padding: var(--space-5);
@@ -1449,7 +1571,6 @@ code {
 
 @media (max-width: 720px) {
   .shell {
-    width: min(calc(100% - (var(--space-4) * 2)), var(--container-width));
     padding: var(--space-6) 0;
   }
 

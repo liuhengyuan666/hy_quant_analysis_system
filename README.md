@@ -40,6 +40,7 @@
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
+- **V4**：桌面端 LLM 智能分析面板（Agent 选择、技能路由、比较分析、历史记录、配置管理）
 
 ### 当前适用场景
 
@@ -62,7 +63,7 @@
 - **Tauri**：桌面端容器
 - **ClickHouse**：分析型时序数据
 - **SQLite**：本地轻状态
-- **Vite + Plain JS**：桌面前端
+- **Vite + Vue 3**：桌面前端（渐进式迁移中，Vue 3 + Composition API）
 
 ---
 
@@ -232,7 +233,7 @@ cargo run -p quant-cli -- compute-signals
 
 ```bash
 cargo run -p quant-cli -- refresh-all
-cargo run -p quant-cli -- refresh-all --to 2026-04-26
+cargo run -p quant-cli -- refresh-all --to 2026-06-05
 ```
 
 说明：
@@ -344,7 +345,7 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-04-07
+cargo run -p quant-cli -- export-report --date 2026-06-04
 cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
 ```
 
@@ -422,6 +423,7 @@ cargo run -p quant-desktop
 - Data health summary
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
+- **V4**：LLM 智能分析面板（Agent / 技能选择、6 标签页分析、历史记录、比较分析）
 
 ---
 
@@ -464,13 +466,13 @@ cargo run -p quant-desktop
 
 ```bash
 # 1. 拉取行情（顺序：必须先有数据）
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
+cargo run -p quant-cli -- ingest-daily --from 2026-06-01 --to 2026-06-05
 
 # 2. 计算技术指标
 cargo run -p quant-cli -- compute-indicators
 
 # 3. 计算宏观与市场环境（同时重建 macro / regime / environment / strategy_state）
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-08
+cargo run -p quant-cli -- compute-macro --from 2026-06-01 --to 2026-06-05
 
 # 4. 计算轮动强弱
 cargo run -p quant-cli -- compute-rotation
@@ -526,7 +528,7 @@ cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
 
 # 推荐默认路径（一条命令完成全链路刷新）
-cargo run -p quant-cli -- refresh-all --to 2026-05-08
+cargo run -p quant-cli -- refresh-all --to 2026-06-05
 
 # V3 一键同步导出（自动检查 gate → 刷新 → 导出）
 cargo run -p quant-cli -- sync-and-export --scope global
@@ -553,10 +555,19 @@ cargo run -p quant-cli -- export-report --date 2026-05-07
 cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
 cargo run -p quant-cli -- export-data-health-report
 
-# V3 LLM 智能分析
+# V3 LLM 智能分析（CLI）
 cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
 cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
 cargo run -p quant-cli -- analyze-with-llm --scope global
+
+# V4 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
+cargo run -p quant-desktop -- get-llm-status
+cargo run -p quant-desktop -- list-agent-profiles
+cargo run -p quant-desktop -- list-skills
+cargo run -p quant-desktop -- evaluate-skill-triggers
+cargo run -p quant-desktop -- save-agent-profile --name default --config "..."
+cargo run -p quant-desktop -- read-agent-profile --name default
+cargo run -p quant-desktop -- analyze-with-llm --scope global --agent default --skill market-regime-reasoning
 
 # 回测
 cargo run -p quant-cli -- run-backtest
