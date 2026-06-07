@@ -20,12 +20,20 @@ impl ContextBuilder {
     }
 
     fn build_market_context(snapshot: &DashboardSnapshot) -> MarketContext {
+        // Confidence derived from score consistency: lower variance = higher confidence
+        let scores = [snapshot.trend_score, snapshot.liquidity_score, snapshot.risk_score];
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let variance = scores.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / scores.len() as f64;
+        let std_dev = variance.sqrt();
+        // Normalize: std_dev 0 -> confidence 1.0, std_dev 30 -> confidence 0.5
+        let confidence = (1.0 - std_dev / 60.0).clamp(0.3, 1.0);
+
         MarketContext {
             current_state: snapshot.regime_label.clone(),
-            previous_state: None, // None = not yet tracked
-            confidence: 0.8,      // TODO: compute from data quality
+            previous_state: None, // None = not yet tracked (requires history)
+            confidence,
             drivers: Vec::new(),
-            transition: None, // TODO: detect transitions
+            transition: None, // TODO: detect transitions (requires history)
         }
     }
 
@@ -114,31 +122,82 @@ impl ContextBuilder {
             RotationState::Broad
         };
 
+        // Leadership stability: top-3 momentum score consistency
+        let leadership_stability = if snapshot.top_rotation.len() >= 3 {
+            let top3: Vec<f64> = snapshot.top_rotation.iter().take(3).map(|r| r.momentum_score).collect();
+            let mean = top3.iter().sum::<f64>() / top3.len() as f64;
+            let variance = top3.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / top3.len() as f64;
+            let std_dev = variance.sqrt();
+            (1.0 - std_dev / 20.0).clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+
+        // Momentum factor: average momentum of top 5
+        let momentum_factor = if !snapshot.top_rotation.is_empty() {
+            let top5: Vec<f64> = snapshot.top_rotation.iter().take(5).map(|r| r.momentum_score).collect();
+            Some(top5.iter().sum::<f64>() / top5.len() as f64)
+        } else {
+            None
+        };
+
+        // Crowding factor: top-1 momentum / top-5 average momentum
+        let crowding_factor = if snapshot.top_rotation.len() >= 5 {
+            let top1 = snapshot.top_rotation[0].momentum_score;
+            let top5_avg = snapshot.top_rotation.iter().take(5).map(|r| r.momentum_score).sum::<f64>() / 5.0;
+            if top5_avg > 0.0 {
+                Some((top1 / top5_avg).clamp(0.5, 3.0))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         RotationContext {
             state,
             top_sectors,
             bottom_sectors,
-            leadership_stability: 0.7, // TODO: compute from history
-            momentum_factor: None,  // TODO: compute from rotation data
-            value_factor: None,     // TODO: compute from rotation data
-            quality_factor: None,   // TODO: compute from rotation data
-            crowding_factor: None,  // TODO: compute from rotation data
+            leadership_stability,
+            momentum_factor,
+            value_factor: None,     // TODO: requires fundamental data (PE/PB/ROE)
+            quality_factor: None,   // TODO: requires fundamental data (earnings quality)
+            crowding_factor,
         }
     }
 
     fn build_regime_context(snapshot: &DashboardSnapshot) -> RegimeContext {
+        // Confidence decays with staleness: fresh data = high confidence
+        let freshness = (1.0 - snapshot.regime_stale_days as f64 / 10.0).clamp(0.0, 1.0);
+        let trend_confidence = snapshot.trend_score / 100.0;
+        let confidence = (trend_confidence * freshness).clamp(0.2, 1.0);
+
         RegimeContext {
             current: snapshot.regime_label.clone(),
-            confidence: 0.8, // TODO: compute from regime scores
+            confidence,
             macro_stale_days: snapshot.regime_stale_days.max(0) as i32,
         }
     }
 
     fn build_signals_context(snapshot: &DashboardSnapshot) -> SignalsContext {
+        // Estimate data-starved symbols from trust summary coverage gap
+        let data_starved_count = snapshot
+            .trust_summary
+            .as_ref()
+            .and_then(|t| {
+                if t.scoped_symbols_expected > 0 {
+                    let gap = t.scoped_symbols_expected.saturating_sub(t.scoped_symbols_on_freshest_market_date);
+                    Some(gap)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(0);
+
         SignalsContext {
             bullish_count: snapshot.bullish_signals.len(),
             defensive_count: snapshot.defensive_signals.len(),
-            data_starved_count: 0, // TODO: get from SignalBuildStats
+            data_starved_count,
         }
     }
 

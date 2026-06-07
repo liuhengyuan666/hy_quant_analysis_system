@@ -11,7 +11,7 @@ pub mod openai_provider;
 pub mod renderer;
 pub mod schema;
 pub mod token_budget;
-pub mod deterministic;
+pub mod inference;
 pub mod regime_state_machine;
 
 pub use agent_profile::{AgentProfile, RiskTolerance, OutputDepth, OutputFormat, RenderingTone, EmphasisLevel};
@@ -26,5 +26,5 @@ pub use regime_state_machine::*;
 pub use analysis::ResearchAnalysis;
 
 // Re-export renderer
-pub use deterministic::DeterministicConfig;
+pub use inference::InferenceConfig;
 pub use renderer::render_analysis_markdown;

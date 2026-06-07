@@ -1,7 +1,7 @@
 use research_context::ResearchContext;
 
 use super::agent_profile::AgentProfile;
-use super::deterministic::DeterministicConfig;
+use super::inference::InferenceConfig;
 use super::provider::LlmProvider;
 use super::skill::Skill;
 use super::token_budget::TokenBudget;
@@ -30,14 +30,14 @@ pub struct TokenUsage {
 pub struct SkillExecutor {
     #[allow(dead_code)]
     budget: TokenBudget,
-    deterministic: DeterministicConfig,
+    inference: InferenceConfig,
 }
 
 impl SkillExecutor {
-    pub fn new(budget: TokenBudget, deterministic: DeterministicConfig) -> Self {
+    pub fn new(budget: TokenBudget, inference: InferenceConfig) -> Self {
         Self {
             budget,
-            deterministic,
+            inference,
         }
     }
 
@@ -76,7 +76,7 @@ impl SkillExecutor {
 
         // Call LLM provider
         let response = provider
-            .chat(&system_prompt, &rendered_prompt, &self.deterministic.to_config())
+            .chat(&system_prompt, &rendered_prompt, &self.inference.to_call_config())
             .await?;
 
         Ok(SkillOutput {
