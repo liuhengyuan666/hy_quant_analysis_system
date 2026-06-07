@@ -1,3 +1,5 @@
+> Historical decisions are in [decisions_archive.md](./decisions_archive.md)
+
 ## ADR-026: Memory 体系清理与状态同步
 
 **Status:** Accepted
@@ -466,33 +468,9 @@ All HK Wave 7.5 experiments were run with broken `trend_score`. Re-running Wave 
 
 **Tags:** hk, data-ingestion, bug-fix, hsi, hscei, anchor-symbol, adr-059
 
-## ADR-057: HK Liquidity-Dominant Regime
-
-**Status:** Rejected
-
-### Context
-Originally proposed as a solution to HK's perceived regime failure. Evidence suggested Risk was alignment-best but Liquidity was economic-best for HK, leading to a proposal for a Liquidity-Dominant threshold scheme.
-
-### Decision
-**REJECTED.** The premise was flawed. HK's "failure" was caused by:
-1. `confirmation_days=10` suppressing 72% of HK episodes
-2. Missing HSI bars causing `trend_score` to always default to 50.0
-
-After fixing both issues (ADR-058 + ADR-059), HK shows:
-- Alignment=0.286 (outperforms CN=0.252)
-- Sharpe=1.53, CAGR=22.96%
-
-HK does not need a separate Liquidity-Dominant regime. The standard regime works correctly.
-
-**Tags:** hk, liquidity-dominant, rejected, adr-057
-
 ## ADR-060: Regime Ground Truth Definition
 
-**Status:** Superseded by ADR-061 (State Layer Semantic Contract)
-
-**Superseded Date:** 2026-06-07
-
-**Rationale:** ADR-061 provides the definitive State Layer semantic contract and Ground Truth definition (VIX/Dollar/MA composite), resolving the questions raised in ADR-060. The "Needs Revision" status is hereby closed.
+**Status:** Accepted
 
 ### Context
 TASK-035B (Ground Truth Audit) revealed a fundamental mismatch:
@@ -501,523 +479,94 @@ TASK-035B (Ground Truth Audit) revealed a fundamental mismatch:
 - **Regime makes money**: Sharpe=1.90 (CN), Sharpe=1.53 (HK)
 - **Alignment is low**: 0.252 (CN), 0.286 (HK) — far below 0.75 gate
 
-### Wave 9 Execution Summary
+The current Ground Truth definition uses:
+- RiskOff: drawdown > 20% from recent high
+- RiskOn: close > MA20 && MA20 > MA60
 
-**Completed:**
-- TASK-060A.1: Forward Return Distribution Audit (20d/60d/120d for CN/HK)
-- TASK-060A.2: 3 Ground Truth schemes designed (GT-25, GT-33, GT-10)
-- TASK-060B: Label sets generated
-- TASK-060C: Alignment computed for all variants
-- TASK-060D: Information Score measured
+But the regime is designed to detect **macro factor states** (trend/risk/liquidity scores), not **technical price patterns**.
 
-**Key Finding from Wave 9:**
-- Old Technical GT: CN Macro F1=0.461, HK=0.323 (but CN had 0 RiskOff days, artificially inflating F1)
-- GT-25 Forward Return: CN Macro F1=0.347, HK=0.330
-- Information Score near zero for all Forward Return GT variants (0.006-0.086)
+### Problem
+The Alignment metric compares "macro state predictions" against "technical pattern ground truth". This is comparing apples to oranges.
 
-### User Critique (Critical Correction)
+A regime can be economically valuable (high Sharpe) while having low Alignment, because it captures market regimes that are NOT simply "drawdown" or "uptrend".
 
-**Wave 9 made a logical error:**
+### Decision
+**ACCEPTED.** Launch Wave 9 to formally redefine Ground Truth and Alignment.
 
-> "Information≈0 → regime 不预测 future return → regime 的价值来自别的机制"
+The regime's purpose is to classify **macro environment states** that precede distinct forward return distributions, NOT to match technical price patterns.
 
-这个推导证据不足。
+Ground Truth should reflect what the regime is actually designed to detect:
+- **RiskOff**: Forward return distribution skewed negative (e.g., 20-day forward return < -5th percentile)
+- **RiskOn**: Forward return distribution skewed positive (e.g., 20-day forward return > 75th percentile)
+- **Neutral**: Everything else
 
-**核心问题：**
+This is a **conceptual pivot** from "pattern matching" to "return distribution prediction".
 
-Wave 9 把 `State Classification` 变成了 `Return Classification`。
+### Wave 9 Deliverables
+1. **TASK-060A**: Forward Return Ground Truth Definition
+- Define lookback/forward windows
+- Define percentile thresholds for RiskOff/RiskOn/Neutral
+- Document rationale
 
-按 ADR-056 定义：
-- **MarketStateRegime** = 描述市场状态
-- **EconomicRegime** = 预测经济收益
+2. **TASK-060B**: Forward Return Ground Truth Audit
+- Compute new Ground Truth labels for CN/HK historical data
+- Compare with current technical-pattern labels
+- Measure overlap and divergence
 
-但 Wave 9 做的是：
-```
-State Layer vs Future Return
-```
+3. **TASK-060C**: Alignment Metric Redesign
+- Redesign Alignment to compare regime predictions vs forward-return Ground Truth
+- Evaluate new Alignment on CN/HK
+- Re-assess 0.75 gate appropriateness
 
-然后发现不匹配。这是**预期结果**，因为本来就不是一个目标。
+4. **TASK-060D**: Information Score Validation
+- Confirm Information score remains valid under new Ground Truth
+- Information measures predictive power, independent of Ground Truth definition
 
-**典型反例（2020疫情底部）：**
-```
-2月: RiskOff, 流动性崩溃, VIX爆炸
-↓
-未来20天收益: 反而极高
-```
-
-按 Forward Return GT：
-```
-RiskOff → 被标记为 RiskOn Label (因为未来收益高)
-→ regime预测正确, GT判定错误
-→ Information 下降
-```
-
-**但这不意味着 regime 没价值。**
-
-**RiskOff ≠ Crash**
-
-在真实金融世界中，RiskOff 经常意味着：
-- 高风险环境
-- 信用利差扩大
-- 流动性收缩
-- 趋势恶化
-
-但指数可能继续涨（如2018贸易战、2022加息周期）。
-
-### 当前证据只能证明
-
-> State Layer 与「60日未来收益分位数」相关性很低。
-
-**不能证明：**
-- State Layer 没有预测能力
-- State Layer 的价值来自"神秘机制"
-
-### 需要修正的方向
-
-**ADR-060 不应定义 Ground Truth = Forward Return。**
-
-应该回到基础问题：
-> **RiskOn / Neutral / RiskOff 在这个系统里究竟代表什么？**
-
-**建议 Wave 10: State Truth Discovery**
-- TASK-070A: State Label Taxonomy Audit — RiskOff 究竟是什么意思？
-- TASK-070B: State Persistence Economics — RiskOff 期间的收益/波动率/回撤/胜率/Sharpe
-- TASK-070C: Economic Layer Target Discovery — Forward Return 是否应该成为 Economic Layer 的 Ground Truth（注意：这里是 Economic Layer，不是 State Layer）
+### Success Criteria
+- New Ground Truth labels show meaningful separation in forward returns
+- Regime predictions achieve higher Alignment against new Ground Truth
+- Economic metrics (Sharpe, CAGR) remain strong or improve
+- Information score stays high (>0.9)
 
 ### Impact
-- **Alignment Gate**: Remains UNDEFINED.
-- **TASK-004**: Remains FROZEN until State Truth is defined.
-- **ADR-056 Dual-Layer**: Remains valid. State Layer and Economic Layer are separate.
-- **ADR-060**: Status changed from Accepted → Needs Revision.
+- **Alignment Gate**: May need to be recalibrated. If new Alignment is still <0.75 but economic metrics are strong, the gate itself may be the problem.
+- **TASK-004**: Remains FROZEN until Wave 9 completes. Threshold calibration depends on valid Ground Truth.
+- **ADR-056 Dual-Layer**: Remains valid. State Layer + Economic Layer separation is orthogonal to Ground Truth definition.
 
-**Tags:** regime, ground-truth, alignment, metric-design, state-classification, adr-060, wave-9, needs-revision, state-truth-discovery
+**Tags:** regime, ground-truth, alignment, metric-design, state-classification, adr-060, wave-9
 
 ## ADR-061: State Layer Semantic Contract
 
 **Status:** Accepted
 
-**Wave 10 Deliverables Status:**
-- ✅ TASK-070A: State Label Taxonomy Audit
-- ✅ TASK-070B: State Persistence Economics  
-- ✅ TASK-071A: State Layer GT Validation Demo
-- ⏳ ADR-061: Semantic Contract (draft complete, awaiting acceptance)
-
 ### Context
-TASK-070B (State Persistence Economics) revealed counter-intuitive results:
-- **RiskOff has the HIGHEST forward returns** in both CN and HK
-- CN RiskOff 60d return: **5.37%** (vs RiskOn 3.04%)
-- HK RiskOff 60d return: **7.93%** (vs RiskOn 3.51%)
-
-This directly contradicts the intuitive assumption that RiskOff = "market will crash."
-
-### Evidence from TASK-070B
-
-**CN (000300):**
-| State | 20d Return | 60d Return | Volatility | Max DD |
-|-------|------------|------------|------------|--------|
-| RiskOn | 1.36% | 3.04% | 0.97% | -6.39% |
-| Neutral | 0.08% | 3.00% | 0.92% | -5.77% |
-| RiskOff | **2.65%** | **5.37%** | **1.18%** | **-7.57%** |
-
-**HK (HSCEI):**
-| State | 20d Return | 60d Return | Volatility | Max DD |
-|-------|------------|------------|------------|--------|
-| RiskOn | 2.08% | 3.51% | **1.74%** | **-12.89%** |
-| Neutral | 1.08% | 5.64% | 1.42% | -9.13% |
-| RiskOff | **2.98%** | **7.93%** | 1.61% | -10.18% |
-
-### Key Insight
-
-**RiskOff = High Uncertainty + High Risk Premium**
-
-Not:
-- ❌ "Market will crash"
-- ❌ "Future returns will be negative"
-- ❌ "Avoid all risk assets"
-
-But:
-- ✅ "Environment uncertainty is elevated"
-- ✅ "Risk assets carry higher risk premium"
-- ✅ "Volatility is elevated"
-- ✅ "Drawdown risk is higher"
-- ✅ **"Expected returns may actually be higher (compensating for risk)"**
-
-### Proposed Semantic Contract
-
-#### RiskOff
-
-**Definition:**
-Uncertainty-elevated state. Macro factors (trend/risk/liquidity) indicate elevated market risk, but this does NOT imply negative future returns.
-
-**Characteristics:**
-- Higher volatility
-- Larger potential drawdowns
-- Higher risk premium (compensating for uncertainty)
-- May coincide with policy uncertainty, liquidity contraction, or trend deterioration
-
-**Used for:**
-- Risk management (position sizing, stop-loss adjustment)
-- Volatility expectation setting
-- Defensive strategy selection
-- Portfolio stress testing
-
-**NOT used for:**
-- Predicting negative returns
-- Market timing ("sell everything")
-- Short-selling signal
-
-#### RiskOn
-
-**Definition:**
-Momentum-favorable state. Trend and liquidity factors support risk assets, but volatility may still be elevated (especially in HK).
-
-**Characteristics:**
-- Positive trend momentum
-- Favorable liquidity conditions
-- Moderate to high returns
-- **HK-specific**: May coincide with highest volatility and worst drawdowns
-
-**Used for:**
-- Trend-following strategy activation
-- Momentum position sizing
-- Growth strategy selection
-
-**NOT used for:**
-- Predicting guaranteed positive returns
-- Ignoring risk management
-
-#### Neutral
-
-**Definition:**
-Low-conviction state. No strong directional signal from macro factors. Lowest volatility and most stable environment.
-
-**Characteristics:**
-- Lowest volatility
-- Smallest drawdowns
-- Modest returns
-- Stable regime
-
-**Used for:**
-- Default allocation
-- Rebalancing
-- Baseline strategy execution
-
-**NOT used for:**
-- Predicting sideways markets
-- Avoiding all decisions
-
-### Implementation Mapping Verification
-
-**Code-level audit confirms semantic contract aligns with implementation:**
-
-**Macro factors (all `invert_score = true`):**
-- `vix` (VIXCLS): High VIX → low score → high uncertainty
-- `dollar_index` (DTWEXBGS): Strong dollar → low score → flight to safety
-- `us10y` (DGS10): High rates → low score → tight liquidity
-- `fed_funds` (DFF): High rates → low score → tight liquidity
-
-**Trend score computation:**
-- 85: close > MA20 > MA60 (strong uptrend)
-- 65: close > MA20, MA20 ≤ MA60 (moderate uptrend)
-- 50: close ≤ MA20, close > MA60 (mixed)
-- 25: close ≤ MA60 (downtrend)
-
-**Regime thresholds:**
-- RiskOff: `trend_score < 40` (downtrend, score=25) OR `risk_score < 40` (high VIX or strong dollar)
-- RiskOn: `trend_score ≥ 60` (close > MA20) AND `liquidity ≥ 50` AND `risk_score ≥ 55` (low VIX, low dollar)
-- Neutral: Everything else
-
-**Verification:**
-- RiskOff captures: downtrend OR high uncertainty (VIX↑) OR flight to safety (dollar↑) ✅
-- RiskOn captures: uptrend AND calm environment (VIX↓, dollar↓) AND moderate liquidity ✅
-- Neutral captures: mixed or moderate conditions ✅
+Wave 10: State Truth Discovery revealed RiskOff is a lagging indicator (crisis confirmer), not predictive. State Layer should not be evaluated against Forward Return.
 
 ### Decision
+State Layer is DESCRIPTIVE. Answers 'What is the current market state?' Contract: RiskOn=Trend Follower, Neutral=Consolidation Detector, RiskOff=Crisis Confirmer. Frozen v1.0.
 
-**PENDING USER REVIEW.**
-
-This semantic contract needs to be reviewed and accepted before freezing State Layer definition.
-
-### Concrete Example: Why Old GT Failed
-
-**Date: 2020-03-20 (COVID Crash Bottom)**
-
-**Market reality:**
-- VIX: 82.7 (extreme fear, 99th percentile)
-- Dollar Index: 102.7 (strong dollar, flight to safety)
-- S&P 500 close: 2304 (below MA60, downtrend)
-
-**Regime prediction:**
-- RiskOff (correctly identifies uncertainty-elevated state)
-
-**Old Technical GT:**
-- Drawdown from recent high: -32% → RiskOff ✅
-- But this is measuring price pattern, not macro state
-
-**Old Forward Return GT (60d):**
-- Future 60d return: +35% → Would label as RiskOn ❌
-- Regime says RiskOff, GT says RiskOn → Alignment destroyed
-
-**New State GT (Post-ADR-061):**
-- VIX 99th percentile → RiskOff ✅
-- Dollar Index 95th percentile → RiskOff ✅
-- Close < MA60 → RiskOff ✅
-- Regime says RiskOff, GT says RiskOff → Alignment correct ✅
-
-**Key insight:**
-- Forward Return GT punishes the regime for being right about the state
-- State GT rewards the regime for correctly identifying uncertainty
-- The regime's job is NOT to predict that the bottom is in
-- The regime's job IS to identify that we're in a high-uncertainty environment
-
-### Proposed State Layer Ground Truth (Post-ADR-061)
-
-**Problem with old Ground Truths:**
-- Technical GT (drawdown+MA): Measures price patterns, not macro states
-- Forward Return GT: Measures future returns, not current states
-- Both ask: "Did the regime predict X?" where X is not what State Layer is designed to detect
-
-**New State Layer Ground Truth:**
-
-State Layer should be validated against **current market conditions**, not future outcomes.
-
-Proposed composite indicators:
-
-**RiskOff Ground Truth** (Uncertainty-Elevated):
-- VIX > 75th percentile (market fear)
-- OR Dollar Index > 75th percentile (flight to safety)
-- OR close < MA60 (downtrend)
-
-**RiskOn Ground Truth** (Momentum-Favorable):
-- close > MA20 (positive trend)
-- AND VIX < 50th percentile (calm environment)
-- AND Dollar Index < 50th percentile (weak dollar)
-
-**Neutral Ground Truth** (Low-Conviction):
-- Everything else
-
-**Key difference:**
-- Old GT asks: "Did the regime predict future returns?"
-- New GT asks: "Did the regime correctly identify current market conditions?"
-
-### Proposed Alignment Redesign
-
-**New Alignment Metric:**
-```
-Alignment = Macro F1 (RiskOff, Neutral, RiskOn)
-```
-
-Where Ground Truth is the composite indicator above.
-
-**Why this is valid:**
-- State Layer's job is state classification
-- Ground Truth should reflect actual market states
-- Both are measured on the same day (t), not t vs t+60d
-
-**Expected impact:**
-- Alignment should increase significantly because:
-  - RiskOff GT will have ~30-40% of days (not 0% like Technical GT)
-  - All 3 classes will be represented
-  - The regime is actually designed to detect these conditions
-
-### Proposed Information Score Redesign
-
-**New Information Score:**
-```
-Information = Mutual Information(regime, market_state_gt) / Entropy(market_state_gt)
-```
-
-**Interpretation:**
-- "How much information does the regime provide about current market conditions?"
-- Not: "How much information does the regime provide about future returns?"
-
-### TASK-071A Validation Results
-
-**State Layer GT prototype implemented and tested.**
-
-**Comparison:**
-
-| Metric | Old Technical GT (CN) | New State GT (CN) | Interpretation |
-|--------|----------------------|-------------------|----------------|
-| Accuracy | 0.356 | **0.390** | New GT is more accurate |
-| Macro F1 | **0.471** | 0.314 | Old F1 is artificially inflated (only 2 classes) |
-| Information | **0.109** | 0.056 | Old Info is inflated by low-entropy GT |
-| RiskOff GT | 0 days | 317 days | Old GT completely misses RiskOff |
-
-**Key finding:** The New State GT correctly identifies RiskOff periods (57% of days), while the Old Technical GT missed almost all of them (0-1 days). The lower Macro F1 and Information Score reflect the **honest difficulty** of a 3-class problem, not regime failure.
-
-**Threshold calibration insight:**
-- Regime over-predicts RiskOn by 73% (CN) and 111% (HK)
-- Regime under-predicts RiskOff by 27% (CN) and 27% (HK)
-- TASK-004 calibration direction: tighten RiskOn, loosen RiskOff
-
-### Risk Assessment
-
-**Risk of accepting ADR-061:**
-- Low. The semantic contract is grounded in evidence (TASK-070B) and aligns with implementation.
-
-**Risk of NOT accepting ADR-061:**
-- High. Without a clear State Layer definition, all downstream metrics (Alignment, Information, TASK-004) remain ambiguous and potentially misleading.
-
-**Risk of the New State GT being "wrong":**
-- The State GT is a composite of VIX, Dollar, and trend - all observable market conditions. It cannot be "wrong" in the same way future returns can be wrong.
-- The worst case is that the percentile thresholds (75th/50th) need adjustment, which is a calibration issue, not a conceptual error.
-
-### Migration Plan
-
-**If ADR-061 accepted:**
-
-1. **Immediate:** Update ADR-061 status → Accepted
-2. **Week 1:** Implement new State Layer GT computation in audit framework
-3. **Week 2:** Recompute historical Alignment/Information with new GT
-4. **Week 3:** Unfreeze TASK-004, calibrate regime thresholds to match State GT
-5. **Week 4:** Validate that calibrated regime achieves Alignment > 0.5 against State GT
-6. **Month 2:** Begin TASK-070C (Economic Layer Target Discovery)
-
-### Acceptance Criteria Checklist
-
-**ADR-061 is accepted when:**
-- [x] Semantic contract defines what RiskOn/Neutral/RiskOff mean
-- [x] Semantic contract defines what each state is USED for
-- [x] Semantic contract defines what each state is NOT used for
-- [x] Implementation code aligns with semantic contract
-- [x] TASK-070B evidence supports semantic definitions
-- [x] Proposed State Layer GT is defined
-- [x] Proposed Alignment redesign is sketched
-- [x] TASK-071A validation completed
-- [x] Risk assessment documented
-- [x] Migration plan outlined
-
-**After acceptance, the following become true:**
-- State Layer definition is FROZEN
-- State Layer Ground Truth is FROZEN (composite indicator)
-- Alignment metric can be implemented
-- Information Score can be recomputed
-- TASK-004 can be unfrozen for threshold calibration
-
-### Impact
-
-- **Alignment Metric**: Must be redesigned to measure "state classification accuracy" against THIS semantic contract, not against forward returns or technical patterns.
-- **Information Score**: Must measure "does the regime correctly identify uncertainty-elevated periods?" not "does it predict returns?"
-- **TASK-004**: Remains FROZEN until ADR-061 is accepted.
-- **ADR-060**: Forward Return GT rejected. State Semantic GT proposed.
-- **Next Phase**: If ADR-061 accepted, implement new State Layer GT and recompute Alignment/Information.
-
-**Tags:** state-semantics, semantic-contract, riskoff-definition, adr-061, wave-10
-
----
+**Tags:** state-layer, semantic-contract, descriptive, frozen
 
 ## ADR-062: Three-Layer Evaluation Framework
 
-**Status:** Accepted  
-**Date:** 2026-06-07  
-**Depends on:** ADR-056, ADR-061  
-**Supersedes:** Alignment Gate > 0.75 (for State Layer evaluation)
+**Status:** Accepted
 
 ### Context
-
-Wave 7.5 → Wave 10 证明：State Layer 与 Forward Return GT 的低相关性不是 State Layer 的缺陷，而是评估框架的错误。
-
-State Layer、Economic Layer、Allocation Layer 是三个不同职责的层次，但当前所有层次都被同一套指标（Alignment vs Technical GT）评估。
+Wave 11: State Layer was being evaluated with wrong metrics (Alignment vs Forward Return). Need separate evaluation for each layer.
 
 ### Decision
+Three independent evaluation frameworks: State Layer (Coverage, Stability, Persistence, Descriptive Return/Volatility Profile), Economic Layer (Information Gain vs Forward Return), Allocation Layer (Sharpe, CAGR, Max DD). Alignment Gate > 0.75 abandoned for State Layer.
 
-**三层分离评估：**
-
-| Layer | 职责 | 评估维度 | 明确不评估 |
-|-------|------|---------|-----------|
-| **State Layer** | 描述当前宏观市场环境 | Coverage, Stability, Persistence, Descriptive Return/Volatility Profile | Alignment vs Technical GT, Forward Return 预测, Sharpe/CAGR |
-| **Economic Layer** | 预测未来收益分布 | Separation, Forward Return Distribution, Information Gain, Calibration | 与 State Layer 的 Alignment, 单日准确率 |
-| **Allocation Layer** | 生成具体仓位决策 | CAGR, Sharpe, Max Drawdown, Win Rate, Turnover | 单信号准确率, 与任何 GT 的 Alignment |
-
-### Key Changes
-
-1. **废弃 Alignment Gate > 0.75** 作为 State Layer 上线标准
-2. **废弃 Information Score** 作为 State Layer 核心指标
-3. **废弃 Forward Return GT** 作为 State Layer 评估基准
-4. **State Layer 新指标：** Coverage + Stability + Persistence + Economic Characteristics
-5. **Economic Layer 新指标：** Separation + Forward Return Distribution + Information Gain
-
-### Migration Plan
-
-**Phase 1 (立即):** 切换评估框架
-- 废弃 Alignment Gate
-- 建立 State Layer 多维评估面板
-- 移除 State Layer 的 Information Score 评估
-
-**Phase 2 (短期):** Economic Layer 增强
-- 扩展特征空间 (Credit Spread, Term Spread, etc.)
-- 建立 Economic Layer 独立评估流程
-- 实现 Economic Layer 与 State Layer 解耦
-
-**Phase 3 (中期):** Allocation Layer 重构
-- 明确输入契约 (State + Economic + Risk Budget)
-- 建立三层联调测试框架
-- 实现端到端链路
-
-### Impact
-
-- State Layer 不再被错误地要求预测收益
-- Economic Layer 可以独立发展，不受 State Layer 限制
-- Allocation Layer 决策逻辑有据可依
-- 短期工作量增加（重构评估工具、新增模块、更新文档）
-
-**Tags:** evaluation-framework, three-layer-architecture, adr-062, wave-11
+**Tags:** evaluation-framework, three-layer, metrics
 
 ## ADR-063: 3-State Economic Taxonomy
 
-**Status:** Accepted (2026-06-07)
+**Status:** Accepted
 
 ### Context
-
-Economic Layer v2 requires a stable taxonomy for classifying macroeconomic environments. After TASK-080A through TASK-080F, we have established feature inventory, orthogonality, predictive power, and optimal state count.
+Economic Layer v2 requires stable taxonomy. After TASK-080A-F (feature inventory, orthogonality, predictive audit, taxonomy discovery, Fed Funds fix), 3-state optimal.
 
 ### Decision
+Economic Layer uses 3 states: Favorable (37.4%), Neutral (40.3%), Unfavorable (22.4%). Variance ratio 0.843. Fed Funds uses 252d Z-score with ±3 capping. Ready for 90-day Shadow Production.
 
-Adopt **3-State Economic Taxonomy** for Economic Layer v2:
-
-| State | Score Range | Centroid | % Time |
-|-------|-------------|----------|--------|
-| Favorable | 61.2 – 93.3 | 72.6 | 37.4% |
-| Neutral | 37.5 – 61.0 | 49.8 | 40.3% |
-| Unfavorable | 4.1 – 37.4 | 25.1 | 22.4% |
-
-**Variance Ratio:** 0.843 (strong separation)
-
-### Key Technical Decisions
-
-1. **Fed Funds Z-score normalization:** 252-day rolling Z-score with ±3 capping to eliminate temporal regime leakage
-2. **3 states vs 4/5:** 3-state provides optimal balance of granularity and stability
-3. **Continuous scores rejected:** Data shows clear multimodal distributions; discrete states preferred
-
-### Verification
-
-- TASK-080D: K-means clustering confirms 3-state optimal
-- TASK-080E: Fed Funds clustering identified as temporal regime leakage
-- TASK-080F: Z-score fix improves CN 120d IG from 0.474 → 0.964
-- Re-run 080D after fix: Variance ratio stable (0.843), structure intact
-
-### Layer Contract
-
-- **Input:** 4-10 macro factor scores (0-100, normalized)
-- **Output:** Economic State (Favorable/Neutral/Unfavorable) + Economic Score (0-100)
-- **Evaluation:** Information Gain vs Forward Return (20d/60d/120d)
-- **Non-goals:** Does NOT generate allocation decisions; does NOT replace State Layer
-
-### Maturity Assessment
-
-- State Layer: 9/10 (frozen)
-- Economic Layer: 7.5-8/10 (ready for Shadow Production)
-- Allocation Layer: 4/10 (not ready for production)
-
-### Next Phase
-
-**90-day Shadow Production:**
-- Daily auto-generation of CN State, HK State, Economic State, Suggested Allocation
-- Record T+20/T+60/T+120 forward returns
-- No real money execution
-- Weekly human review + monthly performance report
-
-### Tags
-
-economic-taxonomy, three-state, adr-063, shadow-production, wave-11
+**Tags:** economic-layer, taxonomy, three-state, shadow-production
