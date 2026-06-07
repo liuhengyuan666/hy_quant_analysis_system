@@ -233,7 +233,7 @@ cargo run -p quant-cli -- compute-signals
 
 ```bash
 cargo run -p quant-cli -- refresh-all
-cargo run -p quant-cli -- refresh-all --to 2026-04-26
+cargo run -p quant-cli -- refresh-all --to 2026-06-05
 ```
 
 说明：
@@ -345,7 +345,7 @@ cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
 
 ```bash
 cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-04-07
+cargo run -p quant-cli -- export-report --date 2026-06-04
 cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
 ```
 
@@ -466,13 +466,13 @@ cargo run -p quant-desktop
 
 ```bash
 # 1. 拉取行情（顺序：必须先有数据）
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
+cargo run -p quant-cli -- ingest-daily --from 2026-06-01 --to 2026-06-05
 
 # 2. 计算技术指标
 cargo run -p quant-cli -- compute-indicators
 
 # 3. 计算宏观与市场环境（同时重建 macro / regime / environment / strategy_state）
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-08
+cargo run -p quant-cli -- compute-macro --from 2026-06-01 --to 2026-06-05
 
 # 4. 计算轮动强弱
 cargo run -p quant-cli -- compute-rotation
@@ -528,7 +528,7 @@ cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
 
 # 推荐默认路径（一条命令完成全链路刷新）
-cargo run -p quant-cli -- refresh-all --to 2026-05-08
+cargo run -p quant-cli -- refresh-all --to 2026-06-05
 
 # V3 一键同步导出（自动检查 gate → 刷新 → 导出）
 cargo run -p quant-cli -- sync-and-export --scope global
