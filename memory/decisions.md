@@ -488,7 +488,11 @@ HK does not need a separate Liquidity-Dominant regime. The standard regime works
 
 ## ADR-060: Regime Ground Truth Definition
 
-**Status:** Needs Revision (Wave 9 Completed, User Critique Incorporated)
+**Status:** Superseded by ADR-061 (State Layer Semantic Contract)
+
+**Superseded Date:** 2026-06-07
+
+**Rationale:** ADR-061 provides the definitive State Layer semantic contract and Ground Truth definition (VIX/Dollar/MA composite), resolving the questions raised in ADR-060. The "Needs Revision" status is hereby closed.
 
 ### Context
 TASK-035B (Ground Truth Audit) revealed a fundamental mismatch:
@@ -922,7 +926,7 @@ State Layer、Economic Layer、Allocation Layer 是三个不同职责的层次�
 
 | Layer | 职责 | 评估维度 | 明确不评估 |
 |-------|------|---------|-----------|
-| **State Layer** | 描述当前宏观市场环境 | Coverage, Stability, Persistence, Economic Characteristics | Alignment vs Technical GT, Forward Return 预测, Sharpe/CAGR |
+| **State Layer** | 描述当前宏观市场环境 | Coverage, Stability, Persistence, Descriptive Return/Volatility Profile | Alignment vs Technical GT, Forward Return 预测, Sharpe/CAGR |
 | **Economic Layer** | 预测未来收益分布 | Separation, Forward Return Distribution, Information Gain, Calibration | 与 State Layer 的 Alignment, 单日准确率 |
 | **Allocation Layer** | 生成具体仓位决策 | CAGR, Sharpe, Max Drawdown, Win Rate, Turnover | 单信号准确率, 与任何 GT 的 Alignment |
 

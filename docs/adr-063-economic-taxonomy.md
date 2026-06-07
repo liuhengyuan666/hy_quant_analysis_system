@@ -176,27 +176,82 @@ score = 50.0 - capped_z * 15.0  // Inverted: high rate = tight = low score
 
 ## Shadow Production Protocol
 
-### Daily Output
+### Phase A: State Layer Observation (Days 1-30)
+
+**Goal:** Validate State Layer stability in live market conditions.
+
+**Daily Output:**
+```
+Date: YYYY-MM-DD
+CN State: {RiskOn | Neutral | RiskOff}
+HK State: {RiskOn | Neutral | RiskOff}
+```
+
+**Recording:**
+- State transitions: Log frequency and direction
+- State persistence: Average duration per state
+- Coverage: % of days with valid state (should be ~100%)
+
+**Evaluation:**
+- Compare with ADR-061 State Truth (drawdown + MA pattern)
+- Validate State Layer contract: descriptive, not predictive
+
+### Phase B: Economic Layer Integration (Days 31-60)
+
+**Goal:** Integrate Economic Layer v1 (4 factors) and validate taxonomy.
+
+**Daily Output:**
+```
+Date: YYYY-MM-DD
+CN State: {RiskOn | Neutral | RiskOff}
+HK State: {RiskOn | Neutral | RiskOff}
+Economic State: {Favorable | Neutral | Unfavorable}
+Economic Score: 0-100
+Factor Contributions: {VIX: ±X, 10Y: ±X, Dollar: ±X, FedFunds: ±X}
+```
+
+**Recording:**
+- T+20 forward return vs Economic State
+- T+60 forward return vs Economic State
+- T+120 forward return vs Economic State
+- Factor score stability (Z-score distribution for Fed Funds)
+- State transition matrix (Economic State → Future Economic State)
+
+**Evaluation:**
+- Information Gain vs Forward Return (target: IG > 0.3)
+- Quintile return monotonicity
+- State distribution stability (should remain ~37/40/22)
+
+### Phase C: Allocation Layer Prototyping (Days 61-90)
+
+**Goal:** Begin paper-trading signals (no real money execution).
+
+**Daily Output:**
 ```
 Date: YYYY-MM-DD
 CN State: {RiskOn | Neutral | RiskOff}
 HK State: {RiskOn | Neutral | RiskOff}
 Economic State: {Favorable | Neutral | Unfavorable}
 Suggested Allocation: {Conservative | Neutral | Aggressive}
+Confidence: 0-100
 ```
 
-### Recording
-- T+20 return: Record actual 20-day forward return
-- T+60 return: Record actual 60-day forward return
-- T+120 return: Record actual 120-day forward return
-- State transitions: Log frequency and direction
-- Factor scores: Daily snapshot for post-hoc analysis
+**Recording:**
+- Paper portfolio P&L (hypothetical, no execution)
+- Sharpe, CAGR, Max Drawdown of paper portfolio
+- Signal accuracy: Did Suggested Allocation match optimal ex-post allocation?
+- Turnover: Frequency of allocation changes
 
-### Constraints
+**Evaluation:**
+- Paper portfolio Sharpe vs buy-and-hold
+- Allocation Layer maturity assessment (target: reach 6/10)
+
+### Constraints (All Phases)
 - **NO real money execution**
-- Allocation suggestions are for observation only
 - Weekly human review required
 - Monthly performance report
+- All suggestions are for observation and validation only
+- Allocation decisions remain human judgment
 
 ---
 
@@ -214,9 +269,17 @@ Suggested Allocation: {Conservative | Neutral | Aggressive}
 - K-means boundaries are data-dependent; require periodic re-validation
 - Fed Funds Z-score requires 252-day warmup; early data less reliable
 
+### Known Limitations (v1)
+
+**Factor overlap with State Layer:**
+Economic Layer v1 shares all 4 factors (VIX, 10Y, Dollar, Fed Funds) with State Layer. The differentiation is in the combination method (K-means clustering vs. threshold rules) and evaluation target (Forward Return vs. State Truth). This is a **transient v1 limitation** — TASK-081 will integrate 6 additional factors (HY Spread, 2Y, Term Spread, SOFR, Initial Claims, NFCI) that are unique to Economic Layer.
+
+**Factor expansion migration:**
+The 3-state structure (Favorable/Neutral/Unfavorable) is frozen. When TASK-081 expands the factor space from 4 to 10, cluster centroids and state assignments are expected to recalibrate. This is a parameter update, not a taxonomy redesign.
+
 ### Risks
-- **Factor addition risk:** Adding 6 missing factors may change taxonomy
-  - Mitigation: Re-run 080D after full factor integration
+- **Factor addition risk:** Adding 6 missing factors may change cluster boundaries
+  - Mitigation: Re-run 080D after full factor integration; 3-state structure stable
 - **Regime change risk:** Future monetary policy regimes may violate historical Z-score distribution
   - Mitigation: Monitor Z-score distribution in Shadow Production
 - **Lookback mismatch:** Other factors use 20d lookback, Fed Funds uses 252d
