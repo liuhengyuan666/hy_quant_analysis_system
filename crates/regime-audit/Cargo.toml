@@ -1,0 +1,15 @@
+[package]
+name = "regime-audit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+core-domain = { path = "../core-domain" }
+gt-regime-generator = { path = "../gt-regime-generator" }
+market-state-extractor = { path = "../market-state-extractor" }
+chrono = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]

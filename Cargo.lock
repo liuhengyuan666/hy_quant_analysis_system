@@ -126,6 +126,7 @@ dependencies = [
  "market-store",
  "report-engine",
  "research-context",
+ "research-renderer",
  "research-skills",
  "rotation-engine",
  "serde",
@@ -227,6 +228,20 @@ name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
+
+[[package]]
+name = "attohttpc"
+version = "0.28.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07a9b245ba0739fc90935094c29adbaee3f977218b5fb95e822e261cda7f56a3"
+dependencies = [
+ "http",
+ "log",
+ "native-tls",
+ "serde",
+ "serde_json",
+ "url",
+]
 
 [[package]]
 name = "autocfg"
@@ -777,10 +792,10 @@ name = "data-ingestion"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "attohttpc",
  "chrono",
  "core-domain",
  "macro-engine",
- "reqwest 0.12.28",
  "serde",
  "serde_json",
 ]
@@ -1554,6 +1569,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gt-regime-generator"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "market-state-extractor",
+ "serde",
+]
+
+[[package]]
 name = "gtk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2265,14 +2290,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "market-state-extractor"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "serde",
+]
+
+[[package]]
 name = "market-store"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "attohttpc",
  "backtest-engine",
+ "base64 0.22.1",
  "chrono",
  "core-domain",
- "reqwest 0.12.28",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3120,10 +3155,19 @@ dependencies = [
  "app-service",
  "chrono",
  "clap",
+ "core-domain",
+ "gt-regime-generator",
+ "indicator-engine",
+ "market-state-extractor",
  "market-store",
+ "regime-audit",
+ "research-benchmark",
  "research-skills",
+ "research-validation",
+ "serde",
  "serde_json",
  "tokio",
+ "toml 0.8.2",
  "tracing",
  "tracing-subscriber",
 ]
@@ -3361,6 +3405,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
+name = "regime-audit"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "gt-regime-generator",
+ "market-state-extractor",
+ "serde",
+]
+
+[[package]]
 name = "report-engine"
 version = "0.1.0"
 dependencies = [
@@ -3378,7 +3433,6 @@ checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "futures-channel",
  "futures-core",
  "futures-util",
  "http",
@@ -3485,6 +3539,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "research-renderer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "core-domain",
+ "report-engine",
+ "research-context",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "research-skills"
 version = "0.1.0"
 dependencies = [
@@ -3498,6 +3564,17 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tokio",
+]
+
+[[package]]
+name = "research-validation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "core-domain",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
