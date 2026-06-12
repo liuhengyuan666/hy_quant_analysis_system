@@ -12,12 +12,12 @@ shadow_production
 - [Todo] [TASK-008] [Accepted] [ADR-058] Persistence Simplification (confirmation_days = 1).
 - [Todo] [TASK-009] [Accepted] [ADR-059] HK Anchor Symbol Fix (HSI → HSCEI).
 - [Todo] [TASK-010] [In Progress] [ADR-060] Regime Ground Truth Definition — Wave 9 launched. Ground Truth being redefined from "technical patterns" to "forward return distributions".
-- [Todo] [TASK-080A] 13 MVP candidate factors identified. Architecture revised to multidimensional Economic Scores output. NFCI downgraded to Composite Validation Factor.
-- [Todo] [TASK-080B] 10 factors selected from 13 candidates. 4-table analysis (Pearson, Spearman, MI, Predictive Orthogonality). Removed IG Spread, BBB Spread, M2.
-- [Todo] [TASK-080C] Empirical analysis on 4 existing factors (VIX, 10Y, Dollar, FedFunds) + research-based estimates for 6 missing factors. VIX strong negative predictor, Dollar very strong for HK.
-- [Todo] [TASK-080D] K-means clustering analysis. 3-State recommended (Favorable/Neutral/Unfavorable) with variance ratio 0.862. Fed Funds clustering identified as bias source.
-- [Todo] [TASK-080E] Identified Fed Funds raw level as regime identifier (not predictive signal). 33.3% near-zero, 44.9% high. Z-score is correct metric with IG=1.005 for CN 120d.
-- [Todo] [TASK-080F] Implemented 252d Z-score with ±3 capping in macro-engine. Updated 2,341 ClickHouse rows. Re-ran 080C/080D. CN IG improved 0.474→0.964. Taxonomy stable.
+- [Todo] [TASK-010] [TASK-080A] 13 MVP candidate factors identified. Architecture revised to multidimensional Economic Scores output. NFCI downgraded to Composite Validation Factor.
+- [Todo] [TASK-011] [TASK-080B] 10 factors selected from 13 candidates. 4-table analysis (Pearson, Spearman, MI, Predictive Orthogonality). Removed IG Spread, BBB Spread, M2.
+- [Todo] [TASK-012] [TASK-080C] Empirical analysis on 4 existing factors (VIX, 10Y, Dollar, FedFunds) + research-based estimates for 6 missing factors. VIX strong negative predictor, Dollar very strong for HK.
+- [Todo] [TASK-013] [TASK-080D] K-means clustering analysis. 3-State recommended (Favorable/Neutral/Unfavorable) with variance ratio 0.862. Fed Funds clustering identified as bias source.
+- [Todo] [TASK-014] [TASK-080E] Identified Fed Funds raw level as regime identifier (not predictive signal). 33.3% near-zero, 44.9% high. Z-score is correct metric with IG=1.005 for CN 120d.
+- [Todo] [TASK-015] [TASK-080F] Implemented 252d Z-score with ±3 capping in macro-engine. Updated 2,341 ClickHouse rows. Re-ran 080C/080D. CN IG improved 0.474→0.964. Taxonomy stable.
 - [Todo] [TASK-081] Integrate 6 missing factors (HY Spread, 2Y, Term Spread, SOFR, Initial Claims, NFCI). Expand from 4 to 10 factors. Re-run orthogonality and taxonomy after full factor integration. GATED until 90-day Shadow Production completes.
 
 # Constraints
