@@ -3,14 +3,13 @@ use async_trait::async_trait;
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
-    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
-    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot,
+    EnvironmentSnapshot, FredFileConfig, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
+    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot, StartupFreshnessCheck,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
 };
-use indicator_engine::build_indicator_snapshots;
 use macro_engine::{build_macro_snapshots, build_market_regimes, build_strategy_state};
 use market_store::StorageConfig;
 use report_engine::{
@@ -20,7 +19,6 @@ use report_engine::{
     WatchlistBreadthSnapshot,
 };
 use research_renderer::DashboardInsightComposer;
-use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
@@ -527,7 +525,14 @@ fn build_trust_summary(
     data_health: Option<&DataHealthSummary>,
     calendar: &core_domain::calendar::TradingCalendar,
 ) -> TrustSummary {
-    let freshest_market_date = data_health.and_then(|dh| dh.freshest_market_date);
+    let freshest_market_date = data_health
+        .and_then(|dh| dh.freshest_market_date)
+        .or_else(|| {
+            pipeline_dates
+                .freshest_market_date
+                .as_deref()
+                .and_then(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
+        });
     let trading_instruments: Vec<_> = match freshest_market_date {
         Some(date) => scoped_instruments
             .iter()
@@ -1422,6 +1427,165 @@ impl AppContext {
         })
     }
 
+    /// Parallel ingestion using Tokio spawn_blocking + Semaphore for concurrent fetch.
+    /// Data-ingestion crate remains sync; parallelism is achieved by wrapping sync fetches
+    /// in blocking tasks with a concurrency limit of 2 (conservative for external provider rate limits).
+    pub async fn ingest_daily_parallel(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        progress_callback: Option<Box<dyn Fn(&str) + Send>>,
+    ) -> Result<IngestSummary> {
+        use std::sync::Arc;
+        use tokio::sync::Semaphore;
+
+        let instruments = load_universe(&self.storage.universe_abspath()?)?;
+        let total = instruments.len();
+        let semaphore = Arc::new(Semaphore::new(2));
+        let mut tasks = Vec::new();
+
+        for (idx, instrument) in instruments.iter().enumerate() {
+            let permit = semaphore.clone().acquire_owned().await?;
+            let instrument = instrument.clone();
+            let from = from;
+            let to = to;
+            let progress = progress_callback.as_ref().map(|cb| {
+                let milestone = total / 10;
+                if milestone == 0 || idx % milestone == 0 || idx + 1 == total {
+                    cb(&format!(
+                        "ingest progress: {}/{} symbols ({}%)",
+                        idx + 1,
+                        total,
+                        ((idx + 1) * 100) / total
+                    ));
+                }
+            });
+            let task = tokio::task::spawn_blocking(move || {
+                let _permit = permit; // hold permit until task completes
+                let _ = progress; // report progress before fetch starts
+                let result = fetch_daily_bars(&instrument, from, to);
+                (instrument.symbol.clone(), result)
+            });
+            tasks.push(task);
+        }
+
+        let mut total_rows = 0usize;
+        let mut failed_symbols = Vec::new();
+        let mut all_bars: Vec<core_domain::DailyBar> = Vec::new();
+
+        for task in tasks {
+            match task.await {
+                Ok((symbol, result)) => {
+                    match result {
+                        Ok(bars) => {
+                            total_rows += bars.len();
+                            all_bars.extend(bars);
+                        }
+                        Err(error) => {
+                            failed_symbols.push(format!("{}: {}", symbol, error));
+                        }
+                    }
+                }
+                Err(join_error) => {
+                    if join_error.is_panic() {
+                        let panic_info = join_error.into_panic();
+                        let panic_msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                            s.to_string()
+                        } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                            s.clone()
+                        } else {
+                            "unknown panic".to_string()
+                        };
+                        failed_symbols.push(format!("task panicked: {}", panic_msg));
+                    } else {
+                        failed_symbols.push(format!("task cancelled or failed: {}", join_error));
+                    }
+                }
+            }
+        }
+
+        // Group by symbol for batch insert (serial to avoid ClickHouse write pressure)
+        let mut bars_by_symbol: std::collections::BTreeMap<String, Vec<core_domain::DailyBar>> = std::collections::BTreeMap::new();
+        for bar in all_bars {
+            bars_by_symbol.entry(bar.symbol.clone()).or_default().push(bar);
+        }
+
+        for (symbol, bars) in bars_by_symbol {
+            if let Err(error) = market_store::insert_daily_bars(&self.storage, &symbol, &bars) {
+                failed_symbols.push(format!("{}: {}", symbol, error));
+            }
+        }
+
+        Ok(IngestSummary {
+            symbols: instruments.len(),
+            rows: total_rows,
+            from_date: from.to_string(),
+            to_date: to.to_string(),
+            failed_symbols,
+        })
+    }
+
+    pub fn check_startup_freshness(&self) -> Result<StartupFreshnessCheck> {
+        let now = chrono::Local::now();
+        let expected_date = self.calendar.expected_latest_tradable_date(now);
+        let latest_db_date = market_store::fetch_latest_daily_bar_date(&self.storage)?;
+        
+        let (has_data, gap_days, auto_ingest_eligible, requires_manual_action, message) = 
+            match (latest_db_date, expected_date) {
+                (None, _) => {
+                    (false, 0, false, true, "数据库中无数据，请手动运行初始化流程".to_string())
+                }
+                (Some(latest), Some(expected)) => {
+                    let gap = (expected - latest).num_days();
+                    if gap <= 0 {
+                        (true, gap, false, false, "数据已是最新".to_string())
+                    } else if gap > 30 {
+                        (true, gap, false, true, format!("数据缺口 {} 天，超过自动补全上限，请手动运行刷新", gap))
+                    } else {
+                        (true, gap, true, false, format!("检测到 {} 天数据缺口，将自动补全", gap))
+                    }
+                }
+                (Some(latest), None) => {
+                    (true, 0, false, false, format!("无法确定期望最新日期，最新数据日期: {}", latest))
+                }
+            };
+        
+        Ok(StartupFreshnessCheck {
+            has_data,
+            latest_db_date,
+            expected_date,
+            gap_days,
+            auto_ingest_eligible,
+            requires_manual_action,
+            message,
+        })
+    }
+
+    pub fn auto_ingest_gap(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<IngestSummary> {
+        let now = chrono::Local::now();
+        let expected_date = self.calendar
+            .expected_latest_tradable_date(now)
+            .ok_or_else(|| anyhow::anyhow!("无法确定期望最新日期"))?;
+        let latest_db_date = market_store::fetch_latest_daily_bar_date(&self.storage)?
+            .ok_or_else(|| anyhow::anyhow!("数据库中无数据，无法自动补全"))?;
+        
+        let gap_days = (expected_date - latest_db_date).num_days();
+        if gap_days <= 0 {
+            anyhow::bail!("数据已是最新，无需补全");
+        }
+        if gap_days > 30 {
+            anyhow::bail!("数据缺口 {} 天超过自动补全上限，请手动操作", gap_days);
+        }
+        
+        let from = latest_db_date + chrono::Duration::days(1);
+        let to = expected_date;
+        
+        self.ingest_daily(from, to, progress_callback)
+    }
+
     pub fn build_refresh_plan(&self, to: NaiveDate) -> Result<RefreshPlan> {
         let latest_daily_date = market_store::fetch_latest_daily_bar_date(&self.storage)?;
 
@@ -2029,26 +2193,42 @@ impl AppContext {
         };
         notify("Starting compute_indicators...");
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
-        let mut total_snapshots = 0usize;
         let mut failed_symbols = Vec::new();
 
+        // 收集所有 bars（串行 I/O）
+        let mut bars_by_symbol = std::collections::HashMap::new();
         for instrument in &instruments {
-            let bars = match market_store::fetch_daily_bars(&self.storage, &instrument.symbol) {
-                Ok(bars) => bars,
+            match market_store::fetch_daily_bars(&self.storage, &instrument.symbol) {
+                Ok(bars) => {
+                    if !bars.is_empty() {
+                        bars_by_symbol.insert(instrument.symbol.clone(), bars);
+                    }
+                }
                 Err(error) => {
                     failed_symbols.push(format!("{}: {}", instrument.symbol, error));
-                    continue;
                 }
-            };
-            let snapshots = build_indicator_snapshots(&bars);
-            total_snapshots += snapshots.len();
+            }
+        }
+
+        // 并行计算 indicators（纯 CPU 计算）
+        let all_snapshots = indicator_engine::build_indicator_snapshots_for_symbols(&bars_by_symbol);
+
+        // 按 symbol 分组，串行插入 ClickHouse（避免并发写入压力）
+        let mut total_snapshots = 0usize;
+        let mut snapshots_by_symbol: std::collections::BTreeMap<String, Vec<core_domain::IndicatorSnapshot>> = std::collections::BTreeMap::new();
+        for snapshot in all_snapshots {
+            snapshots_by_symbol.entry(snapshot.symbol.clone()).or_default().push(snapshot);
+        }
+
+        for (symbol, snapshots) in snapshots_by_symbol {
             if let Err(error) = market_store::insert_indicator_snapshots(
                 &self.storage,
-                &instrument.symbol,
+                &symbol,
                 &snapshots,
             ) {
-                failed_symbols.push(format!("{}: {}", instrument.symbol, error));
+                failed_symbols.push(format!("{}: {}", symbol, error));
             }
+            total_snapshots += snapshots.len();
         }
 
         notify("Finished compute_indicators.");
@@ -2072,6 +2252,33 @@ impl AppContext {
         };
         notify("Starting compute_macro_regime...");
         let mut failed_items = Vec::new();
+
+        // 加载 FRED 配置
+        let fred_config = config_loader::ResolvedFredConfig::resolve()
+            .unwrap_or_else(|_| config_loader::ResolvedFredConfig {
+                enabled: true,
+                base_url: "https://api.stlouisfed.org/fred".to_string(),
+                api_key: None,
+                request_delay_ms: 500,
+                timeout_secs: 30,
+                source: "default".to_string(),
+                config_file: None,
+            });
+
+        if !fred_config.enabled {
+            failed_items.push(
+                "FRED: fred.enabled = false in config/fred.toml; skipping FRED fetch. \
+                 Using existing ClickHouse macro data if available.".to_string()
+            );
+            notify("FRED fetch disabled by config; using persisted data only.");
+        } else if !fred_config.is_valid() {
+            failed_items.push(
+                "FRED: config/fred.toml missing or api_key not set; skipping FRED fetch. \
+                 Create config/fred.toml or set enabled=false to suppress.".to_string()
+            );
+            notify("FRED config incomplete; skipping fetch.");
+        }
+
         let macro_fetch_from = from - Duration::days(550);
         let factor_specs = [
             ("vix", "VIXCLS", true),
@@ -2081,10 +2288,13 @@ impl AppContext {
         ];
 
         let mut factors = Vec::new();
-        for (name, series_id, invert) in factor_specs {
-            match fetch_fred_series(name, series_id, invert, macro_fetch_from, to) {
-                Ok(series) => factors.push(series),
-                Err(error) => failed_items.push(format!("{name}: {}", format_error_chain(&error))),
+        if fred_config.enabled && fred_config.is_valid() {
+            let api_key = fred_config.api_key.as_ref().unwrap().as_str();
+            for (name, series_id, invert) in factor_specs {
+                match fetch_fred_series(name, series_id, invert, macro_fetch_from, to, api_key) {
+                    Ok(series) => factors.push(series),
+                    Err(error) => failed_items.push(format!("{name}: {}", format_error_chain(&error))),
+                }
             }
         }
 
@@ -2191,7 +2401,7 @@ impl AppContext {
             }
         }
 
-        let rows = build_rotation_ranks(&series_by_symbol);
+        let rows = rotation_engine::build_rotation_ranks_parallel(&series_by_symbol);
         if let Err(error) = market_store::insert_rotation_ranks(&self.storage, &rows) {
             failed_symbols.push(format!("rotation_rank: {error}"));
         }
@@ -2957,53 +3167,103 @@ impl AppContext {
         let mut summaries = Vec::new();
         let mut macro_sources = Vec::new();
 
-        for (factor_name, series_id, invert) in [
-            ("vix", "VIXCLS", true),
-            ("us10y", "DGS10", true),
-            ("dollar_index", "DTWEXBGS", true),
-            ("fed_funds", "DFF", true),
-        ] {
-            match fetch_fred_series_with_status(
-                factor_name,
-                series_id,
-                invert,
-                macro_probe_from,
-                now,
-            ) {
-                Ok(outcome) => {
-                    let status = if outcome.transport == "attohttpc" {
-                        "healthy"
-                    } else {
-                        "review"
+        // 加载 FRED 配置
+        let fred_config = config_loader::ResolvedFredConfig::resolve()
+            .unwrap_or_else(|_| config_loader::ResolvedFredConfig {
+                enabled: true,
+                base_url: "https://api.stlouisfed.org/fred".to_string(),
+                api_key: None,
+                request_delay_ms: 500,
+                timeout_secs: 30,
+                source: "default".to_string(),
+                config_file: None,
+            });
+
+        if fred_config.enabled && fred_config.is_valid() {
+            let api_key = fred_config.api_key.as_ref().unwrap().as_str();
+            for (factor_name, series_id, invert) in [
+                ("vix", "VIXCLS", true),
+                ("us10y", "DGS10", true),
+                ("dollar_index", "DTWEXBGS", true),
+                ("fed_funds", "DFF", true),
+            ] {
+                match fetch_fred_series_with_status(
+                    factor_name,
+                    series_id,
+                    invert,
+                    macro_probe_from,
+                    now,
+                    api_key,
+                ) {
+                    Ok(outcome) => {
+                        let status = if outcome.transport == "attohttpc" {
+                            "healthy"
+                        } else {
+                            "review"
+                        }
+                        .to_string();
+                        let mut notes = Vec::new();
+                        if outcome.transport != "attohttpc" {
+                            notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
+                        }
+                        macro_sources.push(DataHealthMacroSourceSummary {
+                            factor_name: factor_name.to_string(),
+                            source: "FRED".to_string(),
+                            transport: outcome.transport,
+                            rows: outcome.series.observations.len(),
+                            first_date: outcome.series.observations.first().map(|(date, _)| *date),
+                            last_date: outcome.series.observations.last().map(|(date, _)| *date),
+                            status,
+                            notes,
+                        });
                     }
-                    .to_string();
-                    let mut notes = Vec::new();
-                    if outcome.transport != "attohttpc" {
-                        notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
+                    Err(error) => {
+                        macro_sources.push(DataHealthMacroSourceSummary {
+                            factor_name: factor_name.to_string(),
+                            source: "FRED".to_string(),
+                            transport: "failed".to_string(),
+                            rows: 0,
+                            first_date: None,
+                            last_date: None,
+                            status: "critical".to_string(),
+                            notes: vec![format_error_chain(&error)],
+                        });
                     }
-                    macro_sources.push(DataHealthMacroSourceSummary {
-                        factor_name: factor_name.to_string(),
-                        source: "FRED".to_string(),
-                        transport: outcome.transport,
-                        rows: outcome.series.observations.len(),
-                        first_date: outcome.series.observations.first().map(|(date, _)| *date),
-                        last_date: outcome.series.observations.last().map(|(date, _)| *date),
-                        status,
-                        notes,
-                    });
                 }
-                Err(error) => {
-                    macro_sources.push(DataHealthMacroSourceSummary {
-                        factor_name: factor_name.to_string(),
-                        source: "FRED".to_string(),
-                        transport: "failed".to_string(),
-                        rows: 0,
-                        first_date: None,
-                        last_date: None,
-                        status: "critical".to_string(),
-                        notes: vec![format_error_chain(&error)],
-                    });
-                }
+            }
+        } else if !fred_config.enabled {
+            for factor_name in ["vix", "us10y", "dollar_index", "fed_funds"] {
+                macro_sources.push(DataHealthMacroSourceSummary {
+                    factor_name: factor_name.to_string(),
+                    source: "FRED".to_string(),
+                    transport: "disabled".to_string(),
+                    rows: 0,
+                    first_date: None,
+                    last_date: None,
+                    status: "disabled".to_string(),
+                    notes: vec![
+                        "FRED fetch disabled by config/fred.toml (enabled = false). \
+                         Using existing ClickHouse data if available."
+                            .to_string(),
+                    ],
+                });
+            }
+        } else {
+            for factor_name in ["vix", "us10y", "dollar_index", "fed_funds"] {
+                macro_sources.push(DataHealthMacroSourceSummary {
+                    factor_name: factor_name.to_string(),
+                    source: "FRED".to_string(),
+                    transport: "unconfigured".to_string(),
+                    rows: 0,
+                    first_date: None,
+                    last_date: None,
+                    status: "disabled".to_string(),
+                    notes: vec![
+                        "FRED config missing or api_key not set. \
+                         Create config/fred.toml or set enabled=false to suppress."
+                            .to_string(),
+                    ],
+                });
             }
         }
 
@@ -3681,6 +3941,32 @@ impl AppContext {
     /// 显示 LLM 配置来源信息
     pub fn show_llm_config(&self) -> Result<config_loader::ResolvedLlmConfig> {
         self.get_resolved_llm_config(None)
+    }
+
+    /// 设置 FRED 配置（写入 TOML 文件）
+    pub fn set_fred_config(&self, enabled: bool, api_key: Option<&str>) -> Result<()> {
+        let toml_path = config_loader::default_fred_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_fred_config(&toml_path)
+        } else {
+            FredFileConfig::default()
+        };
+        toml_config.fred.enabled = enabled;
+        if let Some(key) = api_key {
+            toml_config.fred.auth.api_key = Some(key.to_string());
+        }
+        config_loader::write_fred_config_to_file(&toml_path, &toml_config)?;
+        Ok(())
+    }
+
+    /// 显示 FRED 配置来源信息
+    pub fn show_fred_config(&self) -> Result<config_loader::ResolvedFredConfig> {
+        config_loader::ResolvedFredConfig::resolve()
+    }
+
+    /// 验证 FRED 配置文件
+    pub fn validate_fred_config(&self) -> config_loader::FredConfigValidation {
+        config_loader::validate_fred_config()
     }
 
     /// 验证 LLM 配置文件

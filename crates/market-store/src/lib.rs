@@ -10,7 +10,7 @@ use core_domain::{
     MarketRegimeSnapshot, RefreshJobRecord, RegimeReason, RotationRankSnapshot, RotationReason,
     SignalReason, SignalSnapshot, StrategyKind, StrategyPreferenceSnapshot, StrategyStateSnapshot,
 };
-use attohttpc::Session;
+use ureq::Agent;
 use base64::Engine;
 use rusqlite::Connection;
 use serde::de::DeserializeOwned;
@@ -361,9 +361,23 @@ pub fn get_all_user_preferences(
     Ok(map)
 }
 
-fn clickhouse_client() -> &'static Session {
-    static SESSION: OnceLock<Session> = OnceLock::new();
-    SESSION.get_or_init(|| Session::new())
+fn clickhouse_client() -> &'static Agent {
+    static AGENT: OnceLock<Agent> = OnceLock::new();
+    AGENT.get_or_init(|| {
+        ureq::AgentBuilder::new()
+            .timeout_read(std::time::Duration::from_secs(30))
+            .timeout_write(std::time::Duration::from_secs(30))
+            .build()
+    })
+}
+
+fn read_body(response: ureq::Response) -> Result<String> {
+    let mut body = String::new();
+    response
+        .into_reader()
+        .read_to_string(&mut body)
+        .context("failed to read response body")?;
+    Ok(body)
 }
 
 fn clickhouse_auth_header(user: &str, password: &str) -> String {
@@ -454,6 +468,18 @@ fn ensure_backtest_run_provenance_columns(config: &StorageConfig) -> Result<()> 
     execute_clickhouse_query(
         config,
         "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS state_trajectory_json String DEFAULT ''",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS run_version String DEFAULT 'legacy'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS git_commit String DEFAULT 'unknown'",
+    )?;
+    execute_clickhouse_query(
+        config,
+        "ALTER TABLE quant.backtest_run ADD COLUMN IF NOT EXISTS generated_at String DEFAULT ''",
     )
 }
 
@@ -609,21 +635,27 @@ fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> 
         "{}?database={}&query={}",
         config.clickhouse_url, config.clickhouse_database, encoded
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch ClickHouse text response")?;
-    if !response.is_success() {
-        anyhow::bail!(
-            "ClickHouse text query failed with status {}",
-            response.status()
-        );
+    let status = response.status();
+    if status >= 400 {
+        let mut body = String::new();
+        let _ = response.into_reader()
+            .read_to_string(&mut body);
+        if body.is_empty() {
+            body = format!("HTTP {}", status);
+        }
+        anyhow::bail!("ClickHouse text query failed with status {}: {}", status, body);
     }
-    response
-        .text()
-        .context("failed to read ClickHouse text response")
+    let mut body = String::new();
+    response.into_reader()
+        .read_to_string(&mut body)
+        .context("failed to read ClickHouse text response")?;
+    Ok(body)
 }
 
 fn json_u64(value: Option<&serde_json::Value>) -> Option<u64> {
@@ -650,14 +682,16 @@ pub fn execute_clickhouse_query(config: &StorageConfig, query: &str) -> Result<(
         config.clickhouse_database,
         urlencoding::encode(&effective_query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to execute ClickHouse query")?;
-    if !response.is_success() {
-        anyhow::bail!("ClickHouse query failed with status {}", response.status());
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
+        anyhow::bail!("ClickHouse query failed with status {}: {}", status, body);
     }
     Ok(())
 }
@@ -713,14 +747,16 @@ pub fn insert_instruments(config: &StorageConfig, instruments: &[Instrument]) ->
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert instruments")?;
-    if !response.is_success() {
-        anyhow::bail!("instrument insert failed with status {}", response.status());
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
+        anyhow::bail!("instrument insert failed with status {}: {}", status, body);
     }
     Ok(())
 }
@@ -774,14 +810,16 @@ pub fn insert_daily_bars(config: &StorageConfig, symbol: &str, bars: &[DailyBar]
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert daily bars")?;
-    if !response.is_success() {
-        anyhow::bail!("daily bar insert failed with status {}", response.status());
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
+        anyhow::bail!("daily bar insert failed with status {}: {}", status, body);
     }
     Ok(())
 }
@@ -797,17 +835,18 @@ pub fn fetch_daily_bars(config: &StorageConfig, symbol: &str) -> Result<Vec<Dail
         config.clickhouse_database,
         urlencoding::encode(&query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch daily bars")?;
-    if !response.is_success() {
-        anyhow::bail!("daily bar fetch failed with status {}", response.status());
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
+        anyhow::bail!("daily bar fetch failed with status {}: {}", status, body);
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read daily bar response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -912,16 +951,18 @@ pub fn insert_indicator_snapshots(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert indicator snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "indicator snapshot insert failed with status {}",
-            response.status()
+            "indicator snapshot insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -979,16 +1020,18 @@ pub fn insert_macro_snapshots(config: &StorageConfig, rows: &[MacroSnapshot]) ->
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert macro snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "macro snapshot insert failed with status {}",
-            response.status()
+            "macro snapshot insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1065,16 +1108,18 @@ pub fn insert_market_regimes(config: &StorageConfig, rows: &[MarketRegimeSnapsho
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert market regimes")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "market regime insert failed with status {}",
-            response.status()
+            "market regime insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1148,16 +1193,18 @@ pub fn insert_environment_snapshots(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert environment snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "environment snapshot insert failed with status {}",
-            response.status()
+            "environment snapshot insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1220,16 +1267,18 @@ pub fn insert_strategy_states(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert strategy states")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "strategy state insert failed with status {}",
-            response.status()
+            "strategy state insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1321,16 +1370,18 @@ pub fn insert_rotation_ranks(config: &StorageConfig, rows: &[RotationRankSnapsho
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert rotation ranks")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "rotation rank insert failed with status {}",
-            response.status()
+            "rotation rank insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1350,20 +1401,21 @@ pub fn fetch_indicator_snapshots(
         config.clickhouse_database,
         urlencoding::encode(&query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch indicator snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "indicator snapshot fetch failed with status {}",
-            response.status()
+            "indicator snapshot fetch failed with status {}: {}",
+            status, body
         );
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read indicator snapshot response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -1402,20 +1454,21 @@ pub fn fetch_market_regimes(config: &StorageConfig) -> Result<Vec<MarketRegimeSn
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch market regimes")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "market regime fetch failed with status {}",
-            response.status()
+            "market regime fetch failed with status {}: {}",
+            status, body
         );
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read market regime response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -1494,6 +1547,13 @@ pub fn fetch_environment_snapshots_for_scope(
         scope.as_str(), from, to
     );
     let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse environment snapshot row")
+}
+
+pub fn fetch_all_environment_snapshots(config: &StorageConfig) -> Result<Vec<EnvironmentSnapshot>> {
+    ensure_environment_snapshot_table(config)?;
+    let query = "SELECT date,scope,regime_as_of_date,breadth_as_of_date,stress_as_of_date,breadth_eligible_count,breadth_above_count,breadth_pct,breadth_pct_sma5,breadth_5d_delta,breadth_state,volume_expansion_pct,turnover_coverage_pct,liquidity_proxy_score,stress_proxy_score,environment_score,environment_label FROM quant.environment_snapshot ORDER BY date, scope FORMAT JSONEachRow";
+    let body = fetch_clickhouse_text(config, query)?;
     parse_json_each_row(&body, "failed to parse environment snapshot row")
 }
 
@@ -1581,20 +1641,21 @@ pub fn fetch_rotation_ranks(config: &StorageConfig) -> Result<Vec<RotationRankSn
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch rotation ranks")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "rotation rank fetch failed with status {}",
-            response.status()
+            "rotation rank fetch failed with status {}: {}",
+            status, body
         );
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read rotation rank response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -1685,16 +1746,18 @@ pub fn insert_strategy_preferences(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert strategy preferences")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "strategy preference insert failed with status {}",
-            response.status()
+            "strategy preference insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -1704,7 +1767,7 @@ pub fn fetch_latest_backtest_run(
     config: &StorageConfig,
 ) -> Result<Option<backtest_engine::BacktestSummary>> {
     ensure_backtest_run_provenance_columns(config)?;
-    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
+    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at FROM quant.backtest_run WHERE run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
     let body = fetch_clickhouse_text(config, query)?;
     let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
         return Ok(None);
@@ -1806,6 +1869,21 @@ pub fn fetch_latest_backtest_run(
         trading_days,
         drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
         state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
+        run_version: row
+            .get("run_version")
+            .and_then(|value| value.as_str())
+            .unwrap_or("legacy")
+            .to_string(),
+        git_commit: row
+            .get("git_commit")
+            .and_then(|value| value.as_str())
+            .unwrap_or("unknown")
+            .to_string(),
+        generated_at: row
+            .get("generated_at")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
     }))
 }
 
@@ -1815,7 +1893,7 @@ pub fn fetch_latest_backtest_run_for_scope(
 ) -> Result<Option<backtest_engine::BacktestSummary>> {
     ensure_backtest_run_provenance_columns(config)?;
     let query = format!(
-        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe FROM quant.backtest_run WHERE analysis_scope = '{}' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
+        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at FROM quant.backtest_run WHERE analysis_scope = '{}' AND run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
         scope.as_str()
     );
     let body = fetch_clickhouse_text(config, &query)?;
@@ -1919,6 +1997,21 @@ pub fn fetch_latest_backtest_run_for_scope(
         trading_days,
         drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
         state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
+        run_version: row
+            .get("run_version")
+            .and_then(|value| value.as_str())
+            .unwrap_or("legacy")
+            .to_string(),
+        git_commit: row
+            .get("git_commit")
+            .and_then(|value| value.as_str())
+            .unwrap_or("unknown")
+            .to_string(),
+        generated_at: row
+            .get("generated_at")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
     }))
 }
 
@@ -1966,16 +2059,18 @@ pub fn insert_report_snapshot(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert report snapshot")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "report snapshot insert failed with status {}",
-            response.status()
+            "report snapshot insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -2023,20 +2118,21 @@ pub fn fetch_strategy_preferences(
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch strategy preferences")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "strategy preference fetch failed with status {}",
-            response.status()
+            "strategy preference fetch failed with status {}: {}",
+            status, body
         );
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read strategy preference response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -2127,16 +2223,18 @@ pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) 
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(payload)
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string(&payload)
         .context("failed to insert signal snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "signal snapshot insert failed with status {}",
-            response.status()
+            "signal snapshot insert failed with status {}: {}",
+            status, body
         );
     }
     Ok(())
@@ -2151,20 +2249,21 @@ pub fn fetch_signal_snapshots(config: &StorageConfig) -> Result<Vec<SignalSnapsh
         config.clickhouse_database,
         urlencoding::encode(query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let response = clickhouse_client()
-        .post(url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text("")
-        .send()
+        .post(&url)
+        .set("Authorization", &auth)
+        .send_string("")
         .context("failed to fetch signal snapshots")?;
-    if !response.is_success() {
+    let status = response.status();
+    if status >= 400 {
+        let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
         anyhow::bail!(
-            "signal snapshot fetch failed with status {}",
-            response.status()
+            "signal snapshot fetch failed with status {}: {}",
+            status, body
         );
     }
-    let body = response
-        .text()
+    let body = read_body(response)
         .context("failed to read signal snapshot response")?;
     let mut rows = Vec::new();
     for line in body.lines().filter(|line| !line.trim().is_empty()) {
@@ -2299,6 +2398,9 @@ pub fn insert_backtest_result(
         "finished_at": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         "drawdown_events": summary.drawdown_events,
         "state_trajectory_json": state_trajectory_json,
+        "run_version": summary.run_version,
+        "git_commit": summary.git_commit,
+        "generated_at": summary.generated_at,
         "cagr": summary.cagr,
         "max_drawdown": summary.max_drawdown,
         "sharpe": summary.sharpe,
@@ -2310,16 +2412,18 @@ pub fn insert_backtest_result(
         config.clickhouse_database,
         urlencoding::encode(run_query)
     );
+    let auth = clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password);
     let run_response = clickhouse_client()
-        .post(run_url)
-        .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-        .text(run_payload)
-        .send()
+        .post(&run_url)
+        .set("Authorization", &auth)
+        .send_string(&run_payload)
         .context("failed to insert backtest run")?;
-    if !run_response.is_success() {
+    let run_status = run_response.status();
+    if run_status >= 400 {
+        let body = read_body(run_response).unwrap_or_else(|_| format!("HTTP {}", run_status));
         anyhow::bail!(
-            "backtest run insert failed with status {}",
-            run_response.status()
+            "backtest run insert failed with status {}: {}",
+            run_status, body
         );
     }
 
@@ -2348,15 +2452,16 @@ pub fn insert_backtest_result(
             urlencoding::encode(query)
         );
         let response = clickhouse_client()
-            .post(url)
-            .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-            .text(payload)
-            .send()
+            .post(&url)
+            .set("Authorization", &auth)
+            .send_string(&payload)
             .context("failed to insert backtest trades")?;
-        if !response.is_success() {
+        let status = response.status();
+        if status >= 400 {
+            let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
             anyhow::bail!(
-                "backtest trade insert failed with status {}",
-                response.status()
+                "backtest trade insert failed with status {}: {}",
+                status, body
             );
         }
     }
@@ -2383,15 +2488,16 @@ pub fn insert_backtest_result(
             urlencoding::encode(query)
         );
         let response = clickhouse_client()
-            .post(url)
-            .header("Authorization", clickhouse_auth_header(&config.clickhouse_user, &config.clickhouse_password))
-            .text(payload)
-            .send()
+            .post(&url)
+            .set("Authorization", &auth)
+            .send_string(&payload)
             .context("failed to insert backtest equity curve")?;
-        if !response.is_success() {
+        let status = response.status();
+        if status >= 400 {
+            let body = read_body(response).unwrap_or_else(|_| format!("HTTP {}", status));
             anyhow::bail!(
-                "backtest equity insert failed with status {}",
-                response.status()
+                "backtest equity insert failed with status {}: {}",
+                status, body
             );
         }
     }
