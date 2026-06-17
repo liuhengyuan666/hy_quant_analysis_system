@@ -71,3 +71,12 @@
 
 - [Done] [TASK-019] Wave 7.3E: Historical Replay Audit — run complete GT chain (market-state-extractor → gt-regime-generator → regime-audit) on 2018-2026 historical data and output RegimeAuditReport
 
+
+### 2026-06-17
+- [Done] [TASK-090A] 量化统计最近两年每次状态切换的触发原因分布。读取 quant.market_regime + quant.environment_snapshot + quant.strategy_state，重新评估所有历史日期的 build_strategy_state 转移归因，输出：
+1. 触发条件分布表（NoTrade/DeRisk/ConfirmAdd/FullTrend 各自由哪个条件触发，占比）
+2. 阈值悬崖频率表（trend∈[50,65) 的日期，对应状态分布）
+3. 阈值临近表（trend∈[53,57] 的 ConfirmAdd vs DeRisk 分裂比例）
+4. state_score vs 实际状态混淆矩阵
+零写入、零阈值改动，纯只读审计。输出为 JSON + markdown 报告到 reports/state-transition-attribution-{scope}.md。
+

@@ -39,8 +39,12 @@
 
 ## 6. 配置管理范式 (Configuration)
 
-- LLM 配置使用 TOML 文件 + 环境变量插值（`config/llm.toml`）
-- API Key 三级回退：TOML → Keyring → SQLite
+- **TOML 配置模式**：LLM 和 FRED 配置均使用 TOML 文件 + 环境变量插值（`config/llm.toml`、`config/fred.toml`）
+- **API Key 安全存储**：TOML 文件 gitignored，支持 `${ENV_VAR}` 引用，避免硬编码
+- **可配置开关**：FRED 获取支持 `enabled` 开关，禁用后使用 ClickHouse 已存数据（fail-safe）
+- **配置加载优先级**：CLI 参数 > TOML 文件（含环境变量插值） > 默认值
+- **LLM API Key 三级回退**：TOML → Keyring → SQLite
+- **FRED API Key 单级回退**：TOML 文件（低敏感度，免费政府数据 API）
 - Universe 配置使用 JSON（`config/universe.json`）
 - 交易日历使用静态 JSON（`config/calendars/`）
 

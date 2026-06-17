@@ -9,7 +9,10 @@
 | Data Ingestion | attohttpc + serde | attohttpc 0.28 | HTTP数据获取与序列化 |
 | Async Runtime | Tokio | 1.x | 异步运行时 |
 | LLM Integration | async-openai | 0.34 | OpenAI-compatible API调用 |
-| Config | TOML + clap | toml 0.8, clap 4 | 配置管理与CLI解析 |
+| Config | TOML + clap | toml 0.8, clap 4 | 配置管理与CLI解析（LLM/FRED均使用TOML） |
+| Observability | tracing + tracing-subscriber | 0.1 / 0.3 | 日志与链路追踪 |
+| Security | keyring | 3.x | API Key安全存储（LLM） |
+| Serialization | serde + serde_json + serde_yaml | 1.x / 0.9 | 数据序列化 |
 
 ## 2. 组件通信与数据流拓扑
 
@@ -31,7 +34,8 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 
 ## 3. 全局架构约束
 
-- Workspace结构：24个members（apps/cli, apps/desktop, 21个crates）
+- Workspace 结构：22 个 members（apps/cli, apps/desktop/src-tauri, 20 个 crates）
+- 注意：crates/research-validation 目录存在但未加入 workspace members
 - 数据源策略：Eastmoney主源，Tencent兜底，FRED宏观因子
 - 统一日线口径：Eastmoney fqt=1，Tencent qfq（前复权）
 - 当前环境限制：Eastmoney从当前环境不可达，全部标的走Tencent fallback

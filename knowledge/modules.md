@@ -10,7 +10,7 @@ rust-quant-analysis-system/
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
-├── crates/               # 核心库crate（20个）
+├── crates/               # 核心库crate（20个目录，20个在workspace中；research-validation物理存在但未加入workspace）
 │   ├── app-service/      # 核心服务编排（monolith）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型
@@ -26,15 +26,17 @@ rust-quant-analysis-system/
 │   ├── research-context/ # 研究上下文
 │   ├── research-renderer/ # 研究渲染
 │   ├── research-skills/  # LLM技能路由
-│   ├── research-validation/ # 研究验证
+│   ├── research-validation/ # 研究验证（当前未加入workspace）
 │   ├── rotation-engine/  # 轮动排名
 │   ├── signal-engine/    # 信号生成
 │   ├── strategy-engine/  # 策略引擎
 │   └── task-runner/      # 任务运行器
 ├── config/               # 配置文件
-│   ├── calendars/        # 交易日历
+│   ├── calendars/        # 交易日历（静态JSON，覆盖2024-2027）
 │   ├── universe.json     # 标的池配置
-│   └── llm.toml          # LLM配置
+│   ├── llm.toml          # LLM配置（gitignored，支持${ENV_VAR}插值）
+│   ├── llm.toml.example  # LLM配置示例
+│   └── benchmark-providers.toml # 基准提供者配置
 ├── data/                 # 运行时数据目录
 ├── infra/                # 基础设施
 │   └── docker/           # Docker Compose（ClickHouse）
@@ -44,8 +46,13 @@ rust-quant-analysis-system/
 │   ├── archive/          # 归档记忆
 │   ├── context.md        # 当前状态
 │   ├── decisions.md      # ADR决策记录
+│   ├── decisions_archive.md # ADR决策归档
+│   ├── glossary.md       # 术语表（MemGuard维护）
 │   ├── history/          # 历史记忆
-│   └── traps.md          # 陷阱记录
+│   ├── product.md        # 产品定义（MemGuard维护）
+│   ├── structure.md      # 结构定义（MemGuard维护）
+│   ├── tasks_archive.md  # 任务归档
+│   └── tech.md           # 技术约束（MemGuard维护）
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
 ├── reports/              # 生成的报告

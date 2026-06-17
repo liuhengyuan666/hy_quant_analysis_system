@@ -23,7 +23,9 @@
 | Tauri | Tauri Framework | Rust编写的桌面应用框架 | 桌面端域 |
 | ClickHouse | ClickHouse DB | 分析型时序数据库 | 数据存储域 |
 | SQLite | SQLite DB | 本地轻状态数据库 | 数据存储域 |
-| FRED | Federal Reserve Economic Data | 美联储经济数据，宏观因子来源 | 数据获取域 |
+| FRED API | FRED API | St. Louis Fed API (`api.stlouisfed.org/fred`)，用于获取宏观因子数据 | 数据获取域 |
+| FRED Config | FRED Configuration | `config/fred.toml` 中的 FRED 获取配置，包含 `enabled` 开关和 `api_key` | 配置域 |
+| TOML Config | TOML Configuration | 系统配置管理模式（LLM/FRED 等），文件位于 `config/*.toml`，支持环境变量插值 | 配置域 |
 | VIX | CBOE Volatility Index | 波动率指数，宏观因子之一 | 宏观因子域 |
 | NFCI | National Financial Conditions Index | 国家金融状况指数 | 宏观因子域 |
 | confirmation_days | Persistence Filter Days | Regime状态确认天数，当前production=1 | 宏观因子域 |
@@ -52,7 +54,13 @@
 | Reactive Store | Vue Reactive Store | Vue 3响应式状态存储 | 前端域 |
 | Event Bridge | Tauri Event Bridge | Tauri前后端事件桥接 | 前端域 |
 | CSS Bridge | CSS Variable Bridge | CSS变量桥接（Plain JS与Vue共享样式） | 前端域 |
-| Schema Evolution | Schema Evolution | 数据结构演进策略（serde(default)兼容） | 架构域 |
+| Dashboard Bundle | Dashboard Bundle | 启动和scope reloads使用的数据聚合路径 | 报告与展示域 |
+| Dashboard Snapshot | Dashboard Snapshot | 历史日期变化使用的数据快照路径 | 报告与展示域 |
+| Freshness | Data Freshness | 数据新鲜度，衡量数据是否及时更新 | 数据质量域 |
+| Completeness | Data Completeness | 数据完整性，衡量最新日样本是否全量 | 数据质量域 |
+| Provenance | Data Provenance | 数据来源溯源，记录数据的生成路径和依赖 | 数据质量域 |
+| Repair Window | Repair Window | 刷新管线中的自动修复窗口，用于修复被gate卡住的较早日期 | 数据流域 |
+| Vite | Vite Build Tool | 前端构建工具，用于Vue 3前端打包 | 前端域 |
 | Superseded | Superseded ADR/Task | 被取代的ADR/任务（不可恢复终端状态） | 项目管理域 |
 | Frozen | Frozen Task | 冻结任务（等待前置条件） | 项目管理域 |
 | Gated | Gated Task | 门控任务（依赖其他任务完成） | 项目管理域 |

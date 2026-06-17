@@ -570,3 +570,70 @@ Economic Layer v2 requires stable taxonomy. After TASK-080A-F (feature inventory
 Economic Layer uses 3 states: Favorable (37.4%), Neutral (40.3%), Unfavorable (22.4%). Variance ratio 0.843. Fed Funds uses 252d Z-score with ±3 capping. Ready for 90-day Shadow Production.
 
 **Tags:** economic-layer, taxonomy, three-state, shadow-production
+
+## ADR-064: Backtest Provenance Contract
+
+**Status:** Accepted
+
+### Context
+After Wave 11 milestone (Backtest Engine v1 + Historical Baseline v1), we need stronger traceability than run_version alone. Every backtest result must be traceable to the code version, state machine version, and exact generation time.
+
+### Decision
+All backtest results MUST carry:
+- `run_version`: Backtest engine / state machine version (e.g., v1, v2)
+- `git_commit`: Exact code commit hash (build-time env injection via build.rs)
+- `generated_at`: Exact timestamp of generation (runtime UTC)
+
+Dashboard only displays `run_version = 'v1'` (current production version). Historical versions are preserved forever and never overwritten. Schema evolution uses `#[serde(default)]` or `DEFAULT` clause for backward compatibility.
+
+### Implementation Status
+| Field | Status | Location |
+|-------|--------|----------|
+| `run_version` | ✅ Implemented | `BacktestSummary.run_version`, `quant.backtest_run.run_version` |
+| `generated_at` | ✅ Implemented | `BacktestSummary.generated_at` (runtime UTC), `quant.backtest_run.generated_at` |
+| `git_commit` | ✅ Implemented | `BacktestSummary.git_commit` (build-time via `build.rs` + `BACKTEST_GIT_COMMIT`), `quant.backtest_run.git_commit` |
+
+**Tags:** backtest, provenance, versioning, shadow-production
+
+## ADR-065: Shadow Production v1 Phase Declaration
+
+**Status:** Accepted
+
+### Context
+After completing Waves 8 through 11, the project has reached a maturity inflection point. The milestone is no longer "quant strategy v1 complete" but "research governance system v1 complete". Further optimization carries higher risk of overfitting than value of real-market validation.
+
+### Decision
+**Research Program: CLOSED (2026-06-17)**
+**Shadow Production v1: OPEN (2026-06-17)**
+
+#### A类（Allowed）- Infrastructure Only
+- Monitoring, alerting, observability
+- Dashboard, reporting, documentation
+- Provenance infrastructure (git_commit, generated_at build injection)
+- Data health checks and pipeline diagnostics
+- ADR updates
+
+#### B类（Forbidden）- Behavior Changes (90-day minimum lock)
+- New factors, new weights, new thresholds
+- New state machines, new classification logic, new taxonomy
+- Threshold tuning, weight tuning, factor tuning
+- State machine changes, economic taxonomy changes
+- Backtest execution semantics changes
+
+**Exception:** Kill Criteria only (S1-S3, E1-E3, A1-A3, D1-D2)
+
+#### 90-Day Observation Plan
+| Phase | Days | Focus | Key Metric |
+|-------|------|-------|------------|
+| A | 1-30 | State Layer | State stability, transition frequency, NO_TRADE% |
+| B | 31-60 | Economic Layer | 3-State distribution, Forward Return alignment, PSI |
+| C | 61-90 | Allocation Layer | Position sizing vs backtest, turnover, drawdown tracking |
+
+#### Frozen Baseline
+- State Layer v1.0: ADR-061/062/063
+- Backtest Engine v1: `bt-20260617090905` (Sharpe=0.48, CAGR=8.87%, MaxDD=30.9%)
+- Provenance Chain: `run_version=v1`, `git_commit=df9904e...`, `generated_at=2026-06-17 09:09:05 UTC`
+- Data: 2026-06-16, all pipeline stages complete
+
+**Tags:** shadow-production, phase-declaration, governance, freeze, milestone
+
