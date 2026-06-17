@@ -33,6 +33,22 @@ shadow_production_v1
 # Goal
 **Not to prove the system is correct, but to find evidence of system failure.**
 
+> **Do not optimize on explanations. Optimize only on evidence.**
+> 
+> （不要因为解释听起来合理而优化，只因为证据证明需要优化才优化。）
+
+---
+
+## Phase B 预留观察项（Risk Score 拆解）
+当前 Risk Score = 66.72 但市场表现强势，引发对 Risk 因子贡献的好奇。根据复核意见，Risk Score 拆解在 Shadow Production Phase B 有观察价值，但**当前不产生任何动作**，因此暂不实施。Phase B 将评估：
+- Volatility 贡献
+- Macro 风险贡献
+- Breadth Stress 贡献
+- Credit/Liquidity 贡献
+
+拆解后的信息仅用于理解，不作为调参依据。任何权重/阈值调整必须等待 90 天观察期结束或 Kill Criteria 触发。
+
+---
 # Kill Criteria
 | Code | Category | Description |
 |------|----------|-------------|
@@ -72,7 +88,9 @@ shadow_production_v1
   - cargo test -p rotation-engine passed
   - Two consecutive refresh-all --to 2026-06-16 successful
 - [Todo] [TASK-090A] [COMPLETED] State Machine Attribution Audit completed (620 trading days, 2024-01-01 ~ 2026-06-16). DeRisk 50.3%, risk>60 41.8%, stress>70 33.1%, trend<55 19.7%. NoTrade(fallback) 10.8% (67 days) as only observation metric.
-- [Todo] [TASK-090B] [PENDING] Shadow Production Phase A: State Layer observation (Days 1-30)
+- [Todo] [TASK-090B] [IN PROGRESS] Shadow Production Phase A: State Layer observation (Days 1-30)
+  - Sub-items: Divergence sample tracking (StrongBuy × DeRisk, StrongBuy × NoTrade, StrongBuy × LeftProbe)
+  - Track daily frequency, transition patterns, and forward return accumulation (T+20, T+60, T+120)
 - [Todo] [TASK-090C] [PENDING] Shadow Production Phase B: Economic Layer observation (Days 31-60)
 - [Todo] [TASK-090D] [PENDING] Shadow Production Phase C: Allocation Layer observation (Days 61-90)
 

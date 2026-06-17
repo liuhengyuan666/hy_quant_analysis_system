@@ -635,5 +635,15 @@ After completing Waves 8 through 11, the project has reached a maturity inflecti
 - Provenance Chain: `run_version=v1`, `git_commit=df9904e...`, `generated_at=2026-06-17 09:09:05 UTC`
 - Data: 2026-06-16, all pipeline stages complete
 
+#### Governance Principle
+> **Do not optimize on explanations. Optimize only on evidence.**
+>
+> （不要因为解释听起来合理而优化，只因为证据证明需要优化才优化。）
+
+#### Phase B 预留观察项
+- Risk Score 拆解（Volatility/Macro/Breadth Stress/Credit/Liquidity 贡献）
+- 仅用于理解当前市场状态，**不产生任何动作**
+- 权重/阈值调整仍受 90 天锁限制
+
 **Tags:** shadow-production, phase-declaration, governance, freeze, milestone
 
