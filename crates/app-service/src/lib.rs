@@ -671,6 +671,38 @@ fn build_trust_summary(
             "Latest backtest does not match the current dashboard snapshot scope/date.".to_string(),
         );
     }
+
+    // Signal-State Divergence observability (ADR-065 Shadow Production)
+    // Detects when bullish signals exist but state is conservative.
+    // This is NOT a bug or tuning target; it is an observation to be tracked during Shadow Production.
+    if let Some(strategy_state) = &snapshot.strategy_state {
+        let conservative_states = [
+            core_domain::StrategyState::DeRisk,
+            core_domain::StrategyState::NoTrade,
+            core_domain::StrategyState::LeftProbe,
+        ];
+        if conservative_states.contains(&strategy_state.state) {
+            let bullish_count = snapshot
+                .top_signals
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.signal_label,
+                        core_domain::SignalLabel::StrongBuy | core_domain::SignalLabel::Buy
+                    )
+                })
+                .count();
+            if bullish_count > 0 {
+                notes.push(format!(
+                    "Signal-State Divergence: {} bullish signal(s) (StrongBuy/Buy) detected but StrategyState is {} ({:.0}%). This combination is being tracked during Shadow Production (see ADR-065).",
+                    bullish_count,
+                    strategy_state.state,
+                    strategy_state.recommended_position_pct
+                ));
+            }
+        }
+    }
+
     if let Some(strategy_state) = &snapshot.strategy_state {
         notes.push(format!(
             "Strategy state {} recommends {:.2}% position as of {} ({}).",
