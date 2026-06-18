@@ -120,6 +120,9 @@ export const dashboardStore = reactive({
 
   /** Whether agent profile editor is visible */
   showAgentEditor: false,
+
+  /** Startup freshness check notice */
+  startupNotice: null,
 });
 
 /**
@@ -313,6 +316,13 @@ export function updateCompareLoading(loading) {
  */
 export function toggleAgentEditor(show) {
   dashboardStore.showAgentEditor = show !== undefined ? show : !dashboardStore.showAgentEditor;
+}
+
+/**
+ * Update startup freshness notice.
+ */
+export function updateStartupNotice(notice) {
+  dashboardStore.startupNotice = notice;
 }
 
 /**

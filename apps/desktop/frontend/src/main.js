@@ -22,6 +22,7 @@ import {
   updateRefreshStatus as syncRefreshStatusToStore,
   updateRefreshing as syncRefreshingToStore,
   updateRecentReports as syncRecentReportsToStore,
+  updateStartupNotice as syncStartupNoticeToStore,
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
@@ -52,6 +53,8 @@ const COMMANDS = {
   openReportArtifact: 'open_report_artifact',
   getUserPreferences: 'get_user_preferences',
   setUserPreference: 'set_user_preference',
+  checkStartupFreshness: 'check_startup_freshness',
+  autoIngestOnStartup: 'auto_ingest_on_startup',
 };
 
 let refreshPollTimer = null;
@@ -379,6 +382,33 @@ initEventBridge({
   analyzeWithLlm: (scope, skill, agent) => llmApi.analyzeWithSkill(scope, skill, agent),
 });
 
+// ── Startup freshness check ─────────────────────────────────────────────
+
+async function startupFreshnessCheck() {
+  try {
+    const check = await invoke(COMMANDS.checkStartupFreshness);
+    if (check.requires_manual_action) {
+      syncStartupNoticeToStore({
+        type: 'warning',
+        message: check.message,
+        action: 'manual_refresh',
+      });
+    } else if (check.auto_ingest_eligible) {
+      syncStartupNoticeToStore({
+        type: 'info',
+        message: check.message,
+        action: 'auto_ingesting',
+      });
+      await invoke(COMMANDS.autoIngestOnStartup);
+      scheduleRefreshPoll(500);
+    }
+  } catch (error) {
+    console.error('[Startup] Freshness check failed:', error);
+  }
+}
+
 // ── Bootstrap ───────────────────────────────────────────────────────────
 
-loadAndApplyPreferences().then(() => loadDashboard());
+loadAndApplyPreferences()
+  .then(() => startupFreshnessCheck())
+  .then(() => loadDashboard());
