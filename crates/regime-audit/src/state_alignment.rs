@@ -191,7 +191,7 @@ fn compute_trend_alignment(
 fn extract_change_points(dates: &[(NaiveDate, ParsedRegime)]) -> Vec<(NaiveDate, ParsedRegime, ParsedRegime)> {
     let mut changes = Vec::new();
     for window in dates.windows(2) {
-        let (d1, r1) = window[0];
+        let (_, r1) = window[0];
         let (d2, r2) = window[1];
         if r1 != r2 {
             changes.push((d2, r1, r2));

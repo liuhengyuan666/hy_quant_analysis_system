@@ -112,7 +112,6 @@ fn compute_drawdown_profile(bars: &[DailyBar]) -> DrawdownProfile {
 
     let mut max_dd = 0.0;
     let mut peak = bars[0].close;
-    let mut peak_date = bars[0].date;
     let mut max_dd_date = bars[0].date;
     let mut drawdowns: Vec<f64> = Vec::new();
     let mut dd_over_10 = 0usize;
@@ -122,7 +121,6 @@ fn compute_drawdown_profile(bars: &[DailyBar]) -> DrawdownProfile {
     for bar in bars {
         if bar.close > peak {
             peak = bar.close;
-            peak_date = bar.date;
         }
         let dd = if peak > 0.0 {
             (bar.close - peak) / peak

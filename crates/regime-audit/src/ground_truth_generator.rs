@@ -1,6 +1,5 @@
 use chrono::NaiveDate;
 use core_domain::DailyBar;
-use std::collections::HashMap;
 
 // ============================================================
 // TASK-060B: Ground Truth Label Generator

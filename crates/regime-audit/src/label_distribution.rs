@@ -1,3 +1,4 @@
+use crate::common::apply_persistence;
 use chrono::NaiveDate;
 use core_domain::{
     DailyBar, LabelDistributionPoint, LabelDistributionReport, MarketRegimeSnapshot,
@@ -18,36 +19,6 @@ fn classify_raw_regime(trend_score: f64, risk_score: f64, liquidity_score: f64) 
     } else {
         "neutral".to_string()
     }
-}
-
-fn apply_persistence(raw_labels: &[String], days: usize) -> Vec<String> {
-    if days == 0 {
-        return raw_labels.to_vec();
-    }
-    let mut persisted = Vec::with_capacity(raw_labels.len());
-    let mut current_regime = "neutral".to_string();
-    let mut streak = 0;
-
-    for label in raw_labels {
-        if label == &current_regime {
-            streak += 1;
-        } else {
-            streak = 1;
-            current_regime = label.clone();
-        }
-
-        if streak >= days {
-            persisted.push(current_regime.clone());
-        } else {
-            if persisted.is_empty() {
-                persisted.push("neutral".to_string());
-            } else {
-                persisted.push(persisted.last().unwrap().clone());
-            }
-        }
-    }
-
-    persisted
 }
 
 fn compute_distribution(labels: &[String]) -> (f64, f64, f64) {
@@ -318,7 +289,7 @@ pub fn compute_label_distribution(
         points.push(point);
     }
 
-    let conclusion = if let (Some(p0), Some(p1), Some(p10)) = (points.get(0), points.get(1), points.get(2)) {
+    let conclusion = if let (Some(p0), Some(_p1), Some(p10)) = (points.get(0), points.get(1), points.get(2)) {
         format!(
             "Wave8_BASELINE: 0d→1d→10d comparison. CN/HK state sequences are SHORT-LIVED (median {}d at 0d, {}d at 10d). 10d persistence swallows {}% of episodes, reducing effective states from {} to {}. This is the foundational panel for all Wave 8 revalidation.",
             p0.median_episode_days,
