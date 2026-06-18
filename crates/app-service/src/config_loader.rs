@@ -4,7 +4,7 @@
 //! Priority: CLI args > TOML file (with ${VAR} interpolation) > defaults.
 
 use anyhow::{Context, Result};
-use core_domain::LlmFileConfig;
+use core_domain::{FredFileConfig, LlmFileConfig};
 use market_store::StorageConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -354,6 +354,196 @@ pub fn validate_config() -> ConfigValidation {
                 result.missing_env_vars.push(var_name.to_string());
             } else {
                 // 环境变量引用解析成功，视为 key 已设置
+                result.api_key_set = true;
+            }
+        } else if !key.is_empty() {
+            result.api_key_set = true;
+        }
+    }
+
+    result
+}
+
+// ============================================================
+// FRED Configuration (ADR-064)
+// ============================================================
+
+/// 从 TOML 文件加载 FRED 配置
+pub fn load_fred_config_from_file(path: &Path) -> Result<FredFileConfig> {
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read FRED config file: {}", path.display()))?;
+    let mut config: FredFileConfig = toml::from_str(&content)
+        .with_context(|| format!("Failed to parse FRED config file: {}", path.display()))?;
+
+    // 处理环境变量插值
+    resolve_fred_env_vars(&mut config)?;
+
+    Ok(config)
+}
+
+/// 解析 FRED 配置中的环境变量插值
+fn resolve_fred_env_vars(config: &mut FredFileConfig) -> Result<()> {
+    config.fred.base_url = interpolate(&config.fred.base_url)?;
+    if let Some(ref key) = config.fred.auth.api_key {
+        config.fred.auth.api_key = Some(interpolate(key)?);
+    }
+    Ok(())
+}
+
+/// 获取 FRED 配置文件路径
+pub fn get_fred_config_path() -> Option<PathBuf> {
+    let root = StorageConfig::project_root().ok()?;
+    let config_dir = root.join("config");
+    let path = config_dir.join("fred.toml");
+    if path.exists() {
+        return Some(path);
+    }
+    None
+}
+
+/// 最终生效的 FRED 配置（合并所有来源后）
+#[derive(Debug, Clone)]
+pub struct ResolvedFredConfig {
+    pub enabled: bool,
+    pub base_url: String,
+    pub api_key: Option<String>,
+    pub request_delay_ms: u64,
+    pub timeout_secs: u64,
+    pub source: String, // "file" | "default"
+    pub config_file: Option<String>,
+}
+
+impl ResolvedFredConfig {
+    /// 解析 FRED 配置：File(含 ${VAR} 插值) > Default
+    pub fn resolve() -> Result<Self> {
+        let config_path = get_fred_config_path();
+
+        let file_config = match config_path.as_ref().and_then(|p| {
+            load_fred_config_from_file(p).ok()
+        }) {
+            Some(c) => c,
+            None => FredFileConfig::default(),
+        };
+
+        let source = if config_path.is_some() {
+            "file".to_string()
+        } else {
+            "default".to_string()
+        };
+
+        let api_key = file_config.fred.auth.api_key;
+
+        Ok(Self {
+            enabled: file_config.fred.enabled,
+            base_url: file_config.fred.base_url,
+            api_key,
+            request_delay_ms: file_config.fred.request_delay_ms,
+            timeout_secs: file_config.fred.timeout_secs,
+            source,
+            config_file: config_path.map(|p| p.display().to_string()),
+        })
+    }
+
+    /// 检查配置是否完整（enabled=true 时必须有 api_key）
+    pub fn is_valid(&self) -> bool {
+        if !self.enabled {
+            return true;
+        }
+        self.api_key.is_some() && !self.api_key.as_ref().unwrap().is_empty()
+    }
+}
+
+/// 读取现有 FRED 配置文件（不存在则返回默认）
+pub fn read_or_default_fred_config(path: &Path) -> FredFileConfig {
+    load_fred_config_from_file(path).unwrap_or_default()
+}
+
+/// 写入 FRED 配置到 TOML 文件
+pub fn write_fred_config_to_file(path: &Path, config: &FredFileConfig) -> Result<()> {
+    let content =
+        toml::to_string_pretty(config).context("Failed to serialize FRED config to TOML")?;
+
+    // 确保目录存在
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+    }
+
+    std::fs::write(path, &content)
+        .with_context(|| format!("Failed to write FRED config file: {}", path.display()))?;
+
+    // Unix: 设置文件权限为 600
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+            .with_context(|| format!("Failed to set file permissions: {}", path.display()))?;
+    }
+
+    Ok(())
+}
+
+/// 获取默认 FRED 配置文件路径（用于写入）
+pub fn default_fred_config_path() -> Result<PathBuf> {
+    let root = StorageConfig::project_root()?;
+    Ok(root.join("config").join("fred.toml"))
+}
+
+/// FRED 配置验证结果
+#[derive(Debug, Serialize)]
+pub struct FredConfigValidation {
+    pub file_exists: bool,
+    pub file_parseable: bool,
+    pub env_vars_resolved: bool,
+    pub missing_env_vars: Vec<String>,
+    pub enabled: bool,
+    pub api_key_set: bool,
+}
+
+/// 验证 FRED 配置文件
+pub fn validate_fred_config() -> FredConfigValidation {
+    let mut result = FredConfigValidation {
+        file_exists: false,
+        file_parseable: false,
+        env_vars_resolved: true,
+        missing_env_vars: Vec::new(),
+        enabled: FredFileConfig::default().fred.enabled,
+        api_key_set: false,
+    };
+
+    let path = match default_fred_config_path() {
+        Ok(p) => p,
+        Err(_) => return result,
+    };
+
+    // 检查文件是否存在
+    result.file_exists = path.exists();
+    if !result.file_exists {
+        return result;
+    }
+
+    // 尝试解析文件
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return result,
+    };
+
+    let config: FredFileConfig = match toml::from_str(&content) {
+        Ok(c) => c,
+        Err(_) => return result,
+    };
+
+    result.file_parseable = true;
+    result.enabled = config.fred.enabled;
+
+    // 检查环境变量引用
+    if let Some(ref key) = config.fred.auth.api_key {
+        if key.starts_with("${") && key.ends_with('}') {
+            let var_name = &key[2..key.len() - 1];
+            if std::env::var(var_name).is_err() {
+                result.env_vars_resolved = false;
+                result.missing_env_vars.push(var_name.to_string());
+            } else {
                 result.api_key_set = true;
             }
         } else if !key.is_empty() {
