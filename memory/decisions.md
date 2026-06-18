@@ -571,79 +571,50 @@ Economic Layer uses 3 states: Favorable (37.4%), Neutral (40.3%), Unfavorable (2
 
 **Tags:** economic-layer, taxonomy, three-state, shadow-production
 
-## ADR-064: Backtest Provenance Contract
+## ADR-064: FRED Configuration: TOML + Toggle Switch
 
 **Status:** Accepted
 
 ### Context
-After Wave 11 milestone (Backtest Engine v1 + Historical Baseline v1), we need stronger traceability than run_version alone. Every backtest result must be traceable to the code version, state machine version, and exact generation time.
+FRED API key currently hardcoded in app-service/src/lib.rs. Need configurable storage + on/off toggle for macro data fetching.
 
 ### Decision
-All backtest results MUST carry:
-- `run_version`: Backtest engine / state machine version (e.g., v1, v2)
-- `git_commit`: Exact code commit hash (build-time env injection via build.rs)
-- `generated_at`: Exact timestamp of generation (runtime UTC)
+Migrate FRED API key from hardcoded string to TOML config file (config/fred.toml) with environment variable interpolation, and add an enabled/disabled toggle to control macro data fetching.
 
-Dashboard only displays `run_version = 'v1'` (current production version). Historical versions are preserved forever and never overwritten. Schema evolution uses `#[serde(default)]` or `DEFAULT` clause for backward compatibility.
+**Tags:** fred, config, toml, security, macro-data
 
-### Implementation Status
-| Field | Status | Location |
-|-------|--------|----------|
-| `run_version` | ✅ Implemented | `BacktestSummary.run_version`, `quant.backtest_run.run_version` |
-| `generated_at` | ✅ Implemented | `BacktestSummary.generated_at` (runtime UTC), `quant.backtest_run.generated_at` |
-| `git_commit` | ✅ Implemented | `BacktestSummary.git_commit` (build-time via `build.rs` + `BACKTEST_GIT_COMMIT`), `quant.backtest_run.git_commit` |
-
-**Tags:** backtest, provenance, versioning, shadow-production
-
-## ADR-065: Shadow Production v1 Phase Declaration
+## ADR-065: State Layer v1.0 Freeze — Shadow Production Entry
 
 **Status:** Accepted
 
 ### Context
-After completing Waves 8 through 11, the project has reached a maturity inflection point. The milestone is no longer "quant strategy v1 complete" but "research governance system v1 complete". Further optimization carries higher risk of overfitting than value of real-market validation.
+审计数据：620个交易日 (2024-01-01 ~ 2026-06-16)。DeRisk 50.3% (312天), risk>60 占 41.8%, stress>70 占 33.1%, trend<55 仅占 19.7%。NoTrade(fallback) 10.8% (67天) 为唯一待观察指标。
 
 ### Decision
-**Research Program: CLOSED (2026-06-17)**
-**Shadow Production v1: OPEN (2026-06-17)**
+冻结 State Layer v1.0 所有阈值和状态转移逻辑。仅允许实现层 BUG FIX（如 DeRisk 回测映射、数据源错误）。禁止任何行为优化（调阈值、加保护条款、state_score 分类）。进入 90 天 Shadow Production 观察期。
 
-#### A类（Allowed）- Infrastructure Only
-- Monitoring, alerting, observability
-- Dashboard, reporting, documentation
-- Provenance infrastructure (git_commit, generated_at build injection)
-- Data health checks and pipeline diagnostics
-- ADR updates
+**Tags:** state-layer, shadow-production, freeze, v1.0, audit, task-090a
 
-#### B类（Forbidden）- Behavior Changes (90-day minimum lock)
-- New factors, new weights, new thresholds
-- New state machines, new classification logic, new taxonomy
-- Threshold tuning, weight tuning, factor tuning
-- State machine changes, economic taxonomy changes
-- Backtest execution semantics changes
+## ADR-066: Research Surface Governance Model — Production vs Research Surface Separation
 
-**Exception:** Kill Criteria only (S1-S3, E1-E3, A1-A3, D1-D2)
+**Status:** Accepted
 
-#### 90-Day Observation Plan
-| Phase | Days | Focus | Key Metric |
-|-------|------|-------|------------|
-| A | 1-30 | State Layer | State stability, transition frequency, NO_TRADE% |
-| B | 31-60 | Economic Layer | 3-State distribution, Forward Return alignment, PSI |
-| C | 61-90 | Allocation Layer | Position sizing vs backtest, turnover, drawdown tracking |
+### Context
+Shadow Production phase requires minimal-variable observation. Risk identified: 'UI change trap' where display changes silently alter LLM input behavior via research-context builder.
 
-#### Frozen Baseline
-- State Layer v1.0: ADR-061/062/063
-- Backtest Engine v1: `bt-20260617090905` (Sharpe=0.48, CAGR=8.87%, MaxDD=30.9%)
-- Provenance Chain: `run_version=v1`, `git_commit=df9904e...`, `generated_at=2026-06-17 09:09:05 UTC`
-- Data: 2026-06-16, all pipeline stages complete
+### Decision
+Establish two distinct surfaces. Production Surface (frozen): dashboard_snapshot, daily_report, research_context, trust_summary. Research Surface (open): rotation-ranking, state-audit, signal-divergence-audit, risk-breakdown, factor-inspection. New Research Surface tools must NOT enter DashboardSnapshot, ResearchContext, or Markdown Daily Report. First approved tool: rotation-ranking CLI.
 
-#### Governance Principle
-> **Do not optimize on explanations. Optimize only on evidence.**
->
-> （不要因为解释听起来合理而优化，只因为证据证明需要优化才优化。）
+**Tags:** shadow-production, governance, research-surface, adr-065, llm-context, oracle-reviewed
 
-#### Phase B 预留观察项
-- Risk Score 拆解（Volatility/Macro/Breadth Stress/Credit/Liquidity 贡献）
-- 仅用于理解当前市场状态，**不产生任何动作**
-- 权重/阈值调整仍受 90 天锁限制
+## ADR-067: Explainability Layer Governance Boundary — No New Scores, Only Explanations
 
-**Tags:** shadow-production, phase-declaration, governance, freeze, milestone
+**Status:** Accepted
 
+### Context
+Audit of TASK-092 confirmed Explainability Layer prevents future optimization traps by replacing 'guess → change' with 'observe → understand'. Critical constraint: Explainability Layer must NEVER generate new composite scores, confidence metrics, or decision signals.
+
+### Decision
+Explainability Layer is allowed to: expose existing scores, display attribution breakdowns, show strategy composition, reveal state context. Explainability Layer is FORBIDDEN to: generate new scores, create confidence metrics, rank explanations, modify thresholds. Future Divergence Sample Library will track StrongBuy+DE_RISK patterns using only existing scores.
+
+**Tags:** explainability, governance, shadow-production, adr-065, divergence-sample
