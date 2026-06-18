@@ -15,6 +15,7 @@ indicator-engine = { path = "../../crates/indicator-engine" }
 market-state-extractor = { path = "../../crates/market-state-extractor" }
 gt-regime-generator = { path = "../../crates/gt-regime-generator" }
 regime-audit = { path = "../../crates/regime-audit" }
+macro-engine = { path = "../../crates/macro-engine" }
 market-store = { path = "../../crates/market-store" }
 research-skills = { path = "../../crates/research-skills" }
 research-benchmark = { path = "../../crates/research-benchmark" }
