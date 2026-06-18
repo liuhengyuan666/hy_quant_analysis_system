@@ -80,3 +80,14 @@
 4. state_score vs 实际状态混淆矩阵
 零写入、零阈值改动，纯只读审计。输出为 JSON + markdown 报告到 reports/state-transition-attribution-{scope}.md。
 
+
+### 2026-06-18
+- [Done] [TASK-082] 基于 Oracle 复核的三个问题，完成 V5 并行化优化的修复与验证：
+
+- [Done] [TASK-094] Phase A-E 代码级结构优化：清理 9 个编译器 warning，提取 apply_persistence 到 regime-audit/src/common.rs（6 副本），拆分 market-store 为 14 域模块，拆分 app-service 为 6 helper 模块，拆分 CLI main.rs 为 9 命令模块。A类基础设施改动，不触碰 B类禁止项。验证：cargo check 全 workspace 通过，68/68 测试通过。已推送到 v5 分支（9 commits）。
+
+- [Done] [TASK-095] README CLI 命令文档重组：消除 section 8 与 section 13 的命令重复，新增 40 个审计/验证命令文档（5 组分类），补全 dashboard-dates / status / run-backtest 参数等缺失文档。A类基础设施改动。已推送到 v5 分支（2 commits，c8555de / 15df83c）。
+
+- [Done] [TASK-096] app-service 已拆分为 7 个模块（core, breadth, dashboard, sync, trust, llm, config_loader），但 lib.rs 仍保留 4,083 行 AppContext 高层编排，需要进一步拆分。约束项更新：移除 'app-service/src/lib.rs 仍是 monolith（~796 行）'，改为跟踪本任务。
+- [Done] [TASK-018] cargo check 全 workspace 通过
+
