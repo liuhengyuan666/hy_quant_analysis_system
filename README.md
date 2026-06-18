@@ -185,7 +185,11 @@ cargo run -p quant-cli -- seed-universe
 
 ---
 
-## 8. 完整数据管线使用方法
+## 8. 数据管线（Data Pipeline）
+
+> **默认推荐路径**：`sync-and-export`（一键检查 → 刷新 → 导出）。以下分步命令仅用于高级用户或排查场景。
+>
+> `--quiet` 是全局选项，放在子命令之前，可抑制 stderr 进度输出，仅保留 stdout JSON。
 
 ### 8.1 拉取日线数据
 
@@ -193,13 +197,7 @@ cargo run -p quant-cli -- seed-universe
 cargo run -p quant-cli -- ingest-daily --from 2026-05-19 --to 2026-05-20
 ```
 
-### 8.2 计算指标
-
-```bash
-cargo run -p quant-cli -- compute-indicators
-```
-
-### 8.3 计算宏观与市场环境
+### 8.2 计算宏观与市场环境
 
 ```bash
 cargo run -p quant-cli -- compute-macro --from 2024-01-01 --to 2026-03-16
@@ -211,25 +209,7 @@ cargo run -p quant-cli -- compute-macro --from 2024-01-01 --to 2026-03-16
 - 若部分 FRED 因子短时异常，系统会优先复用库里已有的 `macro_snapshot` 历史，继续按 as-of 语义构建 scoped regime / environment
 - 若某次 provider 返回异常 HTML/非 CSV 响应，失败项会进入 `failed_items`，不再静默产出空结果
 
-### 8.4 计算轮动强弱
-
-```bash
-cargo run -p quant-cli -- compute-rotation
-```
-
-### 8.5 计算策略偏好
-
-```bash
-cargo run -p quant-cli -- compute-strategy-preferences
-```
-
-### 8.6 生成最终信号
-
-```bash
-cargo run -p quant-cli -- compute-signals
-```
-
-### 8.6A 一次执行完整刷新（工程 / 高级用户路径）
+### 8.3 完整刷新（工程 / 高级用户路径）
 
 ```bash
 cargo run -p quant-cli -- refresh-all
@@ -256,7 +236,7 @@ cargo run -p quant-cli -- refresh-all --to 2026-06-16
   - 系统会自动扩到一个保守的 repair window 来修复被 gate 卡住的较早日期
 - 这条命令更适合作为 **显式工程路径 / 高级用户路径**；默认用户路径仍然优先推荐桌面端 `Refresh data`
 
-### 8.7 V3 一键同步导出（推荐默认路径）
+### 8.4 一键同步导出（推荐默认路径）
 
 ```bash
 cargo run -p quant-cli -- sync-and-export --scope global
@@ -275,115 +255,29 @@ cargo run -p quant-cli -- sync-and-export --scope cn --date 2026-05-07
 - `--run-backtests` 控制是否执行回测阶段，默认 `true`
 - 若刷新后 gate 仍未通过，会 fail-loud 并提示运行 `explain-latest-gate` 排查
 
-### 8.8 V3 LLM 智能报告分析
-
-```bash
-# 配置 LLM（只需执行一次）
-cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
-
-# 设置 API Key（存储在系统 keyring，安全优先）
-cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
-
-# 分析当前最新日报
-cargo run -p quant-cli -- analyze-with-llm --scope global
-```
-
-说明：
-
-- 仅支持 OpenAI-compatible API（自定义 `base_url + model + api_key`）
-- API Key 优先存储在 OS keyring，失败时回退到 SQLite credential_store（会打印警告）
-- 分析结果保存为 `reports/llm-analysis-{scope}-{date}.md`
-- 分析文本不会出现在 stdout/stderr/logs/JSON 中，仅保存在报告文件内
-- 不支持流式输出、多 provider、prompt 模板、RAG 或 embeddings
-
-### 8.9 V3 CLI 阶段进度输出
-
-```bash
-# 默认开启 stderr 进度输出
-cargo run -p quant-cli -- refresh-all --to 2026-05-08
-
-# 关闭进度输出（仅保留 stdout JSON）
-cargo run -p quant-cli -- --quiet refresh-all --to 2026-05-08
-cargo run -p quant-cli -- --quiet sync-and-export --scope global
-```
-
-说明：
-
-- `--quiet` 是全局选项，放在子命令之前
-- 进度输出到 stderr，stdout JSON 报告不受影响
-- 长耗时命令（`refresh-all`、`sync-and-export`、`ingest-daily`、`compute-*`）均支持进度回调
-
-### 8.10 跑回测
-
-```bash
-cargo run -p quant-cli -- run-backtest
-```
-
-### 8.11 查看 dashboard 数据
-
-```bash
-cargo run -p quant-cli -- dashboard-dates
-cargo run -p quant-cli -- dashboard-snapshot
-cargo run -p quant-cli -- dashboard-snapshot --date 2026-03-16
-cargo run -p quant-cli -- explain-latest-gate
-cargo run -p quant-cli -- dashboard-dates --scope cn
-cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-16
-```
-
-说明：
-
-- `dashboard-snapshot` 不带参数时，默认返回**最新可分析日期**
-- `dashboard-dates` 返回当前可选的历史分析日期列表
-- `dashboard-snapshot --date YYYY-MM-DD` 可回看某一历史日期的分析结果
-- `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
-- `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
-- `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
-- signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
-- `explain-latest-gate` 会专门解释：为什么默认最新日期还没有推进到 freshest market date，以及卡在 signal / rotation / regime / environment 哪一层
-
-### 8.12 导出日报
-
-```bash
-cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-06-04
-cargo run -p quant-cli -- export-report --scope cn --date 2026-04-02
-```
-
-说明：
-
-- `export-report` 不带参数时，默认导出当前最新分析日期的日报
-- `export-report --date YYYY-MM-DD` 可导出指定历史日期的日报
-- `export-report --scope ...` 会导出对应 scope 的日报
+> 注：`compute-indicators`、`compute-rotation`、`compute-strategy-preferences`、`compute-signals` 也可单独执行，但通常由 `refresh-all` 或 `sync-and-export` 自动覆盖。单独执行适用于某个阶段 lagging 时的精准修复（例如 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，可单独重跑 `compute-signals`）。
 
 ---
 
-## 9. 数据健康检查
-
-为了避免趋势系统因为缺口、fallback、异常波动而被误导，当前已补上数据健康检查。
-
-### 检查内容
-
-- Eastmoney 主源当前是否可达
-- Tencent fallback 当前是否可达
-- 存量日线是否存在大时间缺口
-- 是否存在异常大波动日
-- 是否存在缺失 turnover 的 bar
-
-### 运行命令
+## 9. 检查与排查（Diagnostics）
 
 ```bash
+# 检查各阶段最新日期与完整度
+cargo run -p quant-cli -- pipeline-dates
+
+# 解释 latest gate 为何未推进
+cargo run -p quant-cli -- explain-latest-gate
+
+# 数据健康检查（provider 可达性、缺口、异常波动、turnover 缺失）
 cargo run -p quant-cli -- check-data-health
 ```
 
-### 导出数据健康报告
+说明：
 
-```bash
-cargo run -p quant-cli -- export-data-health-report
-```
-
-导出文件会落在：
-
-- `reports/data-health-<date>.md`
+- `pipeline-dates` 返回每个 stage 的**最新日期**和**最新日是否全量完整**
+- `explain-latest-gate` 专门解释：为什么默认最新日期还没有推进到 freshest market date，以及卡在 signal / rotation / regime / environment 哪一层
+- `check-data-health` 偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
+- 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 
 ---
 
@@ -460,12 +354,12 @@ cargo run -p quant-desktop
 5. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
 6. 需要留档时再导出 report
 
-### CLI 手动链路（工程/高级用户路径）
+### 高级参考：CLI 手动分步执行（工程路径）
 
 > **这组命令必须按顺序执行**，不能倒序或跳过中间阶段，否则 `export-report` 会因 latest gate 落后而被拒绝。
 
 ```bash
-# 1. 拉取行情（顺序：必须先有数据）
+# 1. 拉取行情
 cargo run -p quant-cli -- ingest-daily --from 2026-06-01 --to 2026-06-05
 
 # 2. 计算技术指标
@@ -483,7 +377,7 @@ cargo run -p quant-cli -- compute-strategy-preferences
 # 6. 生成最终信号
 cargo run -p quant-cli -- compute-signals
 
-# 7. 检查各阶段日期是否推进（排查用）
+# 7. 检查各阶段日期是否推进
 cargo run -p quant-cli -- pipeline-dates
 
 # 8. 数据健康检查
@@ -492,7 +386,7 @@ cargo run -p quant-cli -- check-data-health
 # 9. 查看 dashboard
 cargo run -p quant-cli -- dashboard-snapshot
 
-# 10. 导出日报（如果前面有阶段 lagging，这一步会 fail-loud）
+# 10. 导出日报（若前面有阶段 lagging，会 fail-loud）
 cargo run -p quant-cli -- export-report
 ```
 
@@ -508,59 +402,62 @@ cargo run -p quant-cli -- export-report
 
 ---
 
-## 12. 当前 V1 的已知限制
+## 12. 查看与导出（Dashboard & Report）
 
-- 没有正式测试套件 / CI
-- `market-store` 仍然偏大
-- `app-service` 仍然偏大
-- 数据健康检查已上线，但还没有把 provider 来源逐 bar 持久化
-- 当前更适合研究和辅助判断，不适合直接自动交易
+```bash
+# 查看可选历史日期列表
+cargo run -p quant-cli -- dashboard-dates [--scope <scope>]
+
+# 查看当前/历史 dashboard 快照
+cargo run -p quant-cli -- dashboard-snapshot [--scope <scope>] [--date <date>]
+
+# 导出日报
+cargo run -p quant-cli -- export-report [--scope <scope>] [--date <date>]
+
+# 导出数据健康报告
+cargo run -p quant-cli -- export-data-health-report
+```
+
+说明：
+
+- `dashboard-snapshot` 不带参数时，默认返回**最新可分析日期**
+- `dashboard-dates` 返回当前可选的历史分析日期列表
+- `dashboard-snapshot --date YYYY-MM-DD` 可回看某一历史日期的分析结果
+- `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
+- `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
+- `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
+- signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
+- `export-report` 不带参数时，默认导出当前最新分析日期的日报
+- `export-report --date YYYY-MM-DD` 可导出指定历史日期的日报
+- `export-report --scope ...` 会导出对应 scope 的日报
+- **默认 `export-report` 现在会在 latest gate 落后时直接失败，不再静默导出旧日期日报；如果确实要导出历史日报，请显式传 `--date YYYY-MM-DD`**
 
 ---
 
-## 13. 常用命令总表
+## 13. LLM 智能分析
 
 ```bash
-# 环境
-cargo run -p quant-cli -- status
-docker compose -f infra/docker/docker-compose.yml up -d
-cargo run -p quant-cli -- init-storage
-cargo run -p quant-cli -- seed-universe
-
-# 推荐默认路径（一条命令完成全链路刷新）
-cargo run -p quant-cli -- refresh-all --to 2026-06-17
-
-# V3 一键同步导出（自动检查 gate → 刷新 → 导出）
-cargo run -p quant-cli -- sync-and-export --scope global
-cargo run -p quant-cli -- sync-and-export --scope cn --date 2026-05-07
-
-# 分步路径（必须按顺序执行，不能倒序）
-cargo run -p quant-cli -- ingest-daily --from 2026-04-01 --to 2026-05-08
-cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-macro --from 2026-04-01 --to 2026-05-08
-cargo run -p quant-cli -- compute-rotation
-cargo run -p quant-cli -- compute-strategy-preferences
-cargo run -p quant-cli -- compute-signals
-
-# 检查与排查
-cargo run -p quant-cli -- pipeline-dates
-cargo run -p quant-cli -- explain-latest-gate
-cargo run -p quant-cli -- check-data-health
-
-# 查看与导出
-cargo run -p quant-cli -- dashboard-snapshot
-cargo run -p quant-cli -- dashboard-snapshot --scope cn
-cargo run -p quant-cli -- export-report
-cargo run -p quant-cli -- export-report --date 2026-05-07
-cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
-cargo run -p quant-cli -- export-data-health-report
-
-# V3 LLM 智能分析（CLI）
+# 配置 LLM（只需执行一次）
 cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
-cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
-cargo run -p quant-cli -- analyze-with-llm --scope global
 
-# V4 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
+# 设置 API Key（存储在系统 keyring，安全优先）
+cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
+
+# 分析当前最新日报
+cargo run -p quant-cli -- analyze-with-llm --scope global
+```
+
+说明：
+
+- 仅支持 OpenAI-compatible API（自定义 `base_url + model + api_key`）
+- API Key 优先存储在 OS keyring，失败时回退到 SQLite credential_store（会打印警告）
+- 分析结果保存为 `reports/llm-analysis-{scope}-{date}.md`
+- 分析文本不会出现在 stdout/stderr/logs/JSON 中，仅保存在报告文件内
+- 不支持流式输出、多 provider、prompt 模板、RAG 或 embeddings
+
+### V4 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
+
+```bash
 cargo run -p quant-desktop -- get-llm-status
 cargo run -p quant-desktop -- list-agent-profiles
 cargo run -p quant-desktop -- list-skills
@@ -568,11 +465,124 @@ cargo run -p quant-desktop -- evaluate-skill-triggers
 cargo run -p quant-desktop -- save-agent-profile --name default --config "..."
 cargo run -p quant-desktop -- read-agent-profile --name default
 cargo run -p quant-desktop -- analyze-with-llm --scope global --agent default --skill market-regime-reasoning
+```
 
-# 回测
+---
+
+## 14. 回测（Backtest）
+
+```bash
 cargo run -p quant-cli -- run-backtest
 cargo run -p quant-cli -- run-backtest --scope global --use-state-sizing --max-drawdown 0.15
-
-# V3 全局选项
-cargo run -p quant-cli -- --quiet refresh-all --to 2026-05-08
 ```
+
+参数说明：
+
+- `--scope <scope>`：选择回测 scope（`global|cn|hk`）
+- `--use-state-sizing`：启用状态感知仓位调整
+- `--max-drawdown <ratio>`：最大回撤限制（如 `0.15` 表示 15%）
+- `--initial-capital <amount>`：初始资金（默认系统内置）
+- `--max-holdings <n>`：最大持仓数
+- `--fee-rate <ratio>`：交易费率
+- `--slippage-rate <ratio>`：滑点率
+
+---
+
+## 15. 诊断与调试（Research & Debug）
+
+> **以下命令为研究/实验用途，输出格式可能随版本变更，不保证向后兼容。**
+
+### 15.1 系统状态快速检查
+
+```bash
+cargo run -p quant-cli -- status
+```
+
+返回当前系统状态摘要（JSON），包括最新数据日期、各阶段推进情况、gate 状态等。
+
+### 15.2 真值审计与标签生成（Ground Truth）
+
+通用参数：`--from <date> --to <date> [--scope <scope>]`
+
+| 命令 | 说明 |
+|------|------|
+| `validate-regime-accuracy` | 验证 regime 标签与历史走势的匹配度 |
+| `inspect-ground-truth` | 查看已生成的 Ground Truth 标签 |
+| `generate-regime-labels` | 基于规则生成 regime 标签（用于校准） |
+| `audit-gt-regime` | 审计 regime 标签质量 |
+| `audit-gt-transitions` | 审计 regime 切换频率与稳定性 |
+| `audit-gt-candidates` | 查看候选 regime 切换点 |
+| `validate-gt-regimes` | 验证 Ground Truth regime 一致性 |
+| `generate-ground-truth-labels` | 生成 Ground Truth 标签集 |
+| `audit-ground-truth` | 综合 Ground Truth 审计 |
+
+### 15.3 观察层与归因审计（Observation & Attribution）
+
+通用参数：`--from <date> --to <date> [--scope <scope>]`
+
+| 命令 | 说明 |
+|------|------|
+| `audit-observation-layer` | 审计市场观察层数据质量 |
+| `audit-attribution` | 归因分析：各因子对 regime 的贡献度 |
+| `replay-trend-sensitivity` | 趋势敏感度重放分析 |
+| `gt-sensitivity-replay` | Ground Truth 敏感度重放 |
+| `audit-lead-lag` | 领先/滞后关系审计 |
+
+### 15.4 状态与信号分解（State & Signal Decomposition）
+
+通用参数：`--from <date> --to <date> [--scope <scope>]`
+
+| 命令 | 说明 |
+|------|------|
+| `audit-state-signal-decomposition` | 状态-信号分解审计 |
+| `audit-state-transitions` | 状态切换路径审计 |
+| `audit-persistence-sensitivity` | 持久性敏感度分析 |
+| `audit-market-structure` | 市场结构审计 |
+| `audit-false-positive-breakdown` | 假阳性拆解分析 |
+
+### 15.5 经济与配置原型（Economic & Allocation Prototype）
+
+通用参数：`--from <date> --to <date> [--scope <scope>]`
+
+| 命令 | 说明 |
+|------|------|
+| `audit-economic-replay` | 经济情景重放 |
+| `audit-economic-attribution` | 经济因子归因 |
+| `audit-allocation-prototype` | 配置策略原型测试 |
+| `audit-counterfactual-regime` | 反事实 regime 分析 |
+| `audit-economic-regime-prototype` | 经济 regime 原型 |
+
+### 15.6 前沿与机制实验（Frontier & Mechanics）
+
+通用参数：`--from <date> --to <date> [--scope <scope>]`
+
+| 命令 | 说明 |
+|------|------|
+| `audit-pareto-frontier` | Pareto 前沿分析 |
+| `audit-persistence-frontier` | 持久性前沿分析 |
+| `audit-persistence-mechanics` | 持久性机制审计 |
+| `audit-dual-layer-validation` | 双层验证审计 |
+| `audit-state-persistence-economics` | 状态持久性经济学分析 |
+
+### 15.7 符号诊断与排行榜（Symbol Diagnostics）
+
+```bash
+# 单标的诊断
+cargo run -p quant-cli -- symbol-diagnostics --symbol <symbol> [--date <date>] [--scope <scope>]
+
+# 全市场标的排行榜
+cargo run -p quant-cli -- symbol-scoreboard [--date <date>] [--scope <scope>]
+
+# 轮动排名
+cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
+```
+
+---
+
+## 附录 A. 当前 V1 的已知限制
+
+- 没有正式测试套件 / CI
+- `app-service` 已模块化（lib.rs + 7 个辅助模块），但 `lib.rs` 仍较为庞大，后续可进一步拆分
+- `market-store` 已拆分为 14 个域模块，不再列为限制项
+- 数据健康检查已上线，但还没有把 provider 来源逐 bar 持久化
+- 当前更适合研究和辅助判断，不适合直接自动交易
