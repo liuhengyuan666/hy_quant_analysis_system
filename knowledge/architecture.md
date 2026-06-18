@@ -22,7 +22,7 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 ```
 
 关键组件：
-- app-service: 核心服务编排（monolith，~796行）
+- app-service: 核心服务编排（已模块化，lib.rs 4,083行 + 7 helper modules，后续仍可拆分）
 - data-ingestion: 数据获取（Eastmoney/Tencent/FRED）
 - macro-engine: 宏观因子计算与regime分类
 - rotation-engine: 轮动排名计算

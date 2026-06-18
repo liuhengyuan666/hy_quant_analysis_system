@@ -12,7 +12,7 @@ rust-quant-analysis-system/
 │       ├── frontend/            # Vite bundle, plain JS + Vue 3
 │       └── src-tauri/           # Tauri native bridge
 ├── crates/        # contracts, engines, persistence, orchestration
-│   ├── app-service/             # orchestration monolith (~800 lines)
+│   ├── app-service/             # orchestration (lib.rs ~4,083 lines + 7 helper modules: core, trust, breadth, dashboard, llm, sync, config_loader)
 │   ├── core-domain/             # shared DTOs, AnalysisScope, provenance
 │   ├── market-store/            # ALL ClickHouse / SQLite IO
 │   ├── macro-engine/            # factor normalization, regime rows

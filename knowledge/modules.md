@@ -11,7 +11,7 @@ rust-quant-analysis-system/
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
 ├── crates/               # 核心库crate（20个目录，20个在workspace中；research-validation物理存在但未加入workspace）
-│   ├── app-service/      # 核心服务编排（monolith）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 7 helper modules）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
@@ -56,8 +56,9 @@ rust-quant-analysis-system/
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
 ├── reports/              # 生成的报告
-├── shadow-production/    # 影子生产环境
-└── sql/                  # SQL脚本
+├── reports/                  # 生成的报告
+├── sql/                      # SQL脚本
+└── target/                   # Rust构建产物（未在目录树中显式列出，但存在）
 ```
 
 ## 2. 核心模块调用边界与依赖方向
