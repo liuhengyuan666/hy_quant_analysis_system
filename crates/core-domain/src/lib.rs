@@ -462,6 +462,74 @@ impl Default for LlmFileConfig {
     }
 }
 
+// ============================================================
+// TOML-based FRED Configuration (ADR-064)
+// ============================================================
+
+/// FRED 文件配置结构体（从 TOML 加载）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FredFileConfig {
+    pub fred: FredSection,
+}
+
+/// FRED 配置主段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FredSection {
+    #[serde(default = "default_fred_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_fred_base_url")]
+    pub base_url: String,
+    #[serde(default)]
+    pub auth: FredAuthSection,
+    #[serde(default = "default_fred_request_delay_ms")]
+    pub request_delay_ms: u64,
+    #[serde(default = "default_fred_timeout_secs")]
+    pub timeout_secs: u64,
+}
+
+/// FRED 认证配置段
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FredAuthSection {
+    #[serde(default)]
+    pub api_key: Option<String>,
+}
+
+fn default_fred_enabled() -> bool {
+    true
+}
+
+fn default_fred_base_url() -> String {
+    "https://api.stlouisfed.org/fred".to_string()
+}
+
+fn default_fred_request_delay_ms() -> u64 {
+    500
+}
+
+fn default_fred_timeout_secs() -> u64 {
+    30
+}
+
+impl Default for FredSection {
+    fn default() -> Self {
+        Self {
+            enabled: default_fred_enabled(),
+            base_url: default_fred_base_url(),
+            auth: FredAuthSection::default(),
+            request_delay_ms: default_fred_request_delay_ms(),
+            timeout_secs: default_fred_timeout_secs(),
+        }
+    }
+}
+
+impl Default for FredFileConfig {
+    fn default() -> Self {
+        Self {
+            fred: FredSection::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmAnalysisResult {
     pub report_date: String,
@@ -1146,4 +1214,19 @@ pub struct SkillTriggerResult {
     pub description: String,
     pub triggered: bool,
     pub weight: f64,
+}
+
+// ============================================================
+// V5 Startup Freshness Check DTOs
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartupFreshnessCheck {
+    pub has_data: bool,
+    pub latest_db_date: Option<NaiveDate>,
+    pub expected_date: Option<NaiveDate>,
+    pub gap_days: i64,
+    pub auto_ingest_eligible: bool,
+    pub requires_manual_action: bool,
+    pub message: String,
 }

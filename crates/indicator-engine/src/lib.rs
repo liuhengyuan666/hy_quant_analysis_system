@@ -157,3 +157,68 @@ pub fn build_indicator_snapshots(bars: &[DailyBar]) -> Vec<IndicatorSnapshot> {
         })
         .collect()
 }
+
+/// Parallel version: compute indicator snapshots for multiple symbols concurrently.
+/// This is a safe Rayon entry point; caller must invoke via `spawn_blocking` if in async context.
+pub fn build_indicator_snapshots_for_symbols(
+    bars_by_symbol: &std::collections::HashMap<String, Vec<DailyBar>>,
+) -> Vec<IndicatorSnapshot> {
+    use rayon::prelude::*;
+    bars_by_symbol
+        .par_iter()
+        .flat_map(|(_symbol, bars)| build_indicator_snapshots(bars))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+    use std::collections::HashMap;
+    use core_domain::{DailyBar, IndicatorSnapshot};
+
+    fn make_bars(symbol: &str, n: usize) -> Vec<DailyBar> {
+        let mut bars = Vec::new();
+        for i in 0..n {
+            bars.push(DailyBar {
+                date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap() + chrono::Duration::days(i as i64),
+                symbol: symbol.to_string(),
+                open: 100.0 + i as f64,
+                high: 102.0 + i as f64,
+                low: 99.0 + i as f64,
+                close: 101.0 + i as f64,
+                volume: 1000.0 + i as f64,
+                turnover: None,
+            });
+        }
+        bars
+    }
+
+    #[test]
+    fn parallel_produces_same_output_as_serial() {
+        let mut bars_by_symbol = HashMap::new();
+        bars_by_symbol.insert("A".to_string(), make_bars("A", 65));
+        bars_by_symbol.insert("B".to_string(), make_bars("B", 65));
+        bars_by_symbol.insert("C".to_string(), make_bars("C", 65));
+
+        // Serial: call build_indicator_snapshots for each symbol individually
+        let mut serial_results: Vec<IndicatorSnapshot> = Vec::new();
+        for bars in bars_by_symbol.values() {
+            serial_results.extend(build_indicator_snapshots(bars));
+        }
+        serial_results.sort_by(|a, b| (a.date, &a.symbol).cmp(&(b.date, &b.symbol)));
+
+        // Parallel
+        let mut parallel_results = build_indicator_snapshots_for_symbols(&bars_by_symbol);
+        parallel_results.sort_by(|a, b| (a.date, &a.symbol).cmp(&(b.date, &b.symbol)));
+
+        assert_eq!(serial_results.len(), parallel_results.len());
+        for (s, p) in serial_results.iter().zip(parallel_results.iter()) {
+            assert_eq!(s.date, p.date);
+            assert_eq!(s.symbol, p.symbol);
+            assert!((s.ma10.unwrap_or(0.0) - p.ma10.unwrap_or(0.0)).abs() < 1e-6, "ma10 mismatch for {}@{}", s.symbol, s.date);
+            assert!((s.ma20.unwrap_or(0.0) - p.ma20.unwrap_or(0.0)).abs() < 1e-6, "ma20 mismatch for {}@{}", s.symbol, s.date);
+            assert!((s.ma60.unwrap_or(0.0) - p.ma60.unwrap_or(0.0)).abs() < 1e-6, "ma60 mismatch for {}@{}", s.symbol, s.date);
+        }
+    }
+}

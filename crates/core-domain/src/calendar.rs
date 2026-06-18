@@ -96,6 +96,37 @@ impl TradingCalendar {
     fn is_weekend(date: NaiveDate) -> bool {
         matches!(date.weekday(), chrono::Weekday::Sat | chrono::Weekday::Sun)
     }
+
+    /// Returns whether today is a trading day for *any* active market (CN or HK).
+    /// This is used for the "did the market close today" check when the system
+    /// is started after the unified 17:00 cutoff.
+    fn is_trading_day_any_market(&self, date: NaiveDate) -> bool {
+        self.is_trading_day(&super::Market::Cn, date)
+            || self.is_trading_day(&super::Market::Hk, date)
+    }
+
+    /// Determine the expected latest tradable date given the current wall-clock time.
+    ///
+    /// Rules (unified 17:00 close assumption, Beijing time):
+    /// - If now >= 17:00 and today is a trading day for any market, return today.
+    /// - Otherwise, return the previous trading day for CN (the primary market).
+    ///
+    /// Note: This assumes the system clock is set to Beijing time (UTC+8).
+    /// If the clock is on a different timezone, the 17:00 cutoff will be wrong.
+    pub fn expected_latest_tradable_date(
+        &self,
+        now: chrono::DateTime<chrono::Local>,
+    ) -> Option<NaiveDate> {
+        let today = now.date_naive();
+        let close_time = chrono::NaiveTime::from_hms_opt(17, 0, 0)?;
+        let is_after_close = now.time() >= close_time;
+
+        if is_after_close && self.is_trading_day_any_market(today) {
+            Some(today)
+        } else {
+            self.prev_trading_day(&super::Market::Cn, today)
+        }
+    }
 }
 
 #[cfg(test)]
