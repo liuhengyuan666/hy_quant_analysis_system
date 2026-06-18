@@ -34,8 +34,16 @@
   * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径）
   * 核心规则 4: V4桌面端LLM智能分析面板（Agent选择、技能路由、6标签页分析、历史记录、比较分析）
+  * 核心规则 5: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
 
-## 3. 外部业务依赖
+## 4. 新增可解释性能力（TASK-092）
+
+* **Explainability Layer** — 仅暴露系统判断过程，不修改判断逻辑
+  * `symbol-diagnostics`：展示单个标的的信号归因拆解（Strategy 45% + Alignment 15% + Regime 20% + Rotation 20%）
+  * `symbol-scoreboard`：全标的统一视图横向对比（Rotation + Signal + BestStrategy + Alignment + State + Position%）
+  * 约束：不得生成新的评分、排名或决策信号，仅使用现有系统已计算的值
+
+## 5. 外部业务依赖
 
 - Eastmoney API（CN指数/ETF主源）
 - Tencent API（CN/HK兜底源）

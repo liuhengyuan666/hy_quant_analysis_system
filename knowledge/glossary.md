@@ -66,3 +66,12 @@
 | Gated | Gated Task | 门控任务（依赖其他任务完成） | 项目管理域 |
 | P0/P1/P2 | Priority Level | 优先级（P0最高，P2最低） | 项目管理域 |
 | MVP | Minimum Viable Product | 最小可行产品 | 项目管理域 |
+| **Explainability Layer** | Explainability Layer | 可解释性层，用于展示系统决策的归因拆解（TASK-092） | 可解释性域 |
+| **Research Surface** | Research Surface | 研究表面，Shadow Production 期间允许新增的观测/诊断工具集合（如 symbol-diagnostics, rotation-ranking） | 治理域 |
+| **Production Surface** | Production Surface | 生产表面，Shadow Production 期间冻结的核心观察链路（DashboardSnapshot, ResearchContext, Markdown Report） | 治理域 |
+| **Attribution Breakdown** | Attribution Breakdown | 归因拆解，信号得分的四段贡献：Strategy (45%) + Alignment (15%) + Regime (20%) + Rotation (20%) | 可解释性域 |
+| **Divergence Sample Library** | Divergence Sample Library | 分歧样本库，用于追踪 StrongBuy+DE_RISK 等模式的 T+20/T+60/T+120 收益样本 | 研究验证域 |
+| **Symbol Diagnostics** | Symbol Diagnostics | 标的诊断，单标的深度归因拆解 CLI 工具（TASK-092 P0） | 可解释性域 |
+| **Symbol Scoreboard** | Symbol Scoreboard | 标的记分板，全标的统一视图横向对比 CLI 工具（TASK-092 P1） | 可解释性域 |
+| **TRAP** | Trap Record | 陷阱记录，记录已修复的根因和预防措施（如 TRAP-004, TRAP-005） | 项目管理域 |
+| **max_partitions_per_insert_block** | ClickHouse Partition Limit | ClickHouse 单次插入分区数限制，已设置为 10000 以支持长历史数据 | 数据存储域 |

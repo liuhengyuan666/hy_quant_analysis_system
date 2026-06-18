@@ -54,3 +54,11 @@
 - Regime 评估使用三层独立框架：State Layer（描述性）、Economic Layer（预测性）、Allocation Layer（决策性）
 - 所有实验结论需在 `confirmation_days=1` 下重新验证
 - Wave 研究阶段化：Wave 7（GT验证）、Wave 8（Insight Composer）、Wave 9（Daily Report）
+
+## 8. 治理范式 (Governance)
+
+- **Shadow Production 冻结**：State Layer、Economic Layer、Signal Engine、weights、thresholds、allocation、backtest 语义全部冻结
+- **Production Surface 冻结**：DashboardSnapshot、ResearchContext、Markdown Report 在观察期间不修改展示逻辑
+- **Research Surface 允许新增**：观测/诊断工具（symbol-diagnostics, symbol-scoreboard, rotation-ranking）作为独立 CLI 工具，不进入主观察链路
+- **Explainability Layer 约束**：可以解释现有决策，但不得生成新评分、排名或决策信号
+- **ADR 优先级**：User instruction > Active ADRs > Traps > Search results > Model knowledge
