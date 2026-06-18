@@ -133,7 +133,7 @@ rust-quant-analysis-system/
 | `quant-cli` | 薄 clap 命令行封装，直接映射 `AppContext` | `src/main.rs` | `app-service`, `market-store`, `clap` |
 | `quant-desktop` (src-tauri) | Tauri 命令注册、刷新协调器、阶段控制、安全文件打开 | `src/lib.rs`（`spawn_dashboard_refresh`, `open_report_artifact`） | `app-service`, `core-domain`, `market-store`, `report-engine`, `tauri` |
 
-> **约束**：CLI / Tauri 保持薄封装，不拥有量化逻辑。`app-service/src/lib.rs` 当前为 ~795 行的 monolith。
+> **约束**：CLI / Tauri 保持薄封装，不拥有量化逻辑。`app-service/src/lib.rs` 当前为 4,083 行的 AppContext 高层编排，已提取 7 个 helper 模块（core, trust, breadth, dashboard, llm, sync, config_loader）。
 
 ### 3.5 占位
 
@@ -291,7 +291,7 @@ src/
 
 | 热点 | 说明 | 状态 |
 |------|------|------|
-| `app-service/src/lib.rs` | ~795 行 monolith，编排逻辑集中，review 和后续拆分困难 | 进行中 |
+| `app-service/src/lib.rs` | 已模块化：4,083 行 lib.rs（AppContext 高层编排）+ 7 个 helper 模块（core, trust, breadth, dashboard, llm, sync, config_loader）。lib.rs 后续可进一步拆分 | 已拆分 |
 | `market-store/src/lib.rs` | god-module，所有 SQL / IO / 桥接逻辑集中在一处 | 待拆分 |
 | 前端 `main.js` 拆分 | 已按 utils → guides → data-health → environment-breadth 顺序渐进拆分 | 进行中 |
 
