@@ -46,16 +46,16 @@ rust-quant-analysis-system/
 |------|----------|-------|
 | Agent rules + memory workflow | `memory/context.md` + `memory/decisions.md` | highest-priority collaboration rules |
 | Current repo truth source | `README.md` + `docs/文档状态说明.md` | start here before old planning docs |
-| Orchestration / trust / freshness guards | `crates/app-service/src/lib.rs` | `AppContext`, `build_trust_summary`, `dashboard_bundle_with_scope`, `refresh_consistency_alerts` |
+| Orchestration / trust / freshness guards | `crates/app-service/src/` | `AppContext` (in `lib.rs`), `build_trust_summary` (in `trust.rs`), `dashboard_bundle_with_scope`, `refresh_consistency_alerts` |
 | Shared contracts | `crates/core-domain/src/lib.rs` | `AnalysisScope`, shared snapshot DTOs, provenance fields |
-| Persistence boundary | `crates/market-store/src/lib.rs` | all ClickHouse / SQLite IO and latest-date gating |
+| Persistence boundary | `crates/market-store/src/` | 14 domain modules (`core`, `bars`, `signals`, `regime`, `environment`, `rotation`, `strategy`, `indicators`, `macro`, `backtest`, `reports`, `dates`, `instruments`, `sqlite`) via `pub use` re-exports; all ClickHouse / SQLite IO and latest-date gating |
 | Pure macro regime logic | `crates/macro-engine/src/lib.rs` | factor normalization + `GLOBAL/CN/HK` regime rows |
 | Report contract | `crates/report-engine/src/lib.rs` | `DashboardSnapshot`, `TrustSummary`, markdown report rendering |
 | Desktop shell / refresh bridge | `apps/desktop/src-tauri/src/lib.rs` | command boundary, refresh coordinator, safe artifact opening |
 | Frontend composition | `apps/desktop/frontend/src/main.js` | root state, scope/date flow, refresh UI, top-level render |
 | Frontend feature slices | `apps/desktop/frontend/src/components/*.vue` | 20+ Vue panels |
 | Environment + breadth UI | `apps/desktop/frontend/src/components/EnvironmentPanel.vue` + `BreadthPanel.vue` | paired explanation layer + proxy view |
-| CLI surface | `apps/cli/src/main.rs::Command` | authoritative subcommand list |
+| CLI surface | `apps/cli/src/main.rs` + `commands/` | thin dispatch over `AppContext` + 9 command modules (`config`, `pipeline`, `diagnostics`, `dashboard`, `backtest`, `research`, `llm`, `audit`) |
 | Current phase memory | `docs/阶段性更新-2026-04-26.md` + `memory/context.md` + `memory/decisions.md` | latest intent, decisions, and next seam |
 
 ## DEVELOPER COMMANDS

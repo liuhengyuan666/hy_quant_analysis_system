@@ -17,6 +17,9 @@ crates/
 ├── report-engine/      # dashboard/report payload + markdown rendering
 ├── market-store/       # ClickHouse + SQLite IO
 ├── app-service/        # orchestration facade, trust assembly, refresh guards
+├── gt-regime-generator/     # Ground Truth four-layer regime generation (Observation→Candidate→Persistence→Label)
+├── market-state-extractor/  # semantic market-state observation layer (ADR-053): Trend/Volatility/Liquidity
+├── regime-audit/           # regime label quality validation: persistence, coverage, alignment, dual-layer validation
 ├── research-context/   # ResearchContext builder from DashboardSnapshot
 ├── research-skills/    # LLM-powered skill/agent analysis engine
 ├── research-benchmark/ # skill benchmarking harness
@@ -29,9 +32,12 @@ crates/
 | Add / change shared DTOs | `core-domain/` | type first; child AGENTS file covers contract traps |
 | Add new factor/provider | `data-ingestion/` + engine crate | fetch outside, compute inside |
 | Change pure macro scoring | `macro-engine/` | regime math only; no fetch/persist |
-| Add persistence | `market-store/` | fetch/insert pair, enum/string mapping, scoped date helpers |
-| Change trust / dashboard bootstrap / recent reports | `app-service/` + `report-engine/` | `app-service` assembles; `report-engine` shapes |
-| Add pipeline step | `app-service/` | expose summary DTO + CLI/Tauri hook |
+| Add persistence | `market-store/` | split into 14 domain modules (`core`, `bars`, `signals`, `regime`, `environment`, `rotation`, `strategy`, `indicators`, `macro`, `backtest`, `reports`, `dates`, `instruments`, `sqlite`); fetch/insert pair, enum/string mapping, scoped date helpers |
+| Change trust / dashboard bootstrap / recent reports | `app-service/` + `report-engine/` | `app-service` assembles (orchestration monolith with helper modules: `core`, `trust`, `breadth`, `dashboard`, `llm`, `sync`); `report-engine` shapes |
+| Add pipeline step | `app-service/` | expose summary DTO + CLI/Tauri hook; add helper to appropriate module (trust, breadth, dashboard) |
+| Ground Truth regime generation | `gt-regime-generator/` | 4-layer pipeline: Observation → Candidate → Persistence → Regime Label |
+| Market state observations | `market-state-extractor/` | semantic OHLCV + indicator → Trend/Volatility/Liquidity dimensions |
+| Regime quality validation | `regime-audit/` | persistence, coverage, alignment, dual-layer validation; pure analysis |
 | Add LLM research skill | `research-skills/` + SKILL.md | YAML front matter + reasoning graph |
 | Change research context | `research-context/` | builder from DashboardSnapshot |
 | Benchmark research skills | `research-benchmark/` | WIP: Wave 3 harness |
@@ -52,8 +58,8 @@ crates/
 - Do **not** put orchestration or trust assembly into `report-engine`.
 
 ## HOTSPOTS
-- `market-store/src/lib.rs` is still the largest and most coupled crate file.
-- `app-service/src/lib.rs` is still the orchestration monolith; review nearby helpers before adding more flow logic.
+- `market-store/src/` is now split into 14 domain modules (was a 2,678-line god-module). All pub use re-exports preserve backward compatibility.
+- `app-service/src/lib.rs` is still the orchestration monolith (4,083 lines), but helper logic has been extracted into `core.rs`, `trust.rs`, `breadth.rs`, `dashboard.rs`, `llm.rs`, `sync.rs`. Review nearby helper modules before adding more flow logic.
 - `data-ingestion/src/lib.rs` owns source semantics such as forward-adjustment and provider validation.
 - `report-engine/src/lib.rs` is a shared payload contract; field drift breaks CLI, Tauri, and frontend together.
 - `research-context/src/builder.rs` has 10 TODOs for unimplemented data-quality computations.
