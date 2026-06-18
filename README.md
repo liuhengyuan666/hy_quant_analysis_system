@@ -528,7 +528,7 @@ cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
 
 # 推荐默认路径（一条命令完成全链路刷新）
-cargo run -p quant-cli -- refresh-all --to 2026-06-16
+cargo run -p quant-cli -- refresh-all --to 2026-06-17
 
 # V3 一键同步导出（自动检查 gate → 刷新 → 导出）
 cargo run -p quant-cli -- sync-and-export --scope global

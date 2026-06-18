@@ -799,6 +799,93 @@ fn get_user_preferences() -> Result<BTreeMap<String, String>, String> {
 }
 
 #[tauri::command]
+fn check_startup_freshness() -> Result<serde_json::Value, String> {
+    let context = AppContext::new(StorageConfig::default());
+    let check = context.check_startup_freshness().map_err(|e| e.to_string())?;
+    serde_json::to_value(check).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn auto_ingest_on_startup(
+    refresh: tauri::State<'_, RefreshCoordinator>,
+) -> Result<DashboardRefreshStatus, String> {
+    let context = AppContext::new(StorageConfig::default());
+    let check = context.check_startup_freshness().map_err(|e| e.to_string())?;
+    
+    if !check.auto_ingest_eligible {
+        return Ok(DashboardRefreshStatus {
+            status: "skipped".to_string(),
+            ..Default::default()
+        });
+    }
+    
+    // Compute date range for the gap
+    let now = chrono::Local::now();
+    let expected_date = context.calendar.expected_latest_tradable_date(now)
+        .ok_or_else(|| "无法确定期望最新日期".to_string())?;
+    let latest_db_date = market_store::fetch_latest_daily_bar_date(&context.storage)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "数据库中无数据".to_string())?;
+    let from = latest_db_date + chrono::Duration::days(1);
+    let to = expected_date;
+    
+    // Set initial status
+    set_refresh_status(refresh.inner(), |status| {
+        status.running = true;
+        status.status = "running".to_string();
+        status.stage = "auto_ingest".to_string();
+        status.progress_pct = 0;
+        status.started_at = Some(chrono::Local::now().to_rfc3339());
+    });
+    
+    let coordinator = refresh.inner().clone();
+    let coordinator_for_success = coordinator.clone();
+    let coordinator_for_error = coordinator.clone();
+    
+    // Spawn the parallel ingest task in background
+    tauri::async_runtime::spawn(async move {
+        let progress = Box::new(move |msg: &str| {
+            set_refresh_status(&coordinator, |status| {
+                status.status = msg.to_string();
+                if msg.contains("ingest progress") {
+                    if let Some(pct_start) = msg.rfind('(') {
+                        if let Some(pct_end) = msg.rfind('%') {
+                            if let Ok(pct) = msg[pct_start+1..pct_end].parse::<u8>() {
+                                status.progress_pct = pct;
+                            }
+                        }
+                    }
+                }
+            });
+        }) as Box<dyn Fn(&str) + Send>;
+        
+        let context = AppContext::new(StorageConfig::default());
+        match context.ingest_daily_parallel(from, to, Some(progress)).await {
+            Ok(_summary) => {
+                set_refresh_status(&coordinator_for_success, |status| {
+                    status.running = false;
+                    status.status = "success".to_string();
+                    status.progress_pct = 100;
+                    status.finished_at = Some(chrono::Local::now().to_rfc3339());
+                });
+            }
+            Err(error) => {
+                set_refresh_status(&coordinator_for_error, |status| {
+                    status.running = false;
+                    status.status = "error".to_string();
+                    status.error = Some(error.to_string());
+                    status.finished_at = Some(chrono::Local::now().to_rfc3339());
+                });
+            }
+        }
+    });
+    
+    // Return current status immediately
+    let status = refresh.status.lock().map_err(|e| e.to_string())?;
+    Ok(status.clone())
+}
+
+#[tauri::command]
 fn set_user_preference(key: String, value: String) -> Result<(), String> {
     let context = AppContext::new(StorageConfig::default());
     context
@@ -1085,7 +1172,9 @@ pub fn run() {
             export_llm_analysis,
             analyze_with_skill,
             analyze_with_llm,
-            evaluate_skill_triggers
+            evaluate_skill_triggers,
+            check_startup_freshness,
+            auto_ingest_on_startup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
