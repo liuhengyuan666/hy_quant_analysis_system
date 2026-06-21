@@ -392,7 +392,7 @@ pub fn insert_backtest_result(
             .join("\n");
         let query = "INSERT INTO quant.backtest_equity_curve FORMAT JSONEachRow";
         let url = format!(
-            "{}?database={}&query={}",
+            "{}?database={}&query={}&max_partitions_per_insert_block=10000",
             config.clickhouse_url,
             config.clickhouse_database,
             urlencoding::encode(query)

@@ -1725,7 +1725,7 @@ impl AppContext {
             &result.trades,
             &result.equity_curve,
         ) {
-            failed_items.push(format!("backtest_persist: {error}"));
+            failed_items.push(format!("backtest_persist: {}", error));
         }
 
         Ok(BacktestRunSummary {
