@@ -36,6 +36,8 @@ rust-quant-analysis-system/
 │   ├── universe.json     # 标的池配置
 │   ├── llm.toml          # LLM配置（gitignored，支持${ENV_VAR}插值）
 │   ├── llm.toml.example  # LLM配置示例
+│   ├── fred.toml         # FRED宏观因子配置（支持enabled开关）
+│   ├── fred.toml.example # FRED配置示例
 │   └── benchmark-providers.toml # 基准提供者配置
 ├── data/                 # 运行时数据目录
 ├── infra/                # 基础设施
@@ -55,10 +57,9 @@ rust-quant-analysis-system/
 │   └── tech.md           # 技术约束（MemGuard维护）
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
-├── reports/              # 生成的报告
-├── reports/                  # 生成的报告
-├── sql/                      # SQL脚本
-└── target/                   # Rust构建产物（未在目录树中显式列出，但存在）
+├── reports/             # 生成的报告
+├── sql/                 # SQL脚本
+└── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```
 
 ## 2. 核心模块调用边界与依赖方向

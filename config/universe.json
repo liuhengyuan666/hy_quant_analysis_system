@@ -319,6 +319,17 @@
       "eastmoney_secid": "1.000922",
       "tencent_symbol": "sh000922",
       "enabled": true
+    },
+    {
+      "symbol": "516150",
+      "name": "嘉实中证稀土产业ETF",
+      "display_symbol": "E516150",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.516150",
+      "tencent_symbol": "sh516150",
+      "enabled": true
     }
   ]
 }

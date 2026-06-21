@@ -12,7 +12,7 @@ shadow_production_observation
 - [Todo] [TASK-008] [Accepted] [ADR-058] Persistence Simplification (confirmation_days = 1).
 - [Todo] [TASK-009] [Accepted] [ADR-059] HK Anchor Symbol Fix (HSI → HSCEI).
 - [Todo] [TASK-010] [In Progress] [ADR-060] Regime Ground Truth Definition — Wave 9 launched. Ground Truth being redefined from "technical patterns" to "forward return distributions".
-- [Todo] [TASK-080A] 13 MVP candidate factors identified. Architecture revised to multidimensional Economic Scores output. NFCI downgraded to Composite Validation Factor.
+- [Todo] [TASK-010] [TASK-080A] 13 MVP candidate factors identified. Architecture revised to multidimensional Economic Scores output. NFCI downgraded to Composite Validation Factor.
 - [Todo] [TASK-011] [TASK-080B] 10 factors selected from 13 candidates. 4-table analysis (Pearson, Spearman, MI, Predictive Orthogonality). Removed IG Spread, BBB Spread, M2.
 - [Todo] [TASK-012] [TASK-080C] Empirical analysis on 4 existing factors (VIX, 10Y, Dollar, FedFunds) + research-based estimates for 6 missing factors. VIX strong negative predictor, Dollar very strong for HK.
 - [Todo] [TASK-013] [TASK-080D] K-means clustering analysis. 3-State recommended (Favorable/Neutral/Unfavorable) with variance ratio 0.862. Fed Funds clustering identified as bias source.
@@ -26,7 +26,7 @@ shadow_production_observation
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。
 - `TradingCalendar` 当前只覆盖 CN/HK。
-- `app-service` 已模块化（7 个辅助模块：core, breadth, dashboard, sync, trust, llm, config_loader），但 `lib.rs` 仍保留 4,083 行 AppContext 高层编排，后续可进一步拆分。
+- `app-service/src/lib.rs` 仍是 monolith（~796 行）。
 - Eastmoney 主源从当前环境不可达，全部标的走 Tencent fallback。
 - P2 turnover 修复仅影响新拉取数据，存量 ClickHouse 数据需 `ingest-daily` 回填。
 - **Wave 7.5 所有结论需在 1d persistence 下重新验证，暂不基于 10d 结果做进一步决策。**
