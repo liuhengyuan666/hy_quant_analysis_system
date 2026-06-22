@@ -603,6 +603,11 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)
+    PrecloseAnalysis {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     /// TASK-071B: State lead/lag analysis (before/during/after episode returns)
     AuditLeadLag {
         #[arg(long)]
@@ -706,6 +711,7 @@ fn main() -> Result<()> {
         Command::RotationRanking { date, scope } => commands::audit::handle_rotation_ranking(&context, date, scope)?,
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,
+        Command::PrecloseAnalysis { scope } => commands::execution::handle_preclose_analysis(&context, scope.into())?,
         Command::AuditLeadLag { from, to } => commands::audit::handle_audit_lead_lag(&context, from, to)?,
     }
     Ok(())

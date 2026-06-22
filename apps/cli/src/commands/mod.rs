@@ -6,3 +6,4 @@ pub mod backtest;
 pub mod llm;
 pub mod research;
 pub mod audit;
+pub mod execution;

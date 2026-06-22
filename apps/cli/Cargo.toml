@@ -8,6 +8,7 @@ authors.workspace = true
 [dependencies]
 anyhow.workspace = true
 app-service = { path = "../../crates/app-service" }
+execution-engine = { path = "../../crates/execution-engine" }
 chrono.workspace = true
 clap.workspace = true
 core-domain = { path = "../../crates/core-domain" }

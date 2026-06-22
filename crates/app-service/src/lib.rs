@@ -48,6 +48,7 @@ use crate::trust::*;
 
 pub use core_domain::AnalysisScope as ReportScope;
 pub use research_renderer::ResearchInsight;
+pub use execution_engine::types::ExecutionDecision;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -3305,6 +3306,120 @@ impl AppContext {
         });
 
         Ok(results)
+    }
+
+    /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)
+    ///
+    /// Candidate filter: signal >= Buy AND state != NO_TRADE
+    /// Real-time data: Tencent API snapshot
+    /// Output: ExecutionDecision list (BuyNow / Wait / NoChase / Reduce / Skip)
+    pub fn analyze_preclose(
+        &self,
+        scope: ReportScope,
+    ) -> Result<Vec<execution_engine::ExecutionDecision>> {
+        use execution_engine::types::{ExecutionDecision, SkipReason};
+        use core_domain::{SignalLabel, StrategyState};
+
+        // 1. Determine latest available date for this scope
+        let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+        let Some(latest_date) = available_dates.first().copied() else {
+            return Ok(vec![]);
+        };
+
+        // 2. Load strategy state (hard gate)
+        let strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
+            &self.storage,
+            latest_date,
+            scope,
+        )?;
+
+        if let Some(ref state) = strategy_state {
+            if state.state == StrategyState::NoTrade {
+                // All candidates skip due to state gate
+                return Ok(vec![]);
+            }
+        }
+
+        // 3. Load signals for the latest date
+        let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+            &self.storage,
+            latest_date,
+            scope,
+        )?;
+
+        // 4. Filter candidates: signal >= Buy
+        let candidates: Vec<_> = signals
+            .into_iter()
+            .filter(|s| {
+                matches!(
+                    s.signal_label,
+                    SignalLabel::StrongBuy | SignalLabel::Buy
+                )
+            })
+            .collect();
+
+        if candidates.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 5. Build symbol list for fetching
+        let symbols: Vec<String> = candidates.iter().map(|s| s.symbol.clone()).collect();
+
+        // 6. Fetch MA10 and volume MA20 from indicators for enrichment
+        let mut ma10_map: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+        let mut vol_ma20_map: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+
+        for symbol in &symbols {
+            if let Ok(indicators) = market_store::fetch_indicator_snapshots(
+                &self.storage,
+                symbol,
+            ) {
+                // Get the latest indicator (last in sorted list)
+                if let Some(latest) = indicators.last() {
+                    if let Some(ma10) = latest.ma10 {
+                        ma10_map.insert(symbol.clone(), ma10);
+                    }
+                    if let Some(vol_ma20) = latest.vol_ma20 {
+                        vol_ma20_map.insert(symbol.clone(), vol_ma20);
+                    }
+                }
+            }
+        }
+
+        // 7. Fetch real-time snapshots from Tencent API
+        let mut snapshots = match execution_engine::fetcher::fetch_tencent_snapshots(&symbols) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Tencent snapshot fetch failed: {}", e);
+                // Return Skip for all candidates
+                return Ok(candidates
+                    .iter()
+                    .map(|c| ExecutionDecision::skipped(c.symbol.clone(), SkipReason::DataUnavailable))
+                    .collect());
+            }
+        };
+
+        // 8. Enrich snapshots with MA10 (used as proxy for MA5 distance) and volume ratio
+        execution_engine::fetcher::enrich_snapshots(&mut snapshots, &ma10_map, &vol_ma20_map);
+
+        // 9. Run engine analysis
+        let decisions = execution_engine::engine::analyze_batch(&snapshots);
+
+        // 10. Augment decisions with Skip for candidates that had no snapshot data
+        let mut all_decisions: Vec<ExecutionDecision> = decisions;
+        for candidate in candidates {
+            if !all_decisions.iter().any(|d| d.symbol == candidate.symbol) {
+                all_decisions.push(ExecutionDecision::skipped(
+                    candidate.symbol.clone(),
+                    SkipReason::DataUnavailable,
+                ));
+            }
+        }
+
+        // Sort by symbol for deterministic output
+        all_decisions.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+
+        Ok(all_decisions)
     }
 
 }

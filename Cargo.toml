@@ -8,6 +8,7 @@ members = [
   "crates/data-ingestion",
   "crates/indicator-engine",
   "crates/macro-engine",
+  "crates/execution-engine",
   "crates/gt-regime-generator",
   "crates/market-state-extractor",
   "crates/regime-audit",
