@@ -18,6 +18,7 @@ import {
   cancelRefresh as bridgeCancelRefresh,
   exportReport as bridgeExportReport,
   analyzeWithLlm as bridgeAnalyzeWithLlm,
+  runPrecloseAnalysis as bridgeRunPrecloseAnalysis,
 } from './store.js';
 import DashboardHero from './components/DashboardHero.vue';
 import LlmAnalysisTrigger from './components/LlmAnalysisTrigger.vue';
@@ -50,6 +51,17 @@ const snapshot = computed(() => dashboardStore.snapshot);
 const loading = computed(() => dashboardStore.loading);
 const error = computed(() => dashboardStore.error);
 const exportResult = computed(() => dashboardStore.exportResult);
+const startupNotice = computed(() => dashboardStore.startupNotice);
+
+const startupNoticeResult = computed(() => {
+  if (!startupNotice.value) return null;
+  return {
+    kind: startupNotice.value.type || 'info',
+    title: t(`notice.title.${startupNotice.value.type || 'info'}`),
+    message: startupNotice.value.message,
+  };
+});
+
 const selectedRefreshStartStage = computed(() => dashboardStore.selectedRefreshStartStage);
 
 const selectedSignal = ref(null);
@@ -132,6 +144,10 @@ function handleExport() {
   bridgeExportReport();
 }
 
+function handleRunPrecloseAnalysis() {
+  bridgeRunPrecloseAnalysis();
+}
+
 function handleOpenGuides() {
   if (usageGuidesRef.value) {
     usageGuidesRef.value.openUsageGuides();
@@ -181,6 +197,7 @@ async function handleAnalyzeWithLlm() {
       @refresh="handleRefresh"
       @export="handleExport"
       @open-guides="handleOpenGuides"
+      @run-preclose-analysis="handleRunPrecloseAnalysis"
     />
 
     <!-- Top section: full width -->
@@ -206,6 +223,9 @@ async function handleAnalyzeWithLlm() {
       </Transition>
       <Transition name="fade">
         <Notice v-if="exportResult" :result="exportResult" />
+      </Transition>
+      <Transition name="fade">
+        <Notice v-if="startupNoticeResult" :result="startupNoticeResult" />
       </Transition>
       <Transition name="fade">
         <Skeleton v-if="loading" />

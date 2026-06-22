@@ -23,6 +23,7 @@ import {
   updateRefreshing as syncRefreshingToStore,
   updateRecentReports as syncRecentReportsToStore,
   updateStartupNotice as syncStartupNoticeToStore,
+  updatePrecloseAnalyzing as syncPrecloseAnalyzingToStore,
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
@@ -55,6 +56,7 @@ const COMMANDS = {
   setUserPreference: 'set_user_preference',
   checkStartupFreshness: 'check_startup_freshness',
   autoIngestOnStartup: 'auto_ingest_on_startup',
+  runPrecloseAnalysis: 'run_preclose_analysis',
 };
 
 let refreshPollTimer = null;
@@ -370,6 +372,55 @@ async function exportReport() {
   }
 }
 
+// ── Preclose analysis ─────────────────────────────────────────────────
+
+async function runPrecloseAnalysis() {
+  const activeScope = normalizeScope(dashboardStore.selectedScope);
+
+  dashboardStore.precloseAnalyzing = true;
+  syncPrecloseAnalyzingToStore(true);
+  syncStartupNoticeToStore({
+    type: 'info',
+    message: t('preclose.analysisRunning'),
+  });
+
+  try {
+    const decisions = await invoke(COMMANDS.runPrecloseAnalysis, { scope: activeScope });
+
+    // Count by state
+    const counts = { BUY_NOW: 0, WAIT: 0, NO_CHASE: 0, REDUCE: 0, SKIP: 0 };
+    for (const d of decisions) {
+      const state = d.state || 'SKIP';
+      counts[state] = (counts[state] || 0) + 1;
+    }
+
+    const summary = t('preclose.analysisComplete', {
+      total: decisions.length,
+      buyNow: counts.BUY_NOW || 0,
+      wait: counts.WAIT || 0,
+      noChase: counts.NO_CHASE || 0,
+    });
+
+    syncStartupNoticeToStore({
+      type: 'success',
+      message: summary,
+      action: 'preclose_complete',
+    });
+
+    // Push to recent reports as a pseudo-report for easy access
+    const today = new Date().toISOString().slice(0, 10);
+    pushRecentReport('EXECUTION_SAMPLE', today, `reports/execution-samples/${today}.json`);
+  } catch (error) {
+    syncStartupNoticeToStore({
+      type: 'error',
+      message: t('preclose.analysisFailed', { error: getErrorMessage(error) }),
+    });
+  } finally {
+    dashboardStore.precloseAnalyzing = false;
+    syncPrecloseAnalyzingToStore(false);
+  }
+}
+
 // ── Event bridge ────────────────────────────────────────────────────────
 
 initEventBridge({
@@ -380,6 +431,7 @@ initEventBridge({
   cancelRefresh: () => cancelRefreshJob(),
   exportReport: () => exportReport(),
   analyzeWithLlm: (scope, skill, agent) => llmApi.analyzeWithSkill(scope, skill, agent),
+  runPrecloseAnalysis: () => runPrecloseAnalysis(),
 });
 
 // ── Startup freshness check ─────────────────────────────────────────────

@@ -18,6 +18,21 @@
     "savedMessage": "已保存 {date} 的报告。",
     "exportFailed": "导出失败"
   },
+  "preclose": {
+    "analysisRunning": "正在执行收盘前分析...",
+    "analysisComplete": "收盘前分析完成：共 {total} 个候选，{buyNow} 个 BUY_NOW，{wait} 个 WAIT，{noChase} 个 NO_CHASE。",
+    "analysisFailed": "收盘前分析失败：{error}"
+  },
+  "notice": {
+    "title": {
+      "info": "信息",
+      "success": "成功",
+      "warning": "警告",
+      "error": "错误"
+    },
+    "allCompleted": "全部完成",
+    "warnings": "警告：{warnings}"
+  },
   "hero": {
     "eyebrow": "量化桌面 · 第8阶段",
     "title": "操作仪表板",
@@ -26,6 +41,8 @@
     "refreshing": "刷新中…",
     "exportReport": "导出报告",
     "exporting": "导出中…",
+    "runPrecloseAnalysis": "收盘前分析",
+    "analyzing": "分析中...",
     "lastSync": "上次同步"
   },
   "dashboardHero": {
@@ -368,10 +385,6 @@
     "macroUnavailable": "宏观态势时间戳不可用。",
     "behindLatest": "选定分析滞后于最新可用分析。",
     "unavailable": "不可用"
-  },
-  "notice": {
-    "warnings": "警告：{warnings}",
-    "allCompleted": "所有报告工件已完成，无警告。"
   },
   "signalDetail": {
     "eyebrow": "信号下钻",

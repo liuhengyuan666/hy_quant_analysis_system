@@ -123,6 +123,9 @@ export const dashboardStore = reactive({
 
   /** Startup freshness check notice */
   startupNotice: null,
+
+  /** Whether preclose analysis is running */
+  precloseAnalyzing: false,
 });
 
 /**
@@ -319,6 +322,13 @@ export function toggleAgentEditor(show) {
 }
 
 /**
+ * Update preclose analysis state.
+ */
+export function updatePrecloseAnalyzing(analyzing) {
+  dashboardStore.precloseAnalyzing = analyzing;
+}
+
+/**
  * Update startup freshness notice.
  */
 export function updateStartupNotice(notice) {
@@ -427,6 +437,7 @@ export let retryRefresh = () => console.warn('[Store] retryRefresh not yet initi
 export let cancelRefresh = () => console.warn('[Store] cancelRefresh not yet initialized');
 export let exportReport = () => console.warn('[Store] exportReport not yet initialized');
 export let analyzeWithLlm = () => console.warn('[Store] analyzeWithLlm not yet initialized');
+export let runPrecloseAnalysis = () => console.warn('[Store] runPrecloseAnalysis not yet initialized');
 
 /**
  * Initialize event bridge with actual implementations from main.js.
@@ -440,4 +451,5 @@ export function initEventBridge(handlers) {
   if (handlers.cancelRefresh) cancelRefresh = handlers.cancelRefresh;
   if (handlers.exportReport) exportReport = handlers.exportReport;
   if (handlers.analyzeWithLlm) analyzeWithLlm = handlers.analyzeWithLlm;
+  if (handlers.runPrecloseAnalysis) runPrecloseAnalysis = handlers.runPrecloseAnalysis;
 }

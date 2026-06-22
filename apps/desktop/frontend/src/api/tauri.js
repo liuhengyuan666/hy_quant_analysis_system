@@ -32,6 +32,7 @@ export const COMMANDS = {
   analyzeWithSkill: 'analyze_with_skill',
   analyzeWithLlm: 'analyze_with_llm',
   evaluateSkillTriggers: 'evaluate_skill_triggers',
+  runPrecloseAnalysis: 'run_preclose_analysis',
 };
 
 /**

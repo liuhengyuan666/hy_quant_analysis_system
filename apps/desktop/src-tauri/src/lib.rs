@@ -1140,6 +1140,27 @@ fn evaluate_skill_triggers(scope: Option<String>) -> Result<Vec<core_domain::Ski
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn run_preclose_analysis(
+    scope: String,
+) -> Result<Vec<app_service::ExecutionDecision>, String> {
+    let report_scope = match scope.as_str() {
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        _ => app_service::ReportScope::Global,
+    };
+
+    let decisions = tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.analyze_preclose(report_scope)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| e.to_string())?;
+
+    Ok(decisions)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1173,6 +1194,7 @@ pub fn run() {
             analyze_with_skill,
             analyze_with_llm,
             evaluate_skill_triggers,
+            run_preclose_analysis,
             check_startup_freshness,
             auto_ingest_on_startup
         ])

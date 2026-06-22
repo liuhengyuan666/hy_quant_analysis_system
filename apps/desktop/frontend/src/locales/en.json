@@ -14,9 +14,24 @@
     "dashboardSnapshot": "Dashboard snapshot"
   },
   "export": {
-    "reportExported": "Report exported",
+    "reportExported": "Report Exported",
     "savedMessage": "Saved report for {date}.",
-    "exportFailed": "Export failed"
+    "exportFailed": "Export Failed"
+  },
+  "preclose": {
+    "analysisRunning": "Running preclose analysis...",
+    "analysisComplete": "Preclose analysis complete: {total} candidates, {buyNow} BUY_NOW, {wait} WAIT, {noChase} NO_CHASE.",
+    "analysisFailed": "Preclose analysis failed: {error}"
+  },
+  "notice": {
+    "title": {
+      "info": "Info",
+      "success": "Success",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "allCompleted": "All completed",
+    "warnings": "Warnings: {warnings}"
   },
   "hero": {
     "eyebrow": "Quant Desktop \u00b7 Phase 8",
@@ -26,6 +41,8 @@
     "refreshing": "Refreshing\u2026",
     "exportReport": "Export report",
     "exporting": "Exporting\u2026",
+    "runPrecloseAnalysis": "Preclose Analysis",
+    "analyzing": "Analyzing...",
     "lastSync": "Last sync"
   },
   "dashboardHero": {
@@ -368,10 +385,6 @@
     "macroUnavailable": "Macro posture timestamp is unavailable.",
     "behindLatest": "Selected analysis is behind the latest available analysis.",
     "unavailable": "Unavailable"
-  },
-  "notice": {
-    "warnings": "Warnings: {warnings}",
-    "allCompleted": "All report artifacts completed without warnings."
   },
   "signalDetail": {
     "eyebrow": "Signal drilldown",

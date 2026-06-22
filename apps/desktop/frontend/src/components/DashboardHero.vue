@@ -18,7 +18,7 @@ const REFRESH_START_STAGE_OPTIONS = computed(() => [
   { value: 'backtests', label: t('refreshStages.backtests') },
 ]);
 
-const emit = defineEmits(['refresh', 'export', 'openGuides']);
+const emit = defineEmits(['refresh', 'export', 'openGuides', 'runPrecloseAnalysis']);
 
 const loading = computed(() => dashboardStore.loading);
 const refreshing = computed(() => dashboardStore.refreshing);
@@ -26,6 +26,7 @@ const refreshStatus = computed(() => dashboardStore.refreshStatus);
 const exporting = computed(() => dashboardStore.exporting);
 const snapshot = computed(() => dashboardStore.snapshot);
 const lastUpdatedAt = computed(() => dashboardStore.lastUpdatedAt);
+const precloseAnalyzing = computed(() => dashboardStore.precloseAnalyzing);
 const selectedRefreshStartStage = computed({
   get: () => dashboardStore.selectedRefreshStartStage,
   set: (value) => {
@@ -100,6 +101,13 @@ function handleStageChange(event) {
             @click="emit('export')"
           >
             {{ exporting ? t('hero.exporting') : t('hero.exportReport') }}
+          </button>
+          <button
+            class="button button--experimental"
+            :disabled="isBusy || precloseAnalyzing"
+            @click="emit('runPrecloseAnalysis')"
+          >
+            {{ precloseAnalyzing ? t('hero.analyzing') : t('hero.runPrecloseAnalysis') }}
           </button>
         </div>
         <p class="hero__timestamp">{{ t('hero.lastSync') }} {{ formatDateTime(lastUpdatedAt) }}</p>
