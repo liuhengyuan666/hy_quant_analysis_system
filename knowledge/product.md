@@ -29,12 +29,13 @@
   * 核心规则 2: 最终信号生成
   * 核心规则 3: 基础回测
 
-* **[报告与展示域]**
-  * 核心规则 1: Markdown报告导出
-  * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
-  * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径）
-  * 核心规则 4: V4桌面端LLM智能分析面板（Agent选择、技能路由、6标签页分析、历史记录、比较分析）
-  * 核心规则 5: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
+ * **[报告与展示域]**
+   * 核心规则 1: Markdown报告导出
+   * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
+   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径）
+   * 核心规则 4: V4桌面端LLM智能分析面板（Agent选择、技能路由、6标签页分析、历史记录、比较分析）
+   * 核心规则 5: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
+   * 核心规则 6: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
 
 ## 4. 新增可解释性能力（TASK-092）
 
@@ -46,7 +47,7 @@
 ## 5. 外部业务依赖
 
 - Eastmoney API（CN指数/ETF主源）
-- Tencent API（CN/HK兜底源）
+- Tencent API（CN/HK兜底源，Execution Layer实时数据源）
 - FRED API（宏观因子数据源）
 - ClickHouse（时序数据存储）
 - SQLite（本地轻状态存储）

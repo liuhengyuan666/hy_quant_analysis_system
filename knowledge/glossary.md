@@ -66,6 +66,12 @@
 | Gated | Gated Task | 门控任务（依赖其他任务完成） | 项目管理域 |
 | P0/P1/P2 | Priority Level | 优先级（P0最高，P2最低） | 项目管理域 |
 | MVP | Minimum Viable Product | 最小可行产品 | 项目管理域 |
+| **Execution Layer** | Execution Layer | 执行层（V5 新增），基于 Pattern Library 的收盘前执行过滤器，只决定执行时机，不创建投资想法 | 执行域 |
+| **Pattern Library** | Pattern Library | 经验现象库，将市场观察现象（price action, volume, position）映射到执行指引 | 执行域 |
+| **ExecutionState** | Execution State | 执行状态（BuyNow/Wait/NoChase/Reduce/Skip） | 执行域 |
+| **ReasonTag** | Reason Tag | 执行决策原因标签（如 GapUpOverextended, VolumeSpike, StrongClose） | 执行域 |
+| **SkipReason** | Skip Reason | 跳过原因（NoCandidate/StateGate/DataUnavailable），内部使用 | 执行域 |
+| **IntradaySnapshot** | Intraday Snapshot | 实时市场快照（today_return, close_position, volume_ratio, distance_ma5 等） | 执行域 |
 | **Explainability Layer** | Explainability Layer | 可解释性层，用于展示系统决策的归因拆解（TASK-092） | 可解释性域 |
 | **Research Surface** | Research Surface | 研究表面，Shadow Production 期间允许新增的观测/诊断工具集合（如 symbol-diagnostics, rotation-ranking） | 治理域 |
 | **Production Surface** | Production Surface | 生产表面，Shadow Production 期间冻结的核心观察链路（DashboardSnapshot, ResearchContext, Markdown Report） | 治理域 |

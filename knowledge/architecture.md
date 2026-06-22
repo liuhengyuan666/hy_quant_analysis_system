@@ -24,6 +24,7 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 关键组件：
 - app-service: 核心服务编排（已模块化，lib.rs 4,083行 + 7 helper modules，后续仍可拆分）
 - data-ingestion: 数据获取（Eastmoney/Tencent/FRED）
+- execution-engine: 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 - macro-engine: 宏观因子计算与regime分类
 - rotation-engine: 轮动排名计算
 - signal-engine: 信号生成
@@ -34,7 +35,7 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 
 ## 3. 全局架构约束
 
-- Workspace 结构：22 个 members（apps/cli, apps/desktop/src-tauri, 20 个 crates）
+- Workspace 结构：23 个 members（apps/cli, apps/desktop/src-tauri, 21 个 crates）
 - 注意：crates/research-validation 目录存在但未加入 workspace members
 - 数据源策略：Eastmoney主源，Tencent兜底，FRED宏观因子
 - 统一日线口径：Eastmoney fqt=1，Tencent qfq（前复权）

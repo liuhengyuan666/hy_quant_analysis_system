@@ -37,6 +37,7 @@
 - 基础回测
 - Markdown 报告导出
 - Tauri 桌面 Dashboard（支持 `GLOBAL / CN / HK` scope）
+- **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
@@ -44,6 +45,7 @@
 
 ### 当前适用场景
 
+14:45 自动触发执行过滤（`preclose-analysis`），基于实时行情数据判断「今天买不买」
 - 指数 / ETF 趋势研究
 - 低频交易辅助判断
 - 长线 / 波段观察
@@ -576,6 +578,42 @@ cargo run -p quant-cli -- symbol-scoreboard [--date <date>] [--scope <scope>]
 # 轮动排名
 cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
 ```
+
+### 15.8 收盘前执行过滤（Execution Layer — V5）
+
+> **V5 新增**：基于实时行情数据的 Pattern Library 执行过滤器，不修改任何信号/状态/回测逻辑。
+>
+> 只回答 "When to buy"，不回答 "What to buy"。
+
+```bash
+# 收盘前分析（默认 global）
+cargo run -p quant-cli -- preclose-analysis
+
+# 指定 scope
+cargo run -p quant-cli -- preclose-analysis --scope cn
+cargo run -p quant-cli -- preclose-analysis --scope hk
+```
+
+**输出示例**：
+
+```text
+Scope: CN
+Date: 2026-06-22
+Candidates: 8 (filtered: signal≥Buy ∩ state≠NO_TRADE)
+
+Symbol       Signal       State        Reasons
+------------------------------------------------------------
+512480       -            BUY_NOW      StrongClose, HighVolume
+510300       -            NO_CHASE     GapUpOverextended, VolumeSpike, FarFromMA5
+000688       -            WAIT         (no pattern match)
+```
+
+**说明**：
+
+- 只分析 `signal ≥ Buy` 且 `state ≠ NO_TRADE` 的候选
+- 实时数据来自 Tencent API（`qt.gtimg.cn`），失败时全部降级为 `Skip`
+- 输出同时写入 `reports/execution-samples/YYYY-MM-DD.json`
+- 90 天内仅作为观测工具，禁止声称性能优势或优化参数
 
 ---
 

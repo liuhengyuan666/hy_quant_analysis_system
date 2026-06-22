@@ -15,6 +15,7 @@ rust-quant-analysis-system/
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
+│   ├── execution-engine/ # 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 │   ├── gt-regime-generator/ # Ground Truth regime生成
 │   ├── indicator-engine/ # 技术指标计算
 │   ├── macro-engine/     # 宏观因子与regime分类
@@ -64,9 +65,10 @@ rust-quant-analysis-system/
 
 ## 2. 核心模块调用边界与依赖方向
 
-- app-service 依赖：backtest-engine, data-ingestion, core-domain, indicator-engine, macro-engine, market-store, report-engine, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine
+- app-service 依赖：backtest-engine, data-ingestion, core-domain, indicator-engine, macro-engine, market-store, report-engine, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine, execution-engine
 - data-ingestion 依赖：core-domain, macro-engine
 - macro-engine 依赖：core-domain
 - signal-engine 依赖：core-domain
 - rotation-engine 依赖：core-domain
+- execution-engine 依赖：core-domain
 - desktop (Tauri) 依赖：app-service, core-domain, market-store, report-engine, research-skills

@@ -55,7 +55,12 @@
 - 所有实验结论需在 `confirmation_days=1` 下重新验证
 - Wave 研究阶段化：Wave 7（GT验证）、Wave 8（Insight Composer）、Wave 9（Daily Report）
 
-## 8. 治理范式 (Governance)
+## 9. 外部数据源集成范式 (External Data Provider)
+
+- **编码检测**：HTTP 响应必须验证编码格式，不要假设所有 API 返回 UTF-8；Tencent API 返回 GB18030，需使用 `encoding_rs` 解码
+- **Symbol 映射**：每个 provider 有独立的 symbol 前缀规则；上海指数 `000xxx` 必须用 `sh` 前缀，深圳指数 `399xxx` 用 `sz` 前缀
+- **字段索引验证**：解析分隔符格式时，必须确认字段索引对应关系；实际验证前不要假设字段顺序（如 `parts[1]` vs `parts[2]`）
+- **降级策略**：实时数据获取失败时，必须降级为 `Skip` 状态，不能 panic 或影响主系统运行
 
 - **Shadow Production 冻结**：State Layer、Economic Layer、Signal Engine、weights、thresholds、allocation、backtest 语义全部冻结
 - **Production Surface 冻结**：DashboardSnapshot、ResearchContext、Markdown Report 在观察期间不修改展示逻辑
