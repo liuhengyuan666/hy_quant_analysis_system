@@ -1,6 +1,57 @@
 > Historical decisions are in [decisions_archive.md](./decisions_archive.md)
 
-## ADR-026: Memory 体系清理与状态同步
+## ADR-074: Research Layer as Narrative Interface (Skill Framework 删除)
+
+**Status:** Accepted
+
+### Context
+V4 的 LLM 集成（`research-skills` crate）已自然演化出一套复杂的 Skill/Agent/YAML 框架：6 个 Skill（YAML front matter + trigger + schema）、Agent Profile（priority、reasoning_style、risk_tolerance、confidence_model）、Skill Router（触发评估 + 权重排序）、Reasoning Graph（执行流编排）。这本质上是在冻结量化引擎之上重建了第二套评分系统，偏离了最初「LLM 只读解释层」的设计意图。
+
+### Decision
+彻底重构 Research Layer，从「Skill/Agent Framework」收敛为「Prompt-Only Narrative Layer」：
+
+1. **删除 Skill Framework**：删除 `agent_profile.rs`, `trigger.rs`, `router.rs`, `registry.rs`, `schema.rs`, `reasoning.rs`, `executor.rs`；删除 5 个旧 Skill 目录（factor-composite / liquidity-shock / sector-rotation / macro-linkage / volatility-tail）。
+2. **保留知识为 Fragments**：旧 Skill 的文本描述知识保留到 `fragments/` 目录（liquidity.md / macro.md / volatility.md），供 Prompt 按需拼接，而非作为框架调用。
+3. **5 个 Prompt 常量**：`MARKET_STORY_PROMPT`, `EXPLAIN_DECISION_PROMPT`, `PRECLOSE_REVIEW_PROMPT`, `RISK_VIEW_PROMPT`, `DEVILS_ADVOCATE_PROMPT` — 直接写在 Rust 代码中，无 YAML、无 enum、无 registry。
+4. **前端收敛为 ChatGPT 风格**：5 个按钮直接生成 Markdown（Market Story / Explain Decision / Preclose Review / Risk View / Devil's Advocate），不暴露 Agent Selector、Skill Dropdown、Output Format Tabs、Config Editor、Comparison Mode。
+5. **输出 Markdown 纯文本**：禁止 JSON、禁止 score/confidence/ranking/probability、禁止 BUY/SELL/HOLD 建议。保留事实数字（如「连续上涨 5 天」）。
+6. **不传评分数据给 LLM**：Phase1 不给 signal score、rotation RS score、backtest CAGR/Sharpe/MaxDD，避免 LLM 成为 Meta Decision Layer。
+7. **分化 system prompt**：每个 action 有不同的 system prompt（研究员 / 风控总监 / 质疑者），而非统一角色。
+
+### Governance Boundary
+
+```
+Research Layer is a read-only narrative interface above the frozen quantitative engine.
+
+Responsibilities:
+- explain decisions
+- provide context
+- challenge assumptions
+- surface risks
+- narrate history
+
+Forbidden:
+- create signals
+- rank opportunities
+- output scores
+- override decisions
+- participate in execution
+
+Output: Markdown only
+Consumer: Human only
+```
+
+### Phase1 边界
+- ✅ 5 个 Prompt 常量 + `build_prompt()` 函数
+- ✅ 前端 5 按钮 + Markdown 输出
+- ❌ 不做：Agent Framework、Skill Framework、enum、registry、router、weekly/monthly report、historian、postmortem、memory、knowledge graph
+- 90 天内只运行这 5 个按钮，每天像 ChatGPT 一样和系统聊天，不新增任何抽象。
+
+**Tags:** research-layer, llm, skill-framework-deletion, governance, narrative-interface
+
+---
+
+
 
 **Status:** Accepted
 

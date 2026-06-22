@@ -155,8 +155,8 @@ enum Command {
     AnalyzeWithLlm {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
-        #[arg(long)]
-        date: Option<NaiveDate>,
+        #[arg(long, default_value = "market_story")]
+        action: String,
     },
     /// Show current LLM configuration and its source
     ShowLlmConfig {
@@ -170,19 +170,15 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
-    /// Analyze market using a skill
+    /// Analyze market using Research Layer
     Analyze {
-        /// Skill name to use
-        #[arg(long)]
-        skill: String,
+        /// Research action to run
+        #[arg(long, default_value = "market_story")]
+        action: String,
 
         /// Scope to analyze
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
-
-        /// Agent profile name (loads from research/agents/)
-        #[arg(long)]
-        agent: Option<String>,
 
         /// Output format (json, markdown)
         #[arg(long, default_value = "json")]
@@ -200,19 +196,19 @@ enum Command {
     ListSkills,
     /// Benchmark a research skill across providers
     BenchmarkSkill {
-        /// Skill name to benchmark
-        #[arg(long)]
-        skill: String,
+        /// Research action to benchmark
+        #[arg(long, default_value = "market_story")]
+        action: String,
         /// Provider config TOML file path
         #[arg(long, default_value = "config/benchmark-providers.toml")]
         provider_config: String,
         /// Runs per provider
-        #[arg(long, default_value_t = 3)]
+        #[arg(long, default_value = "3")]
         runs: usize,
-        /// Output format: json, markdown
+        /// Output format (json, markdown)
         #[arg(long, default_value = "json")]
         format: String,
-        /// Scope for building ResearchContext
+        /// Scope to analyze
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
@@ -647,17 +643,17 @@ fn main() -> Result<()> {
         Command::ResearchContext { scope } => commands::dashboard::handle_research_context(&context, scope)?,
         Command::SetLlmConfig { base_url, model, timeout_secs } => commands::llm::handle_set_llm_config(&context, base_url, model, timeout_secs)?,
         Command::SetLlmApiKey { key } => commands::llm::handle_set_llm_api_key(&context, key)?,
-        Command::AnalyzeWithLlm { scope, date } => commands::llm::handle_analyze_with_llm(&context, scope, date, cli.quiet)?,
+        Command::AnalyzeWithLlm { scope, action } => commands::llm::handle_analyze_with_llm(&context, scope, action, cli.quiet)?,
         Command::ShowLlmConfig { validate } => commands::llm::handle_show_llm_config(&context, validate)?,
         Command::MigrateLlmConfig { force } => commands::llm::handle_migrate_llm_config(&context, force)?,
         Command::SetFredConfig { enabled, disabled, api_key } => commands::llm::handle_set_fred_config(&context, enabled, disabled, api_key)?,
         Command::ShowFredConfig => commands::llm::handle_show_fred_config(&context)?,
-        Command::ListSkills => commands::research::handle_list_skills()?,
-        Command::BenchmarkSkill { skill, provider_config, runs, format, scope } => {
-            commands::research::handle_benchmark_skill(&context, skill, provider_config, runs, format, scope, cli.quiet)?
-        }
-        Command::Analyze { skill, scope, agent, format, deterministic, seed } => {
-            commands::research::handle_analyze(context, skill, scope, agent, format, deterministic, seed)?
+        Command::ListSkills => commands::research::handle_list_actions()?,
+Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
+    commands::research::handle_benchmark_action(&context, action, provider_config, runs, format, scope, cli.quiet)?
+}
+        Command::Analyze { action, scope, format, deterministic, seed } => {
+            commands::research::handle_analyze(context, action, scope, format, deterministic, seed)?
         }
         Command::ValidateRegimeAccuracy { from, to, scope, benchmark, lookforward_days, risk_on_threshold, risk_off_threshold, output_dir } => {
             commands::audit::handle_validate_regime_accuracy(&context, from, to, scope, benchmark, lookforward_days, risk_on_threshold, risk_off_threshold, output_dir)?

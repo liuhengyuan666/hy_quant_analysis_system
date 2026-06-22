@@ -563,5 +563,18 @@
       "saveFailed": "Save failed",
       "missingFields": "Please fill in agent name and YAML content"
     }
+  },
+  "research": {
+    "eyebrow": "Research Insights",
+    "panelTitle": "Research Layer",
+    "openPanel": "Research Insights",
+    "marketStory": "Market Story",
+    "explainDecision": "Explain Decision",
+    "precloseReview": "Preclose Review",
+    "riskView": "Risk View",
+    "devilsAdvocate": "Devil's Advocate",
+    "analyzing": "Analyzing...",
+    "selectAction": "Click a button above to generate analysis",
+    "analysisFailed": "Analysis failed"
   }
 }

@@ -466,6 +466,7 @@ fn probe_keyring_readable() -> bool {
 /// Placeholder LLM provider for testing.
 /// Returns structured dummy responses. Replace with a real provider
 /// (OpenAI, DeepSeek, etc.) for actual analysis.
+#[allow(dead_code)]
 struct PlaceholderProvider;
 
 #[async_trait]
@@ -3148,64 +3149,39 @@ impl AppContext {
             .collect())
     }
 
-    /// Analyze market using a specific skill.
+    /// Research Layer — 只读叙事层分析。
     ///
-    /// Combines ResearchContext + SkillRouter + SkillExecutor into a
-    /// complete pipeline: build context → route skills → execute skill.
-    pub async fn analyze_with_skill(
+    ///  governance:
+    ///  - 只解释、质疑、提供上下文
+    ///  - 禁止创建信号、评分、排序、覆盖决策
+    ///
+    /// action 必须是以下之一：
+    /// - "market_story"
+    /// - "explain_decision"
+    /// - "preclose_review"
+    /// - "risk_view"
+    /// - "devils_advocate"
+    pub async fn analyze_with_action(
         &self,
-        skill_name: &str,
+        action: &str,
         scope: ReportScope,
-        profile: Option<&research_skills::AgentProfile>,
-        inference_override: Option<research_skills::InferenceConfig>,
     ) -> anyhow::Result<serde_json::Value> {
-        // 1. Build ResearchContext
-        let context = self.research_context(scope)?;
-
-        // 2. Load skill from registry
-        let root = StorageConfig::project_root()?;
-        let skill_dir = root.join("crates/research-skills/skills");
-        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
-
-        let skill = registry
-            .get(skill_name)
-            .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
-
-        // 3. Evaluate trigger
-        let should_run = research_skills::router::SkillRouter::evaluate_trigger(
-            &skill.definition.trigger,
-            &context,
-        );
-
-        if !should_run {
-            return Ok(serde_json::json!({
-                "skill": skill_name,
-                "triggered": false,
-                "reason": "Trigger conditions not met",
-                "context": context
-            }));
-        }
-
-        // 4. Run state machine for regime analysis (deterministic)
-        let current_state = research_skills::RegimeStateMachine::current_state(&context);
-        let transition =
-            research_skills::RegimeStateMachine::detect_transition(current_state, &context);
-        let confidence = research_skills::RegimeStateMachine::calculate_confidence(&context);
-
-        // 5. Create executor and run LLM pipeline
-        let budget = research_skills::token_budget::TokenBudget::default();
-        let resolved = self.get_resolved_llm_config(None)?;
-        let inference = if let Some(inference) = inference_override {
-            inference
-        } else {
-            research_skills::InferenceConfig {
-                temperature: resolved.temperature,
-                seed: resolved.seed,
-                max_tokens: resolved.max_tokens,
-            }
+        // 1. Build snapshot context
+        let snapshot = self.dashboard_snapshot_with_scope(None, scope)?;
+        let Some(snapshot) = snapshot else {
+            return Err(anyhow::anyhow!("No dashboard snapshot available for scope {:?}", scope));
         };
-        let executor = research_skills::executor::SkillExecutor::new(budget, inference);
 
+        // 2. Build prompt
+        let (system_prompt, user_prompt) = research_skills::build_prompt(action, &snapshot)?;
+
+        // 3. Call LLM
+        let resolved = self.get_resolved_llm_config(None)?;
+        let inference = research_skills::InferenceConfig {
+            temperature: resolved.temperature,
+            seed: resolved.seed,
+            max_tokens: resolved.max_tokens,
+        };
         let config = self.get_llm_config()?;
         let api_key = if let Some(ref key) = resolved.api_key {
             if !key.is_empty() {
@@ -3216,96 +3192,34 @@ impl AppContext {
         } else {
             self.get_llm_api_key()?
         };
+
         let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
-            let provider = research_skills::OpenAiProvider::from_config(&config, key);
-            (
-                executor.execute(skill, &context, &provider, profile).await?,
-                false,
+            let _provider = research_skills::OpenAiProvider::from_config(&config, key);
+            let call_config = inference.to_call_config();
+            let response = llm::call_llm_api(
+                config.clone(),
+                key.clone(),
+                system_prompt,
+                user_prompt,
+                call_config.temperature as f64,
+                call_config.max_tokens,
+                call_config.seed,
             )
+            .await?;
+            (Some(response), false)
         } else {
-            let provider = PlaceholderProvider;
-            (
-                executor.execute(skill, &context, &provider, profile).await?,
-                true,
-            )
+            (Some("LLM 未配置，这是占位符输出。请配置 API Key 以获取真实分析。".to_string()), true)
         };
 
-        // 6. Compose ResearchSummary from LLM output (Machine Layer)
-        let research_summary = llm_output.response.as_ref().and_then(|response_text| {
-            serde_json::from_str::<serde_json::Value>(response_text).ok().and_then(|parsed| {
-                let registry = research_renderer::ComposerRegistry::default();
-                registry.compose(skill_name, &parsed).ok().map(|summary| {
-                    serde_json::to_value(summary).unwrap_or(serde_json::Value::Null)
-                })
-            })
-        });
-
-        // 7. Merge deterministic + LLM results
+        // 4. Return simple markdown result
         let result = serde_json::json!({
-            "skill": skill_name,
-            "triggered": true,
+            "action": action,
             "scope": scope.as_str(),
             "placeholder": is_placeholder,
-            "regime_analysis": {
-                "current_state": format!("{:?}", current_state),
-                "transition": transition,
-                "confidence": confidence,
-                "key_drivers": extract_key_drivers(&context),
-                "risk_assessment": {
-                    "level": assess_risk_level(&context),
-                    "factors": identify_risk_factors(&context),
-                    "recommendation": generate_recommendation(&context)
-                }
-            },
-            "llm_analysis": llm_output.response,
-            "research_summary": research_summary,
-            "token_usage": llm_output.token_usage,
-            "context": context
+            "markdown": llm_output.unwrap_or_default(),
         });
 
         Ok(result)
-    }
-
-    /// Evaluate all skill triggers against the current research context.
-    /// Returns a list of skills with their trigger status and weights.
-    pub fn evaluate_skill_triggers(
-        &self,
-        scope: ReportScope,
-    ) -> Result<Vec<core_domain::SkillTriggerResult>> {
-        let context = self.research_context(scope)?;
-        let root = StorageConfig::project_root()?;
-        let skill_dir = root.join("crates/research-skills/skills");
-        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
-
-        let mut results = Vec::new();
-        for name in registry.list() {
-            if let Some(skill) = registry.get(name) {
-                let triggered = research_skills::router::SkillRouter::evaluate_trigger(
-                    &skill.definition.trigger,
-                    &context,
-                );
-                let weight = research_skills::router::SkillRouter::calculate_weight(
-                    &skill.definition.trigger,
-                );
-                results.push(core_domain::SkillTriggerResult {
-                    name: skill.definition.name.clone(),
-                    description: skill.definition.description.clone(),
-                    triggered,
-                    weight,
-                });
-            }
-        }
-
-        // Sort by weight descending, triggered first
-        results.sort_by(|a, b| {
-            let triggered_cmp = b.triggered.cmp(&a.triggered);
-            if triggered_cmp != std::cmp::Ordering::Equal {
-                return triggered_cmp;
-            }
-            b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        Ok(results)
     }
 
     /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)

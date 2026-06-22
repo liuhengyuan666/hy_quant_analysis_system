@@ -563,5 +563,18 @@
       "saveFailed": "保存失败",
       "missingFields": "请填写 Agent 名称和 YAML 内容"
     }
+  },
+  "research": {
+    "eyebrow": "研究洞察",
+    "panelTitle": "Research Layer",
+    "openPanel": "研究洞察",
+    "marketStory": "市场叙事",
+    "explainDecision": "解释决策",
+    "precloseReview": "收盘前复核",
+    "riskView": "风险视角",
+    "devilsAdvocate": "唱反调",
+    "analyzing": "正在分析...",
+    "selectAction": "点击上方按钮生成分析",
+    "analysisFailed": "分析失败"
   }
 }

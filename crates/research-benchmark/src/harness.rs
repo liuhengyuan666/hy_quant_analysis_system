@@ -1,12 +1,7 @@
 use std::collections::HashMap;
-use std::time::Instant;
 
 use research_context::ResearchContext;
-use research_skills::{
-    InferenceConfig, OpenAiProvider, Skill,
-};
-use research_skills::executor::SkillExecutor;
-use research_skills::token_budget::TokenBudget;
+use research_skills::InferenceConfig;
 
 use super::metrics::{
     BenchmarkReport, DivergencePoint, ProviderRun, ProviderScore,
@@ -22,16 +17,15 @@ pub struct ProviderConfig {
     pub timeout_secs: u64,
 }
 
-/// A benchmark suite: one skill, one context, multiple providers, N runs each.
+/// A benchmark suite: one action, one context, multiple providers, N runs each.
+/// TODO: Research Layer 重构后，benchmark 需要重新设计（ADR-074）。
 #[derive(Debug, Clone)]
 pub struct BenchmarkSuite {
-    pub skill: Skill,
+    pub action: String,
     pub context: ResearchContext,
     pub providers: Vec<ProviderConfig>,
     pub runs_per_provider: usize,
     pub inference: InferenceConfig,
-    /// Optional JSON schema for output validation
-    pub schema: Option<serde_json::Value>,
 }
 
 /// Harness for executing benchmark suites.
@@ -39,54 +33,12 @@ pub struct BenchmarkHarness;
 
 impl BenchmarkHarness {
     /// Run a full benchmark suite and produce a report.
-    pub async fn run_suite(suite: &BenchmarkSuite) -> anyhow::Result<BenchmarkReport> {
-        let mut all_runs: Vec<ProviderRun> = Vec::new();
-
-        for provider_cfg in &suite.providers {
-            let provider = OpenAiProvider::new(
-                &provider_cfg.base_url,
-                &provider_cfg.model,
-                &provider_cfg.api_key,
-                provider_cfg.timeout_secs,
-            );
-            let executor =
-                SkillExecutor::new(TokenBudget::default(), suite.inference.clone());
-
-            for run_number in 1..=suite.runs_per_provider {
-                let start = Instant::now();
-                let output = executor
-                    .execute(&suite.skill, &suite.context, &provider, None)
-                    .await?;
-                let latency_ms = start.elapsed().as_millis() as u64;
-
-                let tokens_used = output.token_usage.system_tokens
-                    + output.token_usage.context_tokens
-                    + output.token_usage.reasoning_tokens
-                    + output.token_usage.output_tokens;
-
-                let output_json = output
-                    .response
-                    .and_then(|r| serde_json::from_str(r.as_str()).ok())
-                    .unwrap_or(serde_json::Value::Null);
-
-                let schema_valid = suite.schema.as_ref().map_or(true, |schema| {
-                    let validator = research_skills::schema::SchemaValidator::new(schema.clone());
-                    validator.validate(&output_json).is_ok()
-                });
-
-                all_runs.push(ProviderRun {
-                    provider: provider_cfg.name.clone(),
-                    run_number,
-                    output_json,
-                    latency_ms,
-                    tokens_used,
-                    schema_valid,
-                });
-            }
-        }
-
-        let report =
-            compute_report(&suite.skill.definition.name, &all_runs, suite.runs_per_provider);
+    /// TODO: 适配新的 ResearchAction 架构。
+    pub async fn run_suite(_suite: &BenchmarkSuite) -> anyhow::Result<BenchmarkReport> {
+        // Research Layer 重构后（ADR-074），benchmark 需要重新设计。
+        // 旧 Skill/Executor/Schema 框架已删除，新的 Prompt-only 架构需要不同的 benchmark 方法。
+        let all_runs: Vec<ProviderRun> = Vec::new();
+        let report = compute_report("placeholder", &all_runs, 0);
         Ok(report)
     }
 }

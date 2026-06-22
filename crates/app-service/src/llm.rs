@@ -156,6 +156,7 @@ pub(crate) async fn call_llm_api(
 }
 
 /// Extract key drivers from context
+#[allow(dead_code)]
 pub(crate) fn extract_key_drivers(context: &research_context::ResearchContext) -> Vec<String> {
     let mut drivers = Vec::new();
 
@@ -179,6 +180,7 @@ pub(crate) fn extract_key_drivers(context: &research_context::ResearchContext) -
 }
 
 /// Assess risk level from context
+#[allow(dead_code)]
 pub(crate) fn assess_risk_level(context: &research_context::ResearchContext) -> String {
     if context.breadth.breadth_pct < 20.0
         || matches!(
@@ -202,6 +204,7 @@ pub(crate) fn assess_risk_level(context: &research_context::ResearchContext) -> 
 }
 
 /// Identify risk factors
+#[allow(dead_code)]
 pub(crate) fn identify_risk_factors(context: &research_context::ResearchContext) -> Vec<String> {
     let mut factors = Vec::new();
 
@@ -225,6 +228,7 @@ pub(crate) fn identify_risk_factors(context: &research_context::ResearchContext)
 }
 
 /// Generate recommendation
+#[allow(dead_code)]
 pub(crate) fn generate_recommendation(context: &research_context::ResearchContext) -> String {
     if context.breadth.breadth_pct < 20.0 {
         "exit".to_string()

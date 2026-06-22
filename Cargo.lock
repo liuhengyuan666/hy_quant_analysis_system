@@ -3632,6 +3632,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "core-domain",
+ "report-engine",
  "research-context",
  "serde",
  "serde_json",

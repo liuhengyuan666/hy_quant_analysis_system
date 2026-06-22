@@ -6,36 +6,47 @@ import { dashboardStore } from '../store.js';
 const { t } = useI18n();
 
 const insight = computed(() => dashboardStore.insight);
-
 const hasInsight = computed(() => Boolean(insight.value));
 
-const confidencePercent = computed(() => {
-  if (!insight.value) return 0;
-  return Math.round(insight.value.confidence * 100);
-});
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
-const confidenceLabel = computed(() => {
-  const pct = confidencePercent.value;
-  if (pct >= 80) return t('insight.confidenceHigh');
-  if (pct >= 60) return t('insight.confidenceMedium');
-  return t('insight.confidenceLow');
-});
+  html = html
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+
+  const unsafePatterns = [
+    /<script[^>]*>[\s\S]*?<\/script>/gi,
+    /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
+    /<object[^>]*>[\s\S]*?<\/object>/gi,
+    /<embed[^>]*>/gi,
+    /<form[^>]*>[\s\S]*?<\/form>/gi,
+    /on\w+\s*=\s*["']?[^"'>]*["']?/gi,
+    /javascript:/gi,
+  ];
+  unsafePatterns.forEach((pattern) => {
+    html = html.replace(pattern, '');
+  });
+
+  return html;
+}
 </script>
 
 <template>
   <div v-if="hasInsight" class="insight-panel">
     <div class="insight-panel__header">
       <h2 class="insight-panel__headline">{{ insight.headline }}</h2>
-      <span
-        class="insight-panel__confidence"
-        :class="{
-          'insight-panel__confidence--high': confidencePercent >= 80,
-          'insight-panel__confidence--medium': confidencePercent >= 60 && confidencePercent < 80,
-          'insight-panel__confidence--low': confidencePercent < 60,
-        }"
-      >
-        {{ confidenceLabel }} ({{ confidencePercent }}%)
-      </span>
     </div>
 
     <p class="insight-panel__summary">{{ insight.summary }}</p>
@@ -49,16 +60,6 @@ const confidenceLabel = computed(() => {
       <h3 class="insight-panel__section-title">{{ t('insight.implications') }}</h3>
       <ul class="insight-panel__list">
         <li v-for="(item, index) in insight.implications" :key="`impl-${index}`" class="insight-panel__list-item">
-          {{ item }}
-        </li>
-      </ul>
-    </div>
-
-    <div v-if="insight.recommendations?.length" class="insight-panel__section">
-      <h3 class="insight-panel__section-title">{{ t('insight.recommendations') }}</h3>
-      <ul class="insight-panel__list insight-panel__list--recommendations">
-        <li v-for="(item, index) in insight.recommendations" :key="`rec-${index}`" class="insight-panel__list-item">
-          <span class="insight-panel__bullet">&#8226;</span>
           {{ item }}
         </li>
       </ul>
@@ -90,30 +91,6 @@ const confidenceLabel = computed(() => {
   line-height: 1.3;
   margin: 0;
   flex: 1;
-}
-
-.insight-panel__confidence {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.insight-panel__confidence--high {
-  background: var(--color-success-subtle);
-  color: var(--color-success);
-}
-
-.insight-panel__confidence--medium {
-  background: var(--color-warning-subtle);
-  color: var(--color-warning);
-}
-
-.insight-panel__confidence--low {
-  background: var(--color-error-subtle);
-  color: var(--color-error);
 }
 
 .insight-panel__summary {
@@ -179,13 +156,5 @@ const confidenceLabel = computed(() => {
   height: 6px;
   border-radius: 50%;
   background: var(--color-text-tertiary);
-}
-
-.insight-panel__list--recommendations .insight-panel__list-item::before {
-  background: var(--color-primary);
-}
-
-.insight-panel__bullet {
-  display: none;
 }
 </style>

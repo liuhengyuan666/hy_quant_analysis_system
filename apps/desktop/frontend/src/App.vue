@@ -9,8 +9,6 @@ import {
   updateLlmLoading,
   updateLlmError,
   toggleLlmPanel,
-  saveLlmAnalysisToHistory,
-  loadLlmHistoryFromStorage,
   loadDashboard as bridgeLoadDashboard,
   loadSelectedSnapshot as bridgeLoadSelectedSnapshot,
   startRefresh as bridgeStartRefresh,
@@ -21,7 +19,6 @@ import {
   runPrecloseAnalysis as bridgeRunPrecloseAnalysis,
 } from './store.js';
 import DashboardHero from './components/DashboardHero.vue';
-import LlmAnalysisTrigger from './components/LlmAnalysisTrigger.vue';
 import LlmAnalysisPanel from './components/LlmAnalysisPanel.vue';
 import RecentReportsPanel from './components/RecentReportsPanel.vue';
 import DataHealthPanel from './components/DataHealthPanel.vue';
@@ -91,7 +88,6 @@ function handleKeydown(event) {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
-  loadLlmHistoryFromStorage();
 });
 
 onBeforeUnmount(() => {
@@ -161,33 +157,6 @@ function handleOpenLlmPanel() {
 function handleCloseLlmPanel() {
   toggleLlmPanel(false);
 }
-
-async function handleAnalyzeWithLlm() {
-  updateLlmLoading(true);
-  updateLlmError('');
-  const TIMEOUT_MS = 65000; // 65s — slightly longer than backend 60s timeout
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(t('llm.analysisTimeout'))), TIMEOUT_MS);
-  });
-  try {
-    const result = await Promise.race([
-      bridgeAnalyzeWithLlm(
-        dashboardStore.selectedScope,
-        dashboardStore.selectedSkill,
-        dashboardStore.selectedAgent
-      ),
-      timeoutPromise,
-    ]);
-    updateLlmAnalysis(result);
-    saveLlmAnalysisToHistory(result);
-    toggleLlmPanel(true);
-  } catch (err) {
-    console.error('[App] LLM analysis failed:', err);
-    updateLlmError(err?.toString?.() || t('llm.analysisFailed'));
-  } finally {
-    updateLlmLoading(false);
-  }
-}
 </script>
 
 <template>
@@ -208,10 +177,9 @@ async function handleAnalyzeWithLlm() {
           @update:date="handleDateChange"
           @jump-to-latest="handleJumpToLatest"
         />
-        <LlmAnalysisTrigger
-          @open-panel="handleOpenLlmPanel"
-          @analyze="handleAnalyzeWithLlm"
-        />
+        <button class="button button--secondary" @click="handleOpenLlmPanel">
+          {{ t('research.openPanel') }}
+        </button>
       </div>
       <RefreshProgress
         @cancel="handleCancelRefresh"
