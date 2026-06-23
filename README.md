@@ -41,7 +41,7 @@
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
-- **V4**：桌面端 LLM 智能分析面板（Agent 选择、技能路由、比较分析、历史记录、配置管理）
+- **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
 
 ### 当前适用场景
 
@@ -319,7 +319,7 @@ cargo run -p quant-desktop
 - Data health summary
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
-- **V4**：LLM 智能分析面板（Agent / 技能选择、6 标签页分析、历史记录、比较分析）
+- **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
 
 ---
 
@@ -457,17 +457,23 @@ cargo run -p quant-cli -- analyze-with-llm --scope global
 - 分析文本不会出现在 stdout/stderr/logs/JSON 中，仅保存在报告文件内
 - 不支持流式输出、多 provider、prompt 模板、RAG 或 embeddings
 
-### V4 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
+### V4.5 桌面端 LLM 命令（Tauri 内部调用，也可手动调试）
 
 ```bash
 cargo run -p quant-desktop -- get-llm-status
-cargo run -p quant-desktop -- list-agent-profiles
-cargo run -p quant-desktop -- list-skills
-cargo run -p quant-desktop -- evaluate-skill-triggers
-cargo run -p quant-desktop -- save-agent-profile --name default --config "..."
-cargo run -p quant-desktop -- read-agent-profile --name default
-cargo run -p quant-desktop -- analyze-with-llm --scope global --agent default --skill market-regime-reasoning
+cargo run -p quant-desktop -- analyze-with-llm --scope global --action market_story
+cargo run -p quant-desktop -- analyze-with-llm --scope cn --action explain_decision
+cargo run -p quant-desktop -- analyze-with-llm --scope hk --action risk_view
 ```
+
+可用的 `action` 参数：
+- `market_story` — 市场叙事（今天发生了什么）
+- `explain_decision` — 解释决策（为什么系统这样决定）
+- `preclose_review` — 收盘前复核（Execution 建议解读）
+- `risk_view` — 风险视角（风控总监视角）
+- `devils_advocate` — 唱反调（质疑系统结论）
+
+**注意**：V4.5 已删除 Agent Profile、Skill Registry、技能路由、比较分析、历史记录。只保留 5 个按钮的纯 Markdown 输出。
 
 ---
 

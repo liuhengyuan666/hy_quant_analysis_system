@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-06-22T12:31:28Z",
+    "rebuilt_at": "2026-06-23T18:23:05Z",
     "version": "v4"
   },
   "terms": {
@@ -200,6 +200,14 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "1-2": [
@@ -424,6 +432,14 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "2.0": [
@@ -604,6 +620,26 @@
         "type": "adr"
       }
     ],
+    "2px": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "2rem": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "2，避免": [
       {
         "id": "ADR-034",
@@ -698,6 +734,14 @@
       {
         "id": "ADR-063",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "3-5x": [
@@ -716,6 +760,16 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      }
+    ],
+    "3.5rem": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "30.1": [
@@ -1590,6 +1644,16 @@
         "type": "adr"
       }
     ],
+    "aligns": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "all": [
       {
         "id": "ADR-042",
@@ -1892,6 +1956,14 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "appcontext": [
@@ -2034,6 +2106,14 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "attribution": [
@@ -2342,6 +2422,16 @@
         "type": "adr"
       }
     ],
+    "bottom": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "boundary": [
       {
         "id": "ADR-067",
@@ -2568,6 +2658,16 @@
         "type": "adr"
       }
     ],
+    "calc(100vh": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "calibration": [
       {
         "id": "ADR-051",
@@ -2648,6 +2748,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "caused": [
@@ -2702,6 +2810,16 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      }
+    ],
+    "child": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "chinese": [
@@ -3202,6 +3320,36 @@
         "type": "adr"
       }
     ],
+    "container": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "container's": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "container-bottom": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "context": [
       {
         "id": "ADR-053",
@@ -3366,6 +3514,14 @@
       {
         "id": "ADR-037",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "css-bridge": [
@@ -3468,6 +3624,16 @@
       {
         "id": "ADR-048",
         "type": "adr"
+      }
+    ],
+    "dashboard-research": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "dashboard-utils.js": [
@@ -4138,6 +4304,14 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "each": [
@@ -4212,6 +4386,26 @@
         "type": "adr"
       }
     ],
+    "element": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "element's": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "eliminate": [
       {
         "id": "ADR-041",
@@ -4262,6 +4456,16 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      }
+    ],
+    "end": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "engine": [
@@ -4454,6 +4658,16 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      }
+    ],
+    "exactly": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "exceeds": [
@@ -4874,6 +5088,14 @@
       {
         "id": "ADR-063",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "fixed": [
@@ -5244,6 +5466,14 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "frontend": [
@@ -5336,6 +5566,16 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      }
+    ],
+    "gap": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "gaps/jumps/healthstatusmeta": [
@@ -5526,6 +5766,16 @@
         "type": "trap"
       }
     ],
+    "handle": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "handlers/javascript": [
       {
         "id": "ADR-049",
@@ -5620,6 +5870,14 @@
       {
         "id": "ADR-042",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "header-top": [
@@ -5640,6 +5898,26 @@
       {
         "id": "ADR-040",
         "type": "adr"
+      }
+    ],
+    "height": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "height:3.5rem": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "help/usage": [
@@ -6178,6 +6456,16 @@
         "type": "adr"
       }
     ],
+    "internal": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "interpolation": [
       {
         "id": "ADR-064",
@@ -6310,6 +6598,24 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "jitter": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "join": [
@@ -6578,6 +6884,16 @@
       {
         "id": "ADR-042",
         "type": "adr"
+      }
+    ],
+    "let": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "library": [
@@ -6984,6 +7300,26 @@
         "type": "adr"
       }
     ],
+    "margin": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "margin-box": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "markdown": [
       {
         "id": "ADR-047",
@@ -7254,6 +7590,16 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      }
+    ],
+    "minus": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "mismatch": [
@@ -7936,6 +8282,26 @@
         "type": "adr"
       }
     ],
+    "overflow-y:auto": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "overflows": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "overlap": [
       {
         "id": "ADR-060",
@@ -8000,6 +8366,26 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      }
+    ],
+    "padding-box": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
+    "page": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "pagination": [
@@ -8218,6 +8604,16 @@
         "type": "adr"
       }
     ],
+    "pin": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "pivot": [
       {
         "id": "ADR-060",
@@ -8276,6 +8672,16 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      }
+    ],
+    "position:sticky": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "positive": [
@@ -8394,6 +8800,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "preventing": [
@@ -8558,6 +8972,16 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "push-out": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "quant-cli": [
@@ -8920,6 +9344,14 @@
       {
         "id": "ADR-055",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "removed": [
@@ -9350,6 +9782,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "root-cause-analysis": [
@@ -9456,6 +9896,14 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "same": [
@@ -9554,12 +10002,30 @@
       {
         "id": "ADR-038",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "scroll-lock": [
       {
         "id": "ADR-038",
         "type": "adr"
+      }
+    ],
+    "scrolling": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "second": [
@@ -9722,6 +10188,14 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "set_llm_api_key": [
@@ -9890,6 +10364,16 @@
         "type": "adr"
       }
     ],
+    "sidebar": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      }
+    ],
     "signal": [
       {
         "id": "ADR-028",
@@ -10040,6 +10524,16 @@
       {
         "id": "ADR-041",
         "type": "adr"
+      }
+    ],
+    "so": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "solution": [
@@ -10270,6 +10764,16 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      }
+    ],
+    "sticky": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "still": [
@@ -11046,6 +11550,14 @@
       {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "toggle": [
@@ -11126,6 +11638,14 @@
       {
         "id": "ADR-040",
         "type": "adr"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "top-right": [
@@ -11142,6 +11662,16 @@
       {
         "id": "ADR-047",
         "type": "adr"
+      }
+    ],
+    "topstatusbar.vue": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "track": [
@@ -12030,6 +12560,14 @@
       {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "where": [
@@ -12132,6 +12670,16 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      }
+    ],
+    "without": [
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
       }
     ],
     "work": [

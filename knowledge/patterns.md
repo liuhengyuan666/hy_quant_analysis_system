@@ -29,6 +29,9 @@
 - 组件从 `store.js` 读取状态，通过 `event bridge` 回调 main.js
 - CSS 变量桥接：全局 CSS 定义设计 token，Vue 组件消费 CSS 变量
 - i18n 使用 `vue-i18n@11`，默认中文，嵌套 JSON key 结构
+- **HTML/CSS 混合布局**：复杂数据可视化（如 RotationPanel）优先使用 HTML/CSS 原生布局替代纯 ECharts，提升信息密度、响应式对齐和无障碍访问；ECharts 仅用于纯图表场景
+- **CSS 自定义 Tooltip**：禁用原生 `title` 和 ECharts 默认 Tooltip，使用绝对定位的 CSS 自定义 Tooltip（`position: absolute` + `visibility/opacity` 过渡），确保暗黑主题样式一致、无割裂感
+- **Sticky 布局约束**：`position: sticky` 的侧边栏必须满足 (1) 顶部参考元素（如 header）固定高度，消除 `top` 旷量；(2) sticky 元素高度精确计算，使其 margin-box 不溢出 container 的 padding-box（通常 `height: calc(100vh - headerHeight - padding * 2 - 2px)` 留 2px 安全边距），避免滚动到底部时 push-out 抖动
 
 ## 5. 数据管线范式 (Data Pipeline)
 
