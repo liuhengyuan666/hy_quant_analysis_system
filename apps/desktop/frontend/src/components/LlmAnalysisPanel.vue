@@ -11,8 +11,6 @@ import { llmApi } from '../api/tauri.js';
 
 const { t } = useI18n();
 
-const emit = defineEmits(['close']);
-
 const activeAction = ref('');
 const loading = computed(() => dashboardStore.llmLoading);
 const error = computed(() => dashboardStore.llmError);
@@ -25,10 +23,6 @@ const actions = [
   { key: 'risk_view', label: t('research.riskView') },
   { key: 'devils_advocate', label: t('research.devilsAdvocate') },
 ];
-
-function handleClose() {
-  emit('close');
-}
 
 async function handleGenerate(action) {
   activeAction.value = action;
@@ -84,135 +78,82 @@ function renderMarkdown(text) {
 </script>
 
 <template>
-  <div class="llm-panel" role="dialog" aria-modal="true">
-    <button
-      class="llm-panel__backdrop"
-      type="button"
-      :aria-label="t('common.close')"
-      @click="handleClose"
-    ></button>
-
-    <article class="llm-panel__sheet panel">
-      <!-- Header -->
-      <div class="llm-panel__header panel__header">
-        <div>
-          <p class="eyebrow">{{ t('research.eyebrow') }}</p>
-          <h2>{{ t('research.panelTitle') }}</h2>
-        </div>
-        <button
-          class="llm-panel__close"
-          type="button"
-          :aria-label="t('common.close')"
-          @click="handleClose"
-        >
-          &times;
-        </button>
+  <article class="llm-panel panel">
+    <!-- Header -->
+    <div class="llm-panel__header panel__header">
+      <div>
+        <p class="eyebrow">{{ t('research.eyebrow') }}</p>
+        <h2>{{ t('research.panelTitle') }}</h2>
       </div>
+    </div>
 
-      <!-- Action Buttons -->
-      <div class="llm-panel__actions">
-        <button
-          v-for="act in actions"
-          :key="act.key"
-          class="llm-panel__action-btn"
-          :class="{ 'llm-panel__action-btn--active': activeAction === act.key }"
-          @click="handleGenerate(act.key)"
-          :disabled="loading"
-        >
-          {{ act.label }}
-        </button>
-      </div>
+    <!-- Action Buttons -->
+    <div class="llm-panel__actions">
+      <button
+        v-for="act in actions"
+        :key="act.key"
+        class="llm-panel__action-btn"
+        :class="{ 'llm-panel__action-btn--active': activeAction === act.key }"
+        @click="handleGenerate(act.key)"
+        :disabled="loading"
+      >
+        {{ act.label }}
+      </button>
+    </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="llm-panel__loading">
-        <div class="llm-panel__spinner"></div>
-        <p>{{ t('research.analyzing') }}</p>
-      </div>
+    <!-- Loading -->
+    <div v-if="loading" class="llm-panel__loading">
+      <div class="llm-panel__spinner"></div>
+      <p>{{ t('research.analyzing') }}</p>
+    </div>
 
-      <!-- Error -->
-      <div v-else-if="error" class="llm-panel__error">
-        <p class="llm-panel__error-title">{{ t('common.error') }}</p>
-        <p class="llm-panel__error-body">{{ error }}</p>
-      </div>
+    <!-- Error -->
+    <div v-else-if="error" class="llm-panel__error">
+      <p class="llm-panel__error-title">{{ t('common.error') }}</p>
+      <p class="llm-panel__error-body">{{ error }}</p>
+    </div>
 
-      <!-- Content -->
-      <div v-else-if="analysis" class="llm-panel__content">
-        <div
-          v-if="analysis.markdown"
-          class="llm-panel__markdown"
-          v-html="renderMarkdown(analysis.markdown)"
-        ></div>
-        <div v-else-if="analysis.placeholder" class="llm-panel__placeholder">
-          {{ analysis.markdown }}
-        </div>
+    <!-- Content -->
+    <div v-else-if="analysis" class="llm-panel__content">
+      <div
+        v-if="analysis.markdown"
+        class="llm-panel__markdown"
+        v-html="renderMarkdown(analysis.markdown)"
+      ></div>
+      <div v-else-if="analysis.placeholder" class="llm-panel__placeholder">
+        {{ analysis.markdown }}
       </div>
+    </div>
 
-      <!-- Empty -->
-      <div v-else class="llm-panel__empty">
-        <p>{{ t('research.selectAction') }}</p>
-      </div>
-    </article>
-  </div>
+    <!-- Empty -->
+    <div v-else class="llm-panel__empty">
+      <p>{{ t('research.selectAction') }}</p>
+    </div>
+  </article>
 </template>
 
 <style scoped>
 .llm-panel {
-  position: fixed;
-  inset: 0;
-  z-index: var(--layer-modal, 40);
-  display: flex;
-  justify-content: flex-end;
-}
-
-.llm-panel__backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--color-overlay);
-  border: none;
-  cursor: pointer;
-}
-
-.llm-panel__sheet {
-  position: relative;
-  width: 520px;
-  max-width: 92vw;
-  height: 100vh;
-  overflow-y: auto;
-  background: var(--panel-bg);
-  border-left: 1px solid var(--panel-border);
-  box-shadow: var(--shadow-strong);
   display: flex;
   flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .llm-panel__header {
   flex-shrink: 0;
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--panel-border);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.llm-panel__close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-  line-height: 1;
-}
-
-.llm-panel__close:hover {
-  color: var(--text-primary);
-}
-
 .llm-panel__actions {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--panel-border);
   flex-shrink: 0;
 }
@@ -221,9 +162,9 @@ function renderMarkdown(text) {
   background: var(--panel-bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   color: var(--text-primary);
-  font-size: var(--font-size-meta);
+  font-size: var(--font-size-label);
   font-weight: 500;
   cursor: pointer;
   text-align: left;
@@ -249,7 +190,7 @@ function renderMarkdown(text) {
 .llm-panel__content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
 }
 
 .llm-panel__markdown {

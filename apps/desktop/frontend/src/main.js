@@ -24,6 +24,7 @@ import {
   updateRecentReports as syncRecentReportsToStore,
   updateStartupNotice as syncStartupNoticeToStore,
   updatePrecloseAnalyzing as syncPrecloseAnalyzingToStore,
+  updateExecutionResults as syncExecutionResultsToStore,
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
@@ -387,6 +388,9 @@ async function runPrecloseAnalysis() {
   try {
     const decisions = await invoke(COMMANDS.runPrecloseAnalysis, { scope: activeScope });
 
+    // Store execution results for the ExecutionResultsPanel
+    syncExecutionResultsToStore(decisions || []);
+
     // Count by state
     const counts = { BUY_NOW: 0, WAIT: 0, NO_CHASE: 0, REDUCE: 0, SKIP: 0 };
     for (const d of decisions) {
@@ -430,7 +434,7 @@ initEventBridge({
   retryRefresh: () => retryFailedRefresh(),
   cancelRefresh: () => cancelRefreshJob(),
   exportReport: () => exportReport(),
-  analyzeWithLlm: (scope, skill, agent) => llmApi.analyzeWithSkill(scope, skill, agent),
+  analyzeWithLlm: (scope, action) => llmApi.analyzeWithLlm(scope, action),
   runPrecloseAnalysis: () => runPrecloseAnalysis(),
 });
 

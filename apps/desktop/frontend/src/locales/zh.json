@@ -23,6 +23,21 @@
     "analysisComplete": "收盘前分析完成：共 {total} 个候选，{buyNow} 个 BUY_NOW，{wait} 个 WAIT，{noChase} 个 NO_CHASE。",
     "analysisFailed": "收盘前分析失败：{error}"
   },
+  "execution": {
+    "eyebrow": "执行结果",
+    "title": "收盘前决策",
+    "lede": "{count} 个执行决策来自最近一次收盘前分析，按操作状态分组。",
+    "candidates": "{count} 个候选",
+    "noResults": "暂无执行结果。",
+    "noResultsHint": "点击顶栏的\"收盘前分析\"按钮运行执行过滤。",
+    "symbolsCount": "{count} 个标的",
+    "noReasons": "无模式匹配",
+    "stateBuyNow": "立即买入",
+    "stateNoChase": "不追高",
+    "stateWait": "等待",
+    "stateReduce": "减仓",
+    "stateSkip": "跳过"
+  },
   "notice": {
     "title": {
       "info": "信息",
@@ -203,6 +218,7 @@
     "lede": "当前报告日期按动量分数排名的领导者和落后者。",
     "momentumRanked": "动量排名的领导者和落后者",
     "noLeaders": "最新报告日期没有可用的轮动领导者。",
+    "noLaggards": "最新报告日期没有可用的轮动落后者。",
     "leaders": "领导者",
     "top5Strength": "前5强度",
     "laggards": "落后者",
@@ -354,6 +370,8 @@
     "waiting": "等待中"
   },
   "healthStrip": {
+    "eyebrow": "系统状态",
+    "title": "系统状态",
     "runtime": "运行时",
     "connected": "已连接",
     "awaitingRuntime": "等待运行时",
@@ -472,6 +490,10 @@
     "dataHealth": "数据健康"
   },
   "insight": {
+    "eyebrow": "市场洞察",
+    "awaiting": "等待数据",
+    "transition": "过渡",
+    "placeholder": "等待数据刷新以评估潜在机会",
     "confidenceHigh": "高置信度",
     "confidenceMedium": "中等置信度",
     "confidenceLow": "低置信度",

@@ -7,154 +7,157 @@ const { t } = useI18n();
 
 const insight = computed(() => dashboardStore.insight);
 const hasInsight = computed(() => Boolean(insight.value));
-
-function renderMarkdown(text) {
-  if (!text) return '';
-  let html = String(text)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-
-  html = html
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>');
-
-  const unsafePatterns = [
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
-    /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
-    /<object[^>]*>[\s\S]*?<\/object>/gi,
-    /<embed[^>]*>/gi,
-    /<form[^>]*>[\s\S]*?<\/form>/gi,
-    /on\w+\s*=\s*["']?[^"'>]*["']?/gi,
-    /javascript:/gi,
-  ];
-  unsafePatterns.forEach((pattern) => {
-    html = html.replace(pattern, '');
-  });
-
-  return html;
-}
 </script>
 
 <template>
-  <div v-if="hasInsight" class="insight-panel">
-    <div class="insight-panel__header">
-      <h2 class="insight-panel__headline">{{ insight.headline }}</h2>
+  <article class="panel">
+    <div class="panel__header">
+      <div>
+        <p class="eyebrow">{{ t('insight.eyebrow') }}</p>
+        <h2>{{ insight?.headline || t('insight.awaiting') }}</h2>
+        <p v-if="insight?.summary" class="panel__lede">{{ insight.summary }}</p>
+      </div>
+      <span v-if="insight?.regime_transition" class="pill pill--warning">
+        {{ t('insight.transition') }}
+      </span>
     </div>
 
-    <p class="insight-panel__summary">{{ insight.summary }}</p>
-
-    <div v-if="insight.regime_transition" class="insight-panel__transition">
-      <span class="insight-panel__transition-icon">&#9432;</span>
-      {{ insight.regime_transition }}
+    <div v-if="insight?.implications?.length" class="insight-list">
+      <div
+        v-for="(item, index) in insight.implications"
+        :key="`impl-${index}`"
+        class="insight-item"
+      >
+        <span class="insight-item__icon">▸</span>
+        <span class="insight-item__text">{{ item }}</span>
+      </div>
     </div>
 
-    <div v-if="insight.implications?.length" class="insight-panel__section">
-      <h3 class="insight-panel__section-title">{{ t('insight.implications') }}</h3>
-      <ul class="insight-panel__list">
-        <li v-for="(item, index) in insight.implications" :key="`impl-${index}`" class="insight-panel__list-item">
-          {{ item }}
-        </li>
-      </ul>
+    <div v-else class="insight-placeholder">
+      <span class="insight-placeholder__icon">?</span>
+      <p>{{ t('insight.placeholder') }}</p>
     </div>
-  </div>
+  </article>
 </template>
 
 <style scoped>
-.insight-panel {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  margin-bottom: var(--space-4);
-}
-
-.insight-panel__header {
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  padding: var(--panel-padding);
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  height: 100%;
 }
 
-.insight-panel__headline {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 1.3;
-  margin: 0;
-  flex: 1;
-}
-
-.insight-panel__summary {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-  margin: 0 0 var(--space-3);
-}
-
-.insight-panel__transition {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  background: var(--color-surface);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-3);
+.panel__header {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
-.insight-panel__transition-icon {
-  font-size: var(--font-size-base);
-  line-height: 1;
+.panel__lede {
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  margin-top: var(--space-1);
+  margin-bottom: 0;
 }
 
-.insight-panel__section {
-  margin-top: var(--space-3);
-}
-
-.insight-panel__section-title {
-  font-size: var(--font-size-sm);
+.eyebrow {
+  font-size: var(--font-size-label);
   font-weight: 600;
-  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
-.insight-panel__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+h2 {
+  margin: var(--space-1) 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.insight-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.insight-panel__list-item {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  line-height: 1.5;
-  padding-left: var(--space-3);
-  position: relative;
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel-bg-secondary);
+  border-radius: var(--panel-radius);
+  border-left: 3px solid var(--color-accent);
 }
 
-.insight-panel__list-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.6em;
-  width: 6px;
-  height: 6px;
+.insight-item__icon {
+  color: var(--color-accent);
+  font-size: 1rem;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.insight-item__text {
+  color: var(--text-primary);
+  font-size: var(--font-size-meta);
+  line-height: 1.5;
+}
+
+.insight-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--panel-bg-secondary);
+  border-radius: var(--panel-radius);
+  border: 1px dashed var(--panel-border);
+  flex: 1;
+}
+
+.insight-placeholder__icon {
+  font-size: 2rem;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  background: var(--color-text-tertiary);
+  background: var(--color-surface-raised);
+  color: var(--text-secondary);
+  border: 2px solid var(--panel-border);
+  font-family: var(--font-display);
+}
+
+.insight-placeholder p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  text-align: center;
+  margin: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--space-3);
+  font-size: var(--font-size-label);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pill--warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
 }
 </style>

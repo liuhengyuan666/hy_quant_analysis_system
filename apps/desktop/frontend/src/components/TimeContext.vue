@@ -38,37 +38,53 @@ const viewMode = computed(() => {
 </script>
 
 <template>
-  <section class="overview-grid" aria-label="Dashboard time context">
-    <MetricCard
-      :label="t('timeContext.selectedDate')"
-      :value="selectedDate ? formatDate(selectedDate) : t('timeContext.unavailable')"
-      :meta="selectedDate ? t('timeContext.reflectSnapshot') : t('timeContext.loadToInspect')"
-    />
-    <MetricCard
-      :label="t('timeContext.latestAnalysis')"
-      :value="latestAvailableDate ? formatDate(latestAvailableDate) : t('timeContext.unavailable')"
-      :meta="latestAvailableDate ? (selectedDate === latestAvailableDate ? t('timeContext.viewingNewest') : t('timeContext.newestStored')) : t('timeContext.noDates')"
-      :tone="selectedDate && latestAvailableDate && selectedDate === latestAvailableDate ? 'positive' : 'neutral'"
-    />
-    <MetricCard
-      :label="t('timeContext.regimeAsOf')"
-      :value="regimeAsOfDate ? formatDate(regimeAsOfDate) : t('timeContext.unavailable')"
-      :meta="regimeAsOfDate ? (regimeFreshness?.stale ? t('timeContext.macroRefreshedBefore') : t('timeContext.macroAligned')) : t('timeContext.macroUnavailable')"
-      :tone="regimeFreshness?.tone || 'neutral'"
-    />
-    <MetricCard
-      :label="t('timeContext.viewMode')"
-      :value="viewMode.value"
-      :meta="viewMode.meta"
-      :tone="viewMode.tone"
-    />
-  </section>
+  <article class="time-context-bar">
+    <section class="overview-grid" aria-label="Dashboard time context">
+      <MetricCard
+        :label="t('timeContext.selectedDate')"
+        :value="selectedDate ? formatDate(selectedDate) : t('timeContext.unavailable')"
+        :meta="selectedDate ? t('timeContext.reflectSnapshot') : t('timeContext.loadToInspect')"
+      />
+      <MetricCard
+        :label="t('timeContext.latestAnalysis')"
+        :value="latestAvailableDate ? formatDate(latestAvailableDate) : t('timeContext.unavailable')"
+        :meta="latestAvailableDate ? (selectedDate === latestAvailableDate ? t('timeContext.viewingNewest') : t('timeContext.newestStored')) : t('timeContext.noDates')"
+        :tone="selectedDate && latestAvailableDate && selectedDate === latestAvailableDate ? 'positive' : 'neutral'"
+      />
+      <MetricCard
+        :label="t('timeContext.regimeAsOf')"
+        :value="regimeAsOfDate ? formatDate(regimeAsOfDate) : t('timeContext.unavailable')"
+        :meta="regimeAsOfDate ? (regimeFreshness?.stale ? t('timeContext.macroRefreshedBefore') : t('timeContext.macroAligned')) : t('timeContext.macroUnavailable')"
+        :tone="regimeFreshness?.tone || 'neutral'"
+      />
+      <MetricCard
+        :label="t('timeContext.viewMode')"
+        :value="viewMode.value"
+        :meta="viewMode.meta"
+        :tone="viewMode.tone"
+      />
+    </section>
+  </article>
 </template>
 
 <style scoped>
+.time-context-bar {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+}
+
 .overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+.overview-grid :deep(.metric-card) {
+  flex: 1 1 0;
+  min-width: 0;
 }
 </style>

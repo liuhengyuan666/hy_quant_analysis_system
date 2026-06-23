@@ -71,6 +71,22 @@ function handleSignalClick(group, index) {
     </div>
 
     <template v-else>
+      <!-- Signal Distribution Summary -->
+      <div class="signal-distribution">
+        <div class="signal-distribution__item">
+          <span class="signal-distribution__count signal-distribution__count--strong">{{ topSignals.length }}</span>
+          <span class="signal-distribution__label">StrongBuy</span>
+        </div>
+        <div class="signal-distribution__item">
+          <span class="signal-distribution__count signal-distribution__count--buy">{{ bullishSignals.length }}</span>
+          <span class="signal-distribution__label">Buy</span>
+        </div>
+        <div class="signal-distribution__item">
+          <span class="signal-distribution__count signal-distribution__count--watch">{{ defensiveSignals.length }}</span>
+          <span class="signal-distribution__label">Watch</span>
+        </div>
+      </div>
+
       <section v-if="topSignals.length" class="signal-focus-section">
         <div class="panel__subheader">
           <p class="panel__section-title">{{ t('signals.topSignals') }}</p>
@@ -215,6 +231,50 @@ function handleSignalClick(group, index) {
 .panel__section-title {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.signal-distribution {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+}
+
+.signal-distribution__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 4rem;
+}
+
+.signal-distribution__count {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.signal-distribution__count--strong {
+  color: var(--tone-positive);
+}
+
+.signal-distribution__count--buy {
+  color: var(--color-accent);
+}
+
+.signal-distribution__count--watch {
+  color: var(--color-warning);
+}
+
+.signal-distribution__label {
+  font-size: var(--font-size-label);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .signal-focus-section {

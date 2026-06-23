@@ -21,6 +21,12 @@ const scores = computed(() => [
   [t('regime.riskScore'), snapshot.value?.risk_score],
 ]);
 
+function scoreBarClass(value) {
+  if (value >= 80) return 'score-bar__fill--high';
+  if (value <= 30) return 'score-bar__fill--low';
+  return '';
+}
+
 const freshness = computed(() => {
   if (!snapshot.value?.report_date) return null;
   const asOfDate = snapshot.value.regime_as_of_date || snapshot.value.report_date;
@@ -74,14 +80,14 @@ const freshnessMessage = computed(() => {
       <p>{{ freshnessMessage }}</p>
     </section>
 
-    <div v-if="snapshot" class="score-stack">
+      <div v-if="snapshot" class="score-stack">
       <div v-for="[label, value] in scores" :key="label" class="score-row">
         <div class="score-row__meta">
           <span>{{ label }}</span>
           <strong>{{ formatNumber(value, 1) }}</strong>
         </div>
         <div class="score-bar">
-          <span class="score-bar__fill" :style="{ width: `${clampScore(value)}%` }"></span>
+          <span class="score-bar__fill" :class="scoreBarClass(value)" :style="{ width: `${clampScore(value)}%` }"></span>
         </div>
       </div>
     </div>
@@ -143,7 +149,7 @@ const freshnessMessage = computed(() => {
 }
 
 .score-bar {
-  height: 6px;
+  height: 3px;
   background: var(--score-bar-bg);
   border-radius: var(--space-1);
   overflow: hidden;
@@ -155,6 +161,17 @@ const freshnessMessage = computed(() => {
   background: var(--accent-primary);
   border-radius: var(--space-1);
   transition: width 0.3s ease;
+  opacity: 0.6;
+}
+
+.score-bar__fill--high {
+  background: var(--tone-positive);
+  opacity: 1;
+}
+
+.score-bar__fill--low {
+  background: var(--tone-negative);
+  opacity: 1;
 }
 
 .staleness-banner {

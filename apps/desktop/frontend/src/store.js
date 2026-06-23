@@ -99,6 +99,9 @@ export const dashboardStore = reactive({
 
   /** Whether preclose analysis is running */
   precloseAnalyzing: false,
+
+  /** Execution results from preclose analysis (array of ExecutionDecision) */
+  executionResults: [],
 });
 
 /**
@@ -246,6 +249,13 @@ export function updatePrecloseAnalyzing(analyzing) {
 }
 
 /**
+ * Update execution results from preclose analysis.
+ */
+export function updateExecutionResults(results) {
+  dashboardStore.executionResults = results || [];
+}
+
+/**
  * Update startup freshness notice.
  */
 export function updateStartupNotice(notice) {
@@ -289,6 +299,8 @@ export function resetStore() {
   dashboardStore.llmError = '';
   dashboardStore.llmConfig = null;
   dashboardStore.showLlmPanel = false;
+  dashboardStore.precloseAnalyzing = false;
+  dashboardStore.executionResults = [];
 }
 
 /**

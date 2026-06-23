@@ -23,6 +23,21 @@
     "analysisComplete": "Preclose analysis complete: {total} candidates, {buyNow} BUY_NOW, {wait} WAIT, {noChase} NO_CHASE.",
     "analysisFailed": "Preclose analysis failed: {error}"
   },
+  "execution": {
+    "eyebrow": "Execution Results",
+    "title": "Preclose Decisions",
+    "lede": "{count} execution decisions from the latest preclose analysis, grouped by action state.",
+    "candidates": "{count} candidates",
+    "noResults": "No execution results available yet.",
+    "noResultsHint": "Click \"Preclose Analysis\" in the top bar to run execution filtering.",
+    "symbolsCount": "{count} symbols",
+    "noReasons": "no pattern match",
+    "stateBuyNow": "Buy Now",
+    "stateNoChase": "No Chase",
+    "stateWait": "Wait",
+    "stateReduce": "Reduce",
+    "stateSkip": "Skip"
+  },
   "notice": {
     "title": {
       "info": "Info",
@@ -203,6 +218,7 @@
     "lede": "Leaders and laggards ranked by momentum score for the current report date.",
     "momentumRanked": "Momentum-ranked leaders and laggards",
     "noLeaders": "No rotation leaders are available for the latest report date.",
+    "noLaggards": "No rotation laggards are available for the latest report date.",
     "leaders": "Leaders",
     "top5Strength": "Top 5 strength",
     "laggards": "Laggards",
@@ -354,6 +370,8 @@
     "waiting": "Waiting"
   },
   "healthStrip": {
+    "eyebrow": "System Status",
+    "title": "System Status",
     "runtime": "Runtime",
     "connected": "Connected",
     "awaitingRuntime": "Awaiting runtime",
@@ -472,6 +490,10 @@
     "dataHealth": "Data health"
   },
   "insight": {
+    "eyebrow": "Insight",
+    "awaiting": "Awaiting data",
+    "transition": "Transition",
+    "placeholder": "Waiting for data refresh to evaluate potential opportunities",
     "confidenceHigh": "High confidence",
     "confidenceMedium": "Medium confidence",
     "confidenceLow": "Low confidence",

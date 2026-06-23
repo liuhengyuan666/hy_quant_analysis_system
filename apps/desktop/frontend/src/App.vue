@@ -18,7 +18,7 @@ import {
   analyzeWithLlm as bridgeAnalyzeWithLlm,
   runPrecloseAnalysis as bridgeRunPrecloseAnalysis,
 } from './store.js';
-import DashboardHero from './components/DashboardHero.vue';
+import TopStatusBar from './components/TopStatusBar.vue';
 import LlmAnalysisPanel from './components/LlmAnalysisPanel.vue';
 import RecentReportsPanel from './components/RecentReportsPanel.vue';
 import DataHealthPanel from './components/DataHealthPanel.vue';
@@ -35,10 +35,10 @@ import EnvironmentPanel from './components/EnvironmentPanel.vue';
 import SignalsPanel from './components/SignalsPanel.vue';
 import TrustSummaryPanel from './components/TrustSummaryPanel.vue';
 import InsightPanel from './components/InsightPanel.vue';
+import ExecutionResultsPanel from './components/ExecutionResultsPanel.vue';
 import RefreshProgress from './components/RefreshProgress.vue';
 import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
-import DateSelector from './components/DateSelector.vue';
 import SignalDetailModal from './components/SignalDetailModal.vue';
 
 
@@ -59,20 +59,12 @@ const startupNoticeResult = computed(() => {
   };
 });
 
-const selectedRefreshStartStage = computed(() => dashboardStore.selectedRefreshStartStage);
-
 const selectedSignal = ref(null);
 const usageGuidesRef = ref(null);
 
-const showLlmPanel = computed(() => dashboardStore.showLlmPanel);
-
-// Body scroll lock - managed at App level to handle component lifecycle correctly
+// Body scroll lock for signal detail modal only
 watch(selectedSignal, (newSignal) => {
   document.body.classList.toggle('body--signal-modal-open', Boolean(newSignal));
-});
-
-watch(showLlmPanel, (show) => {
-  document.body.classList.toggle('body--llm-panel-open', show);
 });
 
 // Keyboard: ESC to close modals
@@ -80,8 +72,6 @@ function handleKeydown(event) {
   if (event.key === 'Escape') {
     if (selectedSignal.value) {
       selectedSignal.value = null;
-    } else if (showLlmPanel.value) {
-      toggleLlmPanel(false);
     }
   }
 }
@@ -93,24 +83,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown);
 });
-
-function handleScopeChange(scope) {
-  updateScope(scope);
-  bridgeLoadDashboard();
-}
-
-function handleDateChange(date) {
-  updateReportDate(date);
-  bridgeLoadSelectedSnapshot();
-}
-
-function handleJumpToLatest() {
-  const latestDate = snapshot.value?.latest_available_date;
-  if (latestDate) {
-    updateReportDate(latestDate);
-    bridgeLoadSelectedSnapshot();
-  }
-}
 
 function handleSelectSignal(signal) {
   selectedSignal.value = signal;
@@ -133,7 +105,7 @@ function handleResumeRefresh() {
 }
 
 function handleRefresh(stage) {
-  bridgeStartRefresh(stage || selectedRefreshStartStage.value);
+  bridgeStartRefresh(stage);
 }
 
 function handleExport() {
@@ -144,109 +116,111 @@ function handleRunPrecloseAnalysis() {
   bridgeRunPrecloseAnalysis();
 }
 
+function handleChangeScope(scope) {
+  updateScope(scope);
+  bridgeLoadDashboard();
+}
+
 function handleOpenGuides() {
   if (usageGuidesRef.value) {
     usageGuidesRef.value.openUsageGuides();
   }
 }
-
-function handleOpenLlmPanel() {
-  toggleLlmPanel(true);
-}
-
-function handleCloseLlmPanel() {
-  toggleLlmPanel(false);
-}
 </script>
 
 <template>
   <div id="vue-app" v-cloak>
-    <!-- Hero section -->
-    <DashboardHero
+    <!-- Top Status Bar -->
+    <TopStatusBar
       @refresh="handleRefresh"
       @export="handleExport"
       @open-guides="handleOpenGuides"
       @run-preclose-analysis="handleRunPrecloseAnalysis"
+      @change-scope="handleChangeScope"
     />
 
-    <!-- Top section: full width -->
-    <header class="dashboard-header">
-      <div class="header-top">
-        <DateSelector
-          @update:scope="handleScopeChange"
-          @update:date="handleDateChange"
-          @jump-to-latest="handleJumpToLatest"
+    <!-- Main 2-column layout -->
+    <div class="dashboard-layout">
+      <!-- Left column: Quant Engine (70%) -->
+      <main class="dashboard-main">
+        <!-- Refresh Progress + Notices -->
+        <RefreshProgress
+          @cancel="handleCancelRefresh"
+          @retry="handleRetryRefresh"
+          @resume="handleResumeRefresh"
         />
-        <button class="button button--secondary" @click="handleOpenLlmPanel">
-          {{ t('research.openPanel') }}
-        </button>
-      </div>
-      <RefreshProgress
-        @cancel="handleCancelRefresh"
-        @retry="handleRetryRefresh"
-        @resume="handleResumeRefresh"
-      />
-      <Transition name="fade">
-        <Notice v-if="error" :result="{ kind: 'error', title: t('common.dataLoadFailed'), message: error }" />
-      </Transition>
-      <Transition name="fade">
-        <Notice v-if="exportResult" :result="exportResult" />
-      </Transition>
-      <Transition name="fade">
-        <Notice v-if="startupNoticeResult" :result="startupNoticeResult" />
-      </Transition>
-      <Transition name="fade">
-        <Skeleton v-if="loading" />
-      </Transition>
-      <TrustSummaryPanel />
-      <InsightPanel />
-      <HealthStrip />
-    </header>
+        <Transition name="fade">
+          <Notice v-if="error" :result="{ kind: 'error', title: t('common.dataLoadFailed'), message: error }" />
+        </Transition>
+        <Transition name="fade">
+          <Notice v-if="exportResult" :result="exportResult" />
+        </Transition>
+        <Transition name="fade">
+          <Notice v-if="startupNoticeResult" :result="startupNoticeResult" />
+        </Transition>
+        <Transition name="fade">
+          <Skeleton v-if="loading" />
+        </Transition>
 
-    <!-- Main grid -->
-    <main class="dashboard-grid">
-      <!-- Row 1: Time Context (full width, 4 metadata cards) -->
-      <section class="grid-row grid-row--1">
+        <!-- System Overview -->
+        <TrustSummaryPanel />
+        <section class="grid-row grid-row--2">
+          <InsightPanel />
+          <HealthStrip />
+        </section>
         <TimeContext />
-      </section>
 
-      <!-- Row 2: Regime, Breadth -->
-      <section class="grid-row grid-row--2">
-        <RegimePanel />
-        <BreadthPanel />
-      </section>
+        <!-- Quant Engine Grid -->
+        <div class="dashboard-grid">
+          <!-- Regime + Breadth -->
+          <section class="grid-row grid-row--2">
+            <RegimePanel />
+            <BreadthPanel />
+          </section>
 
-      <!-- Row 3: Top Rotation (full width, limited height) -->
-      <section class="grid-row grid-row--1">
-        <RotationPanel class="rotation-panel--limited" />
-      </section>
+          <!-- Rotation -->
+          <section class="grid-row grid-row--1">
+            <RotationPanel />
+          </section>
 
-      <!-- Row 4: Backtest (full width) -->
-      <section class="grid-row grid-row--1">
-        <BacktestPanel />
-      </section>
+          <!-- Backtest -->
+          <section class="grid-row grid-row--1">
+            <BacktestPanel />
+          </section>
 
-      <!-- Row 5: Signals (full width, internal buy/sale half-width) -->
-      <section class="grid-row grid-row--1">
-        <SignalsPanel @select-signal="handleSelectSignal" />
-      </section>
+          <!-- Signals -->
+          <section class="grid-row grid-row--1">
+            <SignalsPanel @select-signal="handleSelectSignal" />
+          </section>
 
-      <!-- Row 6: Environment, Status -->
-      <section class="grid-row grid-row--2">
-        <EnvironmentPanel />
-        <StatusPanel />
-      </section>
+          <!-- Execution Results -->
+          <section class="grid-row grid-row--1">
+            <ExecutionResultsPanel />
+          </section>
 
-      <!-- Row 7: Recent Reports -->
-      <section class="grid-row grid-row--1">
-        <RecentReportsPanel />
-      </section>
+          <!-- Environment + Status -->
+          <section class="grid-row grid-row--2">
+            <EnvironmentPanel />
+            <StatusPanel />
+          </section>
 
-      <!-- Row 8: Data Health -->
-      <section class="grid-row grid-row--1">
-        <DataHealthPanel />
-      </section>
-    </main>
+          <!-- Recent Reports -->
+          <section class="grid-row grid-row--1">
+            <RecentReportsPanel />
+          </section>
+
+          <!-- Data Health -->
+          <section class="grid-row grid-row--1">
+            <DataHealthPanel />
+          </section>
+        </div>
+      </main>
+
+      <!-- Right column: Research (30%) -->
+      <aside class="dashboard-research">
+        <LlmAnalysisPanel />
+      </aside>
+    </div>
 
     <!-- Usage guides full-screen viewer -->
     <UsageGuidesPanel ref="usageGuidesRef" />
@@ -259,49 +233,47 @@ function handleCloseLlmPanel() {
         @close="handleCloseSignalDetail"
       />
     </Transition>
-
-    <!-- LLM analysis side panel -->
-    <Transition name="slide">
-      <LlmAnalysisPanel
-        v-if="showLlmPanel"
-        @close="handleCloseLlmPanel"
-        @reanalyze="handleAnalyzeWithLlm"
-      />
-    </Transition>
   </div>
 </template>
 
 <style scoped>
 #vue-app {
-  width: min(calc(100% - (var(--space-6) * 2)), var(--container-width));
+  width: 100%;
   min-height: 100vh;
-  padding: var(--space-5) var(--space-6);
+  padding: 0;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
-.dashboard-header {
+.dashboard-layout {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  flex: 1;
+  align-items: flex-start;
+}
+
+.dashboard-main {
+  flex: 0 0 70%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-bottom: var(--space-5);
 }
 
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-4);
-}
-
-.header-top > :first-child {
-  flex: 1;
+.dashboard-research {
+  flex: 0 0 30%;
   min-width: 0;
+  position: sticky;
+  top: calc(3.5rem + var(--space-4));
+  height: calc(100vh - 3.5rem - var(--space-4) * 2 - 2px);
 }
 
 .dashboard-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .grid-row {
@@ -313,24 +285,27 @@ function handleCloseLlmPanel() {
   grid-template-columns: 1fr;
 }
 
-.grid-row--3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
 .grid-row--2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* Rotation panel height limit */
-:deep(.rotation-panel--limited) {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
 /* Responsive breakpoints */
 @media (max-width: 1080px) {
-  .grid-row--3 {
-    grid-template-columns: repeat(2, 1fr);
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .dashboard-main {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .dashboard-research {
+    flex: 1 1 auto;
+    width: 100%;
+    position: static;
+    height: auto;
+    max-height: 600px;
   }
 
   .grid-row--2 {
@@ -343,12 +318,11 @@ function handleCloseLlmPanel() {
 }
 
 @media (max-width: 720px) {
-  .grid-row--3 {
-    grid-template-columns: 1fr;
+  .dashboard-layout {
+    padding: var(--space-3);
   }
 
   #vue-app {
-    padding: var(--space-3);
     width: 100%;
   }
 }
