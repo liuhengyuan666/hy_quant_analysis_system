@@ -2,21 +2,15 @@ use anyhow::Result;
 use core_domain::LlmConfig;
 
 /// Render LLM analysis JSON as markdown report.
+/// V4.5: Expects {action, scope, placeholder, markdown} from analyze_with_action.
 pub(crate) fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
     let mut md = String::new();
 
-    // Title
-    let skill = analysis["skill"].as_str().unwrap_or("unknown");
+    let action = analysis["action"].as_str().unwrap_or("unknown");
     let scope = analysis["scope"].as_str().unwrap_or("global");
-    md.push_str(&format!("# LLM Analysis: {}\n\n", skill));
-    md.push_str(&format!("**Scope**: {}\n\n", scope));
 
-    // Triggered status
-    let triggered = analysis["triggered"].as_bool().unwrap_or(false);
-    md.push_str(&format!(
-        "**Triggered**: {}\n\n",
-        if triggered { "Yes" } else { "No" }
-    ));
+    md.push_str(&format!("# LLM Analysis: {}\n\n", action));
+    md.push_str(&format!("**Scope**: {}\n\n", scope));
 
     // Placeholder warning
     if analysis["placeholder"].as_bool().unwrap_or(false) {
@@ -26,74 +20,12 @@ pub(crate) fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> Stri
         );
     }
 
-    // Regime Analysis
-    if let Some(regime) = analysis["regime_analysis"].as_object() {
-        md.push_str("## Regime Analysis\n\n");
-        if let Some(state) = regime.get("current_state").and_then(|v| v.as_str()) {
-            md.push_str(&format!("- **Current State**: {}\n", state));
-        }
-        if let Some(transition) = regime.get("transition").and_then(|v| v.as_f64()) {
-            md.push_str(&format!("- **Transition Score**: {:.2}\n", transition));
-        }
-        if let Some(confidence) = regime.get("confidence").and_then(|v| v.as_f64()) {
-            md.push_str(&format!("- **Confidence**: {:.1}%\n", confidence * 100.0));
-        }
-        if let Some(drivers) = regime.get("key_drivers").and_then(|v| v.as_array()) {
-            if !drivers.is_empty() {
-                md.push_str("- **Key Drivers**:\n");
-                for d in drivers {
-                    if let Some(s) = d.as_str() {
-                        md.push_str(&format!("  - {}\n", s));
-                    }
-                }
-            }
-        }
-        if let Some(risk) = regime.get("risk_assessment") {
-            if let Some(level) = risk.get("level").and_then(|v| v.as_str()) {
-                md.push_str(&format!("- **Risk Level**: {}\n", level));
-            }
-            if let Some(factors) = risk.get("factors").and_then(|v| v.as_array()) {
-                if !factors.is_empty() {
-                    md.push_str("- **Risk Factors**:\n");
-                    for f in factors {
-                        if let Some(s) = f.as_str() {
-                            md.push_str(&format!("  - {}\n", s));
-                        }
-                    }
-                }
-            }
-            if let Some(rec) = risk.get("recommendation").and_then(|v| v.as_str()) {
-                md.push_str(&format!("- **Recommendation**: {}\n", rec));
-            }
-        }
-        md.push('\n');
-    }
-
-    // LLM Analysis
-    if let Some(llm) = analysis["llm_analysis"].as_str() {
-        if !llm.is_empty() {
-            md.push_str("## LLM Analysis\n\n");
-            md.push_str(llm);
+    // Markdown content (the actual LLM output)
+    if let Some(content) = analysis["markdown"].as_str() {
+        if !content.is_empty() {
+            md.push_str(content);
             md.push_str("\n\n");
         }
-    }
-
-    // Token Usage
-    if let Some(tokens) = analysis["token_usage"].as_object() {
-        md.push_str("## Token Usage\n\n");
-        if let Some(input) = tokens.get("system_tokens").and_then(|v| v.as_u64()) {
-            md.push_str(&format!("- **System Tokens**: {}\n", input));
-        }
-        if let Some(input) = tokens.get("context_tokens").and_then(|v| v.as_u64()) {
-            md.push_str(&format!("- **Context Tokens**: {}\n", input));
-        }
-        if let Some(input) = tokens.get("reasoning_tokens").and_then(|v| v.as_u64()) {
-            md.push_str(&format!("- **Reasoning Tokens**: {}\n", input));
-        }
-        if let Some(output) = tokens.get("output_tokens").and_then(|v| v.as_u64()) {
-            md.push_str(&format!("- **Output Tokens**: {}\n", output));
-        }
-        md.push('\n');
     }
 
     md

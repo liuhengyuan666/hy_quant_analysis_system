@@ -155,10 +155,16 @@ fn build_snapshot_context(snapshot: &DashboardSnapshot) -> String {
 
     ctx.push_str(&format!("**Regime**: {}\n", snapshot.regime_label));
     if let Some(ref env) = snapshot.environment {
-        ctx.push_str(&format!("**Environment**: {:?}\n", env));
+        ctx.push_str(&format!(
+            "**Environment**: {} (breadth: {})\n",
+            env.environment_label, env.breadth_state
+        ));
     }
     if let Some(ref state) = snapshot.strategy_state {
-        ctx.push_str(&format!("**Strategy State**: {:?}\n", state));
+        ctx.push_str(&format!(
+            "**Strategy State**: {} (transition: {})\n",
+            state.state, state.transition_reason
+        ));
     }
 
     // Top rotation — 只给排名，不给 RS 分数
