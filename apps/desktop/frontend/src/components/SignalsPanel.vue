@@ -53,14 +53,21 @@ const signalBasis = computed(() => {
   };
 });
 
-const emit = defineEmits(['select-signal']);
-
-function handleSignalClick(index) {
-  emit('select-signal', mergedSignals.value[index]);
-}
-
-function handleDefensiveClick(index) {
-  emit('select-signal', defensiveSignals.value[index]);
+function buildTooltip(item) {
+  const r = item.reason || {};
+  const sc = r.strategy_contribution ?? 0;
+  const ac = r.alignment_contribution ?? 0;
+  const rc = r.regime?.contribution ?? 0;
+  const rot = r.rotation?.contribution ?? 0;
+  const total = sc + ac + rc + rot;
+  const best = r.best_strategy ? prettifyToken(r.best_strategy) : '-';
+  const aligned = (r.aligned_strategies || []).map(prettifyToken).join(', ') || 'None';
+  const rank = r.rotation?.rank ? `#${r.rotation.rank}` : '-';
+  return `Strategy: ${best}  |  Score: ${formatNumber(r.strategy_score, 2)}  |  Contrib: +${formatNumber(sc, 2)}
+Aligned: ${aligned}  |  Alignment: ${r.alignment ?? '-'}  |  Contrib: +${formatNumber(ac, 2)}
+Regime Trend: ${formatNumber(r.regime?.trend_score, 2)}  |  Risk: ${formatNumber(r.regime?.risk_score, 2)}  |  Contrib: +${formatNumber(rc, 2)}
+Rotation Rank: ${rank}  |  Momentum: ${formatNumber(r.rotation?.momentum_score, 2)}  |  Contrib: +${formatNumber(rot, 2)}
+${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${formatNumber(rc, 2)} (Regime) + ${formatNumber(rot, 2)} (Rotation) = ${formatNumber(total, 2)}`;
 }
 </script>
 
@@ -120,13 +127,11 @@ function handleDefensiveClick(index) {
             <span class="panel__meta">{{ t('signals.strongBuyBuy') }}</span>
           </div>
           <div v-if="mergedSignals.length" class="signal-list">
-            <button
+            <div
               v-for="(item, index) in mergedSignals"
               :key="`merged-${index}`"
-              class="signal-card signal-card--interactive"
+              class="signal-card"
               :class="`signal-card--${signalTone(item.signal_label)}`"
-              type="button"
-              @click="handleSignalClick(index)"
             >
               <div class="signal-card__header">
                 <div>
@@ -139,7 +144,37 @@ function handleDefensiveClick(index) {
                 </span>
               </div>
               <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
-            </button>
+
+              <!-- CSS Hover Tooltip -->
+              <div class="signal-tooltip">
+                <div class="tooltip-title">{{ item.symbol }} <span class="tooltip-symbol">{{ symbolNames[item.symbol] || '' }}</span></div>
+                <div class="tooltip-divider"></div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Final Score</span>
+                  <span class="tooltip-value">{{ formatNumber(item.final_score, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Strategy</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.strategy_contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Alignment</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.alignment_contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Regime</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.regime?.contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Rotation</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.rotation?.contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-divider"></div>
+                <div class="tooltip-formula">
+                  {{ formatNumber(item.reason?.strategy_contribution, 2) }} + {{ formatNumber(item.reason?.alignment_contribution, 2) }} + {{ formatNumber(item.reason?.regime?.contribution, 2) }} + {{ formatNumber(item.reason?.rotation?.contribution, 2) }} = {{ formatNumber(item.final_score, 2) }}
+                </div>
+              </div>
+            </div>
           </div>
           <div v-else class="empty-state empty-state--compact">
             <p>{{ t('signals.noBullish') }}</p>
@@ -153,12 +188,10 @@ function handleDefensiveClick(index) {
             <span class="panel__meta">{{ t('signals.watchHoldReduceSell') }}</span>
           </div>
           <div v-if="defensiveSignals.length" class="signal-list">
-            <button
+            <div
               v-for="(item, index) in defensiveSignals"
               :key="`defensive-${index}`"
-              class="signal-card signal-card--defensive signal-card--interactive"
-              type="button"
-              @click="handleDefensiveClick(index)"
+              class="signal-card signal-card--defensive"
             >
               <div class="signal-card__header">
                 <div>
@@ -171,7 +204,37 @@ function handleDefensiveClick(index) {
                 </span>
               </div>
               <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
-            </button>
+
+              <!-- CSS Hover Tooltip -->
+              <div class="signal-tooltip">
+                <div class="tooltip-title">{{ item.symbol }} <span class="tooltip-symbol">{{ symbolNames[item.symbol] || '' }}</span></div>
+                <div class="tooltip-divider"></div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Final Score</span>
+                  <span class="tooltip-value">{{ formatNumber(item.final_score, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Strategy</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.strategy_contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Alignment</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.alignment_contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Regime</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.regime?.contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-row">
+                  <span class="tooltip-key">Rotation</span>
+                  <span class="tooltip-value">+{{ formatNumber(item.reason?.rotation?.contribution, 2) }}</span>
+                </div>
+                <div class="tooltip-divider"></div>
+                <div class="tooltip-formula">
+                  {{ formatNumber(item.reason?.strategy_contribution, 2) }} + {{ formatNumber(item.reason?.alignment_contribution, 2) }} + {{ formatNumber(item.reason?.regime?.contribution, 2) }} + {{ formatNumber(item.reason?.rotation?.contribution, 2) }} = {{ formatNumber(item.final_score, 2) }}
+                </div>
+              </div>
+            </div>
           </div>
           <div v-else class="empty-state empty-state--compact">
             <p>{{ t('signals.noDefensive') }}</p>
@@ -300,12 +363,13 @@ function handleDefensiveClick(index) {
 }
 
 .signal-card {
+  position: relative;
   background: var(--panel-bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--panel-radius);
   padding: var(--space-3);
   text-align: left;
-  cursor: pointer;
+  cursor: default;
   transition: border-color 0.2s ease;
 }
 
@@ -407,6 +471,78 @@ function handleDefensiveClick(index) {
 
 .signal-card--defensive {
   background: linear-gradient(180deg, rgba(245, 176, 65, 0.06), rgba(245, 176, 65, 0.02));
+}
+
+/* CSS Hover Tooltip */
+.signal-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  z-index: 100;
+  bottom: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 0.15s ease-in-out;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  width: 18rem;
+  box-shadow: var(--shadow-strong);
+  pointer-events: none;
+  font-family: var(--font-mono);
+}
+
+.signal-card:hover .signal-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tooltip-title {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.tooltip-symbol {
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0.5rem 0;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.tooltip-key {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.tooltip-value {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tooltip-formula {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.25rem;
+  opacity: 0.8;
 }
 
 .eyebrow {

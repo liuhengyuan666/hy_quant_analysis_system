@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   dashboardStore,
@@ -39,7 +39,6 @@ import ExecutionResultsPanel from './components/ExecutionResultsPanel.vue';
 import RefreshProgress from './components/RefreshProgress.vue';
 import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
-import SignalDetailModal from './components/SignalDetailModal.vue';
 
 
 const { t } = useI18n();
@@ -59,38 +58,7 @@ const startupNoticeResult = computed(() => {
   };
 });
 
-const selectedSignal = ref(null);
 const usageGuidesRef = ref(null);
-
-// Body scroll lock for signal detail modal only
-watch(selectedSignal, (newSignal) => {
-  document.body.classList.toggle('body--signal-modal-open', Boolean(newSignal));
-});
-
-// Keyboard: ESC to close modals
-function handleKeydown(event) {
-  if (event.key === 'Escape') {
-    if (selectedSignal.value) {
-      selectedSignal.value = null;
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleKeydown);
-});
-
-function handleSelectSignal(signal) {
-  selectedSignal.value = signal;
-}
-
-function handleCloseSignalDetail() {
-  selectedSignal.value = null;
-}
 
 function handleCancelRefresh() {
   bridgeCancelRefresh();
@@ -190,7 +158,7 @@ function handleOpenGuides() {
 
           <!-- Signals -->
           <section class="grid-row grid-row--1">
-            <SignalsPanel @select-signal="handleSelectSignal" />
+            <SignalsPanel />
           </section>
 
           <!-- Execution Results -->
@@ -224,15 +192,6 @@ function handleOpenGuides() {
 
     <!-- Usage guides full-screen viewer -->
     <UsageGuidesPanel ref="usageGuidesRef" />
-
-    <!-- Signal detail side panel -->
-    <Transition name="slide">
-      <SignalDetailModal
-        v-if="selectedSignal"
-        :signal="selectedSignal"
-        @close="handleCloseSignalDetail"
-      />
-    </Transition>
   </div>
 </template>
 
