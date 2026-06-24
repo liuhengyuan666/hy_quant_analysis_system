@@ -2197,8 +2197,16 @@ impl AppContext {
             let has_strategy_state =
                 market_store::fetch_latest_strategy_state_on_or_before(&self.storage, date, scope)?
                     .is_some();
+            let daily_bar_count = market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                &self.storage,
+                "daily_bar",
+                "symbol",
+                &trading_symbols,
+                date,
+            )?;
             if signal_count >= expected_count
                 && rotation_count >= expected_count
+                && daily_bar_count >= expected_count
                 && has_regime
                 && has_environment
                 && has_strategy_state
