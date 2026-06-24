@@ -9,14 +9,36 @@ const { t } = useI18n();
 const snapshot = computed(() => dashboardStore.snapshot);
 const topSignals = computed(() => snapshot.value?.top_signals || []);
 const bullishSignals = computed(() => snapshot.value?.bullish_signals || []);
-const defensiveSignals = computed(() => snapshot.value?.defensive_signals || []);
-const hasSignals = computed(() => topSignals.value.length > 0 || bullishSignals.value.length > 0 || defensiveSignals.value.length > 0);
 const symbolNames = computed(() => snapshot.value?.symbol_names || {});
 
+// Merge top + bullish, deduplicate by symbol, keep higher score, show all
+const mergedSignals = computed(() => {
+  const map = new Map();
+  [...topSignals.value, ...bullishSignals.value].forEach(item => {
+    const existing = map.get(item.symbol);
+    if (!existing || (item.final_score || 0) > (existing.final_score || 0)) {
+      map.set(item.symbol, item);
+    }
+  });
+  return Array.from(map.values());
+});
+
+const hasSignals = computed(() => mergedSignals.value.length > 0);
+
+const signalDistribution = computed(() => {
+  const counts = { StrongBuy: 0, Buy: 0, Other: 0 };
+  mergedSignals.value.forEach(item => {
+    const label = item.signal_label || '';
+    if (label === 'StrongBuy') counts.StrongBuy++;
+    else if (label === 'Buy') counts.Buy++;
+    else counts.Other++;
+  });
+  return counts;
+});
+
 const signalBasis = computed(() => {
-  if (!snapshot.value) return null;
-  const signal = topSignals.value[0] || bullishSignals.value[0] || defensiveSignals.value[0];
-  if (!signal) return null;
+  if (!snapshot.value || mergedSignals.value.length === 0) return null;
+  const signal = mergedSignals.value[0];
 
   const analysisScope = String(signal.analysis_scope || 'GLOBAL').toUpperCase();
   const regimeBasisScope = String(signal.regime_basis_scope || 'GLOBAL').toUpperCase();
@@ -32,11 +54,8 @@ const signalBasis = computed(() => {
 
 const emit = defineEmits(['select-signal']);
 
-function handleSignalClick(group, index) {
-  const signals = group === 'top' ? topSignals.value
-    : group === 'bullish' ? bullishSignals.value
-    : defensiveSignals.value;
-  emit('select-signal', signals[index]);
+function handleSignalClick(index) {
+  emit('select-signal', mergedSignals.value[index]);
 }
 </script>
 
@@ -74,33 +93,35 @@ function handleSignalClick(group, index) {
       <!-- Signal Distribution Summary -->
       <div class="signal-distribution">
         <div class="signal-distribution__item">
-          <span class="signal-distribution__count signal-distribution__count--strong">{{ topSignals.length }}</span>
+          <span class="signal-distribution__count signal-distribution__count--strong">{{ signalDistribution.StrongBuy }}</span>
           <span class="signal-distribution__label">StrongBuy</span>
         </div>
         <div class="signal-distribution__item">
-          <span class="signal-distribution__count signal-distribution__count--buy">{{ bullishSignals.length }}</span>
+          <span class="signal-distribution__count signal-distribution__count--buy">{{ signalDistribution.Buy }}</span>
           <span class="signal-distribution__label">Buy</span>
         </div>
-        <div class="signal-distribution__item">
-          <span class="signal-distribution__count signal-distribution__count--watch">{{ defensiveSignals.length }}</span>
-          <span class="signal-distribution__label">Watch</span>
+        <div v-if="signalDistribution.Other > 0" class="signal-distribution__item">
+          <span class="signal-distribution__count signal-distribution__count--watch">{{ signalDistribution.Other }}</span>
+          <span class="signal-distribution__label">Other</span>
         </div>
       </div>
 
-      <section v-if="topSignals.length" class="signal-focus-section">
+      <!-- Merged Signal List -->
+      <section class="signal-focus-section">
         <div class="panel__subheader">
           <p class="panel__section-title">{{ t('signals.topSignals') }}</p>
           <span class="panel__meta">{{ t('signals.highestConviction') }}</span>
         </div>
         <div class="signal-list">
           <button
-            v-for="(item, index) in topSignals"
-            :key="`top-${index}`"
-            class="signal-card signal-card--top signal-card--interactive"
+            v-for="(item, index) in mergedSignals"
+            :key="`merged-${index}`"
+            class="signal-card signal-card--interactive"
+            :class="`signal-card--${signalTone(item.signal_label)}`"
             type="button"
-            @click="handleSignalClick('top', index)"
+            @click="handleSignalClick(index)"
           >
-                <div class="signal-card__header">
+            <div class="signal-card__header">
               <div>
                 <strong class="signal-card__symbol">{{ item.symbol }}</strong>
                 <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
@@ -114,70 +135,6 @@ function handleSignalClick(group, index) {
           </button>
         </div>
       </section>
-
-      <div class="signal-groups-grid">
-        <section>
-          <div class="panel__subheader">
-            <p class="panel__section-title">{{ t('signals.bullishOpportunities') }}</p>
-            <span class="panel__meta">{{ t('signals.strongBuyBuy') }}</span>
-          </div>
-          <div v-if="bullishSignals.length" class="signal-list">
-            <button
-              v-for="(item, index) in bullishSignals"
-              :key="`bullish-${index}`"
-              class="signal-card signal-card--bullish signal-card--interactive"
-              type="button"
-              @click="handleSignalClick('bullish', index)"
-            >
-              <div class="signal-card__header">
-                <div>
-                  <strong class="signal-card__symbol">{{ item.symbol }}</strong>
-                  <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
-                  <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
-                </div>
-                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
-                  {{ prettifyToken(item.signal_label) }}
-                </span>
-              </div>
-              <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
-            </button>
-          </div>
-          <div v-else class="empty-state empty-state--compact">
-            <p>{{ t('signals.noBullish') }}</p>
-          </div>
-        </section>
-
-        <section>
-          <div class="panel__subheader">
-            <p class="panel__section-title">{{ t('signals.defensiveSell') }}</p>
-            <span class="panel__meta">{{ t('signals.watchHoldReduceSell') }}</span>
-          </div>
-          <div v-if="defensiveSignals.length" class="signal-list">
-            <button
-              v-for="(item, index) in defensiveSignals"
-              :key="`defensive-${index}`"
-              class="signal-card signal-card--defensive signal-card--interactive"
-              type="button"
-              @click="handleSignalClick('defensive', index)"
-            >
-              <div class="signal-card__header">
-                <div>
-                  <strong class="signal-card__symbol">{{ item.symbol }}</strong>
-                  <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
-                  <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
-                </div>
-                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
-                  {{ prettifyToken(item.signal_label) }}
-                </span>
-              </div>
-              <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
-            </button>
-          </div>
-          <div v-else class="empty-state empty-state--compact">
-            <p>{{ t('signals.noDefensive') }}</p>
-          </div>
-        </section>
-      </div>
     </template>
   </article>
 </template>
@@ -395,6 +352,14 @@ function handleSignalClick(group, index) {
   margin: 0;
   font-size: var(--font-size-meta);
   color: var(--text-secondary);
+}
+
+.signal-card--positive {
+  border-color: rgba(118, 212, 159, 0.18);
+}
+
+.signal-card--negative {
+  border-color: rgba(240, 141, 126, 0.18);
 }
 
 .eyebrow {
