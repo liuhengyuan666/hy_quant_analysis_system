@@ -8,7 +8,7 @@ const { t } = useI18n();
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const topSignals = computed(() => snapshot.value?.top_signals || []);
-const bullishSignals = computed(() => snapshot.value?.bullish_signals || []);
+const defensiveSignals = computed(() => snapshot.value?.defensive_signals || []);
 const symbolNames = computed(() => snapshot.value?.symbol_names || {});
 
 // Merge top + bullish, deduplicate by symbol, keep higher score, show all
@@ -23,7 +23,7 @@ const mergedSignals = computed(() => {
   return Array.from(map.values());
 });
 
-const hasSignals = computed(() => mergedSignals.value.length > 0);
+const hasSignals = computed(() => mergedSignals.value.length > 0 || defensiveSignals.value.length > 0);
 
 const signalDistribution = computed(() => {
   const counts = { StrongBuy: 0, Buy: 0, Other: 0 };
@@ -56,6 +56,10 @@ const emit = defineEmits(['select-signal']);
 
 function handleSignalClick(index) {
   emit('select-signal', mergedSignals.value[index]);
+}
+
+function handleDefensiveClick(index) {
+  emit('select-signal', defensiveSignals.value[index]);
 }
 </script>
 
@@ -120,6 +124,34 @@ function handleSignalClick(index) {
             :class="`signal-card--${signalTone(item.signal_label)}`"
             type="button"
             @click="handleSignalClick(index)"
+          >
+            <div class="signal-card__header">
+              <div>
+                <strong class="signal-card__symbol">{{ item.symbol }}</strong>
+                <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
+                <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
+              </div>
+              <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
+                {{ prettifyToken(item.signal_label) }}
+              </span>
+            </div>
+            <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
+          </button>
+        </div>
+      </section>
+
+      <section v-if="defensiveSignals.length" class="signal-focus-section">
+        <div class="panel__subheader">
+          <p class="panel__section-title">{{ t('signals.defensiveSell') }}</p>
+          <span class="panel__meta">{{ t('signals.watchHoldReduceSell') }}</span>
+        </div>
+        <div class="signal-list">
+          <button
+            v-for="(item, index) in defensiveSignals"
+            :key="`defensive-${index}`"
+            class="signal-card signal-card--defensive signal-card--interactive"
+            type="button"
+            @click="handleDefensiveClick(index)"
           >
             <div class="signal-card__header">
               <div>
@@ -360,6 +392,10 @@ function handleSignalClick(index) {
 
 .signal-card--negative {
   border-color: rgba(240, 141, 126, 0.18);
+}
+
+.signal-card--defensive {
+  background: linear-gradient(180deg, rgba(245, 176, 65, 0.06), rgba(245, 176, 65, 0.02));
 }
 
 .eyebrow {
