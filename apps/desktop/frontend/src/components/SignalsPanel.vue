@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatNumber, prettifyToken, signalTone } from '../lib/dashboard-utils.js';
 import { dashboardStore } from '../store.js';
@@ -12,7 +12,6 @@ const bullishSignals = computed(() => snapshot.value?.bullish_signals || []);
 const defensiveSignals = computed(() => snapshot.value?.defensive_signals || []);
 const symbolNames = computed(() => snapshot.value?.symbol_names || {});
 
-// Merge top + bullish, deduplicate by symbol, keep higher score, show all
 const mergedSignals = computed(() => {
   const map = new Map();
   [...topSignals.value, ...bullishSignals.value].forEach(item => {
@@ -40,34 +39,58 @@ const signalDistribution = computed(() => {
 const signalBasis = computed(() => {
   if (!snapshot.value || mergedSignals.value.length === 0) return null;
   const signal = mergedSignals.value[0];
-
   const analysisScope = String(signal.analysis_scope || 'GLOBAL').toUpperCase();
   const regimeBasisScope = String(signal.regime_basis_scope || 'GLOBAL').toUpperCase();
   const snapshotScope = String(snapshot.value.scope || 'GLOBAL').toUpperCase();
-
-  return {
-    analysisScope,
-    regimeBasisScope,
-    snapshotScope,
-    mismatched: regimeBasisScope !== snapshotScope,
-  };
+  return { analysisScope, regimeBasisScope, snapshotScope, mismatched: regimeBasisScope !== snapshotScope };
 });
 
-function buildTooltip(item) {
+const hoveredSignal = ref(null);
+function setHovered(item) { hoveredSignal.value = item; }
+function clearHovered() { hoveredSignal.value = null; }
+
+function getHoveredSegment(item) {
+  if (!hoveredSignal.value || hoveredSignal.value.symbol !== item.symbol) return null;
+  return hoveredSignal.value.segment ?? null;
+}
+
+function handleBarHover(item, idx) { hoveredSignal.value = { ...item, segment: idx }; }
+function handleBarLeave(item) { if (hoveredSignal.value?.symbol === item.symbol) hoveredSignal.value = null; }
+
+function getStackedBar(item) {
   const r = item.reason || {};
   const sc = r.strategy_contribution ?? 0;
   const ac = r.alignment_contribution ?? 0;
   const rc = r.regime?.contribution ?? 0;
   const rot = r.rotation?.contribution ?? 0;
-  const total = sc + ac + rc + rot;
-  const best = r.best_strategy ? prettifyToken(r.best_strategy) : '-';
-  const aligned = (r.aligned_strategies || []).map(prettifyToken).join(', ') || 'None';
-  const rank = r.rotation?.rank ? `#${r.rotation.rank}` : '-';
-  return `Strategy: ${best}  |  Score: ${formatNumber(r.strategy_score, 2)}  |  Contrib: +${formatNumber(sc, 2)}
-Aligned: ${aligned}  |  Alignment: ${r.alignment ?? '-'}  |  Contrib: +${formatNumber(ac, 2)}
-Regime Trend: ${formatNumber(r.regime?.trend_score, 2)}  |  Risk: ${formatNumber(r.regime?.risk_score, 2)}  |  Contrib: +${formatNumber(rc, 2)}
-Rotation Rank: ${rank}  |  Momentum: ${formatNumber(r.rotation?.momentum_score, 2)}  |  Contrib: +${formatNumber(rot, 2)}
-${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${formatNumber(rc, 2)} (Regime) + ${formatNumber(rot, 2)} (Rotation) = ${formatNumber(total, 2)}`;
+  const total = sc + ac + rc + rot || 1;
+  return [
+    { label: 'Strategy', value: sc, pct: (sc / total) * 100, color: '#4f8cff' },
+    { label: 'Alignment', value: ac, pct: (ac / total) * 100, color: '#16c784' },
+    { label: 'Regime', value: rc, pct: (rc / total) * 100, color: '#f5b041' },
+    { label: 'Rotation', value: rot, pct: (rot / total) * 100, color: '#5ce1e6' },
+  ].filter(s => s.value > 0.01);
+}
+
+function getStrategy(item) {
+  const r = item.reason || {};
+  return { rawScore: r.strategy_score ?? 0, contribution: r.strategy_contribution ?? 0, bestStrategy: r.best_strategy ?? 'N/A' };
+}
+
+function getAlignment(item) {
+  const r = item.reason || {};
+  const aligned = r.aligned_strategies || [];
+  return { rawScore: (r.alignment ?? 0) * 20, contribution: r.alignment_contribution ?? 0, count: r.alignment ?? 0, aligned };
+}
+
+function getRegime(item) {
+  const r = item.reason || {};
+  return { trendScore: r.regime?.trend_score ?? 0, riskScore: r.regime?.risk_score ?? 0, combinedScore: r.regime?.combined_score ?? 0, contribution: r.regime?.contribution ?? 0 };
+}
+
+function getRotation(item) {
+  const r = item.reason || {};
+  return { momentumScore: r.rotation?.momentum_score ?? 0, rank: r.rotation?.rank ? `#${r.rotation.rank}` : 'N/A', combinedScore: r.rotation?.combined_score ?? 0, contribution: r.rotation?.contribution ?? 0 };
 }
 </script>
 
@@ -77,9 +100,7 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
       <div>
         <p class="eyebrow">{{ t('signals.eyebrow') }}</p>
         <h2>{{ t('signals.title') }}</h2>
-        <p v-if="hasSignals" class="panel__lede">
-          {{ t('signals.lede') }}
-        </p>
+        <p v-if="hasSignals" class="panel__lede">{{ t('signals.lede') }}</p>
       </div>
       <div v-if="hasSignals" class="panel__actions">
         <span class="panel__meta">{{ t('signals.groupedView', { date: snapshot?.report_date }) }}</span>
@@ -102,7 +123,6 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
     </div>
 
     <template v-else>
-      <!-- Signal Distribution Summary -->
       <div class="signal-distribution">
         <div class="signal-distribution__item">
           <span class="signal-distribution__count signal-distribution__count--strong">{{ signalDistribution.StrongBuy }}</span>
@@ -118,9 +138,7 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
         </div>
       </div>
 
-      <!-- Two-column layout: merged bullish (left) + defensive (right) -->
       <div class="signal-groups-grid">
-        <!-- Left: merged top + bullish (deduplicated) -->
         <section>
           <div class="panel__subheader">
             <p class="panel__section-title">{{ t('signals.bullishOpportunities') }}</p>
@@ -128,10 +146,12 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
           </div>
           <div v-if="mergedSignals.length" class="signal-list">
             <div
-              v-for="(item, index) in mergedSignals"
-              :key="`merged-${index}`"
+              v-for="(item) in mergedSignals"
+              :key="item.symbol"
               class="signal-card"
               :class="`signal-card--${signalTone(item.signal_label)}`"
+              @mouseenter="setHovered(item)"
+              @mouseleave="clearHovered"
             >
               <div class="signal-card__header">
                 <div>
@@ -139,49 +159,136 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
                   <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
                   <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
-                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
-                  {{ prettifyToken(item.signal_label) }}
-                </span>
+                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">{{ prettifyToken(item.signal_label) }}</span>
               </div>
               <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
 
-              <!-- CSS Hover Tooltip -->
-              <div class="signal-tooltip">
-                <div class="tooltip-title">{{ item.symbol }} <span class="tooltip-symbol">{{ symbolNames[item.symbol] || '' }}</span></div>
-                <div class="tooltip-divider"></div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Final Score</span>
-                  <span class="tooltip-value">{{ formatNumber(item.final_score, 2) }}</span>
+              <!-- Hover Detail Card -->
+              <div class="signal-detail-card">
+                <div class="detail-header">
+                  <div class="detail-header__top">
+                    <div class="detail-header__symbol">
+                      <span class="detail-header__code">{{ item.symbol }}</span>
+                      <span class="detail-header__name">{{ symbolNames[item.symbol] || '' }}</span>
+                    </div>
+                    <span class="detail-header__badge" :class="`badge--${signalTone(item.signal_label)}`">{{ prettifyToken(item.signal_label) }}</span>
+                  </div>
+                  <div class="detail-header__score">
+                    <span class="detail-header__score-label">最终得分</span>
+                    <span class="detail-header__score-value">{{ formatNumber(item.final_score, 2) }}</span>
+                  </div>
+                  <div class="stacked-bar">
+                    <div class="stacked-bar__track">
+                      <div
+                        v-for="(seg, idx) in getStackedBar(item)"
+                        :key="seg.label"
+                        class="stacked-bar__segment"
+                        :style="{ width: seg.pct + '%', background: seg.color }"
+                        @mouseenter="handleBarHover(item, idx)"
+                        @mouseleave="handleBarLeave(item)"
+                      ></div>
+                    </div>
+                    <div class="stacked-bar__legend">
+                      <span v-for="(seg, idx) in getStackedBar(item)" :key="seg.label" class="stacked-bar__legend-item" :class="{ 'stacked-bar__legend-item--active': getHoveredSegment(item) === idx }">
+                        <span class="stacked-bar__dot" :style="{ background: seg.color }"></span>
+                        {{ seg.label }} {{ formatNumber(seg.value, 2) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Strategy</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.strategy_contribution, 2) }}</span>
+
+                <div class="detail-cards">
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 0 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title">
+                        <span class="dim-card__name">策略层</span>
+                        <span class="dim-card__weight">45% 权重</span>
+                      </div>
+                      <span class="dim-card__contribution" style="color: #4f8cff;">+{{ formatNumber(getStrategy(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getStrategy(item).rawScore + '%' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getStrategy(item).rawScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">最佳策略</span><span class="submetric__value">{{ prettifyToken(getStrategy(item).bestStrategy) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">策略得分</span><span class="submetric__value">{{ formatNumber(getStrategy(item).rawScore, 2) }}</span></div>
+                    </div>
+                  </section>
+
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 1 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title">
+                        <span class="dim-card__name">模式层</span>
+                        <span class="dim-card__weight">15% 权重</span>
+                      </div>
+                      <span class="dim-card__contribution" style="color: #16c784;">+{{ formatNumber(getAlignment(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getAlignment(item).rawScore + '%', background: '#16c784' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getAlignment(item).rawScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">对齐数量</span><span class="submetric__value">{{ getAlignment(item).count }}</span></div>
+                      <div class="submetric submetric--full">
+                        <span class="submetric__label">对齐策略</span>
+                        <div class="strategy-badges">
+                          <span v-for="s in getAlignment(item).aligned" :key="s" class="strategy-badge">{{ prettifyToken(s) }}</span>
+                          <span v-if="!getAlignment(item).aligned.length" class="submetric__value--muted">无</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 2 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title">
+                        <span class="dim-card__name">体制层</span>
+                        <span class="dim-card__weight">20% 权重</span>
+                      </div>
+                      <span class="dim-card__contribution" style="color: #f5b041;">+{{ formatNumber(getRegime(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getRegime(item).combinedScore + '%', background: '#f5b041' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getRegime(item).combinedScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">趋势分数</span><span class="submetric__value">{{ formatNumber(getRegime(item).trendScore, 2) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">风险分数</span><span class="submetric__value">{{ formatNumber(getRegime(item).riskScore, 2) }}</span></div>
+                    </div>
+                  </section>
+
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 3 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title">
+                        <span class="dim-card__name">轮动层</span>
+                        <span class="dim-card__weight">20% 权重</span>
+                      </div>
+                      <span class="dim-card__contribution" style="color: #5ce1e6;">+{{ formatNumber(getRotation(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getRotation(item).combinedScore + '%', background: '#5ce1e6' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getRotation(item).combinedScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">动量分数</span><span class="submetric__value">{{ formatNumber(getRotation(item).momentumScore, 2) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">排名</span><span class="submetric__value submetric__value--rank">{{ getRotation(item).rank }}</span></div>
+                    </div>
+                  </section>
                 </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Alignment</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.alignment_contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Regime</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.regime?.contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Rotation</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.rotation?.contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-divider"></div>
-                <div class="tooltip-formula">
-                  {{ formatNumber(item.reason?.strategy_contribution, 2) }} + {{ formatNumber(item.reason?.alignment_contribution, 2) }} + {{ formatNumber(item.reason?.regime?.contribution, 2) }} + {{ formatNumber(item.reason?.rotation?.contribution, 2) }} = {{ formatNumber(item.final_score, 2) }}
+
+                <div class="detail-footer">
+                  <div class="detail-footer__divider"></div>
+                  <p class="detail-footer__formula">
+                    {{ formatNumber(getStrategy(item).contribution, 2) }} (策略) + {{ formatNumber(getAlignment(item).contribution, 2) }} (模式) + {{ formatNumber(getRegime(item).contribution, 2) }} (体制) + {{ formatNumber(getRotation(item).contribution, 2) }} (轮动) = {{ formatNumber(item.final_score, 2) }} (最终分)
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <div v-else class="empty-state empty-state--compact">
-            <p>{{ t('signals.noBullish') }}</p>
-          </div>
+          <div v-else class="empty-state empty-state--compact"><p>{{ t('signals.noBullish') }}</p></div>
         </section>
 
-        <!-- Right: defensive signals -->
         <section>
           <div class="panel__subheader">
             <p class="panel__section-title">{{ t('signals.defensiveSell') }}</p>
@@ -189,9 +296,11 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
           </div>
           <div v-if="defensiveSignals.length" class="signal-list">
             <div
-              v-for="(item, index) in defensiveSignals"
-              :key="`defensive-${index}`"
+              v-for="(item) in defensiveSignals"
+              :key="item.symbol"
               class="signal-card signal-card--defensive"
+              @mouseenter="setHovered(item)"
+              @mouseleave="clearHovered"
             >
               <div class="signal-card__header">
                 <div>
@@ -199,46 +308,109 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
                   <span v-if="symbolNames[item.symbol]" class="signal-card__name">{{ symbolNames[item.symbol] }}</span>
                   <p class="signal-card__score">{{ t('signals.score', { score: formatNumber(item.final_score, 2) }) }}</p>
                 </div>
-                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">
-                  {{ prettifyToken(item.signal_label) }}
-                </span>
+                <span class="pill" :class="`pill--${signalTone(item.signal_label)}`">{{ prettifyToken(item.signal_label) }}</span>
               </div>
               <p v-if="item.reason" class="signal-card__reason">{{ item.reason?.summary || '' }}</p>
 
-              <!-- CSS Hover Tooltip -->
-              <div class="signal-tooltip">
-                <div class="tooltip-title">{{ item.symbol }} <span class="tooltip-symbol">{{ symbolNames[item.symbol] || '' }}</span></div>
-                <div class="tooltip-divider"></div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Final Score</span>
-                  <span class="tooltip-value">{{ formatNumber(item.final_score, 2) }}</span>
+              <div class="signal-detail-card">
+                <div class="detail-header">
+                  <div class="detail-header__top">
+                    <div class="detail-header__symbol">
+                      <span class="detail-header__code">{{ item.symbol }}</span>
+                      <span class="detail-header__name">{{ symbolNames[item.symbol] || '' }}</span>
+                    </div>
+                    <span class="detail-header__badge" :class="`badge--${signalTone(item.signal_label)}`">{{ prettifyToken(item.signal_label) }}</span>
+                  </div>
+                  <div class="detail-header__score">
+                    <span class="detail-header__score-label">最终得分</span>
+                    <span class="detail-header__score-value">{{ formatNumber(item.final_score, 2) }}</span>
+                  </div>
+                  <div class="stacked-bar">
+                    <div class="stacked-bar__track">
+                      <div v-for="(seg, idx) in getStackedBar(item)" :key="seg.label" class="stacked-bar__segment" :style="{ width: seg.pct + '%', background: seg.color }" @mouseenter="handleBarHover(item, idx)" @mouseleave="handleBarLeave(item)"></div>
+                    </div>
+                    <div class="stacked-bar__legend">
+                      <span v-for="(seg, idx) in getStackedBar(item)" :key="seg.label" class="stacked-bar__legend-item" :class="{ 'stacked-bar__legend-item--active': getHoveredSegment(item) === idx }">
+                        <span class="stacked-bar__dot" :style="{ background: seg.color }"></span>
+                        {{ seg.label }} {{ formatNumber(seg.value, 2) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Strategy</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.strategy_contribution, 2) }}</span>
+                <div class="detail-cards">
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 0 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title"><span class="dim-card__name">策略层</span><span class="dim-card__weight">45% 权重</span></div>
+                      <span class="dim-card__contribution" style="color: #4f8cff;">+{{ formatNumber(getStrategy(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getStrategy(item).rawScore + '%' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getStrategy(item).rawScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">最佳策略</span><span class="submetric__value">{{ prettifyToken(getStrategy(item).bestStrategy) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">策略得分</span><span class="submetric__value">{{ formatNumber(getStrategy(item).rawScore, 2) }}</span></div>
+                    </div>
+                  </section>
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 1 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title"><span class="dim-card__name">模式层</span><span class="dim-card__weight">15% 权重</span></div>
+                      <span class="dim-card__contribution" style="color: #16c784;">+{{ formatNumber(getAlignment(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getAlignment(item).rawScore + '%', background: '#16c784' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getAlignment(item).rawScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">对齐数量</span><span class="submetric__value">{{ getAlignment(item).count }}</span></div>
+                      <div class="submetric submetric--full">
+                        <span class="submetric__label">对齐策略</span>
+                        <div class="strategy-badges">
+                          <span v-for="s in getAlignment(item).aligned" :key="s" class="strategy-badge">{{ prettifyToken(s) }}</span>
+                          <span v-if="!getAlignment(item).aligned.length" class="submetric__value--muted">无</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 2 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title"><span class="dim-card__name">体制层</span><span class="dim-card__weight">20% 权重</span></div>
+                      <span class="dim-card__contribution" style="color: #f5b041;">+{{ formatNumber(getRegime(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getRegime(item).combinedScore + '%', background: '#f5b041' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getRegime(item).combinedScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">趋势分数</span><span class="submetric__value">{{ formatNumber(getRegime(item).trendScore, 2) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">风险分数</span><span class="submetric__value">{{ formatNumber(getRegime(item).riskScore, 2) }}</span></div>
+                    </div>
+                  </section>
+                  <section class="dim-card" :class="{ 'dim-card--active': getHoveredSegment(item) === 3 }">
+                    <div class="dim-card__header">
+                      <div class="dim-card__title"><span class="dim-card__name">轮动层</span><span class="dim-card__weight">20% 权重</span></div>
+                      <span class="dim-card__contribution" style="color: #5ce1e6;">+{{ formatNumber(getRotation(item).contribution, 2) }}</span>
+                    </div>
+                    <div class="dim-card__gauge">
+                      <div class="gauge-track"><div class="gauge-fill" :style="{ width: getRotation(item).combinedScore + '%', background: '#5ce1e6' }"></div></div>
+                      <span class="gauge-value">{{ formatNumber(getRotation(item).combinedScore, 2) }}</span>
+                    </div>
+                    <div class="dim-card__subgrid">
+                      <div class="submetric"><span class="submetric__label">动量分数</span><span class="submetric__value">{{ formatNumber(getRotation(item).momentumScore, 2) }}</span></div>
+                      <div class="submetric"><span class="submetric__label">排名</span><span class="submetric__value submetric__value--rank">{{ getRotation(item).rank }}</span></div>
+                    </div>
+                  </section>
                 </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Alignment</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.alignment_contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Regime</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.regime?.contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-row">
-                  <span class="tooltip-key">Rotation</span>
-                  <span class="tooltip-value">+{{ formatNumber(item.reason?.rotation?.contribution, 2) }}</span>
-                </div>
-                <div class="tooltip-divider"></div>
-                <div class="tooltip-formula">
-                  {{ formatNumber(item.reason?.strategy_contribution, 2) }} + {{ formatNumber(item.reason?.alignment_contribution, 2) }} + {{ formatNumber(item.reason?.regime?.contribution, 2) }} + {{ formatNumber(item.reason?.rotation?.contribution, 2) }} = {{ formatNumber(item.final_score, 2) }}
+                <div class="detail-footer">
+                  <div class="detail-footer__divider"></div>
+                  <p class="detail-footer__formula">
+                    {{ formatNumber(getStrategy(item).contribution, 2) }} (策略) + {{ formatNumber(getAlignment(item).contribution, 2) }} (模式) + {{ formatNumber(getRegime(item).contribution, 2) }} (体制) + {{ formatNumber(getRotation(item).contribution, 2) }} (轮动) = {{ formatNumber(item.final_score, 2) }} (最终分)
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <div v-else class="empty-state empty-state--compact">
-            <p>{{ t('signals.noDefensive') }}</p>
-          </div>
+          <div v-else class="empty-state empty-state--compact"><p>{{ t('signals.noDefensive') }}</p></div>
         </section>
       </div>
     </template>
@@ -246,327 +418,110 @@ ${formatNumber(sc, 2)} (Strategy) + ${formatNumber(ac, 2)} (Alignment) + ${forma
 </template>
 
 <style scoped>
-.panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--panel-radius);
-  padding: var(--panel-padding);
-}
+.panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: var(--panel-radius); padding: var(--panel-padding); }
+.panel__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4); }
+.panel__actions { display: flex; gap: var(--space-2); align-items: center; }
+.panel__lede { color: var(--text-secondary); font-size: var(--font-size-meta); margin-top: var(--space-1); }
+.panel__meta { font-size: var(--font-size-label); color: var(--text-secondary); }
+.panel__meta-row { display: flex; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.panel__subheader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); }
+.panel__section-title { font-weight: 600; color: var(--text-primary); }
 
-.panel__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--space-4);
-}
+.signal-distribution { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-3); background: var(--panel-bg-secondary); border: 1px solid var(--panel-border); border-radius: var(--panel-radius); }
+.signal-distribution__item { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); min-width: 4rem; }
+.signal-distribution__count { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; line-height: 1; }
+.signal-distribution__count--strong { color: var(--tone-positive); }
+.signal-distribution__count--buy { color: var(--color-accent); }
+.signal-distribution__count--watch { color: var(--color-warning); }
+.signal-distribution__label { font-size: var(--font-size-label); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 
-.panel__actions {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
+.signal-groups-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+@media (max-width: 720px) { .signal-groups-grid { grid-template-columns: 1fr; } }
 
-.panel__lede {
-  color: var(--text-secondary);
-  font-size: var(--font-size-meta);
-  margin-top: var(--space-1);
-}
+.signal-list { display: flex; flex-direction: column; gap: var(--space-2); }
 
-.panel__meta {
-  font-size: var(--font-size-label);
-  color: var(--text-secondary);
-}
+.signal-card { position: relative; background: var(--panel-bg-secondary); border: 1px solid var(--panel-border); border-radius: var(--panel-radius); padding: var(--space-3); text-align: left; cursor: default; transition: border-color 0.2s ease; }
+.signal-card:hover { border-color: var(--color-accent-border); }
+.signal-card__header { display: flex; justify-content: space-between; align-items: flex-start; }
+.signal-card__symbol { display: inline; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.signal-card__name { display: inline; margin-left: var(--space-2); font-size: var(--font-size-label); color: var(--text-secondary); }
+.signal-card__score { font-size: var(--font-size-label); color: var(--text-secondary); margin: var(--space-1) 0 0; }
+.signal-card__reason { font-size: var(--font-size-label); color: var(--text-secondary); margin: var(--space-2) 0 0; }
 
-.panel__meta-row {
-  display: flex;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
+.pill { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-3); border-radius: var(--space-3); font-size: var(--font-size-label); font-weight: 500; }
+.pill--positive { background: var(--tone-positive-bg); color: var(--tone-positive); }
+.pill--negative { background: var(--tone-negative-bg); color: var(--tone-negative); }
+.pill--neutral { background: var(--tone-neutral-bg); color: var(--tone-neutral); }
+.pill--warning { background: var(--color-warning-soft); color: var(--color-warning); }
 
-.panel__subheader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-3);
-}
+.staleness-banner { padding: var(--space-3); border-radius: var(--panel-radius); margin-bottom: var(--space-4); }
+.staleness-banner--warning { background: var(--color-warning-soft); border: 1px solid var(--color-warning); }
+.staleness-banner strong { display: block; margin-bottom: var(--space-1); color: var(--color-warning); }
+.staleness-banner p { margin: 0; font-size: var(--font-size-meta); color: var(--text-secondary); }
 
-.panel__section-title {
-  font-weight: 600;
-  color: var(--text-primary);
-}
+.signal-card--positive { border-color: rgba(118, 212, 159, 0.18); }
+.signal-card--negative { border-color: rgba(240, 141, 126, 0.18); }
+.signal-card--defensive { background: linear-gradient(180deg, rgba(245, 176, 65, 0.06), rgba(245, 176, 65, 0.02)); }
 
-.signal-distribution {
-  display: flex;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-  padding: var(--space-3);
-  background: var(--panel-bg-secondary);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--panel-radius);
-}
+.eyebrow { font-size: var(--font-size-label); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+h2 { margin: var(--space-1) 0 0; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+.empty-state { padding: var(--space-5); text-align: center; color: var(--text-secondary); }
+.empty-state--compact { padding: var(--space-3); }
 
-.signal-distribution__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 4rem;
-}
+/* Hover Detail Card */
+.signal-detail-card { visibility: hidden; opacity: 0; position: absolute; z-index: 100; bottom: calc(100% + 0.6rem); left: 50%; transform: translateX(-50%); transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out; background: #0f1117; border: 1px solid #252938; border-radius: 8px; padding: 1.25rem; width: 26rem; max-width: 90vw; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); pointer-events: none; font-family: var(--font-mono); }
+.signal-card:hover .signal-detail-card { visibility: visible; opacity: 1; pointer-events: auto; }
 
-.signal-distribution__count {
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
+.detail-header { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #252938; }
+.detail-header__top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+.detail-header__symbol { display: flex; flex-direction: column; gap: 0.2rem; }
+.detail-header__code { font-size: 1.2rem; font-weight: 700; color: #d7dae0; letter-spacing: -0.02em; }
+.detail-header__name { font-size: 0.8rem; color: #8a909a; }
+.detail-header__badge { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.badge--positive { background: rgba(22, 199, 132, 0.15); color: #16c784; border: 1px solid rgba(22, 199, 132, 0.25); }
+.badge--negative { background: rgba(255, 92, 92, 0.15); color: #ff5c5c; border: 1px solid rgba(255, 92, 92, 0.25); }
+.badge--neutral { background: rgba(245, 176, 65, 0.15); color: #f5b041; border: 1px solid rgba(245, 176, 65, 0.25); }
+.badge--warning { background: rgba(245, 176, 65, 0.15); color: #f5b041; border: 1px solid rgba(245, 176, 65, 0.25); }
 
-.signal-distribution__count--strong {
-  color: var(--tone-positive);
-}
+.detail-header__score { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem; }
+.detail-header__score-label { font-size: 0.75rem; color: #8a909a; text-transform: uppercase; letter-spacing: 0.08em; }
+.detail-header__score-value { font-size: 2rem; font-weight: 700; color: #d7dae0; line-height: 1; }
 
-.signal-distribution__count--buy {
-  color: var(--color-accent);
-}
+.stacked-bar { margin-bottom: 0.25rem; }
+.stacked-bar__track { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.06); margin-bottom: 0.5rem; }
+.stacked-bar__segment { height: 100%; transition: opacity 0.2s ease; cursor: pointer; }
+.stacked-bar__segment:hover { opacity: 0.85; }
+.stacked-bar__legend { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.stacked-bar__legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; color: #8a909a; transition: color 0.2s ease; }
+.stacked-bar__legend-item--active { color: #d7dae0; }
+.stacked-bar__dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-.signal-distribution__count--watch {
-  color: var(--color-warning);
-}
+.detail-cards { display: flex; flex-direction: column; gap: 0.6rem; }
+.dim-card { background: #171923; border: 1px solid #252938; border-radius: 6px; padding: 0.85rem; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.dim-card--active { border-color: #4f8cff; box-shadow: 0 0 0 1px rgba(79, 140, 255, 0.15); }
+.dim-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.dim-card__title { display: flex; align-items: center; gap: 0.4rem; }
+.dim-card__name { font-size: 0.8rem; font-weight: 600; color: #d7dae0; }
+.dim-card__weight { font-size: 0.6rem; color: #5a6270; background: rgba(255, 255, 255, 0.06); padding: 0.15rem 0.4rem; border-radius: 4px; }
+.dim-card__contribution { font-size: 0.95rem; font-weight: 700; }
 
-.signal-distribution__label {
-  font-size: var(--font-size-label);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.dim-card__gauge { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+.gauge-track { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 2px; background: #4f8cff; transition: width 0.5s ease; }
+.gauge-value { font-size: 0.75rem; color: #d7dae0; font-weight: 600; min-width: 3.5ch; text-align: right; }
 
-.signal-focus-section {
-  margin-bottom: var(--space-5);
-}
+.dim-card__subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1rem; }
+.submetric { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; }
+.submetric--full { grid-column: 1 / -1; }
+.submetric__label { font-size: 0.7rem; color: #5a6270; }
+.submetric__value { font-size: 0.75rem; color: #d7dae0; font-weight: 500; }
+.submetric__value--muted { font-size: 0.75rem; color: #5a6270; }
+.submetric__value--rank { color: #4f8cff; font-weight: 700; }
 
-.signal-groups-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-5);
-}
+.strategy-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: flex-end; }
+.strategy-badge { font-size: 0.6rem; color: #9fb1c7; background: rgba(255, 255, 255, 0.08); padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; }
 
-@media (max-width: 720px) {
-  .signal-groups-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.signal-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.signal-card {
-  position: relative;
-  background: var(--panel-bg-secondary);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--panel-radius);
-  padding: var(--space-3);
-  text-align: left;
-  cursor: default;
-  transition: border-color 0.2s ease;
-}
-
-.signal-card:hover {
-  border-color: var(--color-accent-border);
-}
-
-.signal-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.signal-card__symbol {
-  display: inline;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.signal-card__name {
-  display: inline;
-  margin-left: var(--space-2);
-  font-size: var(--font-size-label);
-  color: var(--text-secondary);
-}
-
-.signal-card__score {
-  font-size: var(--font-size-label);
-  color: var(--text-secondary);
-  margin: var(--space-1) 0 0;
-}
-
-.signal-card__reason {
-  font-size: var(--font-size-label);
-  color: var(--text-secondary);
-  margin: var(--space-2) 0 0;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--space-3);
-  font-size: var(--font-size-label);
-  font-weight: 500;
-}
-
-.pill--positive {
-  background: var(--tone-positive-bg);
-  color: var(--tone-positive);
-}
-
-.pill--negative {
-  background: var(--tone-negative-bg);
-  color: var(--tone-negative);
-}
-
-.pill--neutral {
-  background: var(--tone-neutral-bg);
-  color: var(--tone-neutral);
-}
-
-.pill--warning {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
-}
-
-.staleness-banner {
-  padding: var(--space-3);
-  border-radius: var(--panel-radius);
-  margin-bottom: var(--space-4);
-}
-
-.staleness-banner--warning {
-  background: var(--color-warning-soft);
-  border: 1px solid var(--color-warning);
-}
-
-.staleness-banner strong {
-  display: block;
-  margin-bottom: var(--space-1);
-  color: var(--color-warning);
-}
-
-.staleness-banner p {
-  margin: 0;
-  font-size: var(--font-size-meta);
-  color: var(--text-secondary);
-}
-
-.signal-card--positive {
-  border-color: rgba(118, 212, 159, 0.18);
-}
-
-.signal-card--negative {
-  border-color: rgba(240, 141, 126, 0.18);
-}
-
-.signal-card--defensive {
-  background: linear-gradient(180deg, rgba(245, 176, 65, 0.06), rgba(245, 176, 65, 0.02));
-}
-
-/* CSS Hover Tooltip */
-.signal-tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  z-index: 100;
-  bottom: calc(100% + 0.5rem);
-  left: 50%;
-  transform: translateX(-50%);
-  transition: opacity 0.15s ease-in-out;
-  background: var(--color-surface-strong);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
-  width: 18rem;
-  box-shadow: var(--shadow-strong);
-  pointer-events: none;
-  font-family: var(--font-mono);
-}
-
-.signal-card:hover .signal-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
-.tooltip-title {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
-}
-
-.tooltip-symbol {
-  color: var(--text-secondary);
-  font-weight: 400;
-  font-size: 0.8rem;
-}
-
-.tooltip-divider {
-  height: 1px;
-  background: var(--color-border);
-  margin: 0.5rem 0;
-}
-
-.tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  line-height: 1.7;
-}
-
-.tooltip-key {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-}
-
-.tooltip-value {
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.tooltip-formula {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-align: center;
-  margin-top: 0.25rem;
-  opacity: 0.8;
-}
-
-.eyebrow {
-  font-size: var(--font-size-label);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-}
-
-h2 {
-  margin: var(--space-1) 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.empty-state {
-  padding: var(--space-5);
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.empty-state--compact {
-  padding: var(--space-3);
-}
+.detail-footer { margin-top: 0.75rem; padding-top: 0.75rem; }
+.detail-footer__divider { height: 1px; background: #252938; margin-bottom: 0.5rem; }
+.detail-footer__formula { margin: 0; font-size: 0.7rem; color: #5a6270; text-align: center; letter-spacing: 0.02em; }
 </style>
