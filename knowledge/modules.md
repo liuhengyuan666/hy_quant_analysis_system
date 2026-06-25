@@ -10,11 +10,12 @@ rust-quant-analysis-system/
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
-├── crates/               # 核心库crate（20个）
-│   ├── app-service/      # 核心服务编排（monolith）
+├── crates/               # 核心库crate（20个目录，20个在workspace中；research-validation物理存在但未加入workspace）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 7 helper modules）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
+│   ├── execution-engine/ # 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 │   ├── gt-regime-generator/ # Ground Truth regime生成
 │   ├── indicator-engine/ # 技术指标计算
 │   ├── macro-engine/     # 宏观因子与regime分类
@@ -26,15 +27,19 @@ rust-quant-analysis-system/
 │   ├── research-context/ # 研究上下文
 │   ├── research-renderer/ # 研究渲染
 │   ├── research-skills/  # LLM技能路由
-│   ├── research-validation/ # 研究验证
+│   ├── research-validation/ # 研究验证（当前未加入workspace）
 │   ├── rotation-engine/  # 轮动排名
 │   ├── signal-engine/    # 信号生成
 │   ├── strategy-engine/  # 策略引擎
 │   └── task-runner/      # 任务运行器
 ├── config/               # 配置文件
-│   ├── calendars/        # 交易日历
+│   ├── calendars/        # 交易日历（静态JSON，覆盖2024-2027）
 │   ├── universe.json     # 标的池配置
-│   └── llm.toml          # LLM配置
+│   ├── llm.toml          # LLM配置（gitignored，支持${ENV_VAR}插值）
+│   ├── llm.toml.example  # LLM配置示例
+│   ├── fred.toml         # FRED宏观因子配置（支持enabled开关）
+│   ├── fred.toml.example # FRED配置示例
+│   └── benchmark-providers.toml # 基准提供者配置
 ├── data/                 # 运行时数据目录
 ├── infra/                # 基础设施
 │   └── docker/           # Docker Compose（ClickHouse）
@@ -44,20 +49,26 @@ rust-quant-analysis-system/
 │   ├── archive/          # 归档记忆
 │   ├── context.md        # 当前状态
 │   ├── decisions.md      # ADR决策记录
+│   ├── decisions_archive.md # ADR决策归档
+│   ├── glossary.md       # 术语表（MemGuard维护）
 │   ├── history/          # 历史记忆
-│   └── traps.md          # 陷阱记录
+│   ├── product.md        # 产品定义（MemGuard维护）
+│   ├── structure.md      # 结构定义（MemGuard维护）
+│   ├── tasks_archive.md  # 任务归档
+│   └── tech.md           # 技术约束（MemGuard维护）
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
-├── reports/              # 生成的报告
-├── shadow-production/    # 影子生产环境
-└── sql/                  # SQL脚本
+├── reports/             # 生成的报告
+├── sql/                 # SQL脚本
+└── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```
 
 ## 2. 核心模块调用边界与依赖方向
 
-- app-service 依赖：backtest-engine, data-ingestion, core-domain, indicator-engine, macro-engine, market-store, report-engine, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine
+- app-service 依赖：backtest-engine, data-ingestion, core-domain, indicator-engine, macro-engine, market-store, report-engine, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine, execution-engine
 - data-ingestion 依赖：core-domain, macro-engine
 - macro-engine 依赖：core-domain
 - signal-engine 依赖：core-domain
 - rotation-engine 依赖：core-domain
+- execution-engine 依赖：core-domain
 - desktop (Tauri) 依赖：app-service, core-domain, market-store, report-engine, research-skills

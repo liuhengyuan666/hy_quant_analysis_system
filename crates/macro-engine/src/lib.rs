@@ -276,6 +276,343 @@ pub fn build_strategy_state(
     }
 }
 
+/// Detailed attribution record for the state machine decision.
+#[derive(Debug, Clone)]
+pub struct StrategyStateDetailed {
+    pub date: NaiveDate,
+    pub scope: String,
+    pub state: StrategyState,
+    pub state_score: f64,
+    pub position_pct: f64,
+    pub transition_reason: String,
+    pub trend: f64,
+    pub risk: f64,
+    pub liquidity: f64,
+    pub breadth: f64,
+    pub env_score: f64,
+    pub stress: f64,
+    pub branch_taken: String,
+    pub conditions: Vec<ConditionEval>,
+    pub trigger_conditions: Vec<String>,
+}
+
+/// Per-branch condition evaluation result.
+#[derive(Debug, Clone)]
+pub struct ConditionEval {
+    pub branch: String,
+    pub liquidity_crisis: bool,
+    pub trend_extremely_low: bool,
+    pub risk_extremely_high: bool,
+    pub trend_low: bool,
+    pub breadth_low: bool,
+    pub env_score_low: bool,
+    pub risk_moderate_high: bool,
+    pub trend_high: bool,
+    pub risk_low: bool,
+    pub breadth_high: bool,
+    pub env_score_high: bool,
+    pub stress_low: bool,
+    pub trend_moderate: bool,
+    pub risk_moderate: bool,
+    pub stress_high: bool,
+    pub all_true: bool,
+}
+
+/// Build a detailed strategy state snapshot from regime + environment.
+///
+/// Same logic as `build_strategy_state`, but returns a detailed attribution
+/// record including all intermediate condition evaluations.
+pub fn build_strategy_state_detailed(
+    regime: &MarketRegimeSnapshot,
+    environment: &EnvironmentSnapshot,
+) -> StrategyStateDetailed {
+    let trend = regime.trend_score;
+    let risk = regime.risk_score;
+    let liquidity = regime.liquidity_score;
+    let breadth = environment.breadth_pct;
+    let env_score = environment.environment_score;
+    let stress = environment.stress_proxy_score;
+
+    let c1_liquidity_crisis = liquidity < 20.0;
+    let c1_trend_extremely_low = trend < 25.0;
+    let c1_risk_extremely_high = risk > 75.0;
+    let c1_all_true = c1_liquidity_crisis || (c1_trend_extremely_low && c1_risk_extremely_high);
+
+    let c2_trend_low = trend < 45.0;
+    let c2_breadth_low = breadth < 35.0;
+    let c2_env_score_low = env_score < 45.0;
+    let c2_risk_moderate_high = risk < 65.0;
+    let c2_all_true = c2_trend_low && c2_breadth_low && c2_env_score_low && c2_risk_moderate_high;
+
+    let c3_trend_high = trend > 70.0;
+    let c3_risk_low = risk < 40.0;
+    let c3_breadth_high = breadth > 50.0;
+    let c3_env_score_high = env_score > 60.0;
+    let c3_stress_low = stress < 60.0;
+    let c3_all_true =
+        c3_trend_high && c3_risk_low && c3_breadth_high && c3_env_score_high && c3_stress_low;
+
+    let c4_trend_moderate = trend > 55.0;
+    let c4_env_score_high = env_score > 50.0;
+    let c4_breadth_moderate = breadth > 35.0;
+    let c4_risk_low = risk < 55.0;
+    let c4_all_true =
+        c4_trend_moderate && c4_env_score_high && c4_breadth_moderate && c4_risk_low;
+
+    let c5_trend_moderate = trend < 55.0;
+    let c5_risk_moderate = risk > 60.0;
+    let c5_stress_high = stress > 70.0;
+    let c5_all_true = c5_trend_moderate || c5_risk_moderate || c5_stress_high;
+
+    let (state, reason, position_pct, branch_taken, trigger_conditions) =
+        if c1_all_true {
+            let mut triggers = Vec::new();
+            if c1_liquidity_crisis {
+                triggers.push("liquidity < 20.0".to_string());
+            }
+            if c1_trend_extremely_low && c1_risk_extremely_high {
+                triggers.push("trend < 25.0 && risk > 75.0".to_string());
+            }
+            (
+                StrategyState::NoTrade,
+                "流动性极度紧张或市场极度低迷，全面观望",
+                0.0,
+                "no_trade_liquidity".to_string(),
+                triggers,
+            )
+        } else if c2_all_true {
+            let mut triggers = Vec::new();
+            if c2_trend_low {
+                triggers.push("trend < 45.0".to_string());
+            }
+            if c2_breadth_low {
+                triggers.push("breadth < 35.0".to_string());
+            }
+            if c2_env_score_low {
+                triggers.push("env_score < 45.0".to_string());
+            }
+            if c2_risk_moderate_high {
+                triggers.push("risk < 65.0".to_string());
+            }
+            (
+                StrategyState::LeftProbe,
+                "市场低迷但未到崩溃边缘，可能触底，小仓位试探",
+                20.0,
+                "left_probe".to_string(),
+                triggers,
+            )
+        } else if c3_all_true {
+            let mut triggers = Vec::new();
+            if c3_trend_high {
+                triggers.push("trend > 70.0".to_string());
+            }
+            if c3_risk_low {
+                triggers.push("risk < 40.0".to_string());
+            }
+            if c3_breadth_high {
+                triggers.push("breadth > 50.0".to_string());
+            }
+            if c3_env_score_high {
+                triggers.push("env_score > 60.0".to_string());
+            }
+            if c3_stress_low {
+                triggers.push("stress < 60.0".to_string());
+            }
+            (
+                StrategyState::FullTrend,
+                "趋势明确，风险可控，广度健康，满仓操作",
+                100.0,
+                "full_trend".to_string(),
+                triggers,
+            )
+        } else if c4_all_true {
+            let mut triggers = Vec::new();
+            if c4_trend_moderate {
+                triggers.push("trend > 55.0".to_string());
+            }
+            if c4_env_score_high {
+                triggers.push("env_score > 50.0".to_string());
+            }
+            if c4_breadth_moderate {
+                triggers.push("breadth > 35.0".to_string());
+            }
+            if c4_risk_low {
+                triggers.push("risk < 55.0".to_string());
+            }
+            (
+                StrategyState::ConfirmAdd,
+                "趋势初步确认，逐步加仓",
+                60.0,
+                "confirm_add".to_string(),
+                triggers,
+            )
+        } else if c5_all_true {
+            let mut triggers = Vec::new();
+            if c5_trend_moderate {
+                triggers.push("trend < 55.0".to_string());
+            }
+            if c5_risk_moderate {
+                triggers.push("risk > 60.0".to_string());
+            }
+            if c5_stress_high {
+                triggers.push("stress > 70.0".to_string());
+            }
+            (
+                StrategyState::DeRisk,
+                "趋势减弱或风险/压力上升，降低仓位",
+                30.0,
+                "derisk".to_string(),
+                triggers,
+            )
+        } else {
+            (
+                StrategyState::NoTrade,
+                "市场状态不明确，保持观望",
+                0.0,
+                "no_trade_fallback".to_string(),
+                vec!["fallback".to_string()],
+            )
+        };
+
+    let state_score = (trend * 0.35 + (100.0 - risk) * 0.25 + breadth * 0.20 + env_score * 0.20)
+        .clamp(0.0, 100.0);
+
+    let conditions = vec![
+        ConditionEval {
+            branch: "no_trade_liquidity".to_string(),
+            liquidity_crisis: c1_liquidity_crisis,
+            trend_extremely_low: c1_trend_extremely_low,
+            risk_extremely_high: c1_risk_extremely_high,
+            trend_low: false,
+            breadth_low: false,
+            env_score_low: false,
+            risk_moderate_high: false,
+            trend_high: false,
+            risk_low: false,
+            breadth_high: false,
+            env_score_high: false,
+            stress_low: false,
+            trend_moderate: false,
+            risk_moderate: false,
+            stress_high: false,
+            all_true: c1_all_true,
+        },
+        ConditionEval {
+            branch: "left_probe".to_string(),
+            liquidity_crisis: false,
+            trend_extremely_low: false,
+            risk_extremely_high: false,
+            trend_low: c2_trend_low,
+            breadth_low: c2_breadth_low,
+            env_score_low: c2_env_score_low,
+            risk_moderate_high: c2_risk_moderate_high,
+            trend_high: false,
+            risk_low: false,
+            breadth_high: false,
+            env_score_high: false,
+            stress_low: false,
+            trend_moderate: false,
+            risk_moderate: false,
+            stress_high: false,
+            all_true: c2_all_true,
+        },
+        ConditionEval {
+            branch: "full_trend".to_string(),
+            liquidity_crisis: false,
+            trend_extremely_low: false,
+            risk_extremely_high: false,
+            trend_low: false,
+            breadth_low: false,
+            env_score_low: false,
+            risk_moderate_high: false,
+            trend_high: c3_trend_high,
+            risk_low: c3_risk_low,
+            breadth_high: c3_breadth_high,
+            env_score_high: c3_env_score_high,
+            stress_low: c3_stress_low,
+            trend_moderate: false,
+            risk_moderate: false,
+            stress_high: false,
+            all_true: c3_all_true,
+        },
+        ConditionEval {
+            branch: "confirm_add".to_string(),
+            liquidity_crisis: false,
+            trend_extremely_low: false,
+            risk_extremely_high: false,
+            trend_low: false,
+            breadth_low: false,
+            env_score_low: false,
+            risk_moderate_high: false,
+            trend_high: false,
+            risk_low: false,
+            breadth_high: false,
+            env_score_high: c4_env_score_high,
+            stress_low: false,
+            trend_moderate: c4_trend_moderate,
+            risk_moderate: false,
+            stress_high: false,
+            all_true: c4_all_true,
+        },
+        ConditionEval {
+            branch: "derisk".to_string(),
+            liquidity_crisis: false,
+            trend_extremely_low: false,
+            risk_extremely_high: false,
+            trend_low: false,
+            breadth_low: false,
+            env_score_low: false,
+            risk_moderate_high: false,
+            trend_high: false,
+            risk_low: false,
+            breadth_high: false,
+            env_score_high: false,
+            stress_low: false,
+            trend_moderate: c5_trend_moderate,
+            risk_moderate: c5_risk_moderate,
+            stress_high: c5_stress_high,
+            all_true: c5_all_true,
+        },
+        ConditionEval {
+            branch: "no_trade_fallback".to_string(),
+            liquidity_crisis: false,
+            trend_extremely_low: false,
+            risk_extremely_high: false,
+            trend_low: false,
+            breadth_low: false,
+            env_score_low: false,
+            risk_moderate_high: false,
+            trend_high: false,
+            risk_low: false,
+            breadth_high: false,
+            env_score_high: false,
+            stress_low: false,
+            trend_moderate: false,
+            risk_moderate: false,
+            stress_high: false,
+            all_true: false,
+        },
+    ];
+
+    StrategyStateDetailed {
+        date: regime.date,
+        scope: regime.market.clone(),
+        state,
+        state_score,
+        position_pct,
+        transition_reason: reason.to_string(),
+        trend,
+        risk,
+        liquidity,
+        breadth,
+        env_score,
+        stress,
+        branch_taken,
+        conditions,
+        trigger_conditions,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

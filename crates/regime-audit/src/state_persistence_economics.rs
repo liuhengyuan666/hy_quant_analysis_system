@@ -97,7 +97,6 @@ fn compute_volatility(bars: &[DailyBar], start_idx: usize, horizon: usize) -> f6
 }
 
 fn compute_state_economics(
-    market: &str,
     regimes: &[MarketRegimeSnapshot],
     bars: &[DailyBar],
 ) -> Vec<StateEconomics> {
@@ -192,8 +191,8 @@ pub fn audit_state_persistence_economics(
     hk_regimes: &[MarketRegimeSnapshot],
     hk_bars: &[DailyBar],
 ) -> (StateEconomicsReport, StateEconomicsReport) {
-    let cn_states = compute_state_economics("CN", cn_regimes, cn_bars);
-    let hk_states = compute_state_economics("HK", hk_regimes, hk_bars);
+    let cn_states = compute_state_economics(cn_regimes, cn_bars);
+    let hk_states = compute_state_economics(hk_regimes, hk_bars);
 
     (
         StateEconomicsReport {

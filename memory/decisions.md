@@ -570,3 +570,51 @@ Economic Layer v2 requires stable taxonomy. After TASK-080A-F (feature inventory
 Economic Layer uses 3 states: Favorable (37.4%), Neutral (40.3%), Unfavorable (22.4%). Variance ratio 0.843. Fed Funds uses 252d Z-score with ±3 capping. Ready for 90-day Shadow Production.
 
 **Tags:** economic-layer, taxonomy, three-state, shadow-production
+
+## ADR-064: FRED Configuration: TOML + Toggle Switch
+
+**Status:** Accepted
+
+### Context
+FRED API key currently hardcoded in app-service/src/lib.rs. Need configurable storage + on/off toggle for macro data fetching.
+
+### Decision
+Migrate FRED API key from hardcoded string to TOML config file (config/fred.toml) with environment variable interpolation, and add an enabled/disabled toggle to control macro data fetching.
+
+**Tags:** fred, config, toml, security, macro-data
+
+## ADR-065: State Layer v1.0 Freeze — Shadow Production Entry
+
+**Status:** Accepted
+
+### Context
+审计数据：620个交易日 (2024-01-01 ~ 2026-06-16)。DeRisk 50.3% (312天), risk>60 占 41.8%, stress>70 占 33.1%, trend<55 仅占 19.7%。NoTrade(fallback) 10.8% (67天) 为唯一待观察指标。
+
+### Decision
+冻结 State Layer v1.0 所有阈值和状态转移逻辑。仅允许实现层 BUG FIX（如 DeRisk 回测映射、数据源错误）。禁止任何行为优化（调阈值、加保护条款、state_score 分类）。进入 90 天 Shadow Production 观察期。
+
+**Tags:** state-layer, shadow-production, freeze, v1.0, audit, task-090a
+
+## ADR-066: Research Surface Governance Model — Production vs Research Surface Separation
+
+**Status:** Accepted
+
+### Context
+Shadow Production phase requires minimal-variable observation. Risk identified: 'UI change trap' where display changes silently alter LLM input behavior via research-context builder.
+
+### Decision
+Establish two distinct surfaces. Production Surface (frozen): dashboard_snapshot, daily_report, research_context, trust_summary. Research Surface (open): rotation-ranking, state-audit, signal-divergence-audit, risk-breakdown, factor-inspection. New Research Surface tools must NOT enter DashboardSnapshot, ResearchContext, or Markdown Daily Report. First approved tool: rotation-ranking CLI.
+
+**Tags:** shadow-production, governance, research-surface, adr-065, llm-context, oracle-reviewed
+
+## ADR-067: Explainability Layer Governance Boundary — No New Scores, Only Explanations
+
+**Status:** Accepted
+
+### Context
+Audit of TASK-092 confirmed Explainability Layer prevents future optimization traps by replacing 'guess → change' with 'observe → understand'. Critical constraint: Explainability Layer must NEVER generate new composite scores, confidence metrics, or decision signals.
+
+### Decision
+Explainability Layer is allowed to: expose existing scores, display attribution breakdowns, show strategy composition, reveal state context. Explainability Layer is FORBIDDEN to: generate new scores, create confidence metrics, rank explanations, modify thresholds. Future Divergence Sample Library will track StrongBuy+DE_RISK patterns using only existing scores.
+
+**Tags:** explainability, governance, shadow-production, adr-065, divergence-sample

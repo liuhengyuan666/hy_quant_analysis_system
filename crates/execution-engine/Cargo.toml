@@ -1,0 +1,16 @@
+[package]
+name = "execution-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+core-domain = { path = "../core-domain" }
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+attohttpc.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+encoding_rs = "0.8"

@@ -79,7 +79,7 @@ export const dashboardStore = reactive({
   /** Recent report artifacts */
   recentReports: [],
 
-  /** LLM analysis result */
+  /** LLM analysis result (markdown string) */
   llmAnalysis: null,
 
   /** LLM analysis loading state */
@@ -91,35 +91,17 @@ export const dashboardStore = reactive({
   /** LLM configuration status */
   llmConfig: null,
 
-  /** Selected agent profile for LLM analysis */
-  selectedAgent: 'macro-strategist',
-
-  /** Available agent profiles */
-  availableAgents: [],
-
-  /** Selected skill for LLM analysis */
-  selectedSkill: 'market-regime-reasoning',
-
-  /** Available research skills */
-  availableSkills: [],
-
   /** Whether LLM analysis panel is visible */
   showLlmPanel: false,
 
-  /** LLM analysis history (localStorage-backed) */
-  llmHistory: [],
+  /** Startup freshness check notice */
+  startupNotice: null,
 
-  /** Comparative analysis: second agent for side-by-side comparison */
-  compareAgent: '',
+  /** Whether preclose analysis is running */
+  precloseAnalyzing: false,
 
-  /** Comparative analysis results */
-  compareAnalysis: null,
-
-  /** Comparative analysis loading state */
-  compareLoading: false,
-
-  /** Whether agent profile editor is visible */
-  showAgentEditor: false,
+  /** Execution results from preclose analysis (array of ExecutionDecision) */
+  executionResults: [],
 });
 
 /**
@@ -253,34 +235,6 @@ export function updateLlmConfig(config) {
 }
 
 /**
- * Update selected agent profile.
- */
-export function updateSelectedAgent(agent) {
-  dashboardStore.selectedAgent = agent || 'macro-strategist';
-}
-
-/**
- * Update available agent profiles.
- */
-export function updateAvailableAgents(agents) {
-  dashboardStore.availableAgents = agents || [];
-}
-
-/**
- * Update selected skill.
- */
-export function updateSelectedSkill(skill) {
-  dashboardStore.selectedSkill = skill || 'market-regime-reasoning';
-}
-
-/**
- * Update available skills.
- */
-export function updateAvailableSkills(skills) {
-  dashboardStore.availableSkills = skills || [];
-}
-
-/**
  * Toggle LLM analysis panel visibility.
  */
 export function toggleLlmPanel(show) {
@@ -288,74 +242,24 @@ export function toggleLlmPanel(show) {
 }
 
 /**
- * Update comparative analysis agent.
+ * Update preclose analysis state.
  */
-export function updateCompareAgent(agent) {
-  dashboardStore.compareAgent = agent || '';
+export function updatePrecloseAnalyzing(analyzing) {
+  dashboardStore.precloseAnalyzing = analyzing;
 }
 
 /**
- * Update comparative analysis result.
+ * Update execution results from preclose analysis.
  */
-export function updateCompareAnalysis(analysis) {
-  dashboardStore.compareAnalysis = analysis;
+export function updateExecutionResults(results) {
+  dashboardStore.executionResults = results || [];
 }
 
 /**
- * Update comparative analysis loading state.
+ * Update startup freshness notice.
  */
-export function updateCompareLoading(loading) {
-  dashboardStore.compareLoading = loading;
-}
-
-/**
- * Toggle agent profile editor visibility.
- */
-export function toggleAgentEditor(show) {
-  dashboardStore.showAgentEditor = show !== undefined ? show : !dashboardStore.showAgentEditor;
-}
-
-/**
- * Update LLM analysis history.
- */
-export function updateLlmHistory(history) {
-  dashboardStore.llmHistory = history || [];
-}
-
-/**
- * Save a completed LLM analysis to localStorage history.
- */
-export function saveLlmAnalysisToHistory(analysis) {
-  if (!analysis) return;
-  const entry = {
-    timestamp: Date.now(),
-    date: analysis.date || new Date().toISOString().slice(0, 10),
-    scope: analysis.scope || dashboardStore.selectedScope,
-    skill: analysis.skill || dashboardStore.selectedSkill,
-    agent: analysis.agent || dashboardStore.selectedAgent,
-    triggered: analysis.triggered ?? false,
-    summary: analysis.llm_analysis
-      ? String(analysis.llm_analysis).slice(0, 200)
-      : '',
-    full: analysis,
-  };
-  const current = JSON.parse(localStorage.getItem('llmHistory') || '[]');
-  current.unshift(entry);
-  const trimmed = current.slice(0, 50);
-  localStorage.setItem('llmHistory', JSON.stringify(trimmed));
-  dashboardStore.llmHistory = trimmed;
-}
-
-/**
- * Load LLM analysis history from localStorage.
- */
-export function loadLlmHistoryFromStorage() {
-  try {
-    const raw = localStorage.getItem('llmHistory');
-    dashboardStore.llmHistory = raw ? JSON.parse(raw) : [];
-  } catch {
-    dashboardStore.llmHistory = [];
-  }
+export function updateStartupNotice(notice) {
+  dashboardStore.startupNotice = notice;
 }
 
 /**
@@ -394,15 +298,9 @@ export function resetStore() {
   dashboardStore.llmLoading = false;
   dashboardStore.llmError = '';
   dashboardStore.llmConfig = null;
-  dashboardStore.selectedAgent = 'macro-strategist';
-  dashboardStore.availableAgents = [];
-  dashboardStore.selectedSkill = 'market-regime-reasoning';
-  dashboardStore.availableSkills = [];
   dashboardStore.showLlmPanel = false;
-  dashboardStore.compareAgent = '';
-  dashboardStore.compareAnalysis = null;
-  dashboardStore.compareLoading = false;
-  dashboardStore.showAgentEditor = false;
+  dashboardStore.precloseAnalyzing = false;
+  dashboardStore.executionResults = [];
 }
 
 /**
@@ -417,6 +315,7 @@ export let retryRefresh = () => console.warn('[Store] retryRefresh not yet initi
 export let cancelRefresh = () => console.warn('[Store] cancelRefresh not yet initialized');
 export let exportReport = () => console.warn('[Store] exportReport not yet initialized');
 export let analyzeWithLlm = () => console.warn('[Store] analyzeWithLlm not yet initialized');
+export let runPrecloseAnalysis = () => console.warn('[Store] runPrecloseAnalysis not yet initialized');
 
 /**
  * Initialize event bridge with actual implementations from main.js.
@@ -430,4 +329,5 @@ export function initEventBridge(handlers) {
   if (handlers.cancelRefresh) cancelRefresh = handlers.cancelRefresh;
   if (handlers.exportReport) exportReport = handlers.exportReport;
   if (handlers.analyzeWithLlm) analyzeWithLlm = handlers.analyzeWithLlm;
+  if (handlers.runPrecloseAnalysis) runPrecloseAnalysis = handlers.runPrecloseAnalysis;
 }

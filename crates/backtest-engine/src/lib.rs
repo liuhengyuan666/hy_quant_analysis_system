@@ -72,6 +72,12 @@ pub struct BacktestSummary {
     pub trading_days: usize,
     pub drawdown_events: usize,
     pub state_trajectory: Vec<(NaiveDate, String)>,
+    #[serde(default = "default_run_version")]
+    pub run_version: String,
+    #[serde(default = "default_git_commit")]
+    pub git_commit: String,
+    #[serde(default = "default_generated_at")]
+    pub generated_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,6 +91,20 @@ pub struct BacktestResult {
 struct Position {
     quantity: f64,
     last_price: f64,
+}
+
+fn default_run_version() -> String {
+    "legacy".to_string()
+}
+
+fn default_git_commit() -> String {
+    option_env!("BACKTEST_GIT_COMMIT")
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+fn default_generated_at() -> String {
+    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string()
 }
 
 fn annualized_cagr(initial: f64, final_equity: f64, trading_days: usize) -> f64 {
@@ -173,7 +193,7 @@ fn state_limits(state: &StrategyState, max_holdings: usize) -> (usize, f64) {
         StrategyState::LeftProbe => (1, 0.2),
         StrategyState::ConfirmAdd => (2, 0.6),
         StrategyState::FullTrend => (max_holdings, 1.0),
-        StrategyState::DeRisk => (0, 0.0),
+        StrategyState::DeRisk => (1, 0.3),
     }
 }
 
@@ -297,6 +317,9 @@ pub fn run_signal_backtest(
                 trading_days: 0,
                 drawdown_events,
                 state_trajectory,
+                run_version: "v1".to_string(),
+                git_commit: option_env!("BACKTEST_GIT_COMMIT").unwrap_or("unknown").to_string(),
+                generated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
             },
             trades,
             equity_curve,
@@ -523,6 +546,9 @@ pub fn run_signal_backtest(
             trading_days: equities.len().saturating_sub(1),
             drawdown_events,
             state_trajectory,
+            run_version: "v1".to_string(),
+            git_commit: option_env!("BACKTEST_GIT_COMMIT").unwrap_or("unknown").to_string(),
+            generated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
         },
         trades,
         equity_curve,

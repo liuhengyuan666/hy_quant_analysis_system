@@ -22,6 +22,9 @@ import {
   updateRefreshStatus as syncRefreshStatusToStore,
   updateRefreshing as syncRefreshingToStore,
   updateRecentReports as syncRecentReportsToStore,
+  updateStartupNotice as syncStartupNoticeToStore,
+  updatePrecloseAnalyzing as syncPrecloseAnalyzingToStore,
+  updateExecutionResults as syncExecutionResultsToStore,
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
@@ -52,6 +55,9 @@ const COMMANDS = {
   openReportArtifact: 'open_report_artifact',
   getUserPreferences: 'get_user_preferences',
   setUserPreference: 'set_user_preference',
+  checkStartupFreshness: 'check_startup_freshness',
+  autoIngestOnStartup: 'auto_ingest_on_startup',
+  runPrecloseAnalysis: 'run_preclose_analysis',
 };
 
 let refreshPollTimer = null;
@@ -367,6 +373,58 @@ async function exportReport() {
   }
 }
 
+// ── Preclose analysis ─────────────────────────────────────────────────
+
+async function runPrecloseAnalysis() {
+  const activeScope = normalizeScope(dashboardStore.selectedScope);
+
+  dashboardStore.precloseAnalyzing = true;
+  syncPrecloseAnalyzingToStore(true);
+  syncStartupNoticeToStore({
+    type: 'info',
+    message: t('preclose.analysisRunning'),
+  });
+
+  try {
+    const decisions = await invoke(COMMANDS.runPrecloseAnalysis, { scope: activeScope });
+
+    // Store execution results for the ExecutionResultsPanel
+    syncExecutionResultsToStore(decisions || []);
+
+    // Count by state
+    const counts = { BUY_NOW: 0, WAIT: 0, NO_CHASE: 0, REDUCE: 0, SKIP: 0 };
+    for (const d of decisions) {
+      const state = d.state || 'SKIP';
+      counts[state] = (counts[state] || 0) + 1;
+    }
+
+    const summary = t('preclose.analysisComplete', {
+      total: decisions.length,
+      buyNow: counts.BUY_NOW || 0,
+      wait: counts.WAIT || 0,
+      noChase: counts.NO_CHASE || 0,
+    });
+
+    syncStartupNoticeToStore({
+      type: 'success',
+      message: summary,
+      action: 'preclose_complete',
+    });
+
+    // Push to recent reports as a pseudo-report for easy access
+    const today = new Date().toISOString().slice(0, 10);
+    pushRecentReport('EXECUTION_SAMPLE', today, `reports/execution-samples/${today}.json`);
+  } catch (error) {
+    syncStartupNoticeToStore({
+      type: 'error',
+      message: t('preclose.analysisFailed', { error: getErrorMessage(error) }),
+    });
+  } finally {
+    dashboardStore.precloseAnalyzing = false;
+    syncPrecloseAnalyzingToStore(false);
+  }
+}
+
 // ── Event bridge ────────────────────────────────────────────────────────
 
 initEventBridge({
@@ -376,9 +434,37 @@ initEventBridge({
   retryRefresh: () => retryFailedRefresh(),
   cancelRefresh: () => cancelRefreshJob(),
   exportReport: () => exportReport(),
-  analyzeWithLlm: (scope, skill, agent) => llmApi.analyzeWithSkill(scope, skill, agent),
+  analyzeWithLlm: (scope, action) => llmApi.analyzeWithLlm(scope, action),
+  runPrecloseAnalysis: () => runPrecloseAnalysis(),
 });
+
+// ── Startup freshness check ─────────────────────────────────────────────
+
+async function startupFreshnessCheck() {
+  try {
+    const check = await invoke(COMMANDS.checkStartupFreshness);
+    if (check.requires_manual_action) {
+      syncStartupNoticeToStore({
+        type: 'warning',
+        message: check.message,
+        action: 'manual_refresh',
+      });
+    } else if (check.auto_ingest_eligible) {
+      syncStartupNoticeToStore({
+        type: 'info',
+        message: check.message,
+        action: 'auto_ingesting',
+      });
+      await invoke(COMMANDS.autoIngestOnStartup);
+      scheduleRefreshPoll(500);
+    }
+  } catch (error) {
+    console.error('[Startup] Freshness check failed:', error);
+  }
+}
 
 // ── Bootstrap ───────────────────────────────────────────────────────────
 
-loadAndApplyPreferences().then(() => loadDashboard());
+loadAndApplyPreferences()
+  .then(() => startupFreshnessCheck())
+  .then(() => loadDashboard());

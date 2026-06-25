@@ -12,7 +12,8 @@ async-trait = "0.1"
 backtest-engine = { path = "../backtest-engine" }
 chrono.workspace = true
 data-ingestion = { path = "../data-ingestion" }
-core-domain = { path = "../core-domain" }
+  execution-engine = { path = "../execution-engine" }
+  core-domain = { path = "../core-domain" }
 indicator-engine = { path = "../indicator-engine" }
 keyring.workspace = true
 macro-engine = { path = "../macro-engine" }

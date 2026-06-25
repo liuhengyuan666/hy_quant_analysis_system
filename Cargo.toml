@@ -8,6 +8,7 @@ members = [
   "crates/data-ingestion",
   "crates/indicator-engine",
   "crates/macro-engine",
+  "crates/execution-engine",
   "crates/gt-regime-generator",
   "crates/market-state-extractor",
   "crates/regime-audit",
@@ -50,3 +51,5 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 urlencoding = "2"
 uuid = { version = "1", features = ["v4"] }
 keyring = "3"
+rayon = "1.10"
+ureq = { version = "2.10", features = ["native-tls"] }

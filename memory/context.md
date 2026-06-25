@@ -1,5 +1,5 @@
 # Current Phase
-shadow_production
+v4.5_released_validation_sprint
 
 # Active Tasks
 - [Todo] [TASK-000] [FROZEN] [TASK-004] P0: Regime Threshold Calibration — FROZEN. Will re-evaluate after Wave 9.
@@ -17,8 +17,10 @@ shadow_production
 - [Todo] [TASK-012] [TASK-080C] Empirical analysis on 4 existing factors (VIX, 10Y, Dollar, FedFunds) + research-based estimates for 6 missing factors. VIX strong negative predictor, Dollar very strong for HK.
 - [Todo] [TASK-013] [TASK-080D] K-means clustering analysis. 3-State recommended (Favorable/Neutral/Unfavorable) with variance ratio 0.862. Fed Funds clustering identified as bias source.
 - [Todo] [TASK-014] [TASK-080E] Identified Fed Funds raw level as regime identifier (not predictive signal). 33.3% near-zero, 44.9% high. Z-score is correct metric with IG=1.005 for CN 120d.
-- [Todo] [TASK-015] [TASK-080F] Implemented 252d Z-score with ±3 capping in macro-engine. Updated 2,341 ClickHouse rows. Re-ran 080C/080D. CN IG improved 0.474→0.964. Taxonomy stable.
 - [Todo] [TASK-081] Integrate 6 missing factors (HY Spread, 2Y, Term Spread, SOFR, Initial Claims, NFCI). Expand from 4 to 10 factors. Re-run orthogonality and taxonomy after full factor integration. GATED until 90-day Shadow Production completes.
+- [Todo] [TASK-092] P0: Add symbol-diagnostics CLI command for single-symbol signal attribution breakdown. Must display: Strategy Contribution, Alignment Contribution, Regime Contribution, Rotation Contribution, Final Score. Must also show raw strategy scores (ValueLeft, TrendPullback, TrendBreakout, MomentumRight) and rotation rank. Governance constraint: Explainability Layer may explain decisions but may NOT create decisions — no new composite scores, rankings, confidence metrics, or decision signals. Shadow Production safe: zero changes to State Layer, Signal Engine, weights, thresholds, allocation, backtest, DashboardSnapshot, or ResearchContext.
+- [Todo] [TASK-093] Use TASK-092 explainability tools to systematically collect and analyze divergence patterns. Primary focus: StrongBuy signal + DE_RISK state combinations. Track: Symbol, Date, Signal Score, Attribution Breakdown, State, T+20/T+60/T+120 forward returns. Goal: after 90 days, determine if State Layer is too conservative. Requires evidence before any State Layer threshold changes. Method: daily run `symbol-diagnostics` and `symbol-scoreboard`, log divergence cases, compare with future returns.
+- [Todo] [TASK-124] MemGuard Skill v4.5 — Agent Capability Model. Add Capability Boundaries, Operation Routing, Unsupported Requests Playbook. Update version to 4.5.0. Create TS-006 Long Session Pressure Test.
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

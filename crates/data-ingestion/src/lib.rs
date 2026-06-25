@@ -1,3 +1,4 @@
+use anyhow::Context;
 use anyhow::Result;
 use chrono::NaiveDate;
 use core_domain::{DailyBar, Instrument, InstrumentType, Market};
@@ -258,38 +259,85 @@ pub fn fetch_tencent_daily_bars(
     from: NaiveDate,
     to: NaiveDate,
 ) -> Result<Vec<DailyBar>> {
-    let url = format!(
-        "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=&param={tencent_symbol},day,{},{},400,{}",
-        from.format("%Y-%m-%d"),
-        to.format("%Y-%m-%d"),
-        CANONICAL_DAILY_ADJUSTMENT.tencent_param()
-    );
-    let response = http_client().get(url).send()?;
-    if !response.is_success() {
-        anyhow::bail!("Tencent fetch failed: {}", response.status());
-    }
-    let payload: TencentResponse = response.json()?;
-    let rows = payload
-        .data
-        .get(tencent_symbol)
-        .and_then(|entry| entry.qfqday.clone().or_else(|| entry.day.clone()))
-        .unwrap_or_default();
+    let mut all_bars: Vec<DailyBar> = Vec::new();
+    let page_size = 1000;
+    let mut current_end = to;
 
-    rows.into_iter()
-        .filter(|row| row.len() >= 6)
-        .map(|row| {
-            normalize_daily_bar(DailyBar {
-                date: NaiveDate::parse_from_str(&row[0], "%Y-%m-%d")?,
-                symbol: symbol.to_string(),
-                open: row[1].parse()?,
-                close: row[2].parse()?,
-                high: row[3].parse()?,
-                low: row[4].parse()?,
-                volume: row[5].parse()?,
-                turnover: row.get(6).and_then(|v| v.parse().ok()),
+    loop {
+        if current_end < from {
+            break;
+        }
+
+        // 估算当前页起始（1000个交易日 ≈ 1500个自然日，留足余量）
+        let lookback_days = (page_size as i64 * 3) / 2;
+        let current_start = from.max(current_end - chrono::Duration::days(lookback_days));
+
+        let url = format!(
+            "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=&param={tencent_symbol},day,{},{},{},{}",
+            current_start.format("%Y-%m-%d"),
+            current_end.format("%Y-%m-%d"),
+            page_size,
+            CANONICAL_DAILY_ADJUSTMENT.tencent_param()
+        );
+
+        let response = http_client().get(url).send()?;
+        if !response.is_success() {
+            anyhow::bail!("Tencent fetch failed: {}", response.status());
+        }
+        let payload: TencentResponse = response.json()?;
+        let rows = payload
+            .data
+            .get(tencent_symbol)
+            .and_then(|entry| entry.qfqday.clone().or_else(|| entry.day.clone()))
+            .unwrap_or_default();
+
+        if rows.is_empty() {
+            break;
+        }
+
+        let page_bars: Vec<DailyBar> = rows.into_iter()
+            .filter(|row| row.len() >= 6)
+            .map(|row| {
+                normalize_daily_bar(DailyBar {
+                    date: NaiveDate::parse_from_str(&row[0], "%Y-%m-%d")?,
+                    symbol: symbol.to_string(),
+                    open: row[1].parse()?,
+                    close: row[2].parse()?,
+                    high: row[3].parse()?,
+                    low: row[4].parse()?,
+                    volume: row[5].parse()?,
+                    turnover: row.get(6).and_then(|v| v.parse().ok()),
+                })
             })
-        })
-        .collect()
+            .collect::<Result<Vec<_>>>()?;
+
+        let earliest_in_page = page_bars.iter().map(|b| b.date).min().unwrap_or(from);
+        let count_in_page = page_bars.len();
+
+        all_bars.extend(page_bars);
+
+        // 如果返回行数 < page_size，说明已到达历史起点
+        if count_in_page < page_size {
+            break;
+        }
+
+        // 如果最早日期已到达目标起始，终止
+        if earliest_in_page <= from {
+            break;
+        }
+
+        // 继续向前翻页
+        current_end = earliest_in_page - chrono::Duration::days(1);
+    }
+
+    // 按日期排序并去重
+    all_bars.sort_by_key(|b| b.date);
+    all_bars.dedup_by(|a, b| a.date == b.date);
+
+    // 过滤到 [from, to] 范围
+    all_bars.retain(|b| b.date >= from && b.date <= to);
+
+    Ok(all_bars)
 }
 
 pub fn fetch_daily_bars(
@@ -330,8 +378,9 @@ pub fn fetch_fred_series(
     invert_score: bool,
     from: NaiveDate,
     to: NaiveDate,
+    api_key: &str,
 ) -> Result<MacroFactorSeries> {
-    Ok(fetch_fred_series_with_status(factor_name, series_id, invert_score, from, to)?.series)
+    Ok(fetch_fred_series_with_status(factor_name, series_id, invert_score, from, to, api_key)?.series)
 }
 
 pub fn fetch_fred_series_with_status(
@@ -340,48 +389,53 @@ pub fn fetch_fred_series_with_status(
     invert_score: bool,
     from: NaiveDate,
     to: NaiveDate,
+    api_key: &str,
 ) -> Result<MacroFetchOutcome> {
-    let url = format!("https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}");
+    let url = format!(
+        "https://api.stlouisfed.org/fred/series/observations?series_id={}&api_key={}&file_type=json&observation_start={}&observation_end={}&sort_order=asc&limit=10000",
+        series_id,
+        api_key,
+        from.format("%Y-%m-%d"),
+        to.format("%Y-%m-%d")
+    );
     let (response, transport) = fetch_text_with_fallback(
         &url,
-        Some("text/csv,*/*;q=0.1"),
+        Some("application/json,*/*;q=0.1"),
         Some("https://fred.stlouisfed.org/"),
     )?;
-    let expected_headers = [
-        format!("DATE,{series_id}"),
-        format!("observation_date,{series_id}"),
-    ];
-    let actual_header = response
-        .lines()
-        .next()
-        .unwrap_or_default()
-        .trim()
-        .to_string();
-    anyhow::ensure!(
-        expected_headers
-            .iter()
-            .any(|expected| actual_header.eq_ignore_ascii_case(expected)),
-        "unexpected FRED response header for {series_id}: {actual_header}"
-    );
+    
+    // FRED API rate limit: 2 requests per second (120 per minute with key)
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    
+    let parsed: serde_json::Value = serde_json::from_str(&response)
+        .with_context(|| format!("failed to parse FRED API JSON response for {series_id}"))?;
+    
+    let observations_array = parsed.get("observations")
+        .and_then(|v| v.as_array())
+        .with_context(|| format!("missing or invalid 'observations' array in FRED response for {series_id}"))?;
+    
     let mut observations = Vec::new();
-    for line in response.lines().skip(1) {
-        let mut parts = line.split(',');
-        let Some(date_raw) = parts.next() else {
-            continue;
-        };
-        let Some(value_raw) = parts.next() else {
-            continue;
-        };
-        let value_raw = value_raw.trim();
-        if value_raw.is_empty() || value_raw == "." {
+    for item in observations_array {
+        let date_str = item.get("date")
+            .and_then(|v| v.as_str())
+            .with_context(|| format!("missing 'date' in FRED observation for {series_id}"))?;
+        let value_str = item.get("value")
+            .and_then(|v| v.as_str())
+            .with_context(|| format!("missing 'value' in FRED observation for {series_id}"))?;
+        
+        if value_str.is_empty() || value_str == "." {
             continue;
         }
-        let date = NaiveDate::parse_from_str(date_raw.trim(), "%Y-%m-%d")?;
+        
+        let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+            .with_context(|| format!("invalid date format '{date_str}' in FRED response for {series_id}"))?;
         if date < from || date > to {
             continue;
         }
-        observations.push((date, value_raw.parse()?));
+        observations.push((date, value_str.parse()
+            .with_context(|| format!("invalid numeric value '{value_str}' for {series_id} on {date}"))?));
     }
+    
     anyhow::ensure!(
         !observations.is_empty(),
         "no FRED observations available for {series_id} in range {from}..={to}"

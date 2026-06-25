@@ -546,7 +546,7 @@ pub fn audit_transitions(labels: &[RegimeLabel]) -> TransitionAuditReport {
 // ============================================================
 
 use market_state_extractor::{
-    MarketStateObservation, TrendDirection, VolatilityRegime, VolumeRegime,
+    MarketStateObservation, TrendDirection, VolatilityRegime,
 };
 
 #[derive(Debug, Clone)]
@@ -707,6 +707,8 @@ pub fn audit_factor_attribution(observations: &[MarketStateObservation]) -> Fact
             .collect(),
     }
 }
+
+pub mod common;
 
 pub mod alignment_redesign;
 pub mod allocation_prototype;

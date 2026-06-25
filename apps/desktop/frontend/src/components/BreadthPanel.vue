@@ -259,7 +259,7 @@ function getRangePosition(market) {
 }
 
 .score-bar {
-  height: 6px;
+  height: 3px;
   background: var(--score-bar-bg);
   border-radius: var(--space-1);
   overflow: hidden;
@@ -271,6 +271,7 @@ function getRangePosition(market) {
   background: var(--accent-primary);
   border-radius: var(--space-1);
   transition: width 0.3s ease;
+  opacity: 0.6;
 }
 
 .breadth-panel__note {

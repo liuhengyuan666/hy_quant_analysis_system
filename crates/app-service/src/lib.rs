@@ -3,24 +3,22 @@ use async_trait::async_trait;
 use backtest_engine::{run_signal_backtest, BacktestConfig};
 use chrono::{Duration, NaiveDate, Utc};
 use core_domain::{
-    EnvironmentSnapshot, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
-    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot,
+    EnvironmentSnapshot, FredFileConfig, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
+    LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot, StartupFreshnessCheck,
 };
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
 };
-use indicator_engine::build_indicator_snapshots;
 use macro_engine::{build_macro_snapshots, build_market_regimes, build_strategy_state};
 use market_store::StorageConfig;
 use report_engine::{
     build_dashboard_snapshot_for_date, render_data_health_report, render_markdown_report,
     DashboardLoadMetrics, DashboardSnapshot, DataHealthMacroSourceSummary, DataHealthSummary,
-    DataHealthSymbolSummary, TrustSummary, WatchlistBreadthMarketSnapshot,
+    DataHealthSymbolSummary,
     WatchlistBreadthSnapshot,
 };
 use research_renderer::DashboardInsightComposer;
-use rotation_engine::build_rotation_ranks;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
@@ -33,8 +31,24 @@ use strategy_engine::{build_strategy_preferences, AnalysisContext};
 /// TOML-based configuration loader module
 pub mod config_loader;
 
+// Domain modules (extracted from the monolith)
+pub mod breadth;
+pub mod core;
+pub mod dashboard;
+pub mod llm;
+pub mod sync;
+pub mod trust;
+
+use crate::breadth::*;
+use crate::core::*;
+use crate::dashboard::*;
+use crate::llm::*;
+use crate::sync::*;
+use crate::trust::*;
+
 pub use core_domain::AnalysisScope as ReportScope;
 pub use research_renderer::ResearchInsight;
+pub use execution_engine::types::ExecutionDecision;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -139,158 +153,12 @@ pub mod pipeline_stages {
     }
 }
 
-fn load_calendar_from_config(dir: &std::path::Path) -> core_domain::calendar::TradingCalendar {
-    use chrono::NaiveDate;
-    use std::collections::HashSet;
-    use std::fs;
 
-    let mut cn_holidays = HashSet::new();
-    let mut hk_holidays = HashSet::new();
 
-    match fs::read_dir(dir) {
-        Ok(entries) => {
-            for entry_result in entries {
-                let entry = match entry_result {
-                    Ok(entry) => entry,
-                    Err(error) => {
-                        eprintln!("failed to read calendar config directory entry: {error}");
-                        continue;
-                    }
-                };
-                let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) != Some("json") {
-                    continue;
-                }
-                let content = match fs::read_to_string(&path) {
-                    Ok(content) => content,
-                    Err(error) => {
-                        eprintln!("failed to read calendar config {}: {error}", path.display());
-                        continue;
-                    }
-                };
-                let config = match serde_json::from_str::<serde_json::Value>(&content) {
-                    Ok(config) => config,
-                    Err(error) => {
-                        eprintln!(
-                            "failed to parse calendar config {}: {error}",
-                            path.display()
-                        );
-                        continue;
-                    }
-                };
-                let (market, holidays) = match (
-                    config.get("market").and_then(|m| m.as_str()),
-                    config.get("holidays").and_then(|h| h.as_array()),
-                ) {
-                    (Some(market), Some(holidays)) => (market, holidays),
-                    _ => {
-                        eprintln!(
-                            "calendar config {} is missing market or holidays",
-                            path.display()
-                        );
-                        continue;
-                    }
-                };
-                for holiday in holidays {
-                    let Some(date_str) = holiday.as_str() else {
-                        eprintln!(
-                            "calendar config {} contains a non-string holiday",
-                            path.display()
-                        );
-                        continue;
-                    };
-                    let date = match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                        Ok(date) => date,
-                        Err(error) => {
-                            eprintln!(
-                                "calendar config {} contains invalid holiday {date_str}: {error}",
-                                path.display()
-                            );
-                            continue;
-                        }
-                    };
-                    match market {
-                        "CN" => {
-                            cn_holidays.insert(date);
-                        }
-                        "HK" => {
-                            hk_holidays.insert(date);
-                        }
-                        other => eprintln!(
-                            "calendar config {} uses unsupported market {other}",
-                            path.display()
-                        ),
-                    }
-                }
-            }
-        }
-        Err(error) => eprintln!(
-            "failed to read calendar config directory {}: {error}",
-            dir.display()
-        ),
-    }
 
-    core_domain::calendar::TradingCalendar::new(cn_holidays, hk_holidays)
-}
 
-fn format_error_chain(error: &anyhow::Error) -> String {
-    let mut parts = vec![error.to_string()];
-    let mut current = error.source();
-    while let Some(source) = current {
-        parts.push(source.to_string());
-        current = source.source();
-    }
-    parts.join(" | caused by: ")
-}
 
-fn validate_user_preference(key: &str, value: &str) -> Result<()> {
-    const MAX_PREFERENCE_VALUE_LEN: usize = 32;
-    if value.len() > MAX_PREFERENCE_VALUE_LEN {
-        anyhow::bail!("user preference value is too long: {key}");
-    }
 
-    match key {
-        "default_scope" => match value {
-            "global" | "cn" | "hk" => Ok(()),
-            _ => anyhow::bail!("unsupported default_scope preference value: {value}"),
-        },
-        "last_analysis_date" => {
-            NaiveDate::parse_from_str(value, "%Y-%m-%d")
-                .with_context(|| format!("invalid last_analysis_date preference value: {value}"))?;
-            Ok(())
-        }
-        _ => anyhow::bail!("unsupported user preference key: {key}"),
-    }
-}
-
-fn elapsed_ms(started_at: Instant) -> u64 {
-    started_at.elapsed().as_millis() as u64
-}
-
-fn new_refresh_job_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
-
-fn last_successful_stage(stages: &[RefreshStageExecution]) -> Option<String> {
-    stages
-        .iter()
-        .rev()
-        .find(|stage| stage.status == "success")
-        .map(|stage| stage.name.clone())
-}
-
-fn refresh_stage_order(stage: &str) -> Option<u8> {
-    match stage {
-        "ingest" => Some(0),
-        "indicators" => Some(1),
-        "macro" => Some(2),
-        "rotation" => Some(3),
-        "strategy" => Some(4),
-        "signals" => Some(5),
-        "backtests" => Some(6),
-        _ => None,
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct AppContext {
@@ -520,507 +388,15 @@ pub struct LatestGateExplanation {
     pub stages: Vec<LatestGateStageExplanation>,
 }
 
-fn build_trust_summary(
-    scoped_instruments: &[Instrument],
-    snapshot: &DashboardSnapshot,
-    pipeline_dates: &PipelineDateDiagnostics,
-    data_health: Option<&DataHealthSummary>,
-    calendar: &core_domain::calendar::TradingCalendar,
-) -> TrustSummary {
-    let freshest_market_date = data_health.and_then(|dh| dh.freshest_market_date);
-    let trading_instruments: Vec<_> = match freshest_market_date {
-        Some(date) => scoped_instruments
-            .iter()
-            .filter(|i| calendar.is_trading_day(&i.market, date))
-            .collect(),
-        None => Vec::new(),
-    };
-    let non_trading_count = scoped_instruments
-        .len()
-        .saturating_sub(trading_instruments.len());
-    let scoped_symbols_expected = trading_instruments.len();
-    let scoped_symbols_on_freshest_market_date = match (freshest_market_date, data_health) {
-        (Some(date), Some(dh)) => dh
-            .symbols
-            .iter()
-            .filter(|row| {
-                trading_instruments.iter().any(|i| i.symbol == row.symbol)
-                    && row.last_date == Some(date)
-            })
-            .count(),
-        _ => 0,
-    };
-    let latest_day_complete = scoped_symbols_expected > 0
-        && scoped_symbols_on_freshest_market_date == scoped_symbols_expected;
-    let macro_status = match data_health {
-        Some(dh) if dh.critical_macro_sources > 0 => "critical".to_string(),
-        Some(dh) if dh.review_macro_sources > 0 => "review".to_string(),
-        Some(_) => "healthy".to_string(),
-        None => "unknown".to_string(),
-    };
 
-    let signal_analysis_scope = snapshot
-        .top_signals
-        .first()
-        .map(|row| row.analysis_scope.clone());
-    let signal_regime_basis_scope = snapshot
-        .top_signals
-        .first()
-        .map(|row| row.regime_basis_scope.clone());
-    let backtest_matches_snapshot = snapshot.latest_backtest.as_ref().map(|backtest| {
-        backtest
-            .analysis_scope
-            .eq_ignore_ascii_case(&snapshot.scope)
-            && backtest.signal_scope.eq_ignore_ascii_case(&snapshot.scope)
-            && backtest
-                .signal_end_date
-                .map(|date| date.to_string())
-                .as_deref()
-                == Some(snapshot.report_date.as_str())
-    });
 
-    let pipeline_partial_latest = pipeline_dates
-        .stages
-        .iter()
-        .any(|stage| stage.is_latest && stage.is_complete == Some(false));
-    let pipeline_partial_latest_stage_count = pipeline_dates
-        .stages
-        .iter()
-        .filter(|stage| stage.is_latest && stage.is_complete == Some(false))
-        .count();
-    let pipeline_stale = pipeline_dates.stages.iter().any(|stage| {
-        matches!(stage.lag_days, Some(lag) if lag > 0)
-            && matches!(
-                stage.stage.as_str(),
-                "market_regime"
-                    | "environment_snapshot"
-                    | "strategy_state"
-                    | "strategy_preference"
-                    | "signal_snapshot"
-            )
-    });
-    let pipeline_stale_stage_count = pipeline_dates
-        .stages
-        .iter()
-        .filter(|stage| {
-            matches!(stage.lag_days, Some(lag) if lag > 0)
-                && matches!(
-                    stage.stage.as_str(),
-                    "market_regime"
-                        | "environment_snapshot"
-                        | "strategy_state"
-                        | "strategy_preference"
-                        | "signal_snapshot"
-                )
-        })
-        .count();
 
-    let mut notes = Vec::new();
-    if data_health.is_none() {
-        notes.push("Data health summary is unavailable; trust assessment is degraded.".to_string());
-    }
-    if non_trading_count > 0 {
-        notes.push(format!(
-            "{} symbol(s) were on non-trading markets on the freshest market date and were excluded from coverage checks.",
-            non_trading_count
-        ));
-    }
-    if !latest_day_complete {
-        notes.push(
-            "Latest market date is not fully covered across the active trading universe."
-                .to_string(),
-        );
-    }
-    if matches!(data_health, Some(dh) if dh.review_macro_sources > 0) {
-        notes.push(
-            "One or more macro sources are currently using review/fallback transport.".to_string(),
-        );
-    }
-    if matches!(data_health, Some(dh) if dh.critical_macro_sources > 0) {
-        notes.push("One or more macro sources are currently unavailable.".to_string());
-    }
-    if pipeline_partial_latest {
-        notes.push("At least one pipeline stage is only partially complete on the freshest available date.".to_string());
-    }
-    if pipeline_stale {
-        notes.push(
-            "One or more decision stages are lagging behind the freshest market date.".to_string(),
-        );
-    }
-    notes.extend(pipeline_dates.alerts.iter().cloned());
-    if let (Some(signal_scope), Some(regime_scope)) = (
-        signal_analysis_scope.as_ref(),
-        signal_regime_basis_scope.as_ref(),
-    ) {
-        if !signal_scope.eq_ignore_ascii_case(&snapshot.scope)
-            || !regime_scope.eq_ignore_ascii_case(&snapshot.scope)
-        {
-            notes.push(format!(
-                "Signal analysis/regime basis still points to {} / {} while dashboard scope is {}.",
-                signal_scope, regime_scope, snapshot.scope
-            ));
-        }
-    }
-    if backtest_matches_snapshot == Some(false) {
-        notes.push(
-            "Latest backtest does not match the current dashboard snapshot scope/date.".to_string(),
-        );
-    }
-    if let Some(strategy_state) = &snapshot.strategy_state {
-        notes.push(format!(
-            "Strategy state {} recommends {:.2}% position as of {} ({}).",
-            strategy_state.state,
-            strategy_state.recommended_position_pct,
-            strategy_state.date,
-            strategy_state.transition_reason
-        ));
-    }
 
-    let critical_macro = matches!(data_health, Some(dh) if dh.critical_macro_sources > 0);
-    let review_macro = matches!(data_health, Some(dh) if dh.review_macro_sources > 0);
 
-    let (level, headline, message) = if critical_macro || pipeline_stale {
-        (
-            "degraded",
-            "Use with caution",
-            "The current research view is usable, but freshness or macro availability issues reduce trust in the latest outputs.",
-        )
-    } else if !latest_day_complete
-        || review_macro
-        || pipeline_partial_latest
-        || backtest_matches_snapshot == Some(false)
-    {
-        (
-            "review",
-            "Review before acting",
-            "The pipeline completed, but coverage/provenance caveats should be reviewed before treating this as a clean research snapshot.",
-        )
-    } else {
-        (
-            "trusted",
-            "Ready for analysis",
-            "Freshness, provenance, and macro transport checks currently look healthy for this snapshot.",
-        )
-    };
 
-    TrustSummary {
-        level: level.to_string(),
-        headline: headline.to_string(),
-        message: message.to_string(),
-        pipeline_has_partial_latest: pipeline_partial_latest,
-        pipeline_has_stale_stage: pipeline_stale,
-        pipeline_partial_latest_stage_count,
-        pipeline_stale_stage_count,
-        freshest_market_date: freshest_market_date.map(|date| date.to_string()),
-        latest_available_date: Some(snapshot.latest_available_date.clone()),
-        latest_day_complete,
-        scoped_symbols_expected,
-        scoped_symbols_on_freshest_market_date,
-        macro_status,
-        data_health_generated_at: data_health.map(|dh| dh.generated_at.clone()),
-        data_health_review_symbols: data_health.map(|dh| dh.review_symbols),
-        data_health_critical_symbols: data_health.map(|dh| dh.critical_symbols),
-        data_health_review_macro_sources: data_health.map(|dh| dh.review_macro_sources),
-        data_health_critical_macro_sources: data_health.map(|dh| dh.critical_macro_sources),
-        signal_analysis_scope,
-        signal_regime_basis_scope,
-        strategy_state: snapshot
-            .strategy_state
-            .as_ref()
-            .map(|row| row.state.to_string()),
-        strategy_recommended_position_pct: snapshot
-            .strategy_state
-            .as_ref()
-            .map(|row| row.recommended_position_pct),
-        backtest_matches_snapshot,
-        notes,
-    }
-}
 
-fn pipeline_date_alerts(scope: ReportScope, stages: &[PipelineStageDateStatus]) -> Vec<String> {
-    let strategy_latest_date = stages
-        .iter()
-        .find(|stage| stage.stage == "strategy_preference")
-        .and_then(|stage| stage.latest_date.clone());
-    let signal_latest_date = stages
-        .iter()
-        .find(|stage| stage.stage == "signal_snapshot")
-        .and_then(|stage| stage.latest_date.clone());
 
-    let mut alerts = Vec::new();
-    if let Some(issue) = build_signal_alignment_issue_for_dates(
-        scope,
-        strategy_latest_date
-            .as_ref()
-            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
-        signal_latest_date
-            .as_ref()
-            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
-    ) {
-        alerts.push(issue);
-    }
-    if let Some(issue) = build_signal_completeness_issue(stages) {
-        alerts.push(issue);
-    }
-    alerts
-}
 
-fn latest_gate_alerts_for_scope(
-    scope: ReportScope,
-    before: &PipelineDateDiagnostics,
-    after: &PipelineDateDiagnostics,
-) -> Vec<String> {
-    let mut alerts = Vec::new();
-    let scope_name = scope_label(scope);
-    let before_latest = before.dashboard_latest_date.as_deref();
-    let after_latest = after.dashboard_latest_date.as_deref();
-    let freshest_market_date = after.freshest_market_date.as_deref();
-
-    if before_latest == after_latest {
-        match (after_latest, freshest_market_date) {
-            (Some(latest), Some(freshest)) if freshest > latest => alerts.push(format!(
-                "Latest available dashboard date for scope {} did not advance (still {}, freshest market date is {}).",
-                scope_name, latest, freshest
-            )),
-            (None, Some(freshest)) => alerts.push(format!(
-                "Scope {} still has no qualified dashboard date even though freshest market date is {}.",
-                scope_name, freshest
-            )),
-            _ => {}
-        }
-    }
-
-    for stage in after.stages.iter().filter(|stage| {
-        stage.stage != "daily_bar"
-            && stage.stage != "dashboard_available"
-            && stage.is_latest
-            && stage.is_complete == Some(false)
-    }) {
-        alerts.push(format!(
-            "Stage {} is incomplete on the freshest available date for scope {} (actual {:?} / expected {:?}).",
-            stage.stage, scope_name, stage.latest_entities, stage.expected_entities
-        ));
-    }
-
-    for stage in after.stages.iter().filter(|stage| {
-        stage.stage != "daily_bar"
-            && stage.stage != "dashboard_available"
-            && matches!(stage.lag_days, Some(lag) if lag > 0)
-    }) {
-        alerts.push(format!(
-            "Stage {} is lagging by {} day(s) for scope {} (latest {}).",
-            stage.stage,
-            stage.lag_days.unwrap_or_default(),
-            scope_name,
-            stage.latest_date.as_deref().unwrap_or("N/A")
-        ));
-    }
-
-    alerts
-}
-
-fn latest_gate_stage_explanations(
-    diagnostics: &PipelineDateDiagnostics,
-) -> Vec<LatestGateStageExplanation> {
-    diagnostics
-        .stages
-        .iter()
-        .map(|stage| {
-            let reason = if stage.stage == "dashboard_available" {
-                None
-            } else if stage.is_latest && stage.is_complete == Some(false) {
-                Some(format!(
-                    "{} is incomplete on the freshest market date.",
-                    stage.stage
-                ))
-            } else if matches!(stage.lag_days, Some(lag) if lag > 0) {
-                Some(format!(
-                    "{} is lagging behind the freshest market date by {} day(s).",
-                    stage.stage,
-                    stage.lag_days.unwrap_or_default()
-                ))
-            } else if stage.latest_date.is_none() {
-                Some(format!("{} has no available rows yet.", stage.stage))
-            } else {
-                None
-            };
-
-            LatestGateStageExplanation {
-                stage: stage.stage.clone(),
-                latest_date: stage.latest_date.clone(),
-                lag_days: stage.lag_days,
-                is_latest: stage.is_latest,
-                latest_entities: stage.latest_entities,
-                expected_entities: stage.expected_entities,
-                is_complete: stage.is_complete,
-                blocking: reason.is_some() && stage.stage != "daily_bar",
-                reason,
-            }
-        })
-        .collect()
-}
-
-fn derive_refresh_window(
-    to: NaiveDate,
-    latest_daily_date: Option<NaiveDate>,
-    latest_gated_dashboard_date: Option<NaiveDate>,
-    has_missing_gated_scope: bool,
-) -> (NaiveDate, String, i64) {
-    let bootstrap_from = to - Duration::days(REFRESH_BOOTSTRAP_LOOKBACK_DAYS);
-
-    match latest_daily_date {
-        None => (
-            bootstrap_from,
-            "bootstrap".to_string(),
-            REFRESH_GATE_REPAIR_WINDOW_DAYS,
-        ),
-        Some(latest_daily) => {
-            let effective_to = std::cmp::max(to, latest_daily);
-            let source_from = latest_daily - Duration::days(REFRESH_SOURCE_LOOKBACK_DAYS);
-            let gated_repair_from = if has_missing_gated_scope {
-                Some(effective_to - Duration::days(REFRESH_GATE_REPAIR_WINDOW_DAYS))
-            } else {
-                latest_gated_dashboard_date
-                    .filter(|gated_latest| *gated_latest < latest_daily)
-                    .map(|gated_latest| {
-                        gated_latest - Duration::days(REFRESH_GATE_REPAIR_WINDOW_DAYS)
-                    })
-            };
-
-            match gated_repair_from {
-                Some(repair_from) => (
-                    std::cmp::min(source_from, repair_from).max(bootstrap_from),
-                    if has_missing_gated_scope {
-                        "missing-gated-scope-repair".to_string()
-                    } else {
-                        "latest-gate-repair".to_string()
-                    },
-                    REFRESH_GATE_REPAIR_WINDOW_DAYS,
-                ),
-                None => (
-                    source_from.max(bootstrap_from),
-                    "source-lookback".to_string(),
-                    REFRESH_GATE_REPAIR_WINDOW_DAYS,
-                ),
-            }
-        }
-    }
-}
-
-fn build_signal_alignment_issue_for_dates(
-    scope: ReportScope,
-    strategy_latest: Option<NaiveDate>,
-    signal_latest: Option<NaiveDate>,
-) -> Option<String> {
-    match (strategy_latest, signal_latest) {
-        (Some(strategy_latest), Some(signal_latest)) if strategy_latest > signal_latest => Some(
-            format!(
-                "Signal snapshot for scope {} is lagging behind strategy preferences (signal={}, strategy={}). Rerun `compute-signals` before trusting dashboard/export defaults.",
-                scope_label(scope), signal_latest, strategy_latest
-            ),
-        ),
-        (Some(strategy_latest), None) => Some(format!(
-            "Signal snapshot for scope {} is missing while strategy preferences already exist through {}. Rerun `compute-signals` before trusting dashboard/export defaults.",
-            scope_label(scope), strategy_latest
-        )),
-        _ => None,
-    }
-}
-
-fn build_signal_completeness_issue(stages: &[PipelineStageDateStatus]) -> Option<String> {
-    let signal_stage = stages
-        .iter()
-        .find(|stage| stage.stage == "signal_snapshot")?;
-    match (
-        signal_stage.latest_date.as_ref(),
-        signal_stage.latest_entities,
-        signal_stage.expected_entities,
-        signal_stage.is_complete,
-    ) {
-        (Some(latest_date), Some(actual), Some(expected), Some(false)) if expected > 0 => Some(
-            format!(
-                "Signal snapshot is incomplete on its latest date {} ({}/{} symbols). Rerun `compute-signals` before trusting dashboard/export defaults.",
-                latest_date, actual, expected
-            ),
-        ),
-        _ => None,
-    }
-}
-
-fn analyze_gap_metrics(
-    bars: &[core_domain::DailyBar],
-    instrument: &Instrument,
-    calendar: &core_domain::calendar::TradingCalendar,
-) -> (usize, i64) {
-    let mut gap_count = 0usize;
-    let mut max_gap_days = 0i64;
-    for window in bars.windows(2) {
-        let gap = (window[1].date - window[0].date).num_days();
-        if gap <= 1 {
-            continue;
-        }
-        let all_holidays = (1..gap).all(|offset| {
-            let date = window[0].date + chrono::Duration::days(offset);
-            !calendar.is_trading_day(&instrument.market, date)
-        });
-        if !all_holidays && gap > CALENDAR_GAP_REVIEW_THRESHOLD_DAYS {
-            gap_count += 1;
-            max_gap_days = max_gap_days.max(gap);
-        }
-    }
-    (gap_count, max_gap_days)
-}
-
-fn analyze_jump_metrics(instrument: &Instrument, bars: &[core_domain::DailyBar]) -> (usize, f64) {
-    const REGISTRATION_BOARD_INDICES: &[&str] = &["000688", "000698", "399006", "399673"];
-    let threshold = match instrument.instrument_type {
-        InstrumentType::Index if REGISTRATION_BOARD_INDICES.contains(&instrument.symbol.as_str()) => 0.22,
-        InstrumentType::Index => 0.12,
-        InstrumentType::Etf => 0.15,
-    };
-    let mut suspicious = 0usize;
-    let mut max_abs_return = 0.0f64;
-    for window in bars.windows(2) {
-        let previous = window[0].close;
-        let current = window[1].close;
-        if previous <= 0.0 {
-            continue;
-        }
-        let abs_return = ((current / previous) - 1.0).abs();
-        max_abs_return = max_abs_return.max(abs_return * 100.0);
-        if abs_return > threshold {
-            suspicious += 1;
-        }
-    }
-    (suspicious, max_abs_return)
-}
-
-fn classify_health(
-    rows: usize,
-    last_date: Option<NaiveDate>,
-    now: NaiveDate,
-    primary_provider_ok: bool,
-    fallback_provider_ok: Option<bool>,
-    gap_count: usize,
-    suspicious_jump_count: usize,
-) -> String {
-    let freshness_days = last_date
-        .map(|date| (now - date).num_days())
-        .unwrap_or(i64::MAX);
-    let has_recent_data = freshness_days <= 3;
-
-    if rows == 0 {
-        "critical".to_string()
-    } else if !has_recent_data {
-        "critical".to_string()
-    } else if !primary_provider_ok && fallback_provider_ok != Some(true) {
-        "review".to_string()
-    } else if !primary_provider_ok || gap_count > 0 || suspicious_jump_count > 0 {
-        "review".to_string()
-    } else {
-        "healthy".to_string()
-    }
-}
 
 #[derive(Debug, Clone)]
 struct TrackedInstrumentSeries {
@@ -1059,213 +435,13 @@ struct TrackedUniverseWindow {
     hk_series: Vec<TrackedInstrumentSeries>,
 }
 
-fn scope_label(scope: ReportScope) -> &'static str {
-    scope.as_str()
-}
 
-fn instrument_in_scope(instrument: &Instrument, scope: ReportScope) -> bool {
-    scope.matches_market(&instrument.market)
-}
 
-fn instrument_in_latest_gate_scope(instrument: &Instrument, scope: ReportScope) -> bool {
-    instrument.enabled && instrument.latest_gate_required && instrument_in_scope(instrument, scope)
-}
 
-fn scope_universe_label(scope: ReportScope) -> &'static str {
-    match scope {
-        ReportScope::Global => "Global tracked universe",
-        ReportScope::Cn => "CN tracked universe",
-        ReportScope::Hk => "HK tracked universe",
-    }
-}
 
-fn compute_participation_point(
-    series: &[TrackedInstrumentSeries],
-    date: NaiveDate,
-) -> ParticipationPoint {
-    let mut eligible_count = 0usize;
-    let mut above_count = 0usize;
-    let mut liquidity_eligible_count = 0usize;
-    let mut volume_expansion_count = 0usize;
-    let mut turnover_present_count = 0usize;
 
-    for item in series {
-        let Some(close) = item.close_by_date.get(&date).copied() else {
-            continue;
-        };
-        let Some(ma30) = item.ma30_by_date.get(&date).copied() else {
-            continue;
-        };
 
-        eligible_count += 1;
-        if close > ma30 {
-            above_count += 1;
-        }
-        if let (Some(volume), Some(vol_ma20)) = (
-            item.volume_by_date.get(&date).copied(),
-            item.vol_ma20_by_date.get(&date).copied(),
-        ) {
-            liquidity_eligible_count += 1;
-            if volume > vol_ma20 {
-                volume_expansion_count += 1;
-            }
-        }
-        if item
-            .turnover_present_by_date
-            .get(&date)
-            .copied()
-            .unwrap_or(false)
-        {
-            turnover_present_count += 1;
-        }
-    }
 
-    let breadth_pct = if eligible_count > 0 {
-        above_count as f64 / eligible_count as f64 * 100.0
-    } else {
-        0.0
-    };
-
-    let volume_expansion_pct = (liquidity_eligible_count > 0)
-        .then(|| volume_expansion_count as f64 / liquidity_eligible_count as f64 * 100.0);
-    let turnover_coverage_pct =
-        (eligible_count > 0).then(|| turnover_present_count as f64 / eligible_count as f64 * 100.0);
-    let liquidity_proxy_score = match (volume_expansion_pct, turnover_coverage_pct) {
-        (Some(volume_pct), Some(turnover_pct)) => volume_pct * 0.7 + turnover_pct * 0.3,
-        (Some(volume_pct), None) => volume_pct,
-        (None, Some(turnover_pct)) => turnover_pct,
-        (None, None) => 50.0,
-    };
-
-    ParticipationPoint {
-        breadth_pct,
-        eligible_count,
-        above_count,
-        volume_expansion_pct,
-        turnover_coverage_pct,
-        liquidity_proxy_score,
-    }
-}
-
-fn compute_watchlist_breadth_status(
-    eligible_count: usize,
-    breadth_pct: f64,
-    range_position_60d: Option<f64>,
-    breadth_5d_delta: Option<f64>,
-) -> String {
-    if eligible_count == 0 {
-        return "unavailable".to_string();
-    }
-    if let Some(position) = range_position_60d {
-        if position <= 0.20 {
-            return "near_local_low".to_string();
-        }
-        if position >= 0.80 {
-            return "near_local_high".to_string();
-        }
-    }
-    if let Some(delta) = breadth_5d_delta {
-        if delta >= 10.0 {
-            return "improving".to_string();
-        }
-        if delta <= -10.0 {
-            return "weakening".to_string();
-        }
-    }
-    if breadth_pct < 35.0 {
-        "weak".to_string()
-    } else if breadth_pct > 65.0 {
-        "strong".to_string()
-    } else {
-        "neutral".to_string()
-    }
-}
-
-fn build_market_watchlist_breadth_snapshot(
-    scope: ReportScope,
-    series: &[TrackedInstrumentSeries],
-    report_date: NaiveDate,
-    relevant_dates: &[NaiveDate],
-) -> WatchlistBreadthMarketSnapshot {
-    let metrics = compute_participation_metrics(series, report_date, relevant_dates);
-
-    WatchlistBreadthMarketSnapshot {
-        market: scope_label(scope).to_string(),
-        universe_label: scope_universe_label(scope).to_string(),
-        eligible_count: metrics.current.eligible_count,
-        above_count: metrics.current.above_count,
-        breadth_pct: metrics.current.breadth_pct,
-        breadth_pct_sma5: metrics.breadth_pct_sma5,
-        breadth_5d_delta: metrics.breadth_5d_delta,
-        range_low_60d: metrics.range_low_60d,
-        range_high_60d: metrics.range_high_60d,
-        range_position_60d: metrics.range_position_60d,
-        status_label: metrics.breadth_state,
-    }
-}
-
-fn compute_participation_metrics(
-    series: &[TrackedInstrumentSeries],
-    report_date: NaiveDate,
-    relevant_dates: &[NaiveDate],
-) -> ParticipationMetrics {
-    let current = compute_participation_point(series, report_date);
-    let history = relevant_dates
-        .iter()
-        .copied()
-        .filter(|date| *date <= report_date)
-        .filter_map(|date| {
-            let point = compute_participation_point(series, date);
-            (point.eligible_count > 0).then_some(point)
-        })
-        .collect::<Vec<_>>();
-
-    let breadth_pct_sma5 = (history.len() >= 5).then(|| {
-        let window = &history[history.len() - 5..];
-        window.iter().map(|point| point.breadth_pct).sum::<f64>() / window.len() as f64
-    });
-    let breadth_5d_delta = (history.len() >= 6).then(|| {
-        let current = history[history.len() - 1].breadth_pct;
-        let previous = history[history.len() - 6].breadth_pct;
-        current - previous
-    });
-    let (range_low_60d, range_high_60d, range_position_60d) = if history.len() >= 60 {
-        let window = &history[history.len() - 60..];
-        let range_low = window
-            .iter()
-            .map(|point| point.breadth_pct)
-            .fold(f64::INFINITY, f64::min);
-        let range_high = window
-            .iter()
-            .map(|point| point.breadth_pct)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let position = if (range_high - range_low).abs() < f64::EPSILON {
-            Some(0.5)
-        } else {
-            Some(((current.breadth_pct - range_low) / (range_high - range_low)).clamp(0.0, 1.0))
-        };
-        (Some(range_low), Some(range_high), position)
-    } else {
-        (None, None, None)
-    };
-
-    let breadth_state = compute_watchlist_breadth_status(
-        current.eligible_count,
-        current.breadth_pct,
-        range_position_60d,
-        breadth_5d_delta,
-    );
-
-    ParticipationMetrics {
-        current,
-        breadth_pct_sma5,
-        breadth_5d_delta,
-        range_low_60d,
-        range_high_60d,
-        range_position_60d,
-        breadth_state,
-    }
-}
 
 const LLM_SERVICE_NAME: &str = "rust-quant-analysis-system";
 const LLM_ACCOUNT_NAME: &str = "llm_api_key";
@@ -1283,25 +459,14 @@ fn probe_keyring_readable() -> bool {
 
 /// Determines whether `sync_and_export` should attempt a pipeline refresh.
 /// Returns `true` when the gate is not yet advanced (behind or unknown).
-fn sync_gate_needs_refresh(gate_before_advanced: Option<bool>) -> bool {
-    gate_before_advanced != Some(true)
-}
 
 /// Validates that a refresh pipeline result is acceptable for proceeding.
 /// Returns `Ok(())` if refresh succeeded, `Err` with blocking alerts if it failed.
-fn validate_sync_refresh_result(success: bool, blocking_alerts: &[String]) -> Result<()> {
-    if !success {
-        anyhow::bail!(
-            "sync-and-export aborted because refresh_pipeline failed. {}",
-            blocking_alerts.join(" | ")
-        );
-    }
-    Ok(())
-}
 
 /// Placeholder LLM provider for testing.
 /// Returns structured dummy responses. Replace with a real provider
 /// (OpenAI, DeepSeek, etc.) for actual analysis.
+#[allow(dead_code)]
 struct PlaceholderProvider;
 
 #[async_trait]
@@ -1422,6 +587,165 @@ impl AppContext {
         })
     }
 
+    /// Parallel ingestion using Tokio spawn_blocking + Semaphore for concurrent fetch.
+    /// Data-ingestion crate remains sync; parallelism is achieved by wrapping sync fetches
+    /// in blocking tasks with a concurrency limit of 2 (conservative for external provider rate limits).
+    pub async fn ingest_daily_parallel(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        progress_callback: Option<Box<dyn Fn(&str) + Send>>,
+    ) -> Result<IngestSummary> {
+        use std::sync::Arc;
+        use tokio::sync::Semaphore;
+
+        let instruments = load_universe(&self.storage.universe_abspath()?)?;
+        let total = instruments.len();
+        let semaphore = Arc::new(Semaphore::new(2));
+        let mut tasks = Vec::new();
+
+        for (idx, instrument) in instruments.iter().enumerate() {
+            let permit = semaphore.clone().acquire_owned().await?;
+            let instrument = instrument.clone();
+            let from = from;
+            let to = to;
+            let progress = progress_callback.as_ref().map(|cb| {
+                let milestone = total / 10;
+                if milestone == 0 || idx % milestone == 0 || idx + 1 == total {
+                    cb(&format!(
+                        "ingest progress: {}/{} symbols ({}%)",
+                        idx + 1,
+                        total,
+                        ((idx + 1) * 100) / total
+                    ));
+                }
+            });
+            let task = tokio::task::spawn_blocking(move || {
+                let _permit = permit; // hold permit until task completes
+                let _ = progress; // report progress before fetch starts
+                let result = fetch_daily_bars(&instrument, from, to);
+                (instrument.symbol.clone(), result)
+            });
+            tasks.push(task);
+        }
+
+        let mut total_rows = 0usize;
+        let mut failed_symbols = Vec::new();
+        let mut all_bars: Vec<core_domain::DailyBar> = Vec::new();
+
+        for task in tasks {
+            match task.await {
+                Ok((symbol, result)) => {
+                    match result {
+                        Ok(bars) => {
+                            total_rows += bars.len();
+                            all_bars.extend(bars);
+                        }
+                        Err(error) => {
+                            failed_symbols.push(format!("{}: {}", symbol, error));
+                        }
+                    }
+                }
+                Err(join_error) => {
+                    if join_error.is_panic() {
+                        let panic_info = join_error.into_panic();
+                        let panic_msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                            s.to_string()
+                        } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                            s.clone()
+                        } else {
+                            "unknown panic".to_string()
+                        };
+                        failed_symbols.push(format!("task panicked: {}", panic_msg));
+                    } else {
+                        failed_symbols.push(format!("task cancelled or failed: {}", join_error));
+                    }
+                }
+            }
+        }
+
+        // Group by symbol for batch insert (serial to avoid ClickHouse write pressure)
+        let mut bars_by_symbol: std::collections::BTreeMap<String, Vec<core_domain::DailyBar>> = std::collections::BTreeMap::new();
+        for bar in all_bars {
+            bars_by_symbol.entry(bar.symbol.clone()).or_default().push(bar);
+        }
+
+        for (symbol, bars) in bars_by_symbol {
+            if let Err(error) = market_store::insert_daily_bars(&self.storage, &symbol, &bars) {
+                failed_symbols.push(format!("{}: {}", symbol, error));
+            }
+        }
+
+        Ok(IngestSummary {
+            symbols: instruments.len(),
+            rows: total_rows,
+            from_date: from.to_string(),
+            to_date: to.to_string(),
+            failed_symbols,
+        })
+    }
+
+    pub fn check_startup_freshness(&self) -> Result<StartupFreshnessCheck> {
+        let now = chrono::Local::now();
+        let expected_date = self.calendar.expected_latest_tradable_date(now);
+        let latest_db_date = market_store::fetch_latest_daily_bar_date(&self.storage)?;
+        
+        let (has_data, gap_days, auto_ingest_eligible, requires_manual_action, message) = 
+            match (latest_db_date, expected_date) {
+                (None, _) => {
+                    (false, 0, false, true, "数据库中无数据，请手动运行初始化流程".to_string())
+                }
+                (Some(latest), Some(expected)) => {
+                    let gap = (expected - latest).num_days();
+                    if gap <= 0 {
+                        (true, gap, false, false, "数据已是最新".to_string())
+                    } else if gap > 30 {
+                        (true, gap, false, true, format!("数据缺口 {} 天，超过自动补全上限，请手动运行刷新", gap))
+                    } else {
+                        (true, gap, true, false, format!("检测到 {} 天数据缺口，将自动补全", gap))
+                    }
+                }
+                (Some(latest), None) => {
+                    (true, 0, false, false, format!("无法确定期望最新日期，最新数据日期: {}", latest))
+                }
+            };
+        
+        Ok(StartupFreshnessCheck {
+            has_data,
+            latest_db_date,
+            expected_date,
+            gap_days,
+            auto_ingest_eligible,
+            requires_manual_action,
+            message,
+        })
+    }
+
+    pub fn auto_ingest_gap(
+        &self,
+        progress_callback: Option<&dyn Fn(&str)>,
+    ) -> Result<IngestSummary> {
+        let now = chrono::Local::now();
+        let expected_date = self.calendar
+            .expected_latest_tradable_date(now)
+            .ok_or_else(|| anyhow::anyhow!("无法确定期望最新日期"))?;
+        let latest_db_date = market_store::fetch_latest_daily_bar_date(&self.storage)?
+            .ok_or_else(|| anyhow::anyhow!("数据库中无数据，无法自动补全"))?;
+        
+        let gap_days = (expected_date - latest_db_date).num_days();
+        if gap_days <= 0 {
+            anyhow::bail!("数据已是最新，无需补全");
+        }
+        if gap_days > 30 {
+            anyhow::bail!("数据缺口 {} 天超过自动补全上限，请手动操作", gap_days);
+        }
+        
+        let from = latest_db_date + chrono::Duration::days(1);
+        let to = expected_date;
+        
+        self.ingest_daily(from, to, progress_callback)
+    }
+
     pub fn build_refresh_plan(&self, to: NaiveDate) -> Result<RefreshPlan> {
         let latest_daily_date = market_store::fetch_latest_daily_bar_date(&self.storage)?;
 
@@ -1473,18 +797,6 @@ impl AppContext {
             .collect()
     }
 
-    fn summarize_latest_dates(
-        diagnostics: &[ScopedPipelineDiagnostics],
-    ) -> Vec<RefreshLatestDateStatus> {
-        diagnostics
-            .iter()
-            .map(|item| RefreshLatestDateStatus {
-                scope: item.scope.clone(),
-                freshest_market_date: item.diagnostics.freshest_market_date.clone(),
-                dashboard_latest_date: item.diagnostics.dashboard_latest_date.clone(),
-            })
-            .collect()
-    }
 
     pub fn refresh_pipeline(
         &self,
@@ -1501,7 +813,7 @@ impl AppContext {
             }
         };
         let before_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
-        let latest_dates_before = Self::summarize_latest_dates(&before_diagnostics);
+        let latest_dates_before = summarize_latest_dates(&before_diagnostics);
         let plan = self.build_refresh_plan(to)?;
         let refresh_from = NaiveDate::parse_from_str(&plan.refresh_from, "%Y-%m-%d")?;
         let refresh_to = NaiveDate::parse_from_str(&plan.refresh_to, "%Y-%m-%d")?;
@@ -1589,7 +901,7 @@ impl AppContext {
                     blocking.push(message.clone());
                     let after_diagnostics =
                         self.collect_pipeline_diagnostics_for_standard_scopes()?;
-                    let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
+                    let latest_dates_after = summarize_latest_dates(&after_diagnostics);
                     finish_summary!(
                         "cancelled",
                         true,
@@ -1720,7 +1032,7 @@ impl AppContext {
         }
 
         let after_diagnostics = self.collect_pipeline_diagnostics_for_standard_scopes()?;
-        let latest_dates_after = Self::summarize_latest_dates(&after_diagnostics);
+        let latest_dates_after = summarize_latest_dates(&after_diagnostics);
         let before_scope = before_diagnostics
             .iter()
             .find(|item| {
@@ -1912,46 +1224,8 @@ impl AppContext {
         })
     }
 
-    fn series_for_scope(
-        window: &TrackedUniverseWindow,
-        scope: ReportScope,
-    ) -> Vec<TrackedInstrumentSeries> {
-        match scope {
-            ReportScope::Global => window
-                .cn_series
-                .iter()
-                .chain(window.hk_series.iter())
-                .cloned()
-                .collect(),
-            ReportScope::Cn => window.cn_series.clone(),
-            ReportScope::Hk => window.hk_series.clone(),
-        }
-    }
 
-    fn breadth_momentum_score(delta: Option<f64>) -> f64 {
-        match delta {
-            Some(value) if value >= 10.0 => 70.0,
-            Some(value) if value >= 3.0 => 60.0,
-            Some(value) if value <= -10.0 => 25.0,
-            Some(value) if value <= -3.0 => 40.0,
-            Some(_) => 50.0,
-            None => 45.0,
-        }
-    }
 
-    fn environment_label(score: f64) -> &'static str {
-        if score >= 70.0 {
-            "supportive"
-        } else if score >= 55.0 {
-            "constructive"
-        } else if score >= 40.0 {
-            "mixed"
-        } else if score >= 25.0 {
-            "fragile"
-        } else {
-            "stressed"
-        }
-    }
 
     fn build_environment_snapshots(
         &self,
@@ -1968,7 +1242,7 @@ impl AppContext {
         let mut rows = Vec::new();
 
         for scope in [ReportScope::Global, ReportScope::Cn, ReportScope::Hk] {
-            let scoped_series = Self::series_for_scope(&window, scope);
+            let scoped_series = series_for_scope(&window, scope);
             if scoped_series.is_empty() {
                 continue;
             }
@@ -1986,7 +1260,7 @@ impl AppContext {
                 };
                 let metrics =
                     compute_participation_metrics(&scoped_series, date, &window.relevant_dates);
-                let breadth_momentum_score = Self::breadth_momentum_score(metrics.breadth_5d_delta);
+                let breadth_momentum_score = breadth_momentum_score(metrics.breadth_5d_delta);
                 let environment_score = (regime.trend_score * 0.35
                     + metrics.current.breadth_pct * 0.25
                     + breadth_momentum_score * 0.15
@@ -2010,7 +1284,7 @@ impl AppContext {
                     liquidity_proxy_score: metrics.current.liquidity_proxy_score,
                     stress_proxy_score: regime.risk_score,
                     environment_score,
-                    environment_label: Self::environment_label(environment_score).to_string(),
+                    environment_label: environment_label(environment_score).to_string(),
                 });
             }
         }
@@ -2029,26 +1303,42 @@ impl AppContext {
         };
         notify("Starting compute_indicators...");
         let instruments = load_universe(&self.storage.universe_abspath()?)?;
-        let mut total_snapshots = 0usize;
         let mut failed_symbols = Vec::new();
 
+        // 收集所有 bars（串行 I/O）
+        let mut bars_by_symbol = std::collections::HashMap::new();
         for instrument in &instruments {
-            let bars = match market_store::fetch_daily_bars(&self.storage, &instrument.symbol) {
-                Ok(bars) => bars,
+            match market_store::fetch_daily_bars(&self.storage, &instrument.symbol) {
+                Ok(bars) => {
+                    if !bars.is_empty() {
+                        bars_by_symbol.insert(instrument.symbol.clone(), bars);
+                    }
+                }
                 Err(error) => {
                     failed_symbols.push(format!("{}: {}", instrument.symbol, error));
-                    continue;
                 }
-            };
-            let snapshots = build_indicator_snapshots(&bars);
-            total_snapshots += snapshots.len();
+            }
+        }
+
+        // 并行计算 indicators（纯 CPU 计算）
+        let all_snapshots = indicator_engine::build_indicator_snapshots_for_symbols(&bars_by_symbol);
+
+        // 按 symbol 分组，串行插入 ClickHouse（避免并发写入压力）
+        let mut total_snapshots = 0usize;
+        let mut snapshots_by_symbol: std::collections::BTreeMap<String, Vec<core_domain::IndicatorSnapshot>> = std::collections::BTreeMap::new();
+        for snapshot in all_snapshots {
+            snapshots_by_symbol.entry(snapshot.symbol.clone()).or_default().push(snapshot);
+        }
+
+        for (symbol, snapshots) in snapshots_by_symbol {
             if let Err(error) = market_store::insert_indicator_snapshots(
                 &self.storage,
-                &instrument.symbol,
+                &symbol,
                 &snapshots,
             ) {
-                failed_symbols.push(format!("{}: {}", instrument.symbol, error));
+                failed_symbols.push(format!("{}: {}", symbol, error));
             }
+            total_snapshots += snapshots.len();
         }
 
         notify("Finished compute_indicators.");
@@ -2072,6 +1362,33 @@ impl AppContext {
         };
         notify("Starting compute_macro_regime...");
         let mut failed_items = Vec::new();
+
+        // 加载 FRED 配置
+        let fred_config = config_loader::ResolvedFredConfig::resolve()
+            .unwrap_or_else(|_| config_loader::ResolvedFredConfig {
+                enabled: true,
+                base_url: "https://api.stlouisfed.org/fred".to_string(),
+                api_key: None,
+                request_delay_ms: 500,
+                timeout_secs: 30,
+                source: "default".to_string(),
+                config_file: None,
+            });
+
+        if !fred_config.enabled {
+            failed_items.push(
+                "FRED: fred.enabled = false in config/fred.toml; skipping FRED fetch. \
+                 Using existing ClickHouse macro data if available.".to_string()
+            );
+            notify("FRED fetch disabled by config; using persisted data only.");
+        } else if !fred_config.is_valid() {
+            failed_items.push(
+                "FRED: config/fred.toml missing or api_key not set; skipping FRED fetch. \
+                 Create config/fred.toml or set enabled=false to suppress.".to_string()
+            );
+            notify("FRED config incomplete; skipping fetch.");
+        }
+
         let macro_fetch_from = from - Duration::days(550);
         let factor_specs = [
             ("vix", "VIXCLS", true),
@@ -2081,10 +1398,13 @@ impl AppContext {
         ];
 
         let mut factors = Vec::new();
-        for (name, series_id, invert) in factor_specs {
-            match fetch_fred_series(name, series_id, invert, macro_fetch_from, to) {
-                Ok(series) => factors.push(series),
-                Err(error) => failed_items.push(format!("{name}: {}", format_error_chain(&error))),
+        if fred_config.enabled && fred_config.is_valid() {
+            let api_key = fred_config.api_key.as_ref().unwrap().as_str();
+            for (name, series_id, invert) in factor_specs {
+                match fetch_fred_series(name, series_id, invert, macro_fetch_from, to, api_key) {
+                    Ok(series) => factors.push(series),
+                    Err(error) => failed_items.push(format!("{name}: {}", format_error_chain(&error))),
+                }
             }
         }
 
@@ -2191,7 +1511,7 @@ impl AppContext {
             }
         }
 
-        let rows = build_rotation_ranks(&series_by_symbol);
+        let rows = rotation_engine::build_rotation_ranks_parallel(&series_by_symbol);
         if let Err(error) = market_store::insert_rotation_ranks(&self.storage, &rows) {
             failed_symbols.push(format!("rotation_rank: {error}"));
         }
@@ -2407,7 +1727,7 @@ impl AppContext {
             &result.trades,
             &result.equity_curve,
         ) {
-            failed_items.push(format!("backtest_persist: {error}"));
+            failed_items.push(format!("backtest_persist: {}", error));
         }
 
         Ok(BacktestRunSummary {
@@ -2877,8 +2197,16 @@ impl AppContext {
             let has_strategy_state =
                 market_store::fetch_latest_strategy_state_on_or_before(&self.storage, date, scope)?
                     .is_some();
+            let daily_bar_count = market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                &self.storage,
+                "daily_bar",
+                "symbol",
+                &trading_symbols,
+                date,
+            )?;
             if signal_count >= expected_count
                 && rotation_count >= expected_count
+                && daily_bar_count >= expected_count
                 && has_regime
                 && has_environment
                 && has_strategy_state
@@ -2957,53 +2285,103 @@ impl AppContext {
         let mut summaries = Vec::new();
         let mut macro_sources = Vec::new();
 
-        for (factor_name, series_id, invert) in [
-            ("vix", "VIXCLS", true),
-            ("us10y", "DGS10", true),
-            ("dollar_index", "DTWEXBGS", true),
-            ("fed_funds", "DFF", true),
-        ] {
-            match fetch_fred_series_with_status(
-                factor_name,
-                series_id,
-                invert,
-                macro_probe_from,
-                now,
-            ) {
-                Ok(outcome) => {
-                    let status = if outcome.transport == "attohttpc" {
-                        "healthy"
-                    } else {
-                        "review"
+        // 加载 FRED 配置
+        let fred_config = config_loader::ResolvedFredConfig::resolve()
+            .unwrap_or_else(|_| config_loader::ResolvedFredConfig {
+                enabled: true,
+                base_url: "https://api.stlouisfed.org/fred".to_string(),
+                api_key: None,
+                request_delay_ms: 500,
+                timeout_secs: 30,
+                source: "default".to_string(),
+                config_file: None,
+            });
+
+        if fred_config.enabled && fred_config.is_valid() {
+            let api_key = fred_config.api_key.as_ref().unwrap().as_str();
+            for (factor_name, series_id, invert) in [
+                ("vix", "VIXCLS", true),
+                ("us10y", "DGS10", true),
+                ("dollar_index", "DTWEXBGS", true),
+                ("fed_funds", "DFF", true),
+            ] {
+                match fetch_fred_series_with_status(
+                    factor_name,
+                    series_id,
+                    invert,
+                    macro_probe_from,
+                    now,
+                    api_key,
+                ) {
+                    Ok(outcome) => {
+                        let status = if outcome.transport == "attohttpc" {
+                            "healthy"
+                        } else {
+                            "review"
+                        }
+                        .to_string();
+                        let mut notes = Vec::new();
+                        if outcome.transport != "attohttpc" {
+                            notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
+                        }
+                        macro_sources.push(DataHealthMacroSourceSummary {
+                            factor_name: factor_name.to_string(),
+                            source: "FRED".to_string(),
+                            transport: outcome.transport,
+                            rows: outcome.series.observations.len(),
+                            first_date: outcome.series.observations.first().map(|(date, _)| *date),
+                            last_date: outcome.series.observations.last().map(|(date, _)| *date),
+                            status,
+                            notes,
+                        });
                     }
-                    .to_string();
-                    let mut notes = Vec::new();
-                    if outcome.transport != "attohttpc" {
-                        notes.push("宏观因子当前使用兼容性 fallback 获取".to_string());
+                    Err(error) => {
+                        macro_sources.push(DataHealthMacroSourceSummary {
+                            factor_name: factor_name.to_string(),
+                            source: "FRED".to_string(),
+                            transport: "failed".to_string(),
+                            rows: 0,
+                            first_date: None,
+                            last_date: None,
+                            status: "critical".to_string(),
+                            notes: vec![format_error_chain(&error)],
+                        });
                     }
-                    macro_sources.push(DataHealthMacroSourceSummary {
-                        factor_name: factor_name.to_string(),
-                        source: "FRED".to_string(),
-                        transport: outcome.transport,
-                        rows: outcome.series.observations.len(),
-                        first_date: outcome.series.observations.first().map(|(date, _)| *date),
-                        last_date: outcome.series.observations.last().map(|(date, _)| *date),
-                        status,
-                        notes,
-                    });
                 }
-                Err(error) => {
-                    macro_sources.push(DataHealthMacroSourceSummary {
-                        factor_name: factor_name.to_string(),
-                        source: "FRED".to_string(),
-                        transport: "failed".to_string(),
-                        rows: 0,
-                        first_date: None,
-                        last_date: None,
-                        status: "critical".to_string(),
-                        notes: vec![format_error_chain(&error)],
-                    });
-                }
+            }
+        } else if !fred_config.enabled {
+            for factor_name in ["vix", "us10y", "dollar_index", "fed_funds"] {
+                macro_sources.push(DataHealthMacroSourceSummary {
+                    factor_name: factor_name.to_string(),
+                    source: "FRED".to_string(),
+                    transport: "disabled".to_string(),
+                    rows: 0,
+                    first_date: None,
+                    last_date: None,
+                    status: "disabled".to_string(),
+                    notes: vec![
+                        "FRED fetch disabled by config/fred.toml (enabled = false). \
+                         Using existing ClickHouse data if available."
+                            .to_string(),
+                    ],
+                });
+            }
+        } else {
+            for factor_name in ["vix", "us10y", "dollar_index", "fed_funds"] {
+                macro_sources.push(DataHealthMacroSourceSummary {
+                    factor_name: factor_name.to_string(),
+                    source: "FRED".to_string(),
+                    transport: "unconfigured".to_string(),
+                    rows: 0,
+                    first_date: None,
+                    last_date: None,
+                    status: "disabled".to_string(),
+                    notes: vec![
+                        "FRED config missing or api_key not set. \
+                         Create config/fred.toml or set enabled=false to suppress."
+                            .to_string(),
+                    ],
+                });
             }
         }
 
@@ -3255,102 +2633,6 @@ impl AppContext {
     }
 
     /// Render LLM analysis JSON as markdown report.
-    fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
-        let mut md = String::new();
-
-        // Title
-        let skill = analysis["skill"].as_str().unwrap_or("unknown");
-        let scope = analysis["scope"].as_str().unwrap_or("global");
-        md.push_str(&format!("# LLM Analysis: {}\n\n", skill));
-        md.push_str(&format!("**Scope**: {}\n\n", scope));
-
-        // Triggered status
-        let triggered = analysis["triggered"].as_bool().unwrap_or(false);
-        md.push_str(&format!(
-            "**Triggered**: {}\n\n",
-            if triggered { "Yes" } else { "No" }
-        ));
-
-        // Placeholder warning
-        if analysis["placeholder"].as_bool().unwrap_or(false) {
-            md.push_str(
-                "> **Warning**: This analysis was generated in placeholder mode. \
-                 No real LLM provider was configured.\n\n",
-            );
-        }
-
-        // Regime Analysis
-        if let Some(regime) = analysis["regime_analysis"].as_object() {
-            md.push_str("## Regime Analysis\n\n");
-            if let Some(state) = regime.get("current_state").and_then(|v| v.as_str()) {
-                md.push_str(&format!("- **Current State**: {}\n", state));
-            }
-            if let Some(transition) = regime.get("transition").and_then(|v| v.as_f64()) {
-                md.push_str(&format!("- **Transition Score**: {:.2}\n", transition));
-            }
-            if let Some(confidence) = regime.get("confidence").and_then(|v| v.as_f64()) {
-                md.push_str(&format!("- **Confidence**: {:.1}%\n", confidence * 100.0));
-            }
-            if let Some(drivers) = regime.get("key_drivers").and_then(|v| v.as_array()) {
-                if !drivers.is_empty() {
-                    md.push_str("- **Key Drivers**:\n");
-                    for d in drivers {
-                        if let Some(s) = d.as_str() {
-                            md.push_str(&format!("  - {}\n", s));
-                        }
-                    }
-                }
-            }
-            if let Some(risk) = regime.get("risk_assessment") {
-                if let Some(level) = risk.get("level").and_then(|v| v.as_str()) {
-                    md.push_str(&format!("- **Risk Level**: {}\n", level));
-                }
-                if let Some(factors) = risk.get("factors").and_then(|v| v.as_array()) {
-                    if !factors.is_empty() {
-                        md.push_str("- **Risk Factors**:\n");
-                        for f in factors {
-                            if let Some(s) = f.as_str() {
-                                md.push_str(&format!("  - {}\n", s));
-                            }
-                        }
-                    }
-                }
-                if let Some(rec) = risk.get("recommendation").and_then(|v| v.as_str()) {
-                    md.push_str(&format!("- **Recommendation**: {}\n", rec));
-                }
-            }
-            md.push('\n');
-        }
-
-        // LLM Analysis
-        if let Some(llm) = analysis["llm_analysis"].as_str() {
-            if !llm.is_empty() {
-                md.push_str("## LLM Analysis\n\n");
-                md.push_str(llm);
-                md.push_str("\n\n");
-            }
-        }
-
-        // Token Usage
-        if let Some(tokens) = analysis["token_usage"].as_object() {
-            md.push_str("## Token Usage\n\n");
-            if let Some(input) = tokens.get("system_tokens").and_then(|v| v.as_u64()) {
-                md.push_str(&format!("- **System Tokens**: {}\n", input));
-            }
-            if let Some(input) = tokens.get("context_tokens").and_then(|v| v.as_u64()) {
-                md.push_str(&format!("- **Context Tokens**: {}\n", input));
-            }
-            if let Some(input) = tokens.get("reasoning_tokens").and_then(|v| v.as_u64()) {
-                md.push_str(&format!("- **Reasoning Tokens**: {}\n", input));
-            }
-            if let Some(output) = tokens.get("output_tokens").and_then(|v| v.as_u64()) {
-                md.push_str(&format!("- **Output Tokens**: {}\n", output));
-            }
-            md.push('\n');
-        }
-
-        md
-    }
 
     /// Export LLM analysis result as markdown report.
     pub fn export_llm_analysis(
@@ -3359,7 +2641,7 @@ impl AppContext {
         date: NaiveDate,
         analysis: &serde_json::Value,
     ) -> Result<ReportSummary> {
-        let md = Self::render_llm_analysis_markdown(analysis);
+        let md = render_llm_analysis_markdown(analysis);
         let root = StorageConfig::project_root()?;
         let report_dir = root.join("reports");
         fs::create_dir_all(&report_dir).with_context(|| {
@@ -3683,6 +2965,32 @@ impl AppContext {
         self.get_resolved_llm_config(None)
     }
 
+    /// 设置 FRED 配置（写入 TOML 文件）
+    pub fn set_fred_config(&self, enabled: bool, api_key: Option<&str>) -> Result<()> {
+        let toml_path = config_loader::default_fred_config_path()?;
+        let mut toml_config = if toml_path.exists() {
+            config_loader::read_or_default_fred_config(&toml_path)
+        } else {
+            FredFileConfig::default()
+        };
+        toml_config.fred.enabled = enabled;
+        if let Some(key) = api_key {
+            toml_config.fred.auth.api_key = Some(key.to_string());
+        }
+        config_loader::write_fred_config_to_file(&toml_path, &toml_config)?;
+        Ok(())
+    }
+
+    /// 显示 FRED 配置来源信息
+    pub fn show_fred_config(&self) -> Result<config_loader::ResolvedFredConfig> {
+        config_loader::ResolvedFredConfig::resolve()
+    }
+
+    /// 验证 FRED 配置文件
+    pub fn validate_fred_config(&self) -> config_loader::FredConfigValidation {
+        config_loader::validate_fred_config()
+    }
+
     /// 验证 LLM 配置文件
     pub fn validate_llm_config(&self) -> config_loader::ConfigValidation {
         config_loader::validate_config()
@@ -3735,60 +3043,6 @@ impl AppContext {
         ))
     }
 
-    async fn call_llm_api(
-        config: LlmConfig,
-        api_key: String,
-        system_prompt: &'static str,
-        user_prompt: String,
-        temperature: f64,
-        max_tokens: usize,
-        seed: Option<u64>,
-    ) -> Result<String> {
-        let openai_config = async_openai::config::OpenAIConfig::new()
-            .with_api_key(api_key)
-            .with_api_base(config.base_url);
-        let client = async_openai::Client::with_config(openai_config);
-        let mut request_builder = async_openai::types::chat::CreateChatCompletionRequestArgs::default();
-        request_builder
-            .model(&config.model)
-            .temperature(temperature as f32)
-            .max_tokens(max_tokens as u32)
-            .messages([
-                async_openai::types::chat::ChatCompletionRequestSystemMessageArgs::default()
-                    .content(system_prompt)
-                    .build()
-                    .map_err(|e| anyhow::anyhow!("failed to build system message: {e}"))?
-                    .into(),
-                async_openai::types::chat::ChatCompletionRequestUserMessageArgs::default()
-                    .content(&*user_prompt)
-                    .build()
-                    .map_err(|e| anyhow::anyhow!("failed to build user message: {e}"))?
-                    .into(),
-            ]);
-        if let Some(seed_val) = seed {
-            request_builder.seed(seed_val as i64);
-        }
-        let request = request_builder
-            .build()
-            .map_err(|e| anyhow::anyhow!("failed to build chat completion request: {e}"))?;
-
-        let response = tokio::time::timeout(
-            std::time::Duration::from_secs(config.timeout_secs),
-            client.chat().create(request),
-        )
-        .await
-        .map_err(|_| anyhow::anyhow!("LLM API call timed out after {}s", config.timeout_secs))?
-        .map_err(|e| anyhow::anyhow!("LLM API call failed: {e}"))?;
-
-        let content = response
-            .choices
-            .into_iter()
-            .next()
-            .and_then(|choice| choice.message.content)
-            .unwrap_or_default();
-
-        Ok(content)
-    }
 
     pub fn analyze_report_with_llm(
         &self,
@@ -3831,7 +3085,7 @@ impl AppContext {
                     s.spawn(|| {
                         let runtime = tokio::runtime::Runtime::new()
                             .context("failed to create tokio runtime")?;
-                        runtime.block_on(Self::call_llm_api(
+                        runtime.block_on(call_llm_api(
                             config, api_key, system_prompt, user_prompt,
                             temperature, max_tokens, seed,
                         ))
@@ -3843,7 +3097,7 @@ impl AppContext {
             Err(_) => {
                 let runtime = tokio::runtime::Runtime::new()
                     .context("failed to create tokio runtime")?;
-                runtime.block_on(Self::call_llm_api(
+                runtime.block_on(call_llm_api(
                     config, api_key, system_prompt, user_prompt,
                     temperature, max_tokens, seed,
                 ))?
@@ -3903,64 +3157,39 @@ impl AppContext {
             .collect())
     }
 
-    /// Analyze market using a specific skill.
+    /// Research Layer — 只读叙事层分析。
     ///
-    /// Combines ResearchContext + SkillRouter + SkillExecutor into a
-    /// complete pipeline: build context → route skills → execute skill.
-    pub async fn analyze_with_skill(
+    ///  governance:
+    ///  - 只解释、质疑、提供上下文
+    ///  - 禁止创建信号、评分、排序、覆盖决策
+    ///
+    /// action 必须是以下之一：
+    /// - "market_story"
+    /// - "explain_decision"
+    /// - "preclose_review"
+    /// - "risk_view"
+    /// - "devils_advocate"
+    pub async fn analyze_with_action(
         &self,
-        skill_name: &str,
+        action: &str,
         scope: ReportScope,
-        profile: Option<&research_skills::AgentProfile>,
-        inference_override: Option<research_skills::InferenceConfig>,
     ) -> anyhow::Result<serde_json::Value> {
-        // 1. Build ResearchContext
-        let context = self.research_context(scope)?;
-
-        // 2. Load skill from registry
-        let root = StorageConfig::project_root()?;
-        let skill_dir = root.join("crates/research-skills/skills");
-        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
-
-        let skill = registry
-            .get(skill_name)
-            .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
-
-        // 3. Evaluate trigger
-        let should_run = research_skills::router::SkillRouter::evaluate_trigger(
-            &skill.definition.trigger,
-            &context,
-        );
-
-        if !should_run {
-            return Ok(serde_json::json!({
-                "skill": skill_name,
-                "triggered": false,
-                "reason": "Trigger conditions not met",
-                "context": context
-            }));
-        }
-
-        // 4. Run state machine for regime analysis (deterministic)
-        let current_state = research_skills::RegimeStateMachine::current_state(&context);
-        let transition =
-            research_skills::RegimeStateMachine::detect_transition(current_state, &context);
-        let confidence = research_skills::RegimeStateMachine::calculate_confidence(&context);
-
-        // 5. Create executor and run LLM pipeline
-        let budget = research_skills::token_budget::TokenBudget::default();
-        let resolved = self.get_resolved_llm_config(None)?;
-        let inference = if let Some(inference) = inference_override {
-            inference
-        } else {
-            research_skills::InferenceConfig {
-                temperature: resolved.temperature,
-                seed: resolved.seed,
-                max_tokens: resolved.max_tokens,
-            }
+        // 1. Build snapshot context
+        let snapshot = self.dashboard_snapshot_with_scope(None, scope)?;
+        let Some(snapshot) = snapshot else {
+            return Err(anyhow::anyhow!("No dashboard snapshot available for scope {:?}", scope));
         };
-        let executor = research_skills::executor::SkillExecutor::new(budget, inference);
 
+        // 2. Build prompt
+        let (system_prompt, user_prompt) = research_skills::build_prompt(action, &snapshot)?;
+
+        // 3. Call LLM
+        let resolved = self.get_resolved_llm_config(None)?;
+        let inference = research_skills::InferenceConfig {
+            temperature: resolved.temperature,
+            seed: resolved.seed,
+            max_tokens: resolved.max_tokens,
+        };
         let config = self.get_llm_config()?;
         let api_key = if let Some(ref key) = resolved.api_key {
             if !key.is_empty() {
@@ -3971,187 +3200,150 @@ impl AppContext {
         } else {
             self.get_llm_api_key()?
         };
+
         let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
-            let provider = research_skills::OpenAiProvider::from_config(&config, key);
-            (
-                executor.execute(skill, &context, &provider, profile).await?,
-                false,
+            let _provider = research_skills::OpenAiProvider::from_config(&config, key);
+            let call_config = inference.to_call_config();
+            let response = llm::call_llm_api(
+                config.clone(),
+                key.clone(),
+                system_prompt,
+                user_prompt,
+                call_config.temperature as f64,
+                call_config.max_tokens,
+                call_config.seed,
             )
+            .await?;
+            (Some(response), false)
         } else {
-            let provider = PlaceholderProvider;
-            (
-                executor.execute(skill, &context, &provider, profile).await?,
-                true,
-            )
+            (Some("LLM 未配置，这是占位符输出。请配置 API Key 以获取真实分析。".to_string()), true)
         };
 
-        // 6. Compose ResearchSummary from LLM output (Machine Layer)
-        let research_summary = llm_output.response.as_ref().and_then(|response_text| {
-            serde_json::from_str::<serde_json::Value>(response_text).ok().and_then(|parsed| {
-                let registry = research_renderer::ComposerRegistry::default();
-                registry.compose(skill_name, &parsed).ok().map(|summary| {
-                    serde_json::to_value(summary).unwrap_or(serde_json::Value::Null)
-                })
-            })
-        });
-
-        // 7. Merge deterministic + LLM results
+        // 4. Return simple markdown result
         let result = serde_json::json!({
-            "skill": skill_name,
-            "triggered": true,
+            "action": action,
             "scope": scope.as_str(),
             "placeholder": is_placeholder,
-            "regime_analysis": {
-                "current_state": format!("{:?}", current_state),
-                "transition": transition,
-                "confidence": confidence,
-                "key_drivers": self.extract_key_drivers(&context),
-                "risk_assessment": {
-                    "level": self.assess_risk_level(&context),
-                    "factors": self.identify_risk_factors(&context),
-                    "recommendation": self.generate_recommendation(&context)
-                }
-            },
-            "llm_analysis": llm_output.response,
-            "research_summary": research_summary,
-            "token_usage": llm_output.token_usage,
-            "context": context
+            "markdown": llm_output.unwrap_or_default(),
         });
 
         Ok(result)
     }
 
-    /// Evaluate all skill triggers against the current research context.
-    /// Returns a list of skills with their trigger status and weights.
-    pub fn evaluate_skill_triggers(
+    /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)
+    ///
+    /// Candidate filter: signal >= Buy AND state != NO_TRADE
+    /// Real-time data: Tencent API snapshot
+    /// Output: ExecutionDecision list (BuyNow / Wait / NoChase / Reduce / Skip)
+    pub fn analyze_preclose(
         &self,
         scope: ReportScope,
-    ) -> Result<Vec<core_domain::SkillTriggerResult>> {
-        let context = self.research_context(scope)?;
-        let root = StorageConfig::project_root()?;
-        let skill_dir = root.join("crates/research-skills/skills");
-        let registry = research_skills::registry::SkillRegistry::new(skill_dir)?;
+    ) -> Result<Vec<execution_engine::ExecutionDecision>> {
+        use execution_engine::types::{ExecutionDecision, SkipReason};
+        use core_domain::{SignalLabel, StrategyState};
 
-        let mut results = Vec::new();
-        for name in registry.list() {
-            if let Some(skill) = registry.get(name) {
-                let triggered = research_skills::router::SkillRouter::evaluate_trigger(
-                    &skill.definition.trigger,
-                    &context,
-                );
-                let weight = research_skills::router::SkillRouter::calculate_weight(
-                    &skill.definition.trigger,
-                );
-                results.push(core_domain::SkillTriggerResult {
-                    name: skill.definition.name.clone(),
-                    description: skill.definition.description.clone(),
-                    triggered,
-                    weight,
-                });
+        // 1. Determine latest available date for this scope
+        let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+        let Some(latest_date) = available_dates.first().copied() else {
+            return Ok(vec![]);
+        };
+
+        // 2. Load strategy state (hard gate)
+        let strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
+            &self.storage,
+            latest_date,
+            scope,
+        )?;
+
+        if let Some(ref state) = strategy_state {
+            if state.state == StrategyState::NoTrade {
+                // All candidates skip due to state gate
+                return Ok(vec![]);
             }
         }
 
-        // Sort by weight descending, triggered first
-        results.sort_by(|a, b| {
-            let triggered_cmp = b.triggered.cmp(&a.triggered);
-            if triggered_cmp != std::cmp::Ordering::Equal {
-                return triggered_cmp;
+        // 3. Load signals for the latest date
+        let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+            &self.storage,
+            latest_date,
+            scope,
+        )?;
+
+        // 4. Filter candidates: signal >= Buy
+        let candidates: Vec<_> = signals
+            .into_iter()
+            .filter(|s| {
+                matches!(
+                    s.signal_label,
+                    SignalLabel::StrongBuy | SignalLabel::Buy
+                )
+            })
+            .collect();
+
+        if candidates.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 5. Build symbol list for fetching
+        let symbols: Vec<String> = candidates.iter().map(|s| s.symbol.clone()).collect();
+
+        // 6. Fetch MA10 and volume MA20 from indicators for enrichment
+        let mut ma10_map: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+        let mut vol_ma20_map: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+
+        for symbol in &symbols {
+            if let Ok(indicators) = market_store::fetch_indicator_snapshots(
+                &self.storage,
+                symbol,
+            ) {
+                // Get the latest indicator (last in sorted list)
+                if let Some(latest) = indicators.last() {
+                    if let Some(ma10) = latest.ma10 {
+                        ma10_map.insert(symbol.clone(), ma10);
+                    }
+                    if let Some(vol_ma20) = latest.vol_ma20 {
+                        vol_ma20_map.insert(symbol.clone(), vol_ma20);
+                    }
+                }
             }
-            b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        }
 
-        Ok(results)
+        // 7. Fetch real-time snapshots from Tencent API
+        let mut snapshots = match execution_engine::fetcher::fetch_tencent_snapshots(&symbols) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Tencent snapshot fetch failed: {}", e);
+                // Return Skip for all candidates
+                return Ok(candidates
+                    .iter()
+                    .map(|c| ExecutionDecision::skipped(c.symbol.clone(), SkipReason::DataUnavailable))
+                    .collect());
+            }
+        };
+
+        // 8. Enrich snapshots with MA10 (used as proxy for MA5 distance) and volume ratio
+        execution_engine::fetcher::enrich_snapshots(&mut snapshots, &ma10_map, &vol_ma20_map);
+
+        // 9. Run engine analysis
+        let decisions = execution_engine::engine::analyze_batch(&snapshots);
+
+        // 10. Augment decisions with Skip for candidates that had no snapshot data
+        let mut all_decisions: Vec<ExecutionDecision> = decisions;
+        for candidate in candidates {
+            if !all_decisions.iter().any(|d| d.symbol == candidate.symbol) {
+                all_decisions.push(ExecutionDecision::skipped(
+                    candidate.symbol.clone(),
+                    SkipReason::DataUnavailable,
+                ));
+            }
+        }
+
+        // Sort by symbol for deterministic output
+        all_decisions.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+
+        Ok(all_decisions)
     }
 
-    /// Extract key drivers from context
-    fn extract_key_drivers(&self, context: &research_context::ResearchContext) -> Vec<String> {
-        let mut drivers = Vec::new();
-
-        if context.breadth.breadth_pct < 30.0 {
-            drivers.push("breadth_collapse".to_string());
-        }
-        if context.breadth.breadth_delta < -10.0 {
-            drivers.push("breadth_deteriorating".to_string());
-        }
-        if matches!(
-            context.liquidity.pressure,
-            research_context::LiquidityPressure::Critical
-        ) {
-            drivers.push("liquidity_critical".to_string());
-        }
-        if context.regime.macro_stale_days > 3 {
-            drivers.push("macro_stale".to_string());
-        }
-
-        drivers
-    }
-
-    /// Assess risk level from context
-    fn assess_risk_level(&self, context: &research_context::ResearchContext) -> String {
-        if context.breadth.breadth_pct < 20.0
-            || matches!(
-                context.liquidity.pressure,
-                research_context::LiquidityPressure::Critical
-            )
-        {
-            "critical".to_string()
-        } else if context.breadth.breadth_pct < 30.0
-            || matches!(
-                context.liquidity.pressure,
-                research_context::LiquidityPressure::High
-            )
-        {
-            "high".to_string()
-        } else if context.breadth.breadth_pct < 50.0 {
-            "medium".to_string()
-        } else {
-            "low".to_string()
-        }
-    }
-
-    /// Identify risk factors
-    fn identify_risk_factors(
-        &self,
-        context: &research_context::ResearchContext,
-    ) -> Vec<String> {
-        let mut factors = Vec::new();
-
-        if context.breadth.breadth_pct < 30.0 {
-            factors.push("breadth_below_30".to_string());
-        }
-        if context.breadth.breadth_pct < 20.0 {
-            factors.push("breadth_extreme_collapse".to_string());
-        }
-        if matches!(
-            context.liquidity.pressure,
-            research_context::LiquidityPressure::Critical
-        ) {
-            factors.push("liquidity_critical".to_string());
-        }
-        if context.regime.macro_stale_days > 5 {
-            factors.push("macro_severely_stale".to_string());
-        }
-
-        factors
-    }
-
-    /// Generate recommendation
-    fn generate_recommendation(&self, context: &research_context::ResearchContext) -> String {
-        if context.breadth.breadth_pct < 20.0 {
-            "exit".to_string()
-        } else if context.breadth.breadth_pct < 30.0
-            || matches!(
-                context.liquidity.pressure,
-                research_context::LiquidityPressure::Critical
-            )
-        {
-            "reduce_exposure".to_string()
-        } else if context.breadth.breadth_pct < 50.0 {
-            "increase_quality".to_string()
-        } else {
-            "maintain".to_string()
-        }
-    }
 }
 
 #[cfg(test)]
@@ -4854,18 +4046,18 @@ mod tests {
 
     #[test]
     fn extract_key_drivers_detects_breadth_collapse() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(25.0, -5.0, research_context::LiquidityPressure::Moderate, 1);
-        let drivers = ctx.extract_key_drivers(&context);
+        let drivers = extract_key_drivers(&context);
         assert!(drivers.contains(&"breadth_collapse".to_string()));
         assert!(!drivers.contains(&"breadth_deteriorating".to_string()));
     }
 
     #[test]
     fn extract_key_drivers_detects_deteriorating_and_liquidity_critical() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(40.0, -15.0, research_context::LiquidityPressure::Critical, 5);
-        let drivers = ctx.extract_key_drivers(&context);
+        let drivers = extract_key_drivers(&context);
         assert!(drivers.contains(&"breadth_deteriorating".to_string()));
         assert!(drivers.contains(&"liquidity_critical".to_string()));
         assert!(drivers.contains(&"macro_stale".to_string()));
@@ -4873,68 +4065,68 @@ mod tests {
 
     #[test]
     fn assess_risk_level_critical_when_breadth_below_20() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.assess_risk_level(&context), "critical");
+        assert_eq!(assess_risk_level(&context), "critical");
     }
 
     #[test]
     fn assess_risk_level_high_when_liquidity_critical() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 0);
-        assert_eq!(ctx.assess_risk_level(&context), "critical");
+        assert_eq!(assess_risk_level(&context), "critical");
     }
 
     #[test]
     fn assess_risk_level_medium_when_breadth_between_30_and_50() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(35.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.assess_risk_level(&context), "medium");
+        assert_eq!(assess_risk_level(&context), "medium");
     }
 
     #[test]
     fn assess_risk_level_low_when_breadth_above_50() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.assess_risk_level(&context), "low");
+        assert_eq!(assess_risk_level(&context), "low");
     }
 
     #[test]
     fn identify_risk_factors_detects_extreme_collapse() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        let factors = ctx.identify_risk_factors(&context);
+        let factors = identify_risk_factors(&context);
         assert!(factors.contains(&"breadth_below_30".to_string()));
         assert!(factors.contains(&"breadth_extreme_collapse".to_string()));
     }
 
     #[test]
     fn identify_risk_factors_detects_liquidity_and_macro_stale() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 10);
-        let factors = ctx.identify_risk_factors(&context);
+        let factors = identify_risk_factors(&context);
         assert!(factors.contains(&"liquidity_critical".to_string()));
         assert!(factors.contains(&"macro_severely_stale".to_string()));
     }
 
     #[test]
     fn generate_recommendation_exit_when_breadth_below_20() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.generate_recommendation(&context), "exit");
+        assert_eq!(generate_recommendation(&context), "exit");
     }
 
     #[test]
     fn generate_recommendation_reduce_exposure_when_breadth_below_30() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(25.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.generate_recommendation(&context), "reduce_exposure");
+        assert_eq!(generate_recommendation(&context), "reduce_exposure");
     }
 
     #[test]
     fn generate_recommendation_maintain_when_breadth_above_50() {
-        let ctx = AppContext::new(StorageConfig::default());
+        let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
-        assert_eq!(ctx.generate_recommendation(&context), "maintain");
+        assert_eq!(generate_recommendation(&context), "maintain");
     }
 }

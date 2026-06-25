@@ -54,6 +54,7 @@ defineProps({
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+  font-family: var(--font-mono);
 }
 
 .metric-card__meta {

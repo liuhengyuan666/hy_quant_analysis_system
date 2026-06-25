@@ -164,7 +164,7 @@
       "category": "BROAD",
       "eastmoney_secid": "0.159915",
       "tencent_symbol": "sz159915",
-      "enabled": true
+      "enabled": false
     },
     {
       "symbol": "510300",
@@ -175,7 +175,7 @@
       "category": "BROAD",
       "eastmoney_secid": "1.510300",
       "tencent_symbol": "sh510300",
-      "enabled": true
+      "enabled": false
     },
     {
       "symbol": "512000",
@@ -219,7 +219,7 @@
       "category": "OVERSEAS_LINK",
       "eastmoney_secid": "1.513130",
       "tencent_symbol": "sh513130",
-      "enabled": true
+      "enabled": false
     },
     {
       "symbol": "515070",
@@ -241,6 +241,94 @@
       "category": "INDUSTRY",
       "eastmoney_secid": "1.515880",
       "tencent_symbol": "sh515880",
+      "enabled": true
+    },
+    {
+      "symbol": "000510",
+      "name": "中证A500",
+      "display_symbol": "1A0510",
+      "instrument_type": "INDEX",
+      "market": "CN",
+      "category": "BROAD",
+      "eastmoney_secid": "1.000510",
+      "tencent_symbol": "sh000510",
+      "enabled": true
+    },
+    {
+      "symbol": "512480",
+      "name": "半导体ETF",
+      "display_symbol": "E512480",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.512480",
+      "tencent_symbol": "sh512480",
+      "enabled": true
+    },
+    {
+      "symbol": "562500",
+      "name": "机器人ETF",
+      "display_symbol": "E562500",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "THEME",
+      "eastmoney_secid": "1.562500",
+      "tencent_symbol": "sh562500",
+      "enabled": true
+    },
+    {
+      "symbol": "159995",
+      "name": "芯片ETF",
+      "display_symbol": "E159995",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "0.159995",
+      "tencent_symbol": "sz159995",
+      "enabled": true
+    },
+    {
+      "symbol": "513050",
+      "name": "中概互联网ETF",
+      "display_symbol": "E513050",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "OVERSEAS_LINK",
+      "eastmoney_secid": "1.513050",
+      "tencent_symbol": "sh513050",
+      "enabled": true
+    },
+    {
+      "symbol": "515790",
+      "name": "光伏ETF",
+      "display_symbol": "E515790",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.515790",
+      "tencent_symbol": "sh515790",
+      "enabled": true
+    },
+    {
+      "symbol": "000922",
+      "name": "中证红利",
+      "display_symbol": "1A0922",
+      "instrument_type": "INDEX",
+      "market": "CN",
+      "category": "THEME",
+      "eastmoney_secid": "1.000922",
+      "tencent_symbol": "sh000922",
+      "enabled": true
+    },
+    {
+      "symbol": "516150",
+      "name": "嘉实中证稀土产业ETF",
+      "display_symbol": "E516150",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.516150",
+      "tencent_symbol": "sh516150",
       "enabled": true
     }
   ]

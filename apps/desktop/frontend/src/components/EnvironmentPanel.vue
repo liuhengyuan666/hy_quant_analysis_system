@@ -24,6 +24,12 @@ const scores = computed(() => [
   ['environment.liquidityProxy', environment.value?.liquidity_proxy_score],
   ['environment.stressProxy', environment.value?.stress_proxy_score],
 ]);
+
+function scoreBarClass(value) {
+  if (value >= 80) return 'score-bar__fill--high';
+  if (value <= 30) return 'score-bar__fill--low';
+  return '';
+}
 </script>
 
 <template>
@@ -81,7 +87,7 @@ const scores = computed(() => [
             <strong>{{ formatNumber(value, 1) }}</strong>
           </div>
           <div class="score-bar">
-            <span class="score-bar__fill" :style="{ width: `${clampScore(value)}%` }"></span>
+            <span class="score-bar__fill" :class="scoreBarClass(value)" :style="{ width: `${clampScore(value)}%` }"></span>
           </div>
         </div>
       </div>
@@ -158,7 +164,7 @@ const scores = computed(() => [
 }
 
 .score-bar {
-  height: 6px;
+  height: 3px;
   background: var(--score-bar-bg);
   border-radius: var(--space-1);
   overflow: hidden;
@@ -170,6 +176,17 @@ const scores = computed(() => [
   background: var(--accent-primary);
   border-radius: var(--space-1);
   transition: width 0.3s ease;
+  opacity: 0.6;
+}
+
+.score-bar__fill--high {
+  background: var(--tone-positive);
+  opacity: 1;
+}
+
+.score-bar__fill--low {
+  background: var(--tone-negative);
+  opacity: 1;
 }
 
 .pill {

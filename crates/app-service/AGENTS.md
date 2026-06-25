@@ -32,7 +32,7 @@ Orchestration facade for the entire analysis chain. Highest-coupling crate in th
 - Do **not** grow `AppContext` blindly; if a new vertical becomes large, extract a focused service/module.
 
 ## NOTES
-- `src/lib.rs` is already monolithic; prefer internal helper extraction before adding more long methods.
+- `src/lib.rs` is 4,083 lines of AppContext orchestration; 7 helper modules (core, trust, breadth, dashboard, llm, sync, config_loader) have been extracted. Prefer further extraction before adding more long methods.
 - Timing data on `DashboardSnapshot.load_metrics` is now the first place to check when dashboard performance regresses.
 - `export_data_health_report` now uses the freshest checked market date for artifact naming; keep that aligned with health semantics.
 - Scoped reports now read scoped regime + scoped environment. Strategy/signal/backtest computations are also scope-aware, with explicit provenance fields (analysis_scope, regime_basis_scope) in the data contract.

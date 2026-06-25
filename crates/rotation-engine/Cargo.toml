@@ -9,3 +9,4 @@ authors.workspace = true
 chrono.workspace = true
 core-domain = { path = "../core-domain" }
 serde.workspace = true
+rayon.workspace = true

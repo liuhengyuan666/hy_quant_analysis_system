@@ -226,7 +226,8 @@ struct SlopeStats {
     std: f64,
     p05: f64,
     p25: f64,
-    p50: f64,
+    #[allow(dead_code)]
+    p50: f64, // median slope — part of complete percentile distribution; unused by current trend method but retained for symmetry and future diagnostics
     p75: f64,
     p95: f64,
 }
@@ -315,20 +316,6 @@ fn extract_trend_with_method(
         momentum_strength,
         trend_consistency,
     }
-}
-
-fn classify_trend_direction(
-    close: f64,
-    ma: Option<f64>,
-    ma_slope: f64,
-) -> TrendDirection {
-    classify_trend_direction_with_method(
-        close,
-        ma,
-        ma_slope,
-        TrendDirectionMethod::Baseline,
-        &SlopeStats::from_slice(&[]),
-    )
 }
 
 fn classify_trend_direction_with_method(

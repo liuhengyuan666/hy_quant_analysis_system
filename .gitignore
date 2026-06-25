@@ -15,6 +15,9 @@
 config/llm.toml
 config/llm.*.toml
 !config/llm.toml.example
+config/fred.toml
+config/fred.*.toml
+!config/fred.toml.example
 
 # Reports / generated outputs
 /reports/*.md
@@ -28,3 +31,18 @@ Thumbs.db
 # Misc
 *.log
 /.sisyphus/notepads/
+
+# Temporary analysis artifacts
+tmp_*.py
+tmp_*.csv
+tmp_*.sql
+tmp_*.json
+audit_result.json
+
+# Session artifacts
+.opencode/
+.memguard/backups/
+.omo/run-continuation/
+
+# Reports directory (generated)
+/reports/

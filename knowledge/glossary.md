@@ -23,7 +23,9 @@
 | Tauri | Tauri Framework | Rust编写的桌面应用框架 | 桌面端域 |
 | ClickHouse | ClickHouse DB | 分析型时序数据库 | 数据存储域 |
 | SQLite | SQLite DB | 本地轻状态数据库 | 数据存储域 |
-| FRED | Federal Reserve Economic Data | 美联储经济数据，宏观因子来源 | 数据获取域 |
+| FRED API | FRED API | St. Louis Fed API (`api.stlouisfed.org/fred`)，用于获取宏观因子数据 | 数据获取域 |
+| FRED Config | FRED Configuration | `config/fred.toml` 中的 FRED 获取配置，包含 `enabled` 开关和 `api_key` | 配置域 |
+| TOML Config | TOML Configuration | 系统配置管理模式（LLM/FRED 等），文件位于 `config/*.toml`，支持环境变量插值 | 配置域 |
 | VIX | CBOE Volatility Index | 波动率指数，宏观因子之一 | 宏观因子域 |
 | NFCI | National Financial Conditions Index | 国家金融状况指数 | 宏观因子域 |
 | confirmation_days | Persistence Filter Days | Regime状态确认天数，当前production=1 | 宏观因子域 |
@@ -52,9 +54,30 @@
 | Reactive Store | Vue Reactive Store | Vue 3响应式状态存储 | 前端域 |
 | Event Bridge | Tauri Event Bridge | Tauri前后端事件桥接 | 前端域 |
 | CSS Bridge | CSS Variable Bridge | CSS变量桥接（Plain JS与Vue共享样式） | 前端域 |
-| Schema Evolution | Schema Evolution | 数据结构演进策略（serde(default)兼容） | 架构域 |
+| Dashboard Bundle | Dashboard Bundle | 启动和scope reloads使用的数据聚合路径 | 报告与展示域 |
+| Dashboard Snapshot | Dashboard Snapshot | 历史日期变化使用的数据快照路径 | 报告与展示域 |
+| Freshness | Data Freshness | 数据新鲜度，衡量数据是否及时更新 | 数据质量域 |
+| Completeness | Data Completeness | 数据完整性，衡量最新日样本是否全量 | 数据质量域 |
+| Provenance | Data Provenance | 数据来源溯源，记录数据的生成路径和依赖 | 数据质量域 |
+| Repair Window | Repair Window | 刷新管线中的自动修复窗口，用于修复被gate卡住的较早日期 | 数据流域 |
+| Vite | Vite Build Tool | 前端构建工具，用于Vue 3前端打包 | 前端域 |
 | Superseded | Superseded ADR/Task | 被取代的ADR/任务（不可恢复终端状态） | 项目管理域 |
 | Frozen | Frozen Task | 冻结任务（等待前置条件） | 项目管理域 |
 | Gated | Gated Task | 门控任务（依赖其他任务完成） | 项目管理域 |
 | P0/P1/P2 | Priority Level | 优先级（P0最高，P2最低） | 项目管理域 |
 | MVP | Minimum Viable Product | 最小可行产品 | 项目管理域 |
+| **Execution Layer** | Execution Layer | 执行层（V5 新增），基于 Pattern Library 的收盘前执行过滤器，只决定执行时机，不创建投资想法 | 执行域 |
+| **Pattern Library** | Pattern Library | 经验现象库，将市场观察现象（price action, volume, position）映射到执行指引 | 执行域 |
+| **ExecutionState** | Execution State | 执行状态（BuyNow/Wait/NoChase/Reduce/Skip） | 执行域 |
+| **ReasonTag** | Reason Tag | 执行决策原因标签（如 GapUpOverextended, VolumeSpike, StrongClose） | 执行域 |
+| **SkipReason** | Skip Reason | 跳过原因（NoCandidate/StateGate/DataUnavailable），内部使用 | 执行域 |
+| **IntradaySnapshot** | Intraday Snapshot | 实时市场快照（today_return, close_position, volume_ratio, distance_ma5 等） | 执行域 |
+| **Explainability Layer** | Explainability Layer | 可解释性层，用于展示系统决策的归因拆解（TASK-092） | 可解释性域 |
+| **Research Surface** | Research Surface | 研究表面，Shadow Production 期间允许新增的观测/诊断工具集合（如 symbol-diagnostics, rotation-ranking） | 治理域 |
+| **Production Surface** | Production Surface | 生产表面，Shadow Production 期间冻结的核心观察链路（DashboardSnapshot, ResearchContext, Markdown Report） | 治理域 |
+| **Attribution Breakdown** | Attribution Breakdown | 归因拆解，信号得分的四段贡献：Strategy (45%) + Alignment (15%) + Regime (20%) + Rotation (20%) | 可解释性域 |
+| **Divergence Sample Library** | Divergence Sample Library | 分歧样本库，用于追踪 StrongBuy+DE_RISK 等模式的 T+20/T+60/T+120 收益样本 | 研究验证域 |
+| **Symbol Diagnostics** | Symbol Diagnostics | 标的诊断，单标的深度归因拆解 CLI 工具（TASK-092 P0） | 可解释性域 |
+| **Symbol Scoreboard** | Symbol Scoreboard | 标的记分板，全标的统一视图横向对比 CLI 工具（TASK-092 P1） | 可解释性域 |
+| **TRAP** | Trap Record | 陷阱记录，记录已修复的根因和预防措施（如 TRAP-004, TRAP-005） | 项目管理域 |
+| **max_partitions_per_insert_block** | ClickHouse Partition Limit | ClickHouse 单次插入分区数限制，已设置为 10000 以支持长历史数据 | 数据存储域 |

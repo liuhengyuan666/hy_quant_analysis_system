@@ -194,7 +194,7 @@ apps/desktop/src-tauri ┤
 | 文件 | 规模 | 状态 |
 |------|------|------|
 | `crates/market-store/src/lib.rs` | god-module | SQL/IO/桥接全部集中，待 domain 拆分 |
-| `crates/app-service/src/lib.rs` | ~795 行 | monolith，编排逻辑过度集中。Dashboard 优化已移走 `check_data_health` 热路径调用，但结构仍需拆分 |
+| `crates/app-service/src/lib.rs` | 4,083 行 | 已模块化：AppContext 高层编排 + 7 个 helper 模块（core, trust, breadth, dashboard, llm, sync, config_loader）。Dashboard 优化已移走 `check_data_health` 热路径调用，但 lib.rs 仍待进一步拆分 |
 
 ---
 

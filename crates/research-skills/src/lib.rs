@@ -1,30 +1,20 @@
-pub mod agent_profile;
+pub mod action;
 pub mod analysis;
-pub mod skill;
-pub mod trigger;
-pub mod reasoning;
-pub mod registry;
-pub mod router;
-pub mod executor;
-pub mod provider;
-pub mod openai_provider;
-pub mod renderer;
-pub mod schema;
-pub mod token_budget;
+pub mod deterministic;
 pub mod inference;
-pub mod regime_state_machine;
+pub mod openai_provider;
+pub mod provider;
+pub mod renderer;
+pub mod token_budget;
 
-pub use agent_profile::{AgentProfile, RiskTolerance, OutputDepth, OutputFormat, RenderingTone, EmphasisLevel};
-pub use skill::*;
-pub use trigger::*;
+// Re-exports — 只保留分析层真正需要的类型
+pub use action::{build_prompt, MARKET_STORY_PROMPT, EXPLAIN_DECISION_PROMPT, PRECLOSE_REVIEW_PROMPT, RISK_VIEW_PROMPT, DEVILS_ADVOCATE_PROMPT};
 pub use provider::{LlmProvider, LlmCallConfig};
 pub use openai_provider::OpenAiProvider;
-pub use reasoning::*;
-pub use regime_state_machine::*;
+pub use inference::InferenceConfig;
 
-// Re-export analysis types
+// Re-export analysis types (保留但简化用途)
 pub use analysis::ResearchAnalysis;
 
 // Re-export renderer
-pub use inference::InferenceConfig;
 pub use renderer::render_analysis_markdown;

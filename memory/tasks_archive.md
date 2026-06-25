@@ -71,3 +71,33 @@
 
 - [Done] [TASK-019] Wave 7.3E: Historical Replay Audit — run complete GT chain (market-state-extractor → gt-regime-generator → regime-audit) on 2018-2026 historical data and output RegimeAuditReport
 
+
+### 2026-06-17
+- [Done] [TASK-090A] 量化统计最近两年每次状态切换的触发原因分布。读取 quant.market_regime + quant.environment_snapshot + quant.strategy_state，重新评估所有历史日期的 build_strategy_state 转移归因，输出：
+1. 触发条件分布表（NoTrade/DeRisk/ConfirmAdd/FullTrend 各自由哪个条件触发，占比）
+2. 阈值悬崖频率表（trend∈[50,65) 的日期，对应状态分布）
+3. 阈值临近表（trend∈[53,57] 的 ConfirmAdd vs DeRisk 分裂比例）
+4. state_score vs 实际状态混淆矩阵
+零写入、零阈值改动，纯只读审计。输出为 JSON + markdown 报告到 reports/state-transition-attribution-{scope}.md。
+
+
+### 2026-06-18
+- [Done] [TASK-082] 基于 Oracle 复核的三个问题，完成 V5 并行化优化的修复与验证：
+
+- [Done] [TASK-094] Phase A-E 代码级结构优化：清理 9 个编译器 warning，提取 apply_persistence 到 regime-audit/src/common.rs（6 副本），拆分 market-store 为 14 域模块，拆分 app-service 为 6 helper 模块，拆分 CLI main.rs 为 9 命令模块。A类基础设施改动，不触碰 B类禁止项。验证：cargo check 全 workspace 通过，68/68 测试通过。已推送到 v5 分支（9 commits）。
+
+- [Done] [TASK-095] README CLI 命令文档重组：消除 section 8 与 section 13 的命令重复，新增 40 个审计/验证命令文档（5 组分类），补全 dashboard-dates / status / run-backtest 参数等缺失文档。A类基础设施改动。已推送到 v5 分支（2 commits，c8555de / 15df83c）。
+
+- [Done] [TASK-096] app-service 已拆分为 7 个模块（core, breadth, dashboard, sync, trust, llm, config_loader），但 lib.rs 仍保留 4,083 行 AppContext 高层编排，需要进一步拆分。约束项更新：移除 'app-service/src/lib.rs 仍是 monolith（~796 行）'，改为跟踪本任务。
+- [Done] [TASK-018] cargo check 全 workspace 通过
+
+
+### 2026-06-25
+- [Done] [TASK-123] Research Layer Refactor — delete Skill Framework, converge to 5 Prompt + Markdown. 41 files changed, 795 insertions(+), 4681 deletions(-).
+
+- [Done] [TASK-083] Expanded universe.json from 18 to 25 symbols. Added: 000510 (中证A500), 512480 (半导体ETF), 562500 (机器人ETF), 159995 (芯片ETF), 513050 (中概互联网ETF), 515790 (光伏ETF), 000922 (中证红利). Removed duplicates: disabled 159915, 510300, 513130 (ETF duplicates of existing indices). Historical backfill: 2017-01-01 to 2026-06-17, ~23,000 rows. Tencent pagination fix (TRAP-005) and ClickHouse partition fix (TRAP-004) were discovered during this task. Full pipeline refresh completed: 25/25 symbols complete.
+
+- [Done] [TASK-120] Execution Layer Foundation (Pattern Library) Phase 1. Pre-close analysis filtering based on real-time market data. Delivered, tested, and deployed. Includes: pattern matching for StrongClose, HighVolume, GapUpOverextended, VolumeSpike, FarFromMA5; state classification (BUY_NOW, NO_CHASE, WAIT, SKIP); output to reports/execution-samples/YYYY-MM-DD.json.
+
+- [Done] [TASK-092] P0: Add symbol-diagnostics CLI command for single-symbol signal attribution breakdown. Must display: Strategy Contribution, Alignment Contribution, Regime Contribution, Rotation Contribution, Final Score. Must also show raw strategy scores (ValueLeft, TrendPullback, TrendBreakout, MomentumRight) and rotation rank. Governance constraint: Explainability Layer may explain decisions but may NOT create decisions — no new composite scores, rankings, confidence metrics, or decision signals. Shadow Production safe: zero changes to State Layer, Signal Engine, weights, thresholds, allocation, backtest, DashboardSnapshot, or ResearchContext.
+

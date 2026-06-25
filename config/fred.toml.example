@@ -1,0 +1,60 @@
+# FRED 配置示例文件
+# 复制为 config/fred.toml 并填入实际值
+#
+# 加载优先级：CLI 参数 > 本文件（含环境变量插值） > 默认值
+#
+# 安全建议：
+#   - API Key 使用环境变量引用 ${VAR_NAME}，不要直接写入
+#   - config/fred.toml 已在 .gitignore 中排除，不会提交到版本控制
+
+[fred]
+# 是否启用 FRED 宏观数据获取
+# enabled = false 时，compute-macro 和 check-data-health 将跳过 FRED 获取
+# 系统会使用 ClickHouse 中已有的宏观数据（可能陈旧）
+enabled = true
+
+# FRED API 基础 URL
+base_url = "https://api.stlouisfed.org/fred"
+
+# 请求延迟（毫秒）——遵守 FRED API 限流（每秒最多 2 个请求）
+request_delay_ms = 500
+
+# 请求超时（秒）——当前尚未接入，预留配置
+# timeout_secs = 30
+
+[fred.auth]
+# API Key 配置（二选一）：
+#
+# 方式1: 环境变量引用（推荐，最安全）
+#   api_key = "${FRED_API_KEY}"
+#
+# 方式2: 直接写入（不推荐，仅测试用）
+#   api_key = "ca2f7696e06b4e44bbdb94bf5d2dca6d"
+#
+# 环境变量插值语法：
+#   ${VAR_NAME}   → 读取环境变量 VAR_NAME（仅支持完整值替换）
+#   $${LITERAL}   → 转义为字面值 ${LITERAL}
+#
+# 注意：仅支持完整值替换，不支持嵌入式插值
+#   ✅ api_key = "${FRED_API_KEY}"           # 正确
+#   ❌ api_key = "Bearer ${TOKEN}"           # 不会插值
+#   ✅ api_key = "${FULL_API_KEY_VALUE}"     # 环境变量中存储完整值
+api_key = "${FRED_API_KEY}"
+
+# ============================================================
+# 禁用 FRED 获取示例
+# ============================================================
+#
+# 当网络环境无法访问 FRED 时，可以禁用获取：
+#   [fred]
+#   enabled = false
+#   
+# 此时系统会使用 ClickHouse 中已有的宏观数据。
+# dashboard 和 trust_summary 会提示 "FRED fetch disabled by config"。
+
+# ============================================================
+# FRED 账户注册
+# ============================================================
+# 
+# 访问 https://fredaccount.stlouisfed.org 注册免费账户获取 API Key。
+# FRED API 限流：120 次/分钟（使用 API Key），每秒最多 2 次请求。
