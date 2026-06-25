@@ -1,5 +1,7 @@
 # Rust Quant Analysis System
 
+![Dashboard Screenshot](screen_pic/main.png)
+
 ## 使用手册
 
 - `docs/日常操作手册.md`：适合每天快速更新、查看、导出结果
