@@ -32,6 +32,8 @@
 - **HTML/CSS 混合布局**：复杂数据可视化（如 RotationPanel）优先使用 HTML/CSS 原生布局替代纯 ECharts，提升信息密度、响应式对齐和无障碍访问；ECharts 仅用于纯图表场景
 - **CSS 自定义 Tooltip**：禁用原生 `title` 和 ECharts 默认 Tooltip，使用绝对定位的 CSS 自定义 Tooltip（`position: absolute` + `visibility/opacity` 过渡），确保暗黑主题样式一致、无割裂感
 - **Sticky 布局约束**：`position: sticky` 的侧边栏必须满足 (1) 顶部参考元素（如 header）固定高度，消除 `top` 旷量；(2) sticky 元素高度精确计算，使其 margin-box 不溢出 container 的 padding-box（通常 `height: calc(100vh - headerHeight - padding * 2 - 2px)` 留 2px 安全边距），避免滚动到底部时 push-out 抖动
+- **CSS Hover 内嵌详情卡片**：复杂数据详情（如信号归因 breakdown）优先使用纯 CSS hover 触发内嵌卡片（`position: absolute` + `visibility/opacity` 过渡），替代独立弹窗/抽屉/滑出面板；卡片内使用 `grid` 布局（如 `grid-template-columns: 1fr 1fr`）实现多列信息密度最大化
+- **强制 nowrap 文本策略**：悬浮卡片、内嵌详情面板等空间有限场景，所有文本元素必须声明 `white-space: nowrap` + `flex-shrink: 0`，防止 flex/grid 容器内因换行导致布局崩坏；配合 `overflow: hidden` 或容器扩宽（如 `width: 46rem`）保证可读性
 
 ## 5. 数据管线范式 (Data Pipeline)
 
