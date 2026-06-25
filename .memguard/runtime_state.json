@@ -1,5 +1,5 @@
 {
-  "current_phase": "shadow_production_observation",
+  "current_phase": "v4.5_released_validation_sprint",
   "active_tasks": [
     {
       "id": "TASK-000",
@@ -92,20 +92,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-015",
-      "description": "[TASK-080F] Implemented 252d Z-score with ±3 capping in macro-engine. Updated 2,341 ClickHouse rows. Re-ran 080C/080D. CN IG improved 0.474→0.964. Taxonomy stable.",
-      "status": "Todo",
-      "superseded_by": null
-    },
-    {
       "id": "TASK-081",
       "description": "Integrate 6 missing factors (HY Spread, 2Y, Term Spread, SOFR, Initial Claims, NFCI). Expand from 4 to 10 factors. Re-run orthogonality and taxonomy after full factor integration. GATED until 90-day Shadow Production completes.",
-      "status": "Todo",
-      "superseded_by": null
-    },
-    {
-      "id": "TASK-083",
-      "description": "Expanded universe.json from 18 to 25 symbols. Added: 000510 (中证A500), 512480 (半导体ETF), 562500 (机器人ETF), 159995 (芯片ETF), 513050 (中概互联网ETF), 515790 (光伏ETF), 000922 (中证红利). Removed duplicates: disabled 159915, 510300, 513130 (ETF duplicates of existing indices). Historical backfill: 2017-01-01 to 2026-06-17, ~23,000 rows. Tencent pagination fix (TRAP-005) and ClickHouse partition fix (TRAP-004) were discovered during this task. Full pipeline refresh completed: 25/25 symbols complete.",
       "status": "Todo",
       "superseded_by": null
     },
@@ -122,8 +110,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-123",
-      "description": "Research Layer Refactor — delete Skill Framework, converge to 5 Prompt + Markdown. 41 files changed, 795 insertions(+), 4681 deletions(-).",
+      "id": "TASK-124",
+      "description": "MemGuard Skill v4.5 — Agent Capability Model. Add Capability Boundaries, Operation Routing, Unsupported Requests Playbook. Update version to 4.5.0. Create TS-006 Long Session Pressure Test.",
       "status": "Todo",
       "superseded_by": null
     }

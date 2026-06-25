@@ -91,3 +91,13 @@
 - [Done] [TASK-096] app-service 已拆分为 7 个模块（core, breadth, dashboard, sync, trust, llm, config_loader），但 lib.rs 仍保留 4,083 行 AppContext 高层编排，需要进一步拆分。约束项更新：移除 'app-service/src/lib.rs 仍是 monolith（~796 行）'，改为跟踪本任务。
 - [Done] [TASK-018] cargo check 全 workspace 通过
 
+
+### 2026-06-25
+- [Done] [TASK-123] Research Layer Refactor — delete Skill Framework, converge to 5 Prompt + Markdown. 41 files changed, 795 insertions(+), 4681 deletions(-).
+
+- [Done] [TASK-083] Expanded universe.json from 18 to 25 symbols. Added: 000510 (中证A500), 512480 (半导体ETF), 562500 (机器人ETF), 159995 (芯片ETF), 513050 (中概互联网ETF), 515790 (光伏ETF), 000922 (中证红利). Removed duplicates: disabled 159915, 510300, 513130 (ETF duplicates of existing indices). Historical backfill: 2017-01-01 to 2026-06-17, ~23,000 rows. Tencent pagination fix (TRAP-005) and ClickHouse partition fix (TRAP-004) were discovered during this task. Full pipeline refresh completed: 25/25 symbols complete.
+
+- [Done] [TASK-120] Execution Layer Foundation (Pattern Library) Phase 1. Pre-close analysis filtering based on real-time market data. Delivered, tested, and deployed. Includes: pattern matching for StrongClose, HighVolume, GapUpOverextended, VolumeSpike, FarFromMA5; state classification (BUY_NOW, NO_CHASE, WAIT, SKIP); output to reports/execution-samples/YYYY-MM-DD.json.
+
+- [Done] [TASK-092] P0: Add symbol-diagnostics CLI command for single-symbol signal attribution breakdown. Must display: Strategy Contribution, Alignment Contribution, Regime Contribution, Rotation Contribution, Final Score. Must also show raw strategy scores (ValueLeft, TrendPullback, TrendBreakout, MomentumRight) and rotation rank. Governance constraint: Explainability Layer may explain decisions but may NOT create decisions — no new composite scores, rankings, confidence metrics, or decision signals. Shadow Production safe: zero changes to State Layer, Signal Engine, weights, thresholds, allocation, backtest, DashboardSnapshot, or ResearchContext.
+
