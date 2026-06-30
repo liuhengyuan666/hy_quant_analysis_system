@@ -131,6 +131,11 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// Market Stretch analysis — measures market crowding/extremity in 4 dimensions (Observation tool)
+    ResearchStretch {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     SetLlmConfig {
         #[arg(long)]
         base_url: String,
@@ -592,6 +597,11 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// SRD (Signal-Regime Divergence): observation tool — does not influence any decision logic
+    ResearchSrd {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     /// Research Surface: Full rotation ranking (not part of Shadow Production observation chain)
     RotationRanking {
         #[arg(long)]
@@ -641,6 +651,7 @@ fn main() -> Result<()> {
         Command::ExportDataHealthReport => commands::dashboard::handle_export_data_health_report(&context)?,
         Command::SyncAndExport { date, scope, to, run_backtests } => commands::dashboard::handle_sync_and_export(&context, date, scope, to, run_backtests, cli.quiet)?,
         Command::ResearchContext { scope } => commands::dashboard::handle_research_context(&context, scope)?,
+        Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope)?,
         Command::SetLlmConfig { base_url, model, timeout_secs } => commands::llm::handle_set_llm_config(&context, base_url, model, timeout_secs)?,
         Command::SetLlmApiKey { key } => commands::llm::handle_set_llm_api_key(&context, key)?,
         Command::AnalyzeWithLlm { scope, action } => commands::llm::handle_analyze_with_llm(&context, scope, action, cli.quiet)?,
@@ -704,6 +715,7 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::AuditAlignmentRedesign { from, to, horizon } => commands::audit::handle_audit_alignment_redesign(&context, from, to, horizon)?,
         Command::AuditStatePersistenceEconomics { from, to } => commands::audit::handle_audit_state_persistence_economics(&context, from, to)?,
         Command::ValidateStateLayerGt { from, to } => commands::audit::handle_validate_state_layer_gt(&context, from, to)?,
+        Command::ResearchSrd { scope } => commands::research::handle_research_srd(&context, scope)?,
         Command::RotationRanking { date, scope } => commands::audit::handle_rotation_ranking(&context, date, scope)?,
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,

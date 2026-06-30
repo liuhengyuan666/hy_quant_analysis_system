@@ -1782,6 +1782,7 @@ impl AppContext {
                 &pipeline_dates,
                 data_health,
                 &self.calendar,
+                &self.storage,
             ));
             snapshot
         }))
@@ -1822,6 +1823,7 @@ impl AppContext {
                 &pipeline_dates,
                 data_health,
                 &self.calendar,
+                &self.storage,
             ));
             snapshot
         });
