@@ -587,16 +587,32 @@ pub fn handle_research_stretch(context: &AppContext, scope: ReportScopeArg) -> R
     let leverage_level = "Normal";
 
     // ====== OVERALL ======
-    let (overall, weighted_score) = weighted_stretch_overall(
+    let (overall, _weighted_score) = weighted_stretch_overall(
         crowding_level,
         breadth_level,
         momentum_level,
         leverage_level,
     );
-    let overall_evidence = format!(
-        "Weighted score {:.2} (Momentum 40% + Crowding 30% + Breadth 20% + Leverage 10%)",
-        weighted_score
-    );
+    let overall_evidence = {
+        let mut parts: Vec<String> = Vec::new();
+        if crowding_level != "Normal" {
+            parts.push(format!("Crowding = {}", crowding_level));
+        }
+        if momentum_level != "Normal" {
+            parts.push(format!("Momentum = {}", momentum_level));
+        }
+        if breadth_level != "Normal" {
+            parts.push(format!("Breadth = {}", breadth_level));
+        }
+        if leverage_level != "Normal" {
+            parts.push(format!("Leverage = {}", leverage_level));
+        }
+        if parts.is_empty() {
+            "All dimensions within normal ranges".to_string()
+        } else {
+            parts.join("; ")
+        }
+    };
 
     // ====== NARRATIVE ======
     let stretch_interp = stretch_interpretation(overall, crowding_level, breadth_level, momentum_level);
