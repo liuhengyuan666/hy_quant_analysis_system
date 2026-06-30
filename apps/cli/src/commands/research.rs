@@ -222,23 +222,44 @@ pub fn handle_research_srd(
         (below as f64 / all_avg_signals.len() as f64) * 100.0
     };
 
-    // 10. Output clean text table
+    // 10. Narrative helpers
+    let state_label = recent_states
+        .first()
+        .map(|s| format!("{:?}", s.state))
+        .unwrap_or_else(|| "NO_TRADE".to_string());
+    let interpretation = srd_interpretation(
+        strong_buy_count,
+        buy_count,
+        breadth_trend,
+        rotation_pattern,
+        &state_label,
+    );
+    let confidence = srd_confidence(strong_buy_count, buy_count, breadth_trend, duration);
+    let percentile_text = percentile_label(historical_percentile);
+
+    // 11. Output clean text table
     println!(
         "SRD Statistics | Date: {} | Scope: {}",
         latest_date,
         scope.as_str()
     );
     println!("{:=<80}", "");
+    println!("  StrongBuy count:       {}", strong_buy_count);
+    println!("  Buy count:             {}", buy_count);
+    println!("  Average Signal:        {:.1}", avg_signal);
     println!(
         "  Duration:              {} days (consecutive trading days with divergence)",
         duration
     );
-    println!("  StrongBuy count:       {}", strong_buy_count);
-    println!("  Buy count:             {}", buy_count);
-    println!("  Average Signal:        {:.1}", avg_signal);
     println!("  Breadth trend:         {}", breadth_trend);
     println!("  Rotation pattern:      {}", rotation_pattern);
-    println!("  Historical percentile: {:.0}%", historical_percentile);
+    println!(
+        "  Historical percentile: {:.0}% ({})",
+        historical_percentile, percentile_text
+    );
+    println!("{:-<80}", "");
+    println!("  Interpretation:        {}", interpretation);
+    println!("  Confidence:            {}", confidence);
     println!("{:=<80}", "");
     println!("Observation tool — does not influence any decision logic");
 
@@ -303,6 +324,145 @@ fn percentile_rank(value: f64, sorted: &[f64]) -> f64 {
     let count = sorted.len();
     let below = sorted.iter().filter(|&&v| v <= value).count();
     (below as f64 / count as f64) * 100.0
+}
+
+/// Textual label for a percentile rank.
+fn percentile_label(p: f64) -> &'static str {
+    if p < 20.0 {
+        "Very Low"
+    } else if p < 40.0 {
+        "Low"
+    } else if p < 60.0 {
+        "Moderate"
+    } else if p < 80.0 {
+        "High"
+    } else {
+        "Very High"
+    }
+}
+
+/// Convert a Normal/Elevated/Extreme level into a numeric score for weighted composition.
+fn level_to_score(level: &str) -> f64 {
+    match level {
+        "Extreme" => 2.0,
+        "Elevated" => 1.0,
+        _ => 0.0,
+    }
+}
+
+/// Weighted Stretch Overall: Momentum 40%, Crowding 30%, Breadth 20%, Leverage 10%.
+/// Returns the classified level and the raw weighted score.
+fn weighted_stretch_overall(
+    crowding: &str,
+    breadth: &str,
+    momentum: &str,
+    leverage: &str,
+) -> (&'static str, f64) {
+    let score = level_to_score(momentum) * 0.40
+        + level_to_score(crowding) * 0.30
+        + level_to_score(breadth) * 0.20
+        + level_to_score(leverage) * 0.10;
+    let level = if score >= 1.2 {
+        "Extreme"
+    } else if score >= 0.5 {
+        "Elevated"
+    } else {
+        "Normal"
+    };
+    (level, score)
+}
+
+/// One-sentence interpretation for SRD output.
+fn srd_interpretation(
+    strong_buy: usize,
+    buy: usize,
+    breadth_trend: &str,
+    rotation_pattern: &str,
+    state_label: &str,
+) -> String {
+    let signal_strength = if strong_buy >= 5 {
+        "very strong"
+    } else if strong_buy >= 3 {
+        "strong"
+    } else if strong_buy + buy >= 3 {
+        "moderate"
+    } else {
+        "limited"
+    };
+
+    let breadth_word = match breadth_trend {
+        "Improving" => "with improving breadth",
+        "Weakening" => "but breadth is weakening",
+        _ => "with stable breadth",
+    };
+
+    let rotation_word = match rotation_pattern {
+        "Technology Dominant" => "concentrated in technology",
+        "Defensive" => "rotating defensively",
+        _ => "across mixed themes",
+    };
+
+    format!(
+        "Signals are {} while Strategy remains {} ({} {}, {}).",
+        signal_strength, state_label, breadth_word, rotation_word,
+        if strong_buy >= 3 {
+            "a pattern often seen around early trend transitions"
+        } else {
+            "suggesting a tentative rather than confirmed shift"
+        }
+    )
+}
+
+/// Confidence label for SRD based on signal breadth and duration.
+fn srd_confidence(strong_buy: usize, buy: usize, breadth_trend: &str, duration: i64) -> &'static str {
+    let bullish_count = strong_buy + buy;
+    let breadth_ok = breadth_trend == "Improving" || breadth_trend == "Neutral";
+    let duration_ok = duration >= 2;
+
+    match (bullish_count >= 5, breadth_ok, duration_ok) {
+        (true, true, true) => "High",
+        (true, true, false) | (false, true, true) | (true, false, true) => "Moderate",
+        _ => "Low",
+    }
+}
+
+/// One-sentence interpretation for Stretch output.
+fn stretch_interpretation(
+    overall: &str,
+    crowding: &str,
+    breadth: &str,
+    momentum: &str,
+) -> String {
+    match (overall, crowding, breadth, momentum) {
+        ("Extreme", "Extreme", "Normal", "Extreme") => {
+            "Momentum has accelerated rapidly and crowding is high, but broad participation remains healthy — current stretch resembles early acceleration rather than late-stage exhaustion.".to_string()
+        }
+        ("Extreme", _, "Extreme", "Extreme") => {
+            "Both momentum and breadth are stretched simultaneously; this is a more uniform (and riskier) form of market heat.".to_string()
+        }
+        ("Extreme", "Extreme", _, _) => {
+            "Crowding is extreme: a large share of momentum is concentrated in a few themes, raising the risk of a sharp unwind.".to_string()
+        }
+        ("Extreme", _, _, "Extreme") => {
+            "Momentum is extreme relative to history, suggesting rapid price appreciation that may be due for consolidation.".to_string()
+        }
+        ("Elevated", _, _, _) => {
+            "The market shows moderate stretch; conditions are warmer than average but not yet broadly extreme.".to_string()
+        }
+        _ => {
+            "Stretch readings are within normal ranges; no material overheating is evident.".to_string()
+        }
+    }
+}
+
+/// Risk level label derived from Stretch dimensions.
+fn stretch_risk_level(overall: &str, breadth: &str) -> &'static str {
+    match (overall, breadth) {
+        ("Extreme", "Extreme") => "High",
+        ("Extreme", "Normal") | ("Extreme", "Elevated") => "Moderate-High",
+        ("Elevated", _) => "Moderate",
+        _ => "Low",
+    }
 }
 
 /// Market Stretch analysis — pure observation tool
@@ -427,22 +587,20 @@ pub fn handle_research_stretch(context: &AppContext, scope: ReportScopeArg) -> R
     let leverage_level = "Normal";
 
     // ====== OVERALL ======
-    let levels = [crowding_level, breadth_level, momentum_level, leverage_level];
-    let overall = if levels.contains(&"Extreme") {
-        "Extreme"
-    } else if levels.contains(&"Elevated") {
-        "Elevated"
-    } else {
-        "Normal"
-    };
-    let extreme_count = levels.iter().filter(|&&l| l == "Extreme").count();
-    let elevated_count = levels.iter().filter(|&&l| l == "Elevated").count();
-    let overall_evidence = format!(
-        "{}/4 dimensions elevated ({} Extreme, {} Elevated)",
-        extreme_count + elevated_count,
-        extreme_count,
-        elevated_count
+    let (overall, weighted_score) = weighted_stretch_overall(
+        crowding_level,
+        breadth_level,
+        momentum_level,
+        leverage_level,
     );
+    let overall_evidence = format!(
+        "Weighted score {:.2} (Momentum 40% + Crowding 30% + Breadth 20% + Leverage 10%)",
+        weighted_score
+    );
+
+    // ====== NARRATIVE ======
+    let stretch_interp = stretch_interpretation(overall, crowding_level, breadth_level, momentum_level);
+    let risk_level = stretch_risk_level(overall, breadth_level);
 
     // ====== OUTPUT ======
     let scope_label = match scope {
@@ -457,6 +615,9 @@ pub fn handle_research_stretch(context: &AppContext, scope: ReportScopeArg) -> R
     println!();
     println!("  Overall:               {}", overall);
     println!("    Evidence:            {}", overall_evidence);
+    println!();
+    println!("  Interpretation:        {}", stretch_interp);
+    println!("  Risk Level:            {}", risk_level);
     println!();
     println!("  Crowding:              {}", crowding_level);
     println!("    Evidence:");
