@@ -39,11 +39,13 @@
 - 基础回测
 - Markdown 报告导出
 - Tauri 桌面 Dashboard（支持 `GLOBAL / CN / HK` scope）
-- **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
+
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
+- **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
+- **V6**：Research Surface — `research-srd`（Signal-Regime Divergence 统计）与 `research-stretch`（市场拉伸观测）
 
 ### 当前适用场景
 
@@ -322,6 +324,7 @@ cargo run -p quant-desktop
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
+- **V6**：Research Surface — `research-srd` 与 `research-stretch` 只读观测命令（CLI）
 
 ---
 
@@ -587,7 +590,26 @@ cargo run -p quant-cli -- symbol-scoreboard [--date <date>] [--scope <scope>]
 cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
 ```
 
-### 15.8 收盘前执行过滤（Execution Layer — V5）
+### 15.8 Research Surface 观测工具（V6）
+
+> **V6 新增**：只读研究层工具，用于把市场状态量化为可长期积累的统计证据。不修改任何信号/状态/执行/风控逻辑。
+>
+> 它们不是买卖建议，而是回答"市场现在发生了什么"。
+
+```bash
+# Signal-Regime Divergence 统计
+cargo run -p quant-cli -- research-srd [--scope global|cn|hk]
+
+# Market Stretch / 市场拉伸分析
+cargo run -p quant-cli -- research-stretch [--scope global|cn|hk]
+```
+
+说明：
+- `research-srd` 量化"Signal 很强但 State 保守"的背离持续情况，输出 Duration、StrongBuy 数、Average Signal、Breadth trend、Rotation pattern、Historical percentile。
+- `research-stretch` 从 Crowding、Breadth、Momentum、Leverage 四个维度描述市场拉伸程度，每个维度附带 Evidence。
+- 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`。
+
+### 15.9 收盘前执行过滤（Execution Layer — V5）
 
 > **V5 新增**：基于实时行情数据的 Pattern Library 执行过滤器，不修改任何信号/状态/回测逻辑。
 >
