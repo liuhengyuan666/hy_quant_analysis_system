@@ -23,6 +23,29 @@ impl From<ReportScopeArg> for app_service::ReportScope {
     }
 }
 
+#[derive(Debug, Subcommand)]
+enum ResearchCommand {
+    /// SRD (Signal-Regime Divergence): observation tool
+    Srd {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+    /// Market Stretch analysis — measures market crowding/extremity in 4 dimensions
+    Stretch {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+    /// Conditional forward-return analytics — historical statistics only
+    Analytics {
+        #[arg(long)]
+        condition: String,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+}
+
 #[derive(Debug, Parser)]
 #[command(name = "quant-cli")]
 #[command(about = "Rust quant analysis system CLI")]
@@ -597,6 +620,9 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// Research Surface commands (observation-only tools)
+    #[command(subcommand)]
+    Research(ResearchCommand),
     /// SRD (Signal-Regime Divergence): observation tool — does not influence any decision logic
     ResearchSrd {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
@@ -651,6 +677,13 @@ fn main() -> Result<()> {
         Command::ExportDataHealthReport => commands::dashboard::handle_export_data_health_report(&context)?,
         Command::SyncAndExport { date, scope, to, run_backtests } => commands::dashboard::handle_sync_and_export(&context, date, scope, to, run_backtests, cli.quiet)?,
         Command::ResearchContext { scope } => commands::dashboard::handle_research_context(&context, scope)?,
+        Command::Research(cmd) => match cmd {
+            ResearchCommand::Srd { scope } => commands::research::handle_research_srd(&context, scope)?,
+            ResearchCommand::Stretch { scope } => commands::research::handle_research_stretch(&context, scope)?,
+            ResearchCommand::Analytics { condition, horizon, scope } => {
+                commands::research::handle_research_analytics(&context, condition, horizon, scope)?
+            }
+        },
         Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope)?,
         Command::SetLlmConfig { base_url, model, timeout_secs } => commands::llm::handle_set_llm_config(&context, base_url, model, timeout_secs)?,
         Command::SetLlmApiKey { key } => commands::llm::handle_set_llm_api_key(&context, key)?,

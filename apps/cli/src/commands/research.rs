@@ -2,6 +2,7 @@ use anyhow::Result;
 use app_service::{AppContext, ReportScope};
 use chrono::{Local, NaiveDate};
 use core_domain::{AnalysisScope, RotationRankSnapshot};
+use std::collections::{BTreeMap, BTreeSet};
 use crate::ReportScopeArg;
 
 /// Render an analyze_with_action result as markdown
@@ -664,3 +665,271 @@ pub fn handle_research_stretch(context: &AppContext, scope: ReportScopeArg) -> R
     println!("  Observation tool \u{2014} does not influence any decision logic");
     Ok(())
 }
+
+/// Conditional forward-return analytics — answers "what happened after this condition historically".
+/// MVP: only supports `--horizon 20|60` and two hard-coded reproducible conditions.
+pub fn handle_research_analytics(
+    context: &AppContext,
+    condition: String,
+    horizon: usize,
+    scope_arg: ReportScopeArg,
+) -> Result<()> {
+    if horizon != 20 && horizon != 60 {
+        anyhow::bail!(
+            "Analytics MVP only supports --horizon 20 or 60 (got {})",
+            horizon
+        );
+    }
+
+    let scope: AnalysisScope = match scope_arg {
+        ReportScopeArg::Global => AnalysisScope::Global,
+        ReportScopeArg::Cn => AnalysisScope::Cn,
+        ReportScopeArg::Hk => AnalysisScope::Hk,
+    };
+
+    let anchor_symbol = match scope_arg {
+        ReportScopeArg::Global | ReportScopeArg::Cn => "000300",
+        ReportScopeArg::Hk => "HSCEI",
+    };
+
+    let anchor_bars = market_store::fetch_daily_bars(&context.storage, anchor_symbol)?;
+    let close_by_date: BTreeMap<NaiveDate, f64> =
+        anchor_bars.iter().map(|b| (b.date, b.close)).collect();
+
+    let Some(latest_date) = close_by_date.keys().last().copied() else {
+        anyhow::bail!("No anchor bars available for {}", anchor_symbol);
+    };
+    let Some(earliest_date) = close_by_date.keys().next().copied() else {
+        anyhow::bail!("No anchor bars available for {}", anchor_symbol);
+    };
+
+    let matched_dates = match condition.as_str() {
+        "srd-strong" => match_srd_strong(context, scope, earliest_date, latest_date)?,
+        "stretch-extreme-crowding-momentum" => {
+            match_stretch_extreme(context, scope_arg, scope, earliest_date, latest_date)?
+        }
+        _ => anyhow::bail!(
+            "Unknown condition '{}'. MVP supports: srd-strong, stretch-extreme-crowding-momentum",
+            condition
+        ),
+    };
+
+    let mut returns: Vec<f64> = Vec::new();
+    let mut max_drawdowns: Vec<f64> = Vec::new();
+
+    for date in &matched_dates {
+        let Some(current_close) = close_by_date.get(date) else { continue };
+        if *current_close <= 0.0 {
+            continue;
+        }
+
+        let start = date.succ_opt().unwrap_or(*date);
+        let forward_entries: Vec<(NaiveDate, f64)> = close_by_date
+            .range(start..)
+            .take(horizon)
+            .map(|(d, c)| (*d, *c))
+            .collect();
+
+        if forward_entries.len() < horizon {
+            continue;
+        }
+
+        let forward_close = forward_entries.last().unwrap().1;
+        let ret = (forward_close - current_close) / current_close;
+        returns.push(ret);
+
+        let forward_closes: Vec<f64> = forward_entries.iter().map(|(_, c)| *c).collect();
+        let dd = regime_audit::common::calculate_max_drawdown(*current_close, &forward_closes);
+        max_drawdowns.push(dd);
+    }
+
+    print_analytics_report(&condition, scope.as_str(), horizon, &returns, &max_drawdowns);
+    Ok(())
+}
+
+fn print_analytics_report(
+    condition: &str,
+    scope_label: &str,
+    horizon: usize,
+    returns: &[f64],
+    max_drawdowns: &[f64],
+) {
+    println!(
+        "Conditional Forward Return Analytics | Condition: {} | Scope: {}",
+        condition, scope_label
+    );
+    println!("{:=<80}", "");
+    println!("  Occurrences:              {}", returns.len());
+    println!("  Horizon:                  {} trading days", horizon);
+
+    if returns.is_empty() {
+        println!("{:=<80}", "");
+        println!("Observation tool — does not influence any decision logic");
+        return;
+    }
+
+    let mut sorted_returns = returns.to_vec();
+    sorted_returns.sort_by(|a, b| a.total_cmp(b));
+    let mut sorted_dds = max_drawdowns.to_vec();
+    sorted_dds.sort_by(|a, b| a.total_cmp(b));
+
+    let count = returns.len();
+    let median = regime_audit::common::percentile(&sorted_returns, 0.50);
+    let mean = returns.iter().sum::<f64>() / count as f64;
+    let worst = sorted_returns.first().copied().unwrap_or(0.0);
+    let best = sorted_returns.last().copied().unwrap_or(0.0);
+    let positive_ratio = returns.iter().filter(|&&r| r > 0.0).count() as f64 / count as f64;
+    let median_max_dd = regime_audit::common::percentile(&sorted_dds, 0.50);
+
+    println!("  Forward return median:    {:+.1}%", median * 100.0);
+    println!("  Forward return mean:      {:+.1}%", mean * 100.0);
+    println!("  Forward return best:      {:+.1}%", best * 100.0);
+    println!("  Forward return worst:     {:+.1}%", worst * 100.0);
+    println!("  Positive ratio:           {:.1}%", positive_ratio * 100.0);
+    println!("  Median max drawdown:      {:.1}%", median_max_dd * 100.0);
+    println!("{:=<80}", "");
+    println!("Observation tool — does not influence any decision logic");
+}
+
+/// Match dates where StrongBuy >= 5 and StrategyState is conservative.
+fn match_srd_strong(
+    context: &AppContext,
+    scope: AnalysisScope,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<NaiveDate>> {
+    let states = market_store::fetch_strategy_states_for_scope(&context.storage, scope)?;
+    let conservative_dates: BTreeSet<NaiveDate> = states
+        .iter()
+        .filter(|s| {
+            s.date >= from
+                && s.date <= to
+                && matches!(
+                    s.state,
+                    core_domain::StrategyState::NoTrade
+                        | core_domain::StrategyState::DeRisk
+                        | core_domain::StrategyState::LeftProbe
+                )
+        })
+        .map(|s| s.date)
+        .collect();
+
+    let query = format!(
+        "SELECT date, signal_label FROM quant.signal_snapshot \
+         WHERE date BETWEEN '{}' AND '{}' AND analysis_scope = '{}' \
+         ORDER BY date FORMAT JSONEachRow",
+        from,
+        to,
+        scope.as_str()
+    );
+    let body = market_store::fetch_clickhouse_text(&context.storage, &query)?;
+
+    let mut strong_buy_by_date: BTreeMap<NaiveDate, usize> = BTreeMap::new();
+    for line in body.lines().filter(|l| !l.trim().is_empty()) {
+        let row: serde_json::Value = serde_json::from_str(line)?;
+        let Some(date_str) = row["date"].as_str() else { continue };
+        let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") else { continue };
+        let label = row["signal_label"].as_str().unwrap_or("");
+        if label == "StrongBuy" {
+            *strong_buy_by_date.entry(date).or_insert(0) += 1;
+        }
+    }
+
+    let mut matched = Vec::new();
+    for date in conservative_dates {
+        let count = strong_buy_by_date.get(&date).copied().unwrap_or(0);
+        if count >= 5 {
+            matched.push(date);
+        }
+    }
+    matched.sort();
+    Ok(matched)
+}
+
+/// Match dates where Stretch Overall=Extreme, Crowding=Extreme, Momentum=Extreme, Breadth=Normal.
+fn match_stretch_extreme(
+    context: &AppContext,
+    scope_arg: ReportScopeArg,
+    scope: AnalysisScope,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<NaiveDate>> {
+    let query = format!(
+        "SELECT date, symbol, momentum_score, rs_120 FROM quant.rotation_rank \
+         WHERE date BETWEEN '{}' AND '{}' ORDER BY date FORMAT JSONEachRow",
+        from, to
+    );
+    let body = market_store::fetch_clickhouse_text(&context.storage, &query)?;
+
+    #[derive(Debug, serde::Deserialize)]
+    struct RotationRow {
+        date: String,
+        symbol: String,
+        momentum_score: f64,
+        rs_120: f64,
+    }
+
+    let instruments = context.seed_universe().unwrap_or_default();
+    let symbol_in_scope = |symbol: &str| match scope_arg {
+        ReportScopeArg::Global => true,
+        ReportScopeArg::Cn => instruments
+            .iter()
+            .any(|i| i.symbol == symbol && i.market == core_domain::Market::Cn),
+        ReportScopeArg::Hk => instruments
+            .iter()
+            .any(|i| i.symbol == symbol && i.market == core_domain::Market::Hk),
+    };
+
+    let mut rotation_by_date: BTreeMap<NaiveDate, Vec<(f64, f64)>> = BTreeMap::new();
+    for line in body.lines().filter(|l| !l.trim().is_empty()) {
+        let row: RotationRow = serde_json::from_str(line)?;
+        let Ok(date) = NaiveDate::parse_from_str(&row.date, "%Y-%m-%d") else { continue };
+        if !symbol_in_scope(&row.symbol) {
+            continue;
+        }
+        rotation_by_date
+            .entry(date)
+            .or_default()
+            .push((row.momentum_score, row.rs_120));
+    }
+
+    let env_snapshots = market_store::fetch_environment_snapshots_for_scope(
+        &context.storage,
+        scope,
+        from,
+        to,
+    )?;
+    let breadth_by_date: BTreeMap<NaiveDate, f64> = env_snapshots
+        .iter()
+        .map(|e| (e.date, e.breadth_pct))
+        .collect();
+
+    let mut matched = Vec::new();
+    for (date, rows) in &rotation_by_date {
+        if rows.is_empty() {
+            continue;
+        }
+        let total_momentum: f64 = rows.iter().map(|(m, _)| m).sum();
+        let mut sorted = rows.clone();
+        sorted.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let top5_sum: f64 = sorted.iter().take(5).map(|(m, _)| m).sum();
+        let concentration_pct = if total_momentum > 0.0 {
+            (top5_sum / total_momentum) * 100.0
+        } else {
+            0.0
+        };
+        let rs120_max = rows.iter().map(|(_, rs)| *rs).fold(f64::NEG_INFINITY, f64::max);
+
+        let crowding_level = classify_level(concentration_pct, 30.0, 50.0, true);
+        let momentum_level = classify_level(rs120_max, 70.0, 85.0, true);
+
+        let breadth_pct = breadth_by_date.get(date).copied().unwrap_or(0.0);
+        let breadth_level = classify_level(breadth_pct, 35.0, 20.0, false);
+
+        if crowding_level == "Extreme" && momentum_level == "Extreme" && breadth_level == "Normal" {
+            matched.push(*date);
+        }
+    }
+    Ok(matched)
+}
+
