@@ -67,6 +67,7 @@ pub fn handle_benchmark_action(
 pub fn handle_research_srd(
     context: &AppContext,
     scope_arg: ReportScopeArg,
+    date: Option<NaiveDate>,
 ) -> Result<()> {
     use core_domain::SignalLabel;
 
@@ -76,15 +77,18 @@ pub fn handle_research_srd(
         ReportScopeArg::Hk => core_domain::AnalysisScope::Hk,
     };
 
-    // 1. Find latest date with signal data
-    let latest_date = market_store::fetch_latest_table_date(&context.storage, "signal_snapshot")
-        .unwrap_or(None)
-        .unwrap_or_else(|| Local::now().date_naive());
+    // 1. Resolve target date
+    let target_date = match date {
+        Some(d) => d,
+        None => market_store::fetch_latest_table_date(&context.storage, "signal_snapshot")
+            .unwrap_or(None)
+            .unwrap_or_else(|| Local::now().date_naive()),
+    };
 
     // 2. Fetch latest signal snapshots via typed API for count/avg
     let latest_signals = market_store::fetch_signal_snapshots_for_date_with_scope(
         &context.storage,
-        latest_date,
+        target_date,
         scope,
     )?;
 
@@ -92,13 +96,13 @@ pub fn handle_research_srd(
     let states = market_store::fetch_strategy_states_for_scope(&context.storage, scope)?;
 
     // 4. Bulk-fetch signal history (raw query) for duration + percentile
-    let lookback = latest_date - chrono::Duration::days(365);
+    let lookback = target_date - chrono::Duration::days(365);
     let signal_query = format!(
         "SELECT date, final_score, signal_label FROM quant.signal_snapshot \
          WHERE date BETWEEN '{}' AND '{}' AND analysis_scope = '{}' \
          ORDER BY date FORMAT JSONEachRow",
         lookback,
-        latest_date,
+        target_date,
         scope.as_str()
     );
     let signal_body = market_store::fetch_clickhouse_text(&context.storage, &signal_query)?;
@@ -131,7 +135,7 @@ pub fn handle_research_srd(
     };
 
     let mut recent_states: Vec<&core_domain::StrategyStateSnapshot> =
-        states.iter().filter(|s| s.date <= latest_date).collect();
+        states.iter().filter(|s| s.date <= target_date).collect();
     recent_states.sort_by(|a, b| b.date.cmp(&a.date));
 
     let mut duration: i64 = 0;
@@ -166,12 +170,12 @@ pub fn handle_research_srd(
     };
 
     // 7. Breadth trend from environment
-    let env_lookback = latest_date - chrono::Duration::days(60);
+    let env_lookback = target_date - chrono::Duration::days(60);
     let env_snapshots = market_store::fetch_environment_snapshots_for_scope(
         &context.storage,
         scope,
         env_lookback,
-        latest_date,
+        target_date,
     )?;
     let latest_env = env_snapshots.iter().max_by_key(|e| e.date);
     let breadth_trend = match latest_env {
@@ -189,7 +193,7 @@ pub fn handle_research_srd(
     };
 
     // 8. Rotation pattern based on top momentum scores
-    let rotations = market_store::fetch_rotation_ranks_for_date(&context.storage, latest_date)?;
+    let rotations = market_store::fetch_rotation_ranks_for_date(&context.storage, target_date)?;
     let mut sorted_rotations = rotations.clone();
     sorted_rotations.sort_by(|a, b| b.momentum_score.total_cmp(&a.momentum_score));
     let top_count = sorted_rotations.len().min(10);
@@ -241,7 +245,7 @@ pub fn handle_research_srd(
     // 11. Output clean text table
     println!(
         "SRD Statistics | Date: {} | Scope: {}",
-        latest_date,
+        target_date,
         scope.as_str()
     );
     println!("{:=<80}", "");
@@ -467,12 +471,19 @@ fn stretch_risk_level(overall: &str, breadth: &str) -> &'static str {
 }
 
 /// Market Stretch analysis — pure observation tool
-pub fn handle_research_stretch(context: &AppContext, scope: ReportScopeArg) -> Result<()> {
+pub fn handle_research_stretch(
+    context: &AppContext,
+    scope: ReportScopeArg,
+    date: Option<NaiveDate>,
+) -> Result<()> {
     use chrono::Duration;
 
-    // 1. Determine latest date with rotation data
-    let report_date = market_store::fetch_latest_table_date(&context.storage, "rotation_rank")?
-        .unwrap_or_else(|| Local::now().date_naive());
+    // 1. Resolve target date
+    let report_date = match date {
+        Some(d) => d,
+        None => market_store::fetch_latest_table_date(&context.storage, "rotation_rank")?
+            .unwrap_or_else(|| Local::now().date_naive()),
+    };
 
     // 2. Fetch current rotation data
     let mut rows = market_store::fetch_rotation_ranks_for_date(&context.storage, report_date)?;
@@ -696,7 +707,7 @@ pub fn handle_research_analytics(
     let close_by_date: BTreeMap<NaiveDate, f64> =
         anchor_bars.iter().map(|b| (b.date, b.close)).collect();
 
-    let Some(latest_date) = close_by_date.keys().last().copied() else {
+    let Some(target_date) = close_by_date.keys().last().copied() else {
         anyhow::bail!("No anchor bars available for {}", anchor_symbol);
     };
     let Some(earliest_date) = close_by_date.keys().next().copied() else {
@@ -704,9 +715,9 @@ pub fn handle_research_analytics(
     };
 
     let matched_dates = match condition.as_str() {
-        "srd-strong" => match_srd_strong(context, scope, earliest_date, latest_date)?,
+        "srd-strong" => match_srd_strong(context, scope, earliest_date, target_date)?,
         "stretch-extreme-crowding-momentum" => {
-            match_stretch_extreme(context, scope_arg, scope, earliest_date, latest_date)?
+            match_stretch_extreme(context, scope_arg, scope, earliest_date, target_date)?
         }
         _ => anyhow::bail!(
             "Unknown condition '{}'. MVP supports: srd-strong, stretch-extreme-crowding-momentum",
@@ -748,7 +759,7 @@ pub fn handle_research_analytics(
         scope.as_str(),
         horizon,
         earliest_date,
-        latest_date,
+        target_date,
         &returns,
         &max_drawdowns,
     );

@@ -29,11 +29,15 @@ enum ResearchCommand {
     Srd {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
     },
     /// Market Stretch analysis — measures market crowding/extremity in 4 dimensions
     Stretch {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
     },
     /// Conditional forward-return analytics — historical statistics only
     Analytics {
@@ -678,13 +682,13 @@ fn main() -> Result<()> {
         Command::SyncAndExport { date, scope, to, run_backtests } => commands::dashboard::handle_sync_and_export(&context, date, scope, to, run_backtests, cli.quiet)?,
         Command::ResearchContext { scope } => commands::dashboard::handle_research_context(&context, scope)?,
         Command::Research(cmd) => match cmd {
-            ResearchCommand::Srd { scope } => commands::research::handle_research_srd(&context, scope)?,
-            ResearchCommand::Stretch { scope } => commands::research::handle_research_stretch(&context, scope)?,
+            ResearchCommand::Srd { scope, date } => commands::research::handle_research_srd(&context, scope, date)?,
+            ResearchCommand::Stretch { scope, date } => commands::research::handle_research_stretch(&context, scope, date)?,
             ResearchCommand::Analytics { condition, horizon, scope } => {
                 commands::research::handle_research_analytics(&context, condition, horizon, scope)?
             }
         },
-        Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope)?,
+        Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope, None)?,
         Command::SetLlmConfig { base_url, model, timeout_secs } => commands::llm::handle_set_llm_config(&context, base_url, model, timeout_secs)?,
         Command::SetLlmApiKey { key } => commands::llm::handle_set_llm_api_key(&context, key)?,
         Command::AnalyzeWithLlm { scope, action } => commands::llm::handle_analyze_with_llm(&context, scope, action, cli.quiet)?,
@@ -748,7 +752,7 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::AuditAlignmentRedesign { from, to, horizon } => commands::audit::handle_audit_alignment_redesign(&context, from, to, horizon)?,
         Command::AuditStatePersistenceEconomics { from, to } => commands::audit::handle_audit_state_persistence_economics(&context, from, to)?,
         Command::ValidateStateLayerGt { from, to } => commands::audit::handle_validate_state_layer_gt(&context, from, to)?,
-        Command::ResearchSrd { scope } => commands::research::handle_research_srd(&context, scope)?,
+        Command::ResearchSrd { scope } => commands::research::handle_research_srd(&context, scope, None)?,
         Command::RotationRanking { date, scope } => commands::audit::handle_rotation_ranking(&context, date, scope)?,
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,
