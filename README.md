@@ -45,7 +45,7 @@
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
 - **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
-- **V6**：Research Surface — `research-srd`（Signal-Regime Divergence 统计）与 `research-stretch`（市场拉伸观测）
+- **V6**：Research Surface — `research-srd`（Signal-Regime Divergence 统计）、`research-stretch`（市场拉伸观测）与 `research review`（季度研究综述）
 
 ### 当前适用场景
 
@@ -324,7 +324,7 @@ cargo run -p quant-desktop
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
-- **V6**：Research Surface — `research-srd` 与 `research-stretch` 只读观测命令（CLI）
+- **V6**：Research Surface — `research-srd`、`research-stretch` 与 `research review` 只读观测命令（CLI）
 
 ---
 
@@ -610,7 +610,7 @@ cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM
 说明：
 - `research-srd` 量化"Signal 很强但 State 保守"的背离持续情况，输出 Duration、StrongBuy 数、Average Signal、Breadth trend、Rotation pattern、Historical percentile。
 - `research-stretch` 从 Crowding、Breadth、Momentum、Leverage 四个维度描述市场拉伸程度，每个维度附带 Evidence。
-- `research review` 把观察窗口内的 SRD 分布、Stretch 等级分布、以及条件前向收益统计汇总成一份 Markdown 报告，输出到 `reports/research-quarterly-{scope}-{to}.md`，仅用于积累证据和潜在 ADR 候选。
+- `research review` 把观察窗口内的 SRD 分布、Stretch 等级分布、以及条件前向收益统计汇总成一份 Markdown 报告，输出到 `reports/research-quarterly-{scope}-{to}.md`，仅用于积累证据和后续 ADR Review。
 - 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`；季度末运行 `research review`。
 
 ### 15.9 收盘前执行过滤（Execution Layer — V5）
