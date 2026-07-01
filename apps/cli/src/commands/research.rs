@@ -743,14 +743,26 @@ pub fn handle_research_analytics(
         max_drawdowns.push(dd);
     }
 
-    print_analytics_report(&condition, scope.as_str(), horizon, &returns, &max_drawdowns);
+    print_analytics_report(
+        &condition,
+        scope.as_str(),
+        horizon,
+        earliest_date,
+        latest_date,
+        &returns,
+        &max_drawdowns,
+    );
     Ok(())
 }
+
+const ANALYTICS_VERSION: &str = "v1";
 
 fn print_analytics_report(
     condition: &str,
     scope_label: &str,
     horizon: usize,
+    window_from: NaiveDate,
+    window_to: NaiveDate,
     returns: &[f64],
     max_drawdowns: &[f64],
 ) {
@@ -759,10 +771,13 @@ fn print_analytics_report(
         condition, scope_label
     );
     println!("{:=<80}", "");
+    println!("  Analytics version:        {}", ANALYTICS_VERSION);
+    println!("  History window:           {} ~ {}", window_from, window_to);
     println!("  Occurrences:              {}", returns.len());
     println!("  Horizon:                  {} trading days", horizon);
 
     if returns.is_empty() {
+        println!("  Note:                     Not enough observations. Need more samples.");
         println!("{:=<80}", "");
         println!("Observation tool — does not influence any decision logic");
         return;
