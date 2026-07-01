@@ -598,16 +598,20 @@ cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
 
 ```bash
 # Signal-Regime Divergence 统计
-cargo run -p quant-cli -- research-srd [--scope global|cn|hk]
+cargo run -p quant-cli -- research-srd [--scope global|cn|hk] [--date YYYY-MM-DD]
 
 # Market Stretch / 市场拉伸分析
-cargo run -p quant-cli -- research-stretch [--scope global|cn|hk]
+cargo run -p quant-cli -- research-stretch [--scope global|cn|hk] [--date YYYY-MM-DD]
+
+# 季度研究综述：聚合 SRD / Stretch / Analytics 为 Markdown 报告
+cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--output path.md]
 ```
 
 说明：
 - `research-srd` 量化"Signal 很强但 State 保守"的背离持续情况，输出 Duration、StrongBuy 数、Average Signal、Breadth trend、Rotation pattern、Historical percentile。
 - `research-stretch` 从 Crowding、Breadth、Momentum、Leverage 四个维度描述市场拉伸程度，每个维度附带 Evidence。
-- 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`。
+- `research review` 把观察窗口内的 SRD 分布、Stretch 等级分布、以及条件前向收益统计汇总成一份 Markdown 报告，输出到 `reports/research-quarterly-{scope}-{to}.md`，仅用于积累证据和潜在 ADR 候选。
+- 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`；季度末运行 `research review`。
 
 ### 15.9 收盘前执行过滤（Execution Layer — V5）
 

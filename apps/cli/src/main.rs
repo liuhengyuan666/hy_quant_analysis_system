@@ -48,6 +48,17 @@ enum ResearchCommand {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// Quarterly Review — aggregate SRD/Stretch/Analytics over a window into a Markdown report
+    Review {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Window start date (defaults to 90 days before --to)")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "Window end date (defaults to latest available daily date)")]
+        to: Option<NaiveDate>,
+        #[arg(long, help = "Output Markdown file path")]
+        output: Option<std::path::PathBuf>,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -686,6 +697,9 @@ fn main() -> Result<()> {
             ResearchCommand::Stretch { scope, date } => commands::research::handle_research_stretch(&context, scope, date)?,
             ResearchCommand::Analytics { condition, horizon, scope } => {
                 commands::research::handle_research_analytics(&context, condition, horizon, scope)?
+            }
+            ResearchCommand::Review { scope, from, to, output } => {
+                commands::research::handle_research_review(&context, scope, from, to, output)?
             }
         },
         Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope, None)?,
