@@ -16,7 +16,15 @@ shadow_production_observation
 - [InProgress] [TASK-093] Use TASK-092 explainability tools to systematically collect and analyze divergence patterns. Primary focus: StrongBuy signal + DE_RISK state combinations. Track: Symbol, Date, Signal Score, Attribution Breakdown, State, T+20/T+60/T+120 forward returns. Goal: after 90 days, determine if State Layer is too conservative. Requires evidence before any State Layer threshold changes. Method: daily run `symbol-diagnostics` and `symbol-scoreboard`, log divergence cases, compare with future returns.
 - [Done] [TASK-096] Add --date support to `research srd` and `research stretch` commands. Default to latest date when --date is omitted. Enables historical date research output for validation and Quarterly Review generation.
 - [Done] [TASK-097] Abstract an internal `ResearchSnapshot` model that holds SRD, Stretch, Rotation, Breadth, and Analytics results for a single (date, scope). Refactored existing research commands to build ResearchSnapshot first, then render. No new CLI.
-- [Done] [TASK-098] Implemented Research Quarterly Review: `research review` aggregates SRD/Stretch/Analytics over a 90-day window and generates a Markdown report (Observation Window, SRD summary, Stretch distribution, Conditional Forward-Return Analytics, Potential ADR Candidates). Output to reports/research-quarterly-{scope}-{date}.md. This is the synthesis layer that turns Observation + Analytics into accumulated research assets.
+- [Done] [TASK-098] Implemented Research Quarterly Review: `research review` aggregates SRD/Stretch/Analytics over a 90-day window and generates a Markdown report (Observation Window, SRD summary, Stretch distribution, Conditional Forward-Return Analytics, Evidence Worth ADR Review). Output to reports/research-quarterly-{scope}-{date}.md. This is the synthesis layer that turns Observation + Analytics into accumulated research assets.
+
+# Next Steps — Enter Shadow Production
+- Research Layer feature set is frozen. No TASK-099 / TASK-100 / TASK-101; no new Research CLI tools.
+- Shadow Production cadence:
+  - Daily: `research srd`, `research stretch`
+  - Weekly: `research analytics`
+  - Quarterly: `research review`
+- Run for 90 days, accumulate evidence, then decide whether any ADR is warranted for State/Signal/Regime/Execution layers.
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

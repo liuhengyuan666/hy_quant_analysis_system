@@ -78,7 +78,7 @@ impl ResearchSnapshot {
                 .map(|signals| {
                     signals
                         .iter()
-                        .any(|(_, label)| label == "StrongBuy" || label == "Buy")
+                        .any(|(_, label)| label == "STRONG_BUY" || label == "BUY")
                 })
                 .unwrap_or(false);
             if has_divergent {
@@ -940,7 +940,7 @@ fn match_srd_strong(
         let Some(date_str) = row["date"].as_str() else { continue };
         let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") else { continue };
         let label = row["signal_label"].as_str().unwrap_or("");
-        if label == "StrongBuy" {
+        if label == "STRONG_BUY" {
             *strong_buy_by_date.entry(date).or_insert(0) += 1;
         }
     }
@@ -1262,19 +1262,19 @@ pub fn handle_research_review(
         md.push_str("\n");
     }
 
-    // ADR candidates
-    md.push_str("## Potential ADR Candidates\n\n");
-    md.push_str("The following observations may warrant discussion in a future ADR. No conclusion is implied.\n\n");
-    let mut candidates: Vec<String> = Vec::new();
+    // Evidence worth ADR review
+    md.push_str("## Evidence Worth ADR Review\n\n");
+    md.push_str("The following observations are worth tracking during Shadow Production. They do not imply any system change.\n\n");
+    let mut review_points: Vec<String> = Vec::new();
     if longest_streak >= 5 {
-        candidates.push(format!(
-            "SRD streak reached {} days — consider reviewing State Layer conservatism after 90-day evidence matures.",
+        review_points.push(format!(
+            "SRD streak reached {} days — worth reviewing in a future ADR if the pattern persists across the 90-day observation window.",
             longest_streak
         ));
     }
     if !stretch_extreme_days.is_empty() {
-        candidates.push(format!(
-            "Market Stretch = Extreme on {} days — evaluate whether extremes correlate with subsequent drawdowns.",
+        review_points.push(format!(
+            "Market Stretch = Extreme on {} days — worth tracking whether extremes correlate with subsequent drawdowns.",
             stretch_extreme_days.len()
         ));
     }
@@ -1285,16 +1285,16 @@ pub fn handle_research_review(
             .copied()
             .collect();
         if !overlap.is_empty() {
-            candidates.push(format!(
-                "SRD and Stretch Extreme co-occurred on {} days — potential compound regime tension.",
+            review_points.push(format!(
+                "SRD and Stretch Extreme co-occurred on {} days — worth noting as a potential compound regime tension.",
                 overlap.len()
             ));
         }
     }
-    if candidates.is_empty() {
-        md.push_str("No strong ADR candidates observed in this window.\n\n");
+    if review_points.is_empty() {
+        md.push_str("No strong evidence requiring ADR review was observed in this window.\n\n");
     } else {
-        for c in candidates {
+        for c in review_points {
             md.push_str(&format!("- {}\n", c));
         }
         md.push_str("\n");
