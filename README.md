@@ -8,9 +8,9 @@
 - `docs/分析使用手册.md`：适合趋势 / 长线分析时理解 MA20 / MA60 / MACD / regime / rotation / signal
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
-- `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
+- `docs/v2/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
 - `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
-- `docs/阶段性更新-2026-04-26.md`：汇总这轮阶段性成果与当前仍待继续推进的方向
+- `docs/阶段性更新.md#2026-04-26`：汇总阶段性成果与当前仍待继续推进的方向
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
@@ -23,6 +23,51 @@
 当前已经跑通完整链路：
 
 > 数据拉取 → 指标计算 → 宏观判断 → 轮动排序 → 策略偏好 → 最终信号 → 回测 → 报告 → 桌面展示
+
+---
+
+## 架构所有权（Architecture Ownership）
+
+本项目采用分层所有权模型，每层只负责一种职责，禁止跨层泄漏：
+
+```text
+数据所有权（Data Ownership）
+    ResearchDataset              ← app-service 内部，ephemeral，不暴露
+    ResearchSnapshot             ← app-service 内部，computation workspace
+
+语义所有权（Semantic Ownership）
+    ResearchContext              ← 跨消费者共享的 canonical semantic contract
+
+展示所有权（Presentation Ownership）
+    ReportingSnapshot            ← 展示层 metadata + research context
+    ReportInput                  ← 文档专属输入，document generation workflow 独占
+    ReportBuilder                ← 文档组装（Research / Audit / Review）
+    ReportDocument               ← 渲染前文档模型
+
+渲染所有权（Rendering Ownership）
+    Formatter                    ← Markdown / Text / JSON 渲染，无业务计算
+
+消费者（Consumers）
+    CLI / Desktop / API / GPT / Email / PDF
+```
+
+核心规则：
+- `ResearchContext` ≠ 万能 DTO，不承载 consumer-specific 字段。
+- `ReportInput` 只承载 document payload，不重复 metadata（scope/date/generated_at）。
+- 所有可复用的研究计算位于 `core-domain::research`。
+- `ResearchDataset` 永不暴露到 `app-service` 边界之外。
+
+详细架构演进见 `docs/v6/adr-068-research-context-reporting-layer.md` 与 `memory/decisions.md`（ADR-068）；不可违反的分层规则见 `docs/architecture-invariants.md`（ADR-069）。
+
+### 架构决策时间线
+
+```text
+V5  Engine-centric
+      ↓
+V6  Pipeline → Canonical Semantic Model → Stable Reporting Platform (Frozen)
+```
+
+V6 Reporting Platform 稳定后，新增 Timeline、Desktop、REST API、LLM、Email、PDF 等能力应建立在此平台之上，而不是继续调整平台本身。
 
 ---
 

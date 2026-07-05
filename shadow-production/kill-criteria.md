@@ -258,8 +258,8 @@ When a Kill Criterion is triggered:
 ## Related Documents
 
 - `shadow-production/README.md` — Shadow Production protocol
-- `docs/adr-063-economic-taxonomy.md` — Economic Layer taxonomy
-- `docs/task-080f-findings.md` — Baseline metrics and thresholds
+- `docs/v5/adr-063-economic-taxonomy.md` — Economic Layer taxonomy
+- `docs/v5/task-080f-findings.md` — Baseline metrics and thresholds
 
 ---
 
