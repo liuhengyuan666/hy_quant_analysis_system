@@ -1,38 +1,47 @@
 # RESEARCH-CONTEXT KNOWLEDGE BASE
 
 ## OVERVIEW
-Builds structured `ResearchContext` from `DashboardSnapshot` for LLM-powered analysis. Extracts semantic state across market, liquidity, breadth, rotation, regime, signals, macro, and risk dimensions.
+Owns the canonical, consumer-neutral semantic model for V6 research outputs: `ResearchContext` and `TrustLevel`. Used by `reporting`, `report-builder`, and `app-service` to ensure all consumers speak the same research language.
 
 ## STRUCTURE
 ```text
 crates/research-context/src/
-├── lib.rs            # module declarations + re-exports
-├── semantic_state.rs # ResearchContext + 8 context types (Market, Liquidity, Breadth, etc.)
-├── builder.rs        # ContextBuilder::build() from DashboardSnapshot
-├── feature_engine.rs # feature extraction utilities
-└── compression.rs    # context compression for token budget
+└── lib.rs
+    ├── TrustLevel          # Unassessed / Low / Medium / High
+    └── ResearchContext     # canonical cross-consumer research summary
+        ├── version
+        ├── scope
+        ├── date
+        ├── market_state
+        ├── breadth
+        ├── rotation
+        ├── signal
+        ├── divergence
+        └── trust
 ```
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Add new context dimension | `semantic_state.rs` | add type + field to ResearchContext |
-| Change context building | `builder.rs` | ContextBuilder methods |
-| Extract features | `feature_engine.rs` | feature utilities |
-| Compress context | `compression.rs` | token reduction |
+| Change trust levels | `TrustLevel` enum | storage/report/frontend must stay aligned |
+| Change canonical research model | `ResearchContext` | affects `reporting`, `report-builder`, and all consumers |
+| Add new summary dimension | `ResearchContext` + child summary structs | prefer additive changes; do not modify existing field semantics |
+| Change market/breadth/rotation/signal summary | child structs inside `lib.rs` | keep consumer-neutral |
 
 ## CONVENTIONS
-- `ResearchContext` is the primary output; all 8 dimensions are always populated.
-- Builder uses heuristics from DashboardSnapshot data (e.g., breadth_pct thresholds for condition).
-- Many fields have TODO placeholders with hardcoded values (confidence: 0.8, leadership_stability: 0.7).
-- Compression is WIP (Wave 2).
+- `ResearchContext` is a summary-only, consumer-neutral contract. It does NOT carry raw data or consumer-specific fields.
+- New fields are additive; avoid changing existing semantics without ADR review.
+- `TrustLevel` is the canonical trust enum; do not use raw strings for trust in new code.
+- This crate has minimal dependencies (`chrono`, `serde`, `core-domain`) by design.
 
 ## ANTI-PATTERNS
-- Do **not** add persistence or fetch logic here.
-- Do **not** change context types without updating `research-skills` consumers.
-- Do **not** remove TODO markers; they track Wave 2+ implementation items.
+- Do **not** add raw data, provider metadata, or consumer-specific fields here.
+- Do **not** add I/O, HTTP, or DB access here.
+- Do **not** rename variants or reshape fields without coordinated updates in `reporting` / `report-builder` / consumers.
+- Do **not** duplicate this model in `llm-context`; `llm-context` builds a separate LLM-specific context from `DashboardSnapshot`.
 
 ## NOTES
-- Depends on `report-engine` for `DashboardSnapshot` type.
-- 10 TODO items in `builder.rs` for unimplemented data-quality computations.
-- `compression.rs` is Wave 2 work (semantic compression for token budget).
+- `reporting` depends on this crate for `ResearchContext`.
+- `report-builder` uses it to build `ReportDocument` metadata and sections.
+- `app-service` populates it from engine outputs before passing it to document builders.
+- V6 canonical semantic model; treat as a stable boundary.

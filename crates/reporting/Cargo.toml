@@ -1,11 +1,12 @@
 [package]
-name = "research-context"
+name = "reporting"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
 [dependencies]
-core-domain = { path = "../core-domain" }
+research-context = { path = "../research-context" }
 chrono = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
