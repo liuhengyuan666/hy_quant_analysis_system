@@ -81,3 +81,11 @@
 | **Symbol Scoreboard** | Symbol Scoreboard | 标的记分板，全标的统一视图横向对比 CLI 工具（TASK-092 P1） | 可解释性域 |
 | **TRAP** | Trap Record | 陷阱记录，记录已修复的根因和预防措施（如 TRAP-004, TRAP-005） | 项目管理域 |
 | **max_partitions_per_insert_block** | ClickHouse Partition Limit | ClickHouse 单次插入分区数限制，已设置为 10000 以支持长历史数据 | 数据存储域 |
+| **ResearchContext** | Research Context | V6 Reporting Platform 的 canonical semantic contract，跨消费者共享的语义模型，不承载 consumer-specific 字段 | 报告与展示域 |
+| **ResearchDataset** | Research Dataset | app-service 内部的 transient raw query result，ephemeral 数据容器，不暴露到 app-service 边界之外 | 报告与展示域 |
+| **ResearchSnapshot** | Research Snapshot | app-service 内部的 computation workspace，承载 SRD/Stretch/Rotation/Breadth/Analytics 结果，不直接查询数据源 | 报告与展示域 |
+| **ReportInput** | Report Input | 文档生成流程独占的 document-specific payload，只承载 document payload，不重复 metadata | 报告与展示域 |
+| **ReportingSnapshot** | Reporting Snapshot | 展示层 metadata + research context 的聚合快照，承载 scope/date/generated_at 等元数据 | 报告与展示域 |
+| **ReportBuilder** | Report Builder Trait | 文档组装接口（Research / Audit / Review），当前无实现者，状态为 Pending Evaluation | 报告与展示域 |
+| **Architecture Invariants** | Architecture Invariants | V6 Reporting Platform 的 10 条分层架构不可违反规则（ADR-069） | 架构域 |
+| **Shadow Production Playbook** | Shadow Production Playbook | Shadow Production 阶段操作细则，见 `docs/shadow-production-playbook.md` | 治理域 |

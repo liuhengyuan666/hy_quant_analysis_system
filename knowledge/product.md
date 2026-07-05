@@ -30,12 +30,13 @@
   * 核心规则 3: 基础回测
 
  * **[报告与展示域]**
-   * 核心规则 1: Markdown报告导出
+   * 核心规则 1: Markdown报告导出（日报、LLM分析、Research Quarterly Review）
    * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
-   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径）
-   * 核心规则 4: V4桌面端LLM智能分析面板（Agent选择、技能路由、6标签页分析、历史记录、比较分析）
-   * 核心规则 5: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
-   * 核心规则 6: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
+   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径，V4.5 后仅保留 5 个固定 action 的纯 Markdown 输出）
+   * 核心规则 4: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
+   * 核心规则 5: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
+   * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台
+   * 核心规则 7: **V6 Research Surface** — 只读研究观测工具（`research-srd`、`research-stretch`、`research-analytics`、`research review`），输出 Markdown 观测报告，不进入主决策链路
 
 ## 4. 新增可解释性能力（TASK-092）
 
