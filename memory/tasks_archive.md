@@ -101,3 +101,9 @@
 
 - [Done] [TASK-092] P0: Add symbol-diagnostics CLI command for single-symbol signal attribution breakdown. Must display: Strategy Contribution, Alignment Contribution, Regime Contribution, Rotation Contribution, Final Score. Must also show raw strategy scores (ValueLeft, TrendPullback, TrendBreakout, MomentumRight) and rotation rank. Governance constraint: Explainability Layer may explain decisions but may NOT create decisions — no new composite scores, rankings, confidence metrics, or decision signals. Shadow Production safe: zero changes to State Layer, Signal Engine, weights, thresholds, allocation, backtest, DashboardSnapshot, or ResearchContext.
 
+
+### 2026-07-04
+- [Done] [TASK-099] Add --date support to `research srd` and `research stretch` commands. Default to latest date when --date is omitted. Enables historical date research output for validation and Quarterly Review generation. (Assigned TASK-099 because TASK-096 is archived for app-service modularization.)
+- [Done] [TASK-097] Abstract an internal `ResearchSnapshot` model that holds SRD, Stretch, Rotation, Breadth, and Analytics results for a single (date, scope). Refactor existing research commands to build ResearchSnapshot first, then render. This unifies query logic and enables Quarterly Review aggregation. No new CLI.
+- [Done] [TASK-098] Design and implement Research Quarterly Review: automatically run SRD/Stretch/Analytics over a 90-day window and generate a Markdown report (Observation Window, SRD summary, Stretch distribution, top findings, potential ADR candidates). Output to reports/research-quarterly-{scope}-{date}.md. This is the synthesis layer that turns Observation + Analytics into accumulated research assets.
+

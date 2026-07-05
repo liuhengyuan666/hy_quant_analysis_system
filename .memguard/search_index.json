@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-01T02:42:30Z",
+    "rebuilt_at": "2026-07-05T16:30:48Z",
     "version": "v4"
   },
   "terms": {
@@ -247,6 +247,10 @@
       },
       {
         "id": "ADR-061",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -1326,6 +1330,12 @@
         "type": "adr"
       }
     ],
+    "accidentally": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "accuracy": [
       {
         "id": "ADR-051",
@@ -1430,6 +1440,10 @@
       {
         "id": "ADR-056",
         "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "adr-029": [
@@ -1515,6 +1529,12 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "adr-068": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -1834,6 +1854,14 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "answers": [
@@ -1886,6 +1914,12 @@
         "type": "trap"
       }
     ],
+    "api-pdf-email": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "api_key": [
       {
         "id": "ADR-049",
@@ -1917,6 +1951,10 @@
     "app-service": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -2038,6 +2076,14 @@
       {
         "id": "ADR-056",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "archive": [
@@ -2085,6 +2131,14 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       },
       {
@@ -2316,6 +2370,10 @@
       {
         "id": "ADR-061",
         "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "because": [
@@ -2367,6 +2425,10 @@
     "being": [
       {
         "id": "ADR-062",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -2435,6 +2497,10 @@
     "boundary": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -2558,9 +2624,19 @@
         "type": "adr"
       }
     ],
+    "builders": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "builds": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -2583,6 +2659,10 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       },
       {
@@ -2714,6 +2794,18 @@
         "type": "adr"
       }
     ],
+    "canonical": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "canonical-model": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "capping": [
       {
         "id": "ADR-063",
@@ -2729,6 +2821,18 @@
     "cargo": [
       {
         "id": "ADR-030",
+        "type": "adr"
+      }
+    ],
+    "carrier": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "carries": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -2771,6 +2875,10 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       },
       {
@@ -2905,6 +3013,16 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "cli/gpt/desktop/future": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -3132,6 +3250,12 @@
         "type": "adr"
       }
     ],
+    "computation": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "compute": [
       {
         "id": "ADR-060",
@@ -3163,6 +3287,12 @@
     "conclusions": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "concrete": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -3296,6 +3426,12 @@
         "type": "adr"
       }
     ],
+    "conservatively": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "consistent": [
       {
         "id": "ADR-049",
@@ -3317,6 +3453,34 @@
     "constructed": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "consumer": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "consumer-neutral": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "consumer-neutrality": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "consumers": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -3358,11 +3522,19 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "contract": [
       {
         "id": "ADR-061",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -3384,9 +3556,25 @@
         "type": "adr"
       }
     ],
+    "core-domain": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "core-domain/src/lib.rs": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "core-domain::research": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -3438,6 +3626,12 @@
         "type": "adr"
       }
     ],
+    "coupling": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "coverage": [
       {
         "id": "ADR-053",
@@ -3451,6 +3645,10 @@
     "covering": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -3718,6 +3916,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -3882,6 +4088,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -3953,6 +4163,18 @@
     "deliverables": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "depended": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "dependency": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -4047,6 +4269,10 @@
     "different": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -4158,15 +4384,31 @@
         "type": "adr"
       }
     ],
+    "do-not-merge": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "docker": [
       {
         "id": "ADR-030",
         "type": "adr"
       }
     ],
+    "docs/architecture-invariants.md": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "document": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -4199,6 +4441,10 @@
     "domain": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -4580,11 +4826,19 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "established": [
       {
         "id": "ADR-056",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -4660,6 +4914,12 @@
         "type": "adr"
       }
     ],
+    "evolves": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "exactly": [
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
@@ -4706,6 +4966,10 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "expected-behavior": [
@@ -4729,6 +4993,12 @@
     "explanations": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "explicit": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -5248,6 +5518,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -5265,6 +5539,10 @@
     "form": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -5337,6 +5615,12 @@
     "formatreporttype": [
       {
         "id": "ADR-043",
+        "type": "adr"
+      }
+    ],
+    "formatter": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -5468,6 +5752,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -5526,11 +5814,23 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "full": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -5559,6 +5859,14 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -5936,6 +6244,12 @@
         "type": "adr"
       }
     ],
+    "helpers": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "hero": [
       {
         "id": "ADR-041",
@@ -6294,6 +6608,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       }
@@ -6402,6 +6724,12 @@
         "type": "trap"
       }
     ],
+    "inside": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "insight": [
       {
         "id": "ADR-050",
@@ -6472,6 +6800,12 @@
         "type": "adr"
       }
     ],
+    "interpretation": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "intl": [
       {
         "id": "ADR-043",
@@ -6503,6 +6837,12 @@
     "intuitively": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "invariants": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -6560,6 +6900,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       }
@@ -6585,6 +6929,10 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -6842,6 +7190,20 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "layered": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "layers": [
@@ -6991,6 +7353,12 @@
     "list_skills": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "lives": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -7506,6 +7874,12 @@
         "type": "adr"
       }
     ],
+    "metadata": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "metric": [
       {
         "id": "ADR-060",
@@ -7662,6 +8036,14 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "modify": [
@@ -7804,6 +8186,10 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "negative": [
@@ -7910,6 +8296,16 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "no-domain-computation": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "noise": [
@@ -7919,6 +8315,12 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "non-negotiable": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -8062,6 +8464,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "on/off": [
@@ -8091,6 +8497,10 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -8468,6 +8878,18 @@
         "type": "adr"
       }
     ],
+    "payload": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "payload-only": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "per": [
       {
         "id": "",
@@ -8614,6 +9036,12 @@
         "type": "trap"
       }
     ],
+    "pipeline": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "pivot": [
       {
         "id": "ADR-060",
@@ -8659,6 +9087,18 @@
       },
       {
         "id": "ADR-041",
+        "type": "adr"
+      }
+    ],
+    "platform": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "polluted": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -8796,9 +9236,25 @@
         "type": "adr"
       }
     ],
+    "presentation": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "presentation-business": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "prevent": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       },
       {
@@ -8875,6 +9331,14 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -8959,6 +9423,12 @@
     "provider、skill": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "prs": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -9063,6 +9533,10 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -9332,6 +9806,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "remap。已在": [
@@ -9376,6 +9854,12 @@
         "type": "adr"
       }
     ],
+    "repeated": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "replace": [
       {
         "id": "ADR-053",
@@ -9399,6 +9883,44 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      }
+    ],
+    "report-builder": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "reportdocument/section/formatter": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "reporting": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "reportingsnapshot": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "reportinput": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -9476,11 +9998,23 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "research-context": [
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -9515,6 +10049,24 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "researchdataset": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -9595,6 +10147,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "reusable": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -9864,6 +10422,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
       }
     ],
     "run": [
@@ -10114,6 +10676,10 @@
       {
         "id": "ADR-061",
         "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
       }
     ],
     "semantic-contract": [
@@ -10157,6 +10723,10 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -10536,6 +11106,12 @@
         "type": "trap"
       }
     ],
+    "sole": [
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
     "solution": [
       {
         "id": "ADR-057",
@@ -10545,6 +11121,12 @@
     "source": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "sources": [
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -10563,6 +11145,12 @@
     "sprints": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "sql": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -10757,6 +11345,10 @@
     "stays": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       }
     ],
@@ -10959,6 +11551,14 @@
     "surface": [
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -11340,6 +11940,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-069",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -11541,6 +12145,10 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       },
       {
@@ -12012,6 +12620,12 @@
         "type": "adr"
       }
     ],
+    "unified": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "unique": [
       {
         "id": "ADR-041",
@@ -12154,6 +12768,12 @@
         "type": "adr"
       }
     ],
+    "v1": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
     "v1.0": [
       {
         "id": "ADR-061",
@@ -12185,6 +12805,16 @@
       },
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "v6": [
+      {
+        "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -12281,6 +12911,16 @@
     "violating": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "violations": [
+      {
+        "id": "ADR-069",
         "type": "adr"
       }
     ],
@@ -12463,6 +13103,10 @@
       },
       {
         "id": "ADR-062",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-068",
         "type": "adr"
       },
       {

@@ -72,35 +72,18 @@
       "description": "Use TASK-092 explainability tools to systematically collect and analyze divergence patterns. Primary focus: StrongBuy signal + DE_RISK state combinations. Track: Symbol, Date, Signal Score, Attribution Breakdown, State, T+20/T+60/T+120 forward returns. Goal: after 90 days, determine if State Layer is too conservative. Requires evidence before any State Layer threshold changes. Method: daily run `symbol-diagnostics` and `symbol-scoreboard`, log divergence cases, compare with future returns.",
       "status": "InProgress",
       "superseded_by": null
-    },
-    {
-      "id": "TASK-096",
-      "description": "Add --date support to `research srd` and `research stretch` commands. Use unified ResearchDateOptions { scope, date } parsing. Default to latest date when --date is omitted. This enables historical date research output for validation and Quarterly Review generation without adding new CLI tools.",
-      "status": "InProgress",
-      "superseded_by": null
-    },
-    {
-      "id": "TASK-097",
-      "description": "Abstract an internal `ResearchSnapshot` model that holds SRD, Stretch, Rotation, Breadth, and Analytics results for a single (date, scope). Refactor existing research commands to build ResearchSnapshot first, then render. This unifies query logic and enables Quarterly Review aggregation. No new CLI.",
-      "status": "Todo",
-      "superseded_by": null
-    },
-    {
-      "id": "TASK-098",
-      "description": "Design and implement Research Quarterly Review: automatically run SRD/Stretch/Analytics over a 90-day window and generate a Markdown report (Observation Window, SRD summary, Stretch distribution, top findings, potential ADR candidates). Output to reports/research-quarterly-{scope}-{date}.md. This is the synthesis layer that turns Observation + Analytics into accumulated research assets.",
-      "status": "Todo",
-      "superseded_by": null
     }
   ],
   "done_tasks": [],
   "constraints": [
     "静态 JSON 日历覆盖 2024-2027，后续需要人工维护。",
     "`TradingCalendar` 当前只覆盖 CN/HK。",
-    "`app-service/src/lib.rs` 仍是 monolith（~796 行）。",
+    "`app-service/src/lib.rs` 仍是 monolith（~4460 行），7 个 helper 模块（core, trust, breadth, dashboard, llm, sync, config_loader）已拆分，但高层编排仍集中在 lib.rs，后续可进一步拆分。",
     "Eastmoney 主源从当前环境不可达，全部标的走 Tencent fallback。",
     "P2 turnover 修复仅影响新拉取数据，存量 ClickHouse 数据需 `ingest-daily` 回填。",
     "**Wave 7.5 所有结论需在 1d persistence 下重新验证，暂不基于 10d 结果做进一步决策。**",
     "**Production regime data refresh APPROVED for both CN and HK with confirmation_days=1.**",
-    "**ADR-057 HK Liquidity Dominant is NOT needed. HK was never broken.**"
+    "**ADR-057 HK Liquidity Dominant is NOT needed. HK was never broken.**",
+    "**Shadow Production 操作指引见 `docs/shadow-production-playbook.md`**。90 天观察期；每日 `research srd/stretch` + `symbol-diagnostics`；每周 `symbol-scoreboard` + `research analytics`；每季度 `research review`。触发 kill criteria 时停止并提交 ADR review。"
   ]
 }
