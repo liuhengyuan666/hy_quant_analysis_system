@@ -15,7 +15,7 @@ apps/desktop/
 |------|----------|-------|
 | UI composition | `frontend/src/main.js` | root state, scope/date flow, refresh CTA, top-level render |
 | Shared reactive state | `frontend/src/store.js` | Vue reactive store with 10 synced properties |
-| Vue components | `frontend/src/components/*.vue` | 15 Vue panels (BreadthPanel, MetricCard, DateSelector, etc.) |
+| Vue components | `frontend/src/components/*.vue` | 20+ Vue panels (BreadthPanel, MetricCard, DateSelector, etc.) |
 | Vue root | `frontend/src/App.vue` | Composes all panels, wires events |
 | Feature-specific UI | `frontend/src/components/*.vue` | Vue components (DataHealth, RecentReports, UsageGuides, etc.) |
 | Frontend-only rules | `frontend/AGENTS.md` | nearest guidance for slice work |
@@ -32,6 +32,7 @@ apps/desktop/
 - Startup and scope reloads use `dashboard_bundle`; historical date changes use `dashboard_snapshot`.
 - `Trust summary` is the primary top-level verdict; `Recent reports` is a research-results action surface, not just a file-path list.
 - Safe artifact opening stays restricted to managed files under `reports/`.
+- V6 Research Surface commands are currently CLI-only; desktop UI may add them later via Tauri commands.
 
 ## ANTI-PATTERNS
 - Do **not** move analytics/business logic into frontend.
@@ -45,6 +46,6 @@ apps/desktop/
 ## NOTES
 - `frontend/node_modules/` and `frontend/dist/` are generated artifacts.
 - Help / Usage docs are loaded in-app from project markdown through Tauri.
-- Scoped desktop views use scoped regime + scoped environment, while upstream signal/backtest provenance still needs explicit reading in Phase 1.
+- Scoped desktop views use scoped regime + scoped environment, while upstream signal/backtest provenance still needs explicit reading.
 - Phase 3 complete. i18n with vue-i18n@11 (zh/en). Dead code deleted from `features/` and `renderers/`.
 - Keep this file cross-boundary; push frontend-only detail into `frontend/AGENTS.md` and Tauri-native detail into `src-tauri/AGENTS.md`.

@@ -21,12 +21,14 @@ Tauri-native desktop bridge. Owns command registration, refresh-job coordination
 - Scope parsing only accepts `global`, `cn`, and `hk`.
 - Refresh stage names, labels, and ordering must stay aligned with the frontend selector.
 - Artifact opening must remain restricted to canonical files under `reports/`.
+- New V6 Research Surface commands are currently CLI-only; if exposed in desktop, register them here and delegate to `app-service`.
 
 ## ANTI-PATTERNS
 - Do **not** put quant logic, report shaping, or SQL in this crate.
 - Do **not** add broad filesystem access when a narrow app-local command is enough.
 - Do **not** duplicate stage ordering or scope parsing in ad-hoc branches.
 - Do **not** bypass `refresh_consistency_alerts()` on the success path.
+- Do **not** implement V6 research document assembly here; call `app-service` methods.
 
 ## NOTES
 - `start_dashboard_refresh`, `cancel_dashboard_refresh`, and `retry_dashboard_refresh` implement suffix-run refresh with cooperative stage-bound cancellation and resume from the latest cancelled/error persisted job.
