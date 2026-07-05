@@ -31,7 +31,7 @@ crates/research-skills/src/
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| 修改/新增研究动作 | `action.rs` | 编辑 5 个 const PROMPT 或新增 prompt |
+| 修改/新增研究动作 | `action.rs` | 编辑 5 个 const PROMPT 或新增 prompt；需要 ADR-074 修正案 |
 | 修改 LLM 调用 | `openai_provider.rs` | async-openai crate |
 | 修改 provider 抽象 | `provider.rs` | LlmProvider trait |
 | 修改推理配置 | `inference.rs` | InferenceConfig |
@@ -67,3 +67,4 @@ crates/research-skills/src/
 - 死代码文件（skill.rs, renderer.rs, analysis.rs, deterministic.rs, token_budget.rs, regime_state_machine.rs）已标记 `#[allow(dead_code)]` 或不再被 lib.rs 使用，待后续清理。
 - `async-openai` is the LLM client library.
 - Depends on `core-domain` for `DashboardSnapshot` and `LlmConfig`.
+- V6 canonical `ResearchContext` lives in `crates/research-context`; LLM-specific context building lives in `crates/llm-context`.

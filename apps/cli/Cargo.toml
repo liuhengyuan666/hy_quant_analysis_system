@@ -21,6 +21,10 @@ market-store = { path = "../../crates/market-store" }
 research-skills = { path = "../../crates/research-skills" }
 research-benchmark = { path = "../../crates/research-benchmark" }
 research-validation = { path = "../../crates/research-validation" }
+report-builder = { path = "../../crates/report-builder" }
+reporting = { path = "../../crates/reporting" }
+report-renderer = { path = "../../crates/report-renderer" }
+research-context = { path = "../../crates/research-context" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

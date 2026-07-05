@@ -204,7 +204,7 @@ fn build_snapshot_context(snapshot: &DashboardSnapshot) -> String {
     if !snapshot.top_signals.is_empty() {
         ctx.push_str("\n**Top Signals**:\n");
         for (i, item) in snapshot.top_signals.iter().take(5).enumerate() {
-            ctx.push_str(&format!("{}. {} ({:?})\n", i + 1, item.symbol, item.signal_label));
+            ctx.push_str(&format!("{}. {} ({})\n", i + 1, item.symbol, item.signal_label));
         }
     }
 

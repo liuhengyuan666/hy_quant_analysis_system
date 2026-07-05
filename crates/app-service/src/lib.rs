@@ -6,6 +6,8 @@ use core_domain::{
     EnvironmentSnapshot, FredFileConfig, Instrument, InstrumentType, LlmAnalysisResult, LlmConfig,
     LlmFileConfig, LlmStatus, Market, RefreshJobRecord, SignalSnapshot, StartupFreshnessCheck,
 };
+use core_domain::research::classification::classify_level;
+use core_domain::research::stretch::weighted_stretch_overall;
 use data_ingestion::{
     fetch_daily_bars, fetch_eastmoney_daily_bars, fetch_fred_series, fetch_fred_series_with_status,
     fetch_tencent_daily_bars, load_universe,
@@ -18,7 +20,7 @@ use report_engine::{
     DataHealthSymbolSummary,
     WatchlistBreadthSnapshot,
 };
-use research_renderer::DashboardInsightComposer;
+use report_renderer::DashboardInsightComposer;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
 use std::collections::BTreeMap;
@@ -47,7 +49,7 @@ use crate::sync::*;
 use crate::trust::*;
 
 pub use core_domain::AnalysisScope as ReportScope;
-pub use research_renderer::ResearchInsight;
+pub use report_renderer::ResearchInsight;
 pub use execution_engine::types::ExecutionDecision;
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
@@ -481,6 +483,218 @@ impl research_skills::provider::LlmProvider for PlaceholderProvider {
             "analysis": "Market regime analysis completed",
             "note": "This is a placeholder response. Configure a real LLM provider for actual analysis."
         }"#.to_string())
+    }
+}
+
+// ── Phase 1: Unified Research Dataset ──
+
+/// Sole owner of research query results within a research execution session.
+/// Pure data container — only raw records, no business methods.
+/// NOT exposed outside the app-service boundary.
+struct ResearchDataset {
+    date: NaiveDate,
+    scope: core_domain::AnalysisScope,
+    signals: Vec<SignalSnapshot>,
+    states_history: Vec<core_domain::StrategyStateSnapshot>,
+    env_history: Vec<EnvironmentSnapshot>,
+    rotations: Vec<core_domain::RotationRankSnapshot>,
+    all_regimes: Vec<core_domain::MarketRegimeSnapshot>,
+    signal_history: BTreeMap<NaiveDate, Vec<(f64, core_domain::SignalLabel)>>,
+}
+
+/// Internal model: all research-relevant data for a single (date, scope).
+/// SRD, Stretch, and future Quarterly Review all build on this snapshot.
+/// This is an internal abstraction; it is not exposed in any public API or report DTO.
+#[derive(Debug, Clone)]
+pub struct ResearchSnapshot {
+    pub date: NaiveDate,
+    pub signals: Vec<core_domain::SignalSnapshot>,
+    pub state: Option<core_domain::StrategyStateSnapshot>,
+    pub states_history: Vec<core_domain::StrategyStateSnapshot>,
+    pub rotations: Vec<core_domain::RotationRankSnapshot>,
+    pub env: Option<core_domain::EnvironmentSnapshot>,
+    pub signal_history: BTreeMap<NaiveDate, Vec<(f64, core_domain::SignalLabel)>>,
+}
+
+impl ResearchSnapshot {
+    pub fn strong_buy_count(&self) -> usize {
+        self.signals
+            .iter()
+            .filter(|s| matches!(s.signal_label, core_domain::SignalLabel::StrongBuy))
+            .count()
+    }
+
+    pub fn buy_count(&self) -> usize {
+        self.signals
+            .iter()
+            .filter(|s| matches!(s.signal_label, core_domain::SignalLabel::Buy))
+            .count()
+    }
+
+    pub fn average_signal(&self) -> f64 {
+        if self.signals.is_empty() {
+            0.0
+        } else {
+            self.signals.iter().map(|s| s.final_score).sum::<f64>() / self.signals.len() as f64
+        }
+    }
+
+    pub fn state_label(&self) -> String {
+        self.state
+            .as_ref()
+            .map(|s| format!("{:?}", s.state))
+            .unwrap_or_else(|| "NO_TRADE".to_string())
+    }
+
+    pub fn divergence_duration(&self) -> i64 {
+        let is_conservative = |state: &core_domain::StrategyState| -> bool {
+            matches!(
+                state,
+                core_domain::StrategyState::NoTrade
+                    | core_domain::StrategyState::DeRisk
+                    | core_domain::StrategyState::LeftProbe
+            )
+        };
+
+        let mut recent_states: Vec<&core_domain::StrategyStateSnapshot> = self
+            .states_history
+            .iter()
+            .filter(|s| s.date <= self.date)
+            .collect();
+        recent_states.sort_by(|a, b| b.date.cmp(&a.date));
+
+        let mut duration: i64 = 0;
+        for state_snapshot in &recent_states {
+            if !is_conservative(&state_snapshot.state) {
+                break;
+            }
+            let has_divergent = self
+                .signal_history
+                .get(&state_snapshot.date)
+                .map(|signals| {
+                    signals
+                        .iter()
+                        .any(|(_, label)| matches!(label, core_domain::SignalLabel::StrongBuy | core_domain::SignalLabel::Buy))
+                })
+                .unwrap_or(false);
+            if has_divergent {
+                duration += 1;
+            } else {
+                break;
+            }
+        }
+        duration
+    }
+
+    pub fn breadth_trend(&self) -> &'static str {
+        match self.env {
+            Some(ref env) => {
+                let delta = env.breadth_5d_delta.unwrap_or(0.0);
+                if delta > 0.05 {
+                    "Improving"
+                } else if delta < -0.05 {
+                    "Weakening"
+                } else {
+                    "Neutral"
+                }
+            }
+            None => "Neutral",
+        }
+    }
+
+    pub fn rotation_pattern(&self) -> &'static str {
+        let mut sorted = self.rotations.clone();
+        sorted.sort_by(|a, b| b.momentum_score.total_cmp(&a.momentum_score));
+        let top_count = sorted.len().min(10);
+        let top_10_avg_momentum: f64 = if top_count > 0 {
+            sorted.iter().take(top_count).map(|r| r.momentum_score).sum::<f64>() / top_count as f64
+        } else {
+            0.0
+        };
+
+        if top_10_avg_momentum > 1.5 {
+            "Technology Dominant"
+        } else if top_10_avg_momentum < 0.3 {
+            "Defensive"
+        } else {
+            "Mixed"
+        }
+    }
+
+    pub fn signal_percentile(&self) -> f64 {
+        let avg_signal = self.average_signal();
+        let mut all_avg_signals: Vec<f64> = self
+            .signal_history
+            .values()
+            .filter(|signals| !signals.is_empty())
+            .map(|signals| {
+                signals.iter().map(|(s, _)| s).sum::<f64>() / signals.len() as f64
+            })
+            .collect();
+        all_avg_signals.sort_by(|a, b| a.total_cmp(b));
+
+        if all_avg_signals.is_empty() {
+            50.0
+        } else {
+            let below = all_avg_signals.iter().filter(|&&v| v < avg_signal).count();
+            (below as f64 / all_avg_signals.len() as f64) * 100.0
+        }
+    }
+
+    pub fn stretch_crowding(&self) -> (&'static str, f64, Option<f64>) {
+        let total_momentum: f64 = self.rotations.iter().map(|r| r.momentum_score).sum();
+        let mut sorted = self.rotations.clone();
+        sorted.sort_by(|a, b| b.momentum_score.total_cmp(&a.momentum_score));
+        let top5_sum: f64 = sorted.iter().take(5).map(|r| r.momentum_score).sum();
+        let concentration_pct = if total_momentum > 0.0 {
+            (top5_sum / total_momentum) * 100.0
+        } else {
+            0.0
+        };
+        let level = classify_level(concentration_pct, 30.0, 50.0, true);
+        (level, concentration_pct, None)
+    }
+
+    pub fn stretch_momentum(&self) -> (&'static str, f64, f64) {
+        let rs120_max = self
+            .rotations
+            .iter()
+            .map(|r| r.rs_120)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let mut sorted = self.rotations.clone();
+        sorted.sort_by(|a, b| b.momentum_score.total_cmp(&a.momentum_score));
+        let top5: Vec<&core_domain::RotationRankSnapshot> = sorted.iter().take(5).collect();
+        let top5_rs120_avg = if !top5.is_empty() {
+            top5.iter().map(|r| r.rs_120).sum::<f64>() / top5.len() as f64
+        } else {
+            0.0
+        };
+        let level = classify_level(rs120_max, 70.0, 85.0, true);
+        (level, rs120_max, top5_rs120_avg)
+    }
+
+    pub fn stretch_breadth(&self) -> (&'static str, f64, Option<f64>) {
+        match self.env {
+            Some(ref env) => {
+                let bp = env.breadth_pct;
+                let sma5 = env.breadth_pct_sma5;
+                let level = classify_level(bp, 35.0, 20.0, false);
+                (level, bp, sma5)
+            }
+            None => ("Normal", 0.0, None),
+        }
+    }
+
+    pub fn stretch_leverage(&self) -> &'static str {
+        "Normal"
+    }
+
+    pub fn stretch_overall(&self) -> (&'static str, f64) {
+        let (crowding_level, _, _) = self.stretch_crowding();
+        let (breadth_level, _, _) = self.stretch_breadth();
+        let (momentum_level, _, _) = self.stretch_momentum();
+        let leverage_level = self.stretch_leverage();
+        weighted_stretch_overall(crowding_level, breadth_level, momentum_level, leverage_level)
     }
 }
 
@@ -2587,9 +2801,9 @@ impl AppContext {
             .dashboard_snapshot_with_scope(report_date, scope)?
             .context("no dashboard snapshot available for report export")?;
 
-        let insight = research_renderer::DashboardInsightComposer::compose(&snapshot);
+        let insight = report_renderer::DashboardInsightComposer::compose(&snapshot);
         let markdown = if concise {
-            research_renderer::DailyReportComposer::compose_markdown(&snapshot, Some(&insight))
+            report_renderer::DailyReportComposer::compose_markdown(&snapshot, Some(&insight))
         } else {
             render_markdown_report(&snapshot)
         };
@@ -3139,24 +3353,170 @@ impl AppContext {
     }
 
     /// Build ResearchContext for a given scope
-    pub fn research_context(&self, scope: ReportScope) -> Result<research_context::ResearchContext> {
+    pub fn research_context(&self, scope: ReportScope) -> Result<llm_context::ResearchContext> {
         let snapshot = self
             .dashboard_snapshot_with_scope(None, scope)?
             .context("No dashboard data available")?;
-        Ok(research_context::ContextBuilder::build(&snapshot))
+        Ok(llm_context::ContextBuilder::build(&snapshot))
     }
 
     /// Compute semantic features for a given scope
     pub fn research_features(
         &self,
         scope: ReportScope,
-    ) -> Result<Vec<research_context::SemanticFeature>> {
+    ) -> Result<Vec<llm_context::SemanticFeature>> {
         let context = self.research_context(scope)?;
-        let features = research_context::builtin_features();
+        let features = llm_context::builtin_features();
         Ok(features
             .iter()
             .filter_map(|f| f.compute(&context))
             .collect())
+    }
+
+    /// Build ResearchContext directly from Engine/Store for a given date and scope.
+    ///
+    /// This is the V6 consumer migration entry point for CLI research commands. Unlike
+    /// `build_research_context_from_dashboard` (which maps from Production Surface),
+    /// this method fetches directly from market-store, keeping the Research
+    /// Pipeline independent of `DashboardSnapshot`.
+    ///
+    /// Phase 1: Delegates to `fetch_research_dataset` (single query owner).
+    pub fn build_research_context_for_date(
+        &self,
+        date: NaiveDate,
+        scope: core_domain::AnalysisScope,
+    ) -> Result<research_context::ResearchContext> {
+        let dataset = self.fetch_research_dataset(date, scope, 365)?;
+        build_research_context_from_dataset(&dataset)
+    }
+
+    /// Build ResearchSnapshot (Computation Workspace) for a given date and scope.
+    pub fn build_research_snapshot_for_date(
+        &self,
+        date: NaiveDate,
+        scope: core_domain::AnalysisScope,
+    ) -> Result<ResearchSnapshot> {
+        let dataset = self.fetch_research_dataset(date, scope, 365)?;
+        Ok(build_research_snapshot_from_dataset(&dataset))
+    }
+
+    /// Build both ResearchContext and ResearchSnapshot from a single dataset fetch.
+    /// Use this when you need both to avoid double-fetching.
+    pub fn build_research_bundle_for_date(
+        &self,
+        date: NaiveDate,
+        scope: core_domain::AnalysisScope,
+    ) -> Result<(research_context::ResearchContext, ResearchSnapshot)> {
+        let dataset = self.fetch_research_dataset(date, scope, 365)?;
+        let context = build_research_context_from_dataset(&dataset)?;
+        let snapshot = build_research_snapshot_from_dataset(&dataset);
+        Ok((context, snapshot))
+    }
+
+    /// Phase 1: Single query owner — fetch all research data in one place.
+    fn fetch_research_dataset(
+        &self,
+        date: NaiveDate,
+        scope: core_domain::AnalysisScope,
+        signal_history_lookback_days: i64,
+    ) -> Result<ResearchDataset> {
+        // 1. signals for date/scope
+        let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+            &self.storage, date, scope,
+        )?;
+
+        // 2. states_history for scope
+        let states_history =
+            market_store::fetch_strategy_states_for_scope(&self.storage, scope)?;
+
+        // 3. env_history (60-day lookback)
+        let env_lookback = date - chrono::Duration::days(60);
+        let env_history = market_store::fetch_environment_snapshots_for_scope(
+            &self.storage, scope, env_lookback, date,
+        )?;
+
+        // 4. rotations for date, filtered by scope using seed_universe
+        let rotations = market_store::fetch_rotation_ranks_for_date(&self.storage, date)?;
+        let instruments = self.seed_universe().unwrap_or_default();
+        let market_filter = match scope {
+            core_domain::AnalysisScope::Cn => Some(core_domain::Market::Cn),
+            core_domain::AnalysisScope::Hk => Some(core_domain::Market::Hk),
+            core_domain::AnalysisScope::Global => None,
+        };
+        let rotations: Vec<core_domain::RotationRankSnapshot> = rotations
+            .into_iter()
+            .filter(|r| {
+                market_filter.as_ref().map_or(true, |m| {
+                    instruments.iter().any(|i| i.symbol == r.symbol && i.market == *m)
+                })
+            })
+            .collect();
+
+        // 5. all_regimes
+        let all_regimes = market_store::fetch_market_regimes(&self.storage)?;
+
+        // 6. signal_history (signal_history_lookback_days range) using new market-store function
+        let history_from = date - chrono::Duration::days(signal_history_lookback_days);
+        let history_signals = market_store::fetch_signal_snapshots_for_range_with_scope(
+            &self.storage, scope, history_from, date,
+        )?;
+        let mut signal_history: BTreeMap<NaiveDate, Vec<(f64, core_domain::SignalLabel)>> =
+            BTreeMap::new();
+        for s in history_signals {
+            signal_history
+                .entry(s.date)
+                .or_default()
+                .push((s.final_score, s.signal_label));
+        }
+
+        Ok(ResearchDataset {
+            date,
+            scope,
+            signals,
+            states_history,
+            env_history,
+            rotations,
+            all_regimes,
+            signal_history,
+        })
+    }
+
+    /// V6 Reporting Layer demo: build ResearchContext → ReportingSnapshot → ReportDocument → Markdown.
+    ///
+    /// This is a temporary demo method to validate the new reporting pipeline.
+    /// It does not replace any existing CLI behavior.
+    pub fn demo_reporting_pipeline(&self, scope: ReportScope) -> Result<String> {
+        use report_builder::{ResearchReportBuilder, SrdReportInput};
+        use reporting::Formatter;
+
+        let snapshot = self
+            .dashboard_snapshot_with_scope(None, scope)?
+            .context("No dashboard data available")?;
+        let research = build_research_context_from_dashboard(&snapshot);
+        let reporting_snapshot = reporting::ReportingSnapshot {
+            generated_at: chrono::Utc::now(),
+            research,
+        };
+
+        // Demo: build an SRD-style document with placeholder input
+        let input = SrdReportInput {
+            strong_buy_count: 0,
+            buy_count: 0,
+            average_signal: 0.0,
+            duration: 0,
+            breadth_trend: "Neutral".to_string(),
+            rotation_pattern: "Mixed".to_string(),
+            historical_percentile: 50.0,
+            interpretation: "Demo pipeline output".to_string(),
+            confidence: "Low".to_string(),
+            state_label: "NO_TRADE".to_string(),
+        };
+
+        let document =
+            ResearchReportBuilder::build_srd(&reporting_snapshot, &input)?;
+        let mut formatter = report_renderer::MarkdownFormatter::new();
+        report_renderer::render(&mut formatter, &document);
+        Ok(formatter.finalize())
     }
 
     /// Research Layer — 只读叙事层分析。
@@ -3348,9 +3708,407 @@ impl AppContext {
 
 }
 
+/// Build ResearchContext (Canonical Semantic Contract) from a ResearchDataset.
+fn build_research_context_from_dataset(
+    dataset: &ResearchDataset,
+) -> Result<research_context::ResearchContext> {
+    use research_context::{
+        BreadthSummary, DivergenceSummary, MarketStateSummary, RotationItem, RotationSummary,
+        SignalItem, SignalSummary, TrustSummary,
+    };
+
+    // Find env for date
+    let env = dataset.env_history.iter().find(|e| e.date == dataset.date);
+
+    // Find regime for (scope, date)
+    let scope_str = dataset.scope.as_str().to_uppercase();
+    let regime = dataset
+        .all_regimes
+        .iter()
+        .filter(|r| r.market.eq_ignore_ascii_case(&scope_str) && r.date == dataset.date)
+        .next();
+
+    // Build MarketStateSummary
+    let market_state = MarketStateSummary {
+        label: regime
+            .map(|r| r.regime_label.clone())
+            .unwrap_or_else(|| "unknown".to_string()),
+        trend_score: regime.map(|r| r.trend_score).unwrap_or(50.0),
+        liquidity_score: regime.map(|r| r.liquidity_score).unwrap_or(50.0),
+        risk_score: regime.map(|r| r.risk_score).unwrap_or(50.0),
+        confidence: env
+            .map(|e| e.environment_score / 100.0)
+            .unwrap_or(0.5)
+            .clamp(0.0, 1.0),
+    };
+
+    // Build BreadthSummary
+    let breadth = env
+        .map(|e| {
+            let breadth_pct = e.breadth_pct;
+            let breadth_delta = e.breadth_5d_delta.unwrap_or(0.0);
+            let condition = if breadth_pct < 30.0 && breadth_delta < -10.0 {
+                "collapsed"
+            } else if breadth_pct < 50.0 || breadth_delta < -5.0 {
+                "weakening"
+            } else {
+                "strong"
+            };
+            BreadthSummary {
+                breadth_pct,
+                sma5: e.breadth_pct_sma5,
+                delta_5d: e.breadth_5d_delta,
+                condition: condition.to_string(),
+            }
+        })
+        .unwrap_or(BreadthSummary {
+            breadth_pct: 0.0,
+            sma5: None,
+            delta_5d: None,
+            condition: "unknown".to_string(),
+        });
+
+    // Build RotationSummary
+    let rotation = {
+        let top: Vec<RotationItem> = dataset
+            .rotations
+            .iter()
+            .take(10)
+            .enumerate()
+            .map(|(i, r)| RotationItem {
+                rank: (i + 1) as i32,
+                symbol: r.symbol.clone(),
+                momentum_score: r.momentum_score,
+            })
+            .collect();
+        let bottom: Vec<RotationItem> = dataset
+            .rotations
+            .iter()
+            .rev()
+            .take(10)
+            .enumerate()
+            .map(|(i, r)| RotationItem {
+                rank: (dataset.rotations.len() - i) as i32,
+                symbol: r.symbol.clone(),
+                momentum_score: r.momentum_score,
+            })
+            .collect();
+
+        let rotation_state = if top.len() >= 3 {
+            let top3: Vec<f64> = top.iter().take(3).map(|r| r.momentum_score).collect();
+            let min_mm = top3.iter().cloned().fold(f64::MAX, f64::min);
+            let max_mm = top3.iter().cloned().fold(f64::MIN, f64::max);
+            if max_mm - min_mm < 5.0 {
+                "broad"
+            } else {
+                "concentrated"
+            }
+        } else {
+            "broad"
+        };
+
+        let leadership_stability = if top.len() >= 3 {
+            let top3: Vec<f64> = top.iter().take(3).map(|r| r.momentum_score).collect();
+            let mean = top3.iter().sum::<f64>() / top3.len() as f64;
+            let variance =
+                top3.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / top3.len() as f64;
+            let std_dev = variance.sqrt();
+            (1.0 - std_dev / 20.0).clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+
+        RotationSummary {
+            top,
+            bottom,
+            rotation_state: rotation_state.to_string(),
+            leadership_stability,
+        }
+    };
+
+    // Build SignalSummary
+    let signal = SignalSummary {
+        signals: dataset
+            .signals
+            .iter()
+            .take(20)
+            .map(|s| SignalItem {
+                symbol: s.symbol.clone(),
+                final_score: s.final_score,
+                signal_label: s.signal_label.to_string(),
+            })
+            .collect(),
+        bullish_count: dataset
+            .signals
+            .iter()
+            .filter(|s| {
+                matches!(
+                    s.signal_label,
+                    core_domain::SignalLabel::StrongBuy | core_domain::SignalLabel::Buy
+                )
+            })
+            .count(),
+        strong_buy_count: dataset
+            .signals
+            .iter()
+            .filter(|s| matches!(s.signal_label, core_domain::SignalLabel::StrongBuy))
+            .count(),
+        average_score: if dataset.signals.is_empty() {
+            0.0
+        } else {
+            dataset.signals.iter().map(|s| s.final_score).sum::<f64>()
+                / dataset.signals.len() as f64
+        },
+    };
+
+    // Build DivergenceSummary (placeholder)
+    let divergence = DivergenceSummary {
+        divergence_duration: 0,
+        samples: Vec::new(),
+    };
+
+    // Build TrustSummary
+    let trust = TrustSummary {
+        level: research_context::TrustLevel::Unassessed,
+        headline: "Trust assessment not yet implemented for ResearchContext".to_string(),
+        is_data_complete: !dataset.signals.is_empty() && env.is_some(),
+    };
+
+    Ok(research_context::ResearchContext {
+        version: 1,
+        scope: dataset.scope,
+        date: dataset.date,
+        market_state,
+        breadth,
+        rotation,
+        signal,
+        divergence,
+        trust,
+    })
+}
+
+/// Build ResearchSnapshot (Computation Workspace) from a ResearchDataset.
+fn build_research_snapshot_from_dataset(dataset: &ResearchDataset) -> ResearchSnapshot {
+    let state = dataset
+        .states_history
+        .iter()
+        .find(|s| s.date == dataset.date)
+        .cloned();
+    let env = dataset
+        .env_history
+        .iter()
+        .find(|e| e.date == dataset.date)
+        .cloned();
+
+    ResearchSnapshot {
+        date: dataset.date,
+        signals: dataset.signals.clone(),
+        state,
+        states_history: dataset.states_history.clone(),
+        rotations: dataset.rotations.clone(),
+        env,
+        signal_history: dataset.signal_history.clone(),
+    }
+}
+
+/// Map DashboardSnapshot (Production Surface) to the new research-context semantic layer.
+///
+/// This mapping lives in app-service because research-context must not depend on report-engine.
+fn build_research_context_from_dashboard(
+    snapshot: &report_engine::DashboardSnapshot,
+) -> research_context::ResearchContext {
+    use research_context::{
+        BreadthSummary, DivergenceSummary, MarketStateSummary, RotationItem, RotationSummary,
+        SignalItem, SignalSummary, TrustSummary,
+    };
+
+    let market_state = MarketStateSummary {
+        label: snapshot.regime_label.clone(),
+        trend_score: snapshot.trend_score,
+        liquidity_score: snapshot.liquidity_score,
+        risk_score: snapshot.risk_score,
+        confidence: snapshot
+            .environment
+            .as_ref()
+            .map(|e| e.environment_score / 100.0)
+            .unwrap_or(0.5)
+            .clamp(0.0, 1.0),
+    };
+
+    let breadth = snapshot
+        .environment
+        .as_ref()
+        .map(|e| {
+            let breadth_pct = e.breadth_pct;
+            let breadth_delta = e.breadth_5d_delta.unwrap_or(0.0);
+            let condition = if breadth_pct < 30.0 && breadth_delta < -10.0 {
+                "collapsed"
+            } else if breadth_pct < 50.0 || breadth_delta < -5.0 {
+                "weakening"
+            } else {
+                "strong"
+            };
+            BreadthSummary {
+                breadth_pct,
+                sma5: e.breadth_pct_sma5,
+                delta_5d: e.breadth_5d_delta,
+                condition: condition.to_string(),
+            }
+        })
+        .unwrap_or(BreadthSummary {
+            breadth_pct: 0.0,
+            sma5: None,
+            delta_5d: None,
+            condition: "unknown".to_string(),
+        });
+
+    let rotation = {
+        let top = snapshot
+            .top_rotation
+            .iter()
+            .map(|r| RotationItem {
+                rank: r.rank as i32,
+                symbol: r.symbol.clone(),
+                momentum_score: r.momentum_score,
+            })
+            .collect::<Vec<_>>();
+        let bottom = snapshot
+            .bottom_rotation
+            .iter()
+            .map(|r| RotationItem {
+                rank: r.rank as i32,
+                symbol: r.symbol.clone(),
+                momentum_score: r.momentum_score,
+            })
+            .collect::<Vec<_>>();
+
+        let rotation_state = if top.len() >= 3 {
+            let top3: Vec<f64> = top.iter().take(3).map(|r| r.momentum_score).collect();
+            let min_mm = top3.iter().cloned().fold(f64::MAX, f64::min);
+            let max_mm = top3.iter().cloned().fold(f64::MIN, f64::max);
+            if max_mm - min_mm < 5.0 {
+                "broad"
+            } else {
+                "concentrated"
+            }
+        } else {
+            "broad"
+        };
+
+        let leadership_stability = if top.len() >= 3 {
+            let top3: Vec<f64> = top.iter().take(3).map(|r| r.momentum_score).collect();
+            let mean = top3.iter().sum::<f64>() / top3.len() as f64;
+            let variance = top3.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / top3.len() as f64;
+            let std_dev = variance.sqrt();
+            (1.0 - std_dev / 20.0).clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+
+        RotationSummary {
+            top,
+            bottom,
+            rotation_state: rotation_state.to_string(),
+            leadership_stability,
+        }
+    };
+
+    let signal = SignalSummary {
+        signals: snapshot
+            .top_signals
+            .iter()
+            .map(|s| SignalItem {
+                symbol: s.symbol.clone(),
+                final_score: s.final_score,
+                signal_label: s.signal_label.to_string(),
+            })
+            .collect(),
+        bullish_count: snapshot.bullish_signals.len(),
+        strong_buy_count: snapshot
+            .bullish_signals
+            .iter()
+            .filter(|s| matches!(s.signal_label, core_domain::SignalLabel::StrongBuy))
+            .count(),
+        average_score: if snapshot.top_signals.is_empty() {
+            0.0
+        } else {
+            snapshot.top_signals.iter().map(|s| s.final_score).sum::<f64>()
+                / snapshot.top_signals.len() as f64
+        },
+    };
+
+    let divergence = DivergenceSummary {
+        divergence_duration: 0,
+        samples: Vec::new(),
+    };
+
+    let trust = snapshot
+        .trust_summary
+        .as_ref()
+        .map(|t| TrustSummary {
+            level: parse_trust_level(&t.level),
+            headline: t.headline.clone(),
+            is_data_complete: t.latest_day_complete,
+        })
+        .unwrap_or(TrustSummary {
+            level: research_context::TrustLevel::Unassessed,
+            headline: "No trust summary available".to_string(),
+            is_data_complete: false,
+        });
+
+    research_context::ResearchContext {
+        version: 1,
+        scope: parse_scope(&snapshot.scope),
+        date: NaiveDate::parse_from_str(&snapshot.report_date, "%Y-%m-%d")
+            .unwrap_or_else(|_| NaiveDate::default()),
+        market_state,
+        breadth,
+        rotation,
+        signal,
+        divergence,
+        trust,
+    }
+}
+
+fn parse_scope(scope: &str) -> core_domain::AnalysisScope {
+    match scope.to_uppercase().as_str() {
+        "CN" => core_domain::AnalysisScope::Cn,
+        "HK" => core_domain::AnalysisScope::Hk,
+        _ => core_domain::AnalysisScope::Global,
+    }
+}
+
+fn parse_trust_level(level: &str) -> research_context::TrustLevel {
+    match level.to_lowercase().as_str() {
+        "trusted" => research_context::TrustLevel::High,
+        "review" => research_context::TrustLevel::Medium,
+        "degraded" => research_context::TrustLevel::Low,
+        _ => research_context::TrustLevel::Unassessed,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_trust_level_maps_known_levels() {
+        use research_context::TrustLevel;
+        assert_eq!(parse_trust_level("trusted"), TrustLevel::High);
+        assert_eq!(parse_trust_level("TRUSTED"), TrustLevel::High);
+        assert_eq!(parse_trust_level("review"), TrustLevel::Medium);
+        assert_eq!(parse_trust_level("Review"), TrustLevel::Medium);
+        assert_eq!(parse_trust_level("degraded"), TrustLevel::Low);
+        assert_eq!(parse_trust_level("DeGrAdEd"), TrustLevel::Low);
+    }
+
+    #[test]
+    fn parse_trust_level_defaults_to_unassessed_for_unknown() {
+        use research_context::TrustLevel;
+        assert_eq!(parse_trust_level("ok"), TrustLevel::Unassessed);
+        assert_eq!(parse_trust_level("warning"), TrustLevel::Unassessed);
+        assert_eq!(parse_trust_level(""), TrustLevel::Unassessed);
+    }
 
     fn build_series(points: &[(NaiveDate, f64, f64)]) -> TrackedInstrumentSeries {
         TrackedInstrumentSeries {
@@ -3990,30 +4748,30 @@ mod tests {
     fn build_research_context(
         breadth_pct: f64,
         breadth_delta: f64,
-        liquidity_pressure: research_context::LiquidityPressure,
+        liquidity_pressure: llm_context::LiquidityPressure,
         macro_stale_days: i32,
-    ) -> research_context::ResearchContext {
-        research_context::ResearchContext {
-            market: research_context::MarketContext {
+    ) -> llm_context::ResearchContext {
+        llm_context::ResearchContext {
+            market: llm_context::MarketContext {
                 current_state: "bullish".to_string(),
                 previous_state: None,
                 confidence: 0.8,
                 drivers: vec![],
                 transition: None,
             },
-            liquidity: research_context::LiquidityContext {
+            liquidity: llm_context::LiquidityContext {
                 pressure: liquidity_pressure,
                 spread: None,
                 yield_curve_status: None,
                 dollar_strength: None,
             },
-            breadth: research_context::BreadthContext {
-                condition: research_context::BreadthCondition::Strong,
+            breadth: llm_context::BreadthContext {
+                condition: llm_context::BreadthCondition::Strong,
                 breadth_pct,
                 breadth_delta,
             },
-            rotation: research_context::RotationContext {
-                state: research_context::RotationState::Broad,
+            rotation: llm_context::RotationContext {
+                state: llm_context::RotationState::Broad,
                 top_sectors: vec![],
                 bottom_sectors: vec![],
                 leadership_stability: 0.7,
@@ -4022,23 +4780,23 @@ mod tests {
                 quality_factor: None,
                 crowding_factor: None,
             },
-            regime: research_context::RegimeContext {
+            regime: llm_context::RegimeContext {
                 current: "expansion".to_string(),
                 confidence: 0.75,
                 macro_stale_days,
             },
-            signals: research_context::SignalsContext {
+            signals: llm_context::SignalsContext {
                 bullish_count: 3,
                 defensive_count: 2,
                 data_starved_count: 0,
             },
-            macro_: research_context::MacroContext {
+            macro_: llm_context::MacroContext {
                 spread_10y: None,
                 dxy_index: None,
                 foreign_flow: None,
                 vix: None,
             },
-            risk: research_context::RiskContext {
+            risk: llm_context::RiskContext {
                 skewness: None,
                 kurtosis: None,
                 tail_index: None,
@@ -4049,7 +4807,7 @@ mod tests {
     #[test]
     fn extract_key_drivers_detects_breadth_collapse() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(25.0, -5.0, research_context::LiquidityPressure::Moderate, 1);
+        let context = build_research_context(25.0, -5.0, llm_context::LiquidityPressure::Moderate, 1);
         let drivers = extract_key_drivers(&context);
         assert!(drivers.contains(&"breadth_collapse".to_string()));
         assert!(!drivers.contains(&"breadth_deteriorating".to_string()));
@@ -4058,7 +4816,7 @@ mod tests {
     #[test]
     fn extract_key_drivers_detects_deteriorating_and_liquidity_critical() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(40.0, -15.0, research_context::LiquidityPressure::Critical, 5);
+        let context = build_research_context(40.0, -15.0, llm_context::LiquidityPressure::Critical, 5);
         let drivers = extract_key_drivers(&context);
         assert!(drivers.contains(&"breadth_deteriorating".to_string()));
         assert!(drivers.contains(&"liquidity_critical".to_string()));
@@ -4068,35 +4826,35 @@ mod tests {
     #[test]
     fn assess_risk_level_critical_when_breadth_below_20() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(15.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(assess_risk_level(&context), "critical");
     }
 
     #[test]
     fn assess_risk_level_high_when_liquidity_critical() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 0);
+        let context = build_research_context(40.0, 0.0, llm_context::LiquidityPressure::Critical, 0);
         assert_eq!(assess_risk_level(&context), "critical");
     }
 
     #[test]
     fn assess_risk_level_medium_when_breadth_between_30_and_50() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(35.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(35.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(assess_risk_level(&context), "medium");
     }
 
     #[test]
     fn assess_risk_level_low_when_breadth_above_50() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(60.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(assess_risk_level(&context), "low");
     }
 
     #[test]
     fn identify_risk_factors_detects_extreme_collapse() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(15.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         let factors = identify_risk_factors(&context);
         assert!(factors.contains(&"breadth_below_30".to_string()));
         assert!(factors.contains(&"breadth_extreme_collapse".to_string()));
@@ -4105,7 +4863,7 @@ mod tests {
     #[test]
     fn identify_risk_factors_detects_liquidity_and_macro_stale() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(40.0, 0.0, research_context::LiquidityPressure::Critical, 10);
+        let context = build_research_context(40.0, 0.0, llm_context::LiquidityPressure::Critical, 10);
         let factors = identify_risk_factors(&context);
         assert!(factors.contains(&"liquidity_critical".to_string()));
         assert!(factors.contains(&"macro_severely_stale".to_string()));
@@ -4114,21 +4872,21 @@ mod tests {
     #[test]
     fn generate_recommendation_exit_when_breadth_below_20() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(15.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(15.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(generate_recommendation(&context), "exit");
     }
 
     #[test]
     fn generate_recommendation_reduce_exposure_when_breadth_below_30() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(25.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(25.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(generate_recommendation(&context), "reduce_exposure");
     }
 
     #[test]
     fn generate_recommendation_maintain_when_breadth_above_50() {
         let _ctx = AppContext::new(StorageConfig::default());
-        let context = build_research_context(60.0, 0.0, research_context::LiquidityPressure::Low, 0);
+        let context = build_research_context(60.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(generate_recommendation(&context), "maintain");
     }
 }

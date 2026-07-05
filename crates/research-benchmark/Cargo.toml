@@ -6,7 +6,7 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-research-context = { path = "../research-context" }
+llm-context = { path = "../llm-context" }
 research-skills = { path = "../research-skills" }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -6,7 +6,7 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-research-context = { path = "../research-context" }
+llm-context = { path = "../llm-context" }
 core-domain = { path = "../core-domain" }
 chrono = { workspace = true }
 report-engine = { path = "../report-engine" }
