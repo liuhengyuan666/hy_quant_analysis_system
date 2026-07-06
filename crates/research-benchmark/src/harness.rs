@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use research_context::ResearchContext;
+use llm_context::ResearchContext;
 use research_skills::InferenceConfig;
 
 use super::metrics::{

@@ -127,8 +127,8 @@ Calibrate regime thresholds to improve alignment between Regime predictions and 
 ## Files Modified
 
 - `crates/macro-engine/src/lib.rs` — thresholds modified and reverted
-- `docs/task-004-calibration-plan.md` — original plan (superseded)
-- `docs/task-004-calibration-findings.md` — this document
+- `docs/v5/task-004-calibration-plan.md` — original plan (superseded)
+- `docs/v5/task-004-calibration-findings.md` — this document
 
 ---
 

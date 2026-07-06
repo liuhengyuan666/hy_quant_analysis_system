@@ -23,6 +23,44 @@ impl From<ReportScopeArg> for app_service::ReportScope {
     }
 }
 
+#[derive(Debug, Subcommand)]
+enum ResearchCommand {
+    /// SRD (Signal-Regime Divergence): observation tool
+    Srd {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
+    /// Market Stretch analysis — measures market crowding/extremity in 4 dimensions
+    Stretch {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
+    /// Conditional forward-return analytics — historical statistics only
+    Analytics {
+        #[arg(long)]
+        condition: String,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+    /// Quarterly Review — aggregate SRD/Stretch/Analytics over a window into a Markdown report
+    Review {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Window start date (defaults to 90 days before --to)")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "Window end date (defaults to latest available daily date)")]
+        to: Option<NaiveDate>,
+        #[arg(long, help = "Output Markdown file path")]
+        output: Option<std::path::PathBuf>,
+    },
+}
+
 #[derive(Debug, Parser)]
 #[command(name = "quant-cli")]
 #[command(about = "Rust quant analysis system CLI")]
@@ -128,6 +166,11 @@ enum Command {
         run_backtests: bool,
     },
     ResearchContext {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
+    /// Market Stretch analysis — measures market crowding/extremity in 4 dimensions (Observation tool)
+    ResearchStretch {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
@@ -592,6 +635,14 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// Research Surface commands (observation-only tools)
+    #[command(subcommand)]
+    Research(ResearchCommand),
+    /// SRD (Signal-Regime Divergence): observation tool — does not influence any decision logic
+    ResearchSrd {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+    },
     /// Research Surface: Full rotation ranking (not part of Shadow Production observation chain)
     RotationRanking {
         #[arg(long)]
@@ -641,6 +692,17 @@ fn main() -> Result<()> {
         Command::ExportDataHealthReport => commands::dashboard::handle_export_data_health_report(&context)?,
         Command::SyncAndExport { date, scope, to, run_backtests } => commands::dashboard::handle_sync_and_export(&context, date, scope, to, run_backtests, cli.quiet)?,
         Command::ResearchContext { scope } => commands::dashboard::handle_research_context(&context, scope)?,
+        Command::Research(cmd) => match cmd {
+            ResearchCommand::Srd { scope, date } => commands::research::handle_research_srd(&context, scope, date)?,
+            ResearchCommand::Stretch { scope, date } => commands::research::handle_research_stretch(&context, scope, date)?,
+            ResearchCommand::Analytics { condition, horizon, scope } => {
+                commands::research::handle_research_analytics(&context, condition, horizon, scope)?
+            }
+            ResearchCommand::Review { scope, from, to, output } => {
+                commands::research::handle_research_review(&context, scope, from, to, output)?
+            }
+        },
+        Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope, None)?,
         Command::SetLlmConfig { base_url, model, timeout_secs } => commands::llm::handle_set_llm_config(&context, base_url, model, timeout_secs)?,
         Command::SetLlmApiKey { key } => commands::llm::handle_set_llm_api_key(&context, key)?,
         Command::AnalyzeWithLlm { scope, action } => commands::llm::handle_analyze_with_llm(&context, scope, action, cli.quiet)?,
@@ -704,6 +766,7 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::AuditAlignmentRedesign { from, to, horizon } => commands::audit::handle_audit_alignment_redesign(&context, from, to, horizon)?,
         Command::AuditStatePersistenceEconomics { from, to } => commands::audit::handle_audit_state_persistence_economics(&context, from, to)?,
         Command::ValidateStateLayerGt { from, to } => commands::audit::handle_validate_state_layer_gt(&context, from, to)?,
+        Command::ResearchSrd { scope } => commands::research::handle_research_srd(&context, scope, None)?,
         Command::RotationRanking { date, scope } => commands::audit::handle_rotation_ranking(&context, date, scope)?,
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,

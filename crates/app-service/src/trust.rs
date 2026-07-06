@@ -1,6 +1,7 @@
 use chrono::{Duration, NaiveDate};
 use core_domain::{Instrument, InstrumentType};
 use core_domain::AnalysisScope as ReportScope;
+use market_store::StorageConfig;
 use report_engine::{DashboardSnapshot, DataHealthSummary, TrustSummary};
 
 use crate::{
@@ -16,6 +17,7 @@ pub(crate) fn build_trust_summary(
     pipeline_dates: &PipelineDateDiagnostics,
     data_health: Option<&DataHealthSummary>,
     calendar: &core_domain::calendar::TradingCalendar,
+    storage: &StorageConfig,
 ) -> TrustSummary {
     let freshest_market_date = data_health
         .and_then(|dh| dh.freshest_market_date)
@@ -36,16 +38,22 @@ pub(crate) fn build_trust_summary(
         .len()
         .saturating_sub(trading_instruments.len());
     let scoped_symbols_expected = trading_instruments.len();
-    let scoped_symbols_on_freshest_market_date = match (freshest_market_date, data_health) {
-        (Some(date), Some(dh)) => dh
-            .symbols
-            .iter()
-            .filter(|row| {
-                trading_instruments.iter().any(|i| i.symbol == row.symbol)
-                    && row.last_date == Some(date)
-            })
-            .count(),
-        _ => 0,
+    let scoped_symbols_on_freshest_market_date = match freshest_market_date {
+        Some(date) => {
+            let symbols: Vec<String> = trading_instruments
+                .iter()
+                .map(|i| i.symbol.clone())
+                .collect();
+            market_store::fetch_distinct_entity_count_for_date_in_symbols(
+                storage,
+                "daily_bar",
+                "symbol",
+                &symbols,
+                date,
+            )
+            .unwrap_or(0)
+        }
+        None => 0,
     };
     let latest_day_complete = scoped_symbols_expected > 0
         && scoped_symbols_on_freshest_market_date == scoped_symbols_expected;
@@ -114,7 +122,10 @@ pub(crate) fn build_trust_summary(
 
     let mut notes = Vec::new();
     if data_health.is_none() {
-        notes.push("Data health summary is unavailable; trust assessment is degraded.".to_string());
+        notes.push(
+            "Full data health check (provider probes, macro source status) is deferred for dashboard performance; coverage is computed from ClickHouse. Run `check-data-health` for complete health report."
+                .to_string(),
+        );
     }
     if non_trading_count > 0 {
         notes.push(format!(

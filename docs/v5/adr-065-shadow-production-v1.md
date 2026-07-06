@@ -155,7 +155,7 @@ This is a **disciplined pause with explicit re-entry conditions**. The system is
 - ADR-061: State Machine v1.0 Freeze
 - ADR-062: Evaluation Framework
 - ADR-063: Economic Taxonomy
-- ADR-064: Backtest Provenance Contract
+- [Backtest Provenance Contract](./backtest-provenance-contract.md)
 - TRAP-003: Backtest DeRisk Bug Fix
 - `shadow-production/README.md`: Phase A/B/C observation plan
 - `reports/state-transition-attribution-global.md`: TASK-090A audit baseline

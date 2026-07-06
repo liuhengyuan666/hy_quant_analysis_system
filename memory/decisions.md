@@ -618,3 +618,27 @@ Audit of TASK-092 confirmed Explainability Layer prevents future optimization tr
 Explainability Layer is allowed to: expose existing scores, display attribution breakdowns, show strategy composition, reveal state context. Explainability Layer is FORBIDDEN to: generate new scores, create confidence metrics, rank explanations, modify thresholds. Future Divergence Sample Library will track StrongBuy+DE_RISK patterns using only existing scores.
 
 **Tags:** explainability, governance, shadow-production, adr-065, divergence-sample
+
+## ADR-068: Research Context + Reporting Layer v1
+
+**Status:** Accepted
+
+### Context
+CLI/GPT/Desktop/future API-PDF-Email consumers depended on different data sources, causing repeated semantic interpretation and Presentation-Business coupling. Production Surface was being polluted.
+
+### Decision
+Establish unified ResearchContext as canonical semantic model and Reporting Layer pipeline. ResearchContext is consumer-neutral and evolves conservatively; ReportDocument/Section/Formatter form Presentation Contract; ReportInput carries document payload only; ResearchDataset stays inside app-service; reusable research computation lives in core-domain::research; Production Surface remains frozen. V6 Reporting Platform is frozen; future Consumer Expansion builds on it.
+
+**Tags:** reporting, research-context, architecture, canonical-model, consumer-neutrality, v6
+
+## ADR-069: Reporting Layer Architecture Invariants
+
+**Status:** Accepted
+
+### Context
+ADR-068 established the layered model, but the non-negotiable boundary rules needed to be explicit to prevent future PRs from accidentally violating layer separation.
+
+### Decision
+Adopt 10 Architecture Invariants covering: ResearchContext consumer-neutrality, ResearchDataset boundary, ReportInput payload-only, Formatter no-domain-computation, core-domain no report-builder dependency, ReportingSnapshot as sole metadata carrier, CLI no raw SQL for research data, concrete ReportInput in builders, domain helpers in core-domain::research, and Production Surface frozen. Full rules in docs/architecture-invariants.md; violations default to do-not-merge.
+
+**Tags:** reporting, architecture, invariants, v6

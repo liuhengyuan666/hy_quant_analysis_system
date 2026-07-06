@@ -40,6 +40,7 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 - Vue templates use `{{ }}` interpolation which auto-escapes; do not wrap with `escapeHtml()`.
 - Vue components consume CSS variables via the bridge defined in styles.css `:root`.
 - Signal reason is an object; render `item.reason?.summary` not `item.reason`.
+- All UI strings use `t('key')` from `useI18n()`; update both `zh.json` and `en.json` when adding keys.
 
 ## ANTI-PATTERNS
 - Do **not** add business logic or provider semantics in frontend.
@@ -64,3 +65,4 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 - Store has 10 synced properties covering all Vue component dependencies.
 - App.vue wires all component events (DateSelector, SignalsPanel, RefreshProgress, SignalDetailModal, LanguageToggle).
 - `node_modules/` and `dist/` are generated artifacts.
+- V6 Research Surface is currently CLI-only; desktop UI additions would start here as new Vue panels wired through Tauri commands.

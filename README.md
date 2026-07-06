@@ -8,12 +8,13 @@
 - `docs/分析使用手册.md`：适合趋势 / 长线分析时理解 MA20 / MA60 / MACD / regime / rotation / signal
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
-- `docs/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
+- `docs/v2/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
 - `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
-- `docs/阶段性更新-2026-04-26.md`：汇总这轮阶段性成果与当前仍待继续推进的方向
+- `docs/阶段性更新.md#2026-04-26`：汇总阶段性成果与当前仍待继续推进的方向
+- `docs/shadow-production-playbook.md`：V5 Shadow Production 90 天观察期操作指引
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
-本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
+本项目是一个 **本地桌面量化研究系统 V6**，核心目标是：
 
 - 用 Rust 构建完整研究链路
 - 用 Tauri 提供桌面端界面
@@ -23,6 +24,51 @@
 当前已经跑通完整链路：
 
 > 数据拉取 → 指标计算 → 宏观判断 → 轮动排序 → 策略偏好 → 最终信号 → 回测 → 报告 → 桌面展示
+
+---
+
+## 架构所有权（Architecture Ownership）
+
+本项目采用分层所有权模型，每层只负责一种职责，禁止跨层泄漏：
+
+```text
+数据所有权（Data Ownership）
+    ResearchDataset              ← app-service 内部，ephemeral，不暴露
+    ResearchSnapshot             ← app-service 内部，computation workspace
+
+语义所有权（Semantic Ownership）
+    ResearchContext              ← 跨消费者共享的 canonical semantic contract
+
+展示所有权（Presentation Ownership）
+    ReportingSnapshot            ← 展示层 metadata + research context
+    ReportInput                  ← 文档专属输入，document generation workflow 独占
+    ReportBuilder                ← 文档组装（Research / Audit / Review）
+    ReportDocument               ← 渲染前文档模型
+
+渲染所有权（Rendering Ownership）
+    Formatter                    ← Markdown / Text / JSON 渲染，无业务计算
+
+消费者（Consumers）
+    CLI / Desktop / API / GPT / Email / PDF
+```
+
+核心规则：
+- `ResearchContext` ≠ 万能 DTO，不承载 consumer-specific 字段。
+- `ReportInput` 只承载 document payload，不重复 metadata（scope/date/generated_at）。
+- 所有可复用的研究计算位于 `core-domain::research`。
+- `ResearchDataset` 永不暴露到 `app-service` 边界之外。
+
+详细架构演进见 `docs/v6/adr-068-research-context-reporting-layer.md` 与 `memory/decisions.md`（ADR-068）；不可违反的分层规则见 `docs/architecture-invariants.md`（ADR-069）。
+
+### 架构决策时间线
+
+```text
+V5  Engine-centric
+      ↓
+V6  Pipeline → Canonical Semantic Model → Stable Reporting Platform (Frozen)
+```
+
+V6 Reporting Platform 稳定后，新增 Timeline、Desktop、REST API、LLM、Email、PDF 等能力应建立在此平台之上，而不是继续调整平台本身。
 
 ---
 
@@ -39,11 +85,13 @@
 - 基础回测
 - Markdown 报告导出
 - Tauri 桌面 Dashboard（支持 `GLOBAL / CN / HK` scope）
-- **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
+
 - **V3**：一键同步导出（`sync-and-export`）
 - **V3**：CLI 阶段进度输出（`--quiet` 关闭）
 - **V3**：LLM 智能报告分析（OpenAI-compatible API）
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
+- **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
+- **V6**：Research Surface — `research-srd`（Signal-Regime Divergence 统计）、`research-stretch`（市场拉伸观测）与 `research review`（季度研究综述）
 
 ### 当前适用场景
 
@@ -82,11 +130,11 @@
 ### 暂不作为默认主源
 
 - **Yahoo Finance**：当前环境已实测出现 `403`，因此不作为港股默认主源
-- **Tushare**：保留为后续可选增强源，但当前 V1 不依赖它
+- **Tushare**：保留为后续可选增强源，但当前 V6 不依赖它
 
 ### 当前统一日线口径
 
-为了让 `MA20 / MA60 / MACD` 更稳定，当前 V1 已统一为：
+为了让 `MA20 / MA60 / MACD` 更稳定，当前 V6 已统一为：
 
 - **Eastmoney：`fqt=1`**
 - **Tencent：`qfq`**
@@ -322,10 +370,11 @@ cargo run -p quant-desktop
 - Recent reports（支持回跳 matching snapshot / open artifact / copy artifact path）
 - Report export action
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
+- **V6**：Research Surface — `research-srd`、`research-stretch` 与 `research review` 只读观测命令（CLI）
 
 ---
 
-## 11. 推荐使用流程（适合当前 V1）
+## 11. 推荐使用流程（适合当前 V6）
 
 如果你当前主要做：
 
@@ -587,7 +636,90 @@ cargo run -p quant-cli -- symbol-scoreboard [--date <date>] [--scope <scope>]
 cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
 ```
 
-### 15.8 收盘前执行过滤（Execution Layer — V5）
+### 15.8 Research Surface 观测工具（V6）
+
+> **V6 新增**：只读研究层工具，用于把市场状态量化为可长期积累的统计证据。不修改任何信号/状态/执行/风控逻辑。
+>
+> 它们不是买卖建议，而是回答"市场现在发生了什么"。
+
+```bash
+# Signal-Regime Divergence 统计（使用最新可用日期）
+cargo run -p quant-cli -- research-srd [--scope global|cn|hk]
+
+# Market Stretch / 市场拉伸分析（使用最新可用日期）
+cargo run -p quant-cli -- research-stretch [--scope global|cn|hk]
+
+# 条件前向收益统计
+cargo run -p quant-cli -- research analytics --condition srd-strong|stretch-extreme-crowding-momentum [--scope global|cn|hk] [--horizon 20|60]
+
+# 季度研究综述：聚合 SRD / Stretch / Analytics 为 Markdown 报告
+cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--output path.md]
+```
+
+说明：
+- `research-srd` 量化"Signal 很强但 State 保守"的背离持续情况，输出 Duration、StrongBuy 数、Average Signal、Breadth trend、Rotation pattern、Historical percentile。
+- `research-stretch` 从 Crowding、Breadth、Momentum、Leverage 四个维度描述市场拉伸程度，每个维度附带 Evidence。
+- `research analytics` 计算特定历史条件出现后的前向收益分布（median / mean / best / worst / positive ratio / median max drawdown），仅用于积累统计证据。
+- `research review` 把观察窗口内的 SRD 分布、Stretch 等级分布、以及条件前向收益统计汇总成一份 Markdown 报告，输出到 `reports/research-quarterly-{scope}-{to}.md`，仅用于积累证据和后续 ADR Review。
+- 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`；季度末运行 `research review`。
+
+**指标解读（以实际输出为例）**：
+
+`research-srd --scope global` 示例：
+```text
+StrongBuy count:       3
+Buy count:             4
+Average Signal:        50.2
+Duration:              3 days
+Breadth trend:         Weakening
+Rotation pattern:      Technology Dominant
+Historical percentile: 22% (Low)
+Interpretation:        Signals are strong while Strategy remains LeftProbe ...
+Confidence:            Moderate
+```
+- **StrongBuy / Buy count**：当天产生 StrongBuy / Buy 信号的标的数量。数量多说明表层信号偏强。
+- **Average Signal**：所有信号标的的平均最终得分，反映整体信号强度。
+- **Duration**：当前 SRD 状态连续持续的交易天数。持续天数越长，说明"信号强但状态保守"的背离越顽固。
+- **Breadth trend**：广度走势（Improving / Weakening / Stable）。Weakening 表示参与上涨的标的比例在下降，可能预示背离。
+- **Rotation pattern**：当前轮动特征（如 Technology Dominant）。用于判断强势是否集中在少数主题。
+- **Historical percentile**：当前 SRD 强度在过去历史中的百分位。22% 表示当前处于历史较低水平，背离不算极端。
+- **Interpretation / Confidence**：系统给出的定性解读和置信度，仅作参考，不进入决策。
+
+`research-stretch --scope cn` 示例：
+```text
+Overall:               Extreme
+Crowding:              Extreme (Top5 Rotation = 118.2%, Historical Percentile = 68%)
+Breadth:               Elevated (Breadth = 29.2%, SMA5 = 42.5%)
+Momentum:              Elevated (RS120 Max = 73.7, RS120 Top5 Avg = 43.8)
+Leverage:              Normal (data pending)
+Risk Level:            Moderate-High
+```
+- **Overall**：综合拉伸等级（Normal / Elevated / Extreme）。Extreme 表示多个维度同时出现极端读数。
+- **Crowding**：拥挤度。Top5 Rotation 占比越高，说明资金越集中在少数领涨方向；Historical Percentile 表示该拥挤度在历史中的位置。
+- **Breadth**：市场广度。Breadth 为当前日标的站在均线之上的比例；SMA5 为 5 日平滑，用于判断短期趋势。
+- **Momentum**：动量。RS120 Max 是 120 日相对强度最大值，Top5 Avg 是前 5 名平均，用于识别动量是否过热。
+- **Leverage**：杠杆维度（当前数据源 pending， Normal 为占位）。
+- **Risk Level**：综合风险等级，不等于交易信号，只提示需要留意的市场状态。
+
+`research analytics --condition srd-strong --scope global --horizon 20` 示例：
+```text
+Occurrences:              212
+Forward return median:    +0.2%
+Forward return mean:      +0.1%
+Forward return best:      +9.8%
+Forward return worst:     -9.0%
+Positive ratio:           51.9%
+Median max drawdown:      4.0%
+```
+- **Occurrences**：历史样本中满足 `srd-strong` 条件的天数。
+- **Forward return median / mean**：条件发生后 N 个交易日的前向收益中位数 / 均值。正值不代表未来一定涨，仅说明历史统计倾向。
+- **Best / Worst**：历史最好 / 最坏情况，用于评估尾部风险。
+- **Positive ratio**：历史正收益样本占比。51.9% 接近随机，说明该条件单独不具备显著预测力。
+- **Median max drawdown**：持有 N 个交易日的中位数最大回撤，衡量条件触发后的典型风险。
+
+`research review` 会把以上三类指标按季度窗口聚合，输出到 `reports/research-quarterly-{scope}-{to}.md`，适合季度末做 ADR Review。
+
+### 15.9 收盘前执行过滤（Execution Layer — V5）
 
 > **V5 新增**：基于实时行情数据的 Pattern Library 执行过滤器，不修改任何信号/状态/回测逻辑。
 >
@@ -625,10 +757,11 @@ Symbol       Signal       State        Reasons
 
 ---
 
-## 附录 A. 当前 V1 的已知限制
+## 附录 A. 当前 V6 的已知限制
 
 - 没有正式测试套件 / CI
 - `app-service` 已模块化（lib.rs + 7 个辅助模块），但 `lib.rs` 仍较为庞大，后续可进一步拆分
-- `market-store` 已拆分为 14 个域模块，不再列为限制项
+- `market-store` 已拆分为 14 个域模块，该限制已解决
 - 数据健康检查已上线，但还没有把 provider 来源逐 bar 持久化
 - 当前更适合研究和辅助判断，不适合直接自动交易
+- V6 Research Surface 为只读观测层，统计结果不进入策略、信号、执行或风控链路

@@ -1,4 +1,5 @@
 pub mod calendar;
+pub mod research;
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -245,6 +246,19 @@ pub enum SignalLabel {
     Hold,
     Reduce,
     Sell,
+}
+
+impl std::fmt::Display for SignalLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::StrongBuy => write!(f, "Strong Buy"),
+            Self::Buy => write!(f, "Buy"),
+            Self::Watch => write!(f, "Watch"),
+            Self::Hold => write!(f, "Hold"),
+            Self::Reduce => write!(f, "Reduce"),
+            Self::Sell => write!(f, "Sell"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

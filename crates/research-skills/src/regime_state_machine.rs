@@ -1,4 +1,4 @@
-use research_context::ResearchContext;
+use llm_context::ResearchContext;
 use serde::{Deserialize, Serialize};
 
 /// Market regime states
@@ -34,12 +34,12 @@ impl RegimeStateMachine {
         let _breadth_delta = context.breadth.breadth_delta;
         let liquidity_critical = matches!(
             context.liquidity.pressure,
-            research_context::LiquidityPressure::Critical
+            llm_context::LiquidityPressure::Critical
         );
         let liquidity_high = matches!(
             context.liquidity.pressure,
-            research_context::LiquidityPressure::High
-                | research_context::LiquidityPressure::Critical
+            llm_context::LiquidityPressure::High
+                | llm_context::LiquidityPressure::Critical
         );
         let macro_stale = context.regime.macro_stale_days > 3;
 
@@ -81,7 +81,7 @@ impl RegimeStateMachine {
                 if breadth_pct > 60.0
                     && matches!(
                         context.liquidity.pressure,
-                        research_context::LiquidityPressure::Low
+                        llm_context::LiquidityPressure::Low
                     )
                 {
                     return Some(TransitionResult {

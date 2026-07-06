@@ -60,6 +60,18 @@
 - 所有实验结论需在 `confirmation_days=1` 下重新验证
 - Wave 研究阶段化：Wave 7（GT验证）、Wave 8（Insight Composer）、Wave 9（Daily Report）
 
+## 8. V6 Reporting Platform 范式 (Reporting Architecture)
+
+- **数据所有权**：`ResearchDataset` 是 app-service 内部 ephemeral 查询结果容器，永不暴露到边界之外
+- **语义所有权**：`ResearchContext` 是 canonical semantic model，跨消费者共享，不承载 consumer-specific 字段
+- **计算工作区**：`ResearchSnapshot` 是 app-service 内部 computation workspace，由 `ResearchDataset` 构建，不再直接查询数据源
+- **展示所有权**：`ReportingSnapshot` 承载 metadata（scope/date/generated_at）+ `ResearchContext`
+- **文档输入**：`ReportInput` 仅承载 document-specific payload，不重复 metadata
+- **渲染所有权**：Formatter（Markdown / Text / JSON）只负责渲染，无业务计算
+- **领域计算归属**：所有可复用的研究计算位于 `core-domain::research`
+- **Builder 状态**：`ReportBuilder` trait 当前为 Pending Evaluation，无实现者，不得人工添加实现
+- **Schema Evolution**：ClickHouse JSON DTO 的新字段必须携带 `#[serde(default)]` 或手动 remapping
+
 ## 9. 外部数据源集成范式 (External Data Provider)
 
 - **编码检测**：HTTP 响应必须验证编码格式，不要假设所有 API 返回 UTF-8；Tencent API 返回 GB18030，需使用 `encoding_rs` 解码

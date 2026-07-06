@@ -6,7 +6,22 @@ Persistence boundary. Owns ClickHouse/SQLite initialization, fetch/insert helper
 ## STRUCTURE
 ```text
 crates/market-store/
-└── src/lib.rs   # all storage logic currently centralized here
+└── src/
+    ├── lib.rs          # pub use re-exports of all domain modules
+    ├── core.rs         # StorageConfig + raw ClickHouse HTTP transport
+    ├── sqlite.rs       # SQLite app config / credentials
+    ├── instruments.rs  # universe sync
+    ├── bars.rs         # daily bar IO
+    ├── indicators.rs   # indicator snapshot IO
+    ├── macro.rs        # macro snapshot IO
+    ├── regime.rs       # market regime IO
+    ├── environment.rs  # environment snapshot IO
+    ├── rotation.rs     # rotation rank IO
+    ├── strategy.rs     # strategy preference IO
+    ├── signals.rs      # signal snapshot IO
+    ├── backtest.rs     # backtest result IO
+    ├── reports.rs      # report artifact registry
+    └── dates.rs        # date-gating helpers
 ```
 
 ## WHERE TO LOOK
@@ -45,7 +60,7 @@ crates/market-store/
 - Do **not** reintroduce whole-range macro deletes that wipe unrelated factor history.
 
 ## REVIEW NOTES
-- This file is now a god-module; split by domain (`bars`, `signals`, `backtest`, `reports`) before much more growth.
+- `src/lib.rs` is now a thin re-export hub; domain logic lives in the 14 modules below it.
 - Mutation-heavy refresh is acceptable for V1 volume, but not a scalable long-term pattern.
 - Synchronous delete mutations improve correctness but increase refresh latency; correctness wins on report/dashboard tables.
 - `project_root()` is heuristic-based; keep runtime path assumptions explicit.

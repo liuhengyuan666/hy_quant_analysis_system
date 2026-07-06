@@ -3599,6 +3599,13 @@ pub fn handle_rotation_ranking(
     date: Option<NaiveDate>,
     scope: ReportScopeArg,
 ) -> Result<()> {
+    use report_builder::{
+        AuditReportBuilder, RotationRankingReportInput, RotationRankingInputRow,
+    };
+    use reporting::ReportingSnapshot;
+    use reporting::Formatter;
+    use report_renderer::{render, TextFormatter};
+
     let report_date = date.unwrap_or_else(|| {
         market_store::fetch_latest_table_date(&context.storage, "rotation_rank")
             .unwrap_or(None)
@@ -3621,20 +3628,72 @@ pub fn handle_rotation_ranking(
     }
 
     rows.sort_by(|a, b| b.momentum_score.total_cmp(&a.momentum_score).then(a.symbol.cmp(&b.symbol)));
-    for (i, row) in rows.iter_mut().enumerate() {
-        row.rank = (i + 1) as u32;
-    }
 
-    println!("Rotation Ranking | Date: {} | Scope: {:?}", report_date, scope);
-    println!("{:-<80}", "");
-    println!("{:>4} {:>8} {:>12} {:>12} {:>12} {:>12}", "Rank", "Symbol", "Momentum", "RS20", "RS60", "RS120");
-    println!("{:-<80}", "");
-    for row in &rows {
-        println!("{:>4} {:>8} {:>12.2} {:>12.2} {:>12.2} {:>12.2}",
-            row.rank, row.symbol, row.momentum_score, row.rs_20, row.rs_60, row.rs_120);
-    }
-    println!("{:-<80}", "");
-    println!("Total: {} symbols | Research Surface (not in Shadow Production chain)", rows.len());
+    // Build instrument name lookup
+    let instruments = context.seed_universe().unwrap_or_default();
+    let name_map: HashMap<&str, &str> = instruments
+        .iter()
+        .map(|i| (i.symbol.as_str(), i.name.as_str()))
+        .collect();
+
+    let scope_analysis: ReportScope = scope.into();
+
+    // Fetch signals for enrichment
+    let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+        &context.storage,
+        report_date,
+        scope_analysis,
+    )?;
+    let signal_map: HashMap<&str, &core_domain::SignalSnapshot> = signals
+        .iter()
+        .map(|s| (s.symbol.as_str(), s))
+        .collect();
+
+    // Build RotationRankingInputRows
+    let detail_rows: Vec<RotationRankingInputRow> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            let name = name_map
+                .get(row.symbol.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| row.symbol.clone());
+            let signal = signal_map.get(row.symbol.as_str());
+            RotationRankingInputRow {
+                rank: (i + 1) as i32,
+                symbol: row.symbol.clone(),
+                name,
+                momentum_score: row.momentum_score,
+                rs_120: row.rs_120,
+                signal_label: signal
+                    .map(|s| s.signal_label.to_string())
+                    .unwrap_or_else(|| "N/A".to_string()),
+                final_score: signal.map(|s| s.final_score).unwrap_or(0.0),
+            }
+        })
+        .collect();
+
+    // Build ReportingSnapshot from ResearchContext
+    let research_ctx =
+        context.build_research_context_for_date(report_date, scope_analysis)?;
+    let snapshot = ReportingSnapshot {
+        generated_at: chrono::Utc::now(),
+        research: research_ctx,
+    };
+
+    let input = RotationRankingReportInput {
+        rows: detail_rows,
+    };
+
+    let doc = AuditReportBuilder::build_rotation_ranking(&snapshot, &input)?;
+
+    let mut fmt = TextFormatter::new();
+    render(&mut fmt, &doc);
+    println!("{}", fmt.finalize());
+    println!(
+        "Total: {} symbols | Research Surface (not in Shadow Production chain)",
+        rows.len()
+    );
     Ok(())
 }
 
@@ -3666,7 +3725,7 @@ pub fn handle_symbol_diagnostics(
     println!("{:=<80}", "");
 
     if let Some(ref signal) = signal {
-        println!("Final Score: {:.2} | Label: {:?}", signal.final_score, signal.signal_label);
+        println!("Final Score: {:.2} | Label: {}", signal.final_score, signal.signal_label);
         println!("{:-<80}", "");
 
         println!("Attribution Breakdown");
@@ -3724,6 +3783,13 @@ pub fn handle_symbol_scoreboard(
     date: Option<NaiveDate>,
     scope: ReportScopeArg,
 ) -> Result<()> {
+    use report_builder::{
+        AuditReportBuilder, ScoreboardReportInput, ScoreboardInputRow,
+    };
+    use reporting::ReportingSnapshot;
+    use reporting::Formatter;
+    use report_renderer::{render, TextFormatter};
+
     let report_date = date.unwrap_or_else(|| {
         market_store::fetch_latest_table_date(&context.storage, "signal_snapshot")
             .unwrap_or(None)
@@ -3736,31 +3802,59 @@ pub fn handle_symbol_scoreboard(
     let state = market_store::fetch_strategy_states_for_scope(&context.storage, scope)?
         .into_iter().find(|s| s.date == report_date);
 
-    println!("Symbol Scoreboard | Date: {} | Scope: {}", report_date, scope.as_str());
-    println!("{:=<80}", "");
-    println!("{:>4} | {:>8} | {:>8} | {:>8} | {:>12} | {:>5} | {:>6} | {:>6}",
-        "Rank", "Symbol", "Rotation", "Signal", "Strategy", "Align", "State", "Pos%");
-    println!("{:-<80}", "");
+    // Build instrument name lookup
+    let instruments = context.seed_universe().unwrap_or_default();
+    let name_map: HashMap<&str, &str> = instruments
+        .iter()
+        .map(|i| (i.symbol.as_str(), i.name.as_str()))
+        .collect();
 
     let mut sorted = signals.clone();
     sorted.sort_by(|a, b| b.final_score.total_cmp(&a.final_score).then(a.symbol.cmp(&b.symbol)));
 
-    for (i, signal) in sorted.iter().enumerate() {
-        let rot = rotations.iter().find(|r| r.symbol == signal.symbol);
-        let _rank = rot.map(|r| r.rank).unwrap_or(0);
-        let momentum = rot.map(|r| r.momentum_score).unwrap_or(0.0);
-        let strategy_name = format!("{:?}", signal.reason.best_strategy);
-        let align = signal.reason.alignment;
-        let state_label = state.as_ref().map(|s| s.state.clone()).unwrap_or_else(|| core_domain::StrategyState::DeRisk);
-        let pos_pct = state.as_ref().map(|s| s.recommended_position_pct).unwrap_or(0.0);
+    let detail_rows: Vec<ScoreboardInputRow> = sorted
+        .iter()
+        .map(|signal| {
+            let rot = rotations.iter().find(|r| r.symbol == signal.symbol);
+            let momentum = rot.map(|r| r.momentum_score).unwrap_or(0.0);
+            let name = name_map
+                .get(signal.symbol.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| signal.symbol.clone());
+            let state_label = state
+                .as_ref()
+                .map(|s| format!("{:?}", s.state))
+                .unwrap_or_else(|| "DeRisk".to_string());
+            ScoreboardInputRow {
+                symbol: signal.symbol.clone(),
+                name,
+                final_score: signal.final_score,
+                signal_label: signal.signal_label.to_string(),
+                momentum_score: momentum,
+                regime_label: state_label,
+            }
+        })
+        .collect();
 
-        println!("{:>4} | {:>8} | {:>8.1} | {:>8.2} | {:>12} | {:>5}/4 | {:>6} | {:>5.0}",
-            i + 1, signal.symbol, momentum, signal.final_score,
-            strategy_name, align, state_label, pos_pct);
-    }
+    // Build ReportingSnapshot from ResearchContext
+    let research_ctx = context.build_research_context_for_date(report_date, scope)?;
+    let snapshot = ReportingSnapshot {
+        generated_at: chrono::Utc::now(),
+        research: research_ctx,
+    };
 
-    println!("{:-<80}", "");
-    println!("Explainability Layer (TASK-092) | Research Surface — not in Shadow Production chain.");
+    let input = ScoreboardReportInput {
+        rows: detail_rows,
+    };
+
+    let doc = AuditReportBuilder::build_scoreboard(&snapshot, &input)?;
+
+    let mut fmt = TextFormatter::new();
+    render(&mut fmt, &doc);
+    println!("{}", fmt.finalize());
+    println!(
+        "Explainability Layer (TASK-092) | Research Surface — not in Shadow Production chain."
+    );
     Ok(())
 }
 

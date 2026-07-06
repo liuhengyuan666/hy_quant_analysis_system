@@ -1,6 +1,85 @@
+pub mod json;
+pub mod markdown;
+pub mod text;
+
+pub use json::JsonFormatter;
+pub use markdown::MarkdownFormatter;
+pub use text::TextFormatter;
+
 use anyhow::Result;
+use reporting::{Formatter, ReportDocument};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+/// Render a ReportDocument using the provided Formatter.
+pub fn render<F: Formatter>(formatter: &mut F, doc: &ReportDocument) {
+    formatter.render_document(doc);
+    for section in &doc.sections {
+        formatter.render_section(section);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{NaiveDate, Utc};
+    use reporting::{ReportDocument, ReportLayout, ReportMetadata, ReportSection, SectionContent, SectionKind};
+
+    fn dummy_document() -> ReportDocument {
+        ReportDocument {
+            layout: ReportLayout::Detail,
+            sections: vec![
+                ReportSection {
+                    kind: SectionKind::Trend,
+                    title: "Trend".to_string(),
+                    content: SectionContent::Markdown("State: risk_on".to_string()),
+                },
+                ReportSection {
+                    kind: SectionKind::Breadth,
+                    title: "Breadth".to_string(),
+                    content: SectionContent::Markdown("breadth_pct: 65.0".to_string()),
+                },
+            ],
+            metadata: ReportMetadata {
+                title: "Demo Report".to_string(),
+                generated_at: Utc::now(),
+                scope: "GLOBAL".to_string(),
+                date: NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+            },
+        }
+    }
+
+    #[test]
+    fn markdown_formatter_renders() {
+        let doc = dummy_document();
+        let mut fmt = MarkdownFormatter::new();
+        render(&mut fmt, &doc);
+        let output = fmt.finalize();
+        assert!(output.contains("Demo Report"));
+        assert!(output.contains("Trend"));
+        assert!(output.contains("risk_on"));
+    }
+
+    #[test]
+    fn json_formatter_renders() {
+        let doc = dummy_document();
+        let mut fmt = JsonFormatter::new();
+        render(&mut fmt, &doc);
+        let output = fmt.finalize();
+        assert!(output.contains("Demo Report"));
+        assert!(output.contains("Trend"));
+    }
+
+    #[test]
+    fn text_formatter_renders() {
+        let doc = dummy_document();
+        let mut fmt = TextFormatter::new();
+        render(&mut fmt, &doc);
+        let output = fmt.finalize();
+        assert!(output.contains("Demo Report"));
+        assert!(output.contains("Trend"));
+    }
+}
 
 /// Unified summary across all analysis skills.
 /// This is the Machine Layer output before any human-facing rendering.
@@ -8,7 +87,7 @@ use serde_json::Value;
 pub struct ResearchSummary {
     pub regime: RegimeState,
     pub confidence: f64,
-    pub breadth_condition: research_context::BreadthCondition,
+    pub breadth_condition: llm_context::BreadthCondition,
     pub risk_level: RiskLevel,
     pub rotation: Option<RotationSummary>,
     pub liquidity: Option<LiquiditySummary>,
@@ -144,7 +223,7 @@ impl ResearchComposer for MarketRegimeComposer {
             .unwrap_or_default();
 
         // Breadth condition is not directly in the skill output; placeholder for now
-        let breadth_condition = research_context::BreadthCondition::Strong;
+        let breadth_condition = llm_context::BreadthCondition::Strong;
 
         Ok(ResearchSummary {
             regime,
@@ -226,7 +305,7 @@ impl ResearchComposer for SectorRotationComposer {
         Ok(ResearchSummary {
             regime: RegimeState::Neutral, // sector-rotation doesn't output regime
             confidence,
-            breadth_condition: research_context::BreadthCondition::Strong,
+            breadth_condition: llm_context::BreadthCondition::Strong,
             risk_level: RiskLevel::Medium,
             rotation,
             liquidity: None,

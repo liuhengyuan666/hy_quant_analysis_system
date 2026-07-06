@@ -112,3 +112,16 @@ pub fn fetch_rotation_ranks_for_date(
     let body = fetch_clickhouse_text(config, &query)?;
     parse_json_each_row(&body, "failed to parse rotation rank row")
 }
+
+pub fn fetch_rotation_ranks_for_range(
+    config: &StorageConfig,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<RotationRankSnapshot>> {
+    let query = format!(
+        "SELECT date,symbol,rs_20,rs_60,rs_120,momentum_score,rank FROM quant.rotation_rank WHERE date BETWEEN '{}' AND '{}' ORDER BY date, rank, symbol FORMAT JSONEachRow",
+        from, to
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_json_each_row(&body, "failed to parse rotation rank row")
+}

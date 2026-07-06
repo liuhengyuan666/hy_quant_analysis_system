@@ -263,6 +263,29 @@ pub fn fetch_signal_snapshots_for_date_with_scope(
     Ok(rows)
 }
 
+pub fn fetch_signal_snapshots_for_range_with_scope(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<SignalSnapshot>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    let query = format!(
+        "SELECT date,symbol,final_score,signal_label,analysis_scope,regime_basis_scope,explanation FROM quant.signal_snapshot WHERE date BETWEEN '{}' AND '{}' AND analysis_scope = '{}' ORDER BY date, final_score DESC, symbol FORMAT JSONEachRow",
+        from,
+        to,
+        scope.as_str()
+    );
+    let body = fetch_clickhouse_text(config, &query)?;
+    let mut rows = Vec::new();
+    for line in body.lines().filter(|line| !line.trim().is_empty()) {
+        let row: serde_json::Value =
+            serde_json::from_str(line).context("failed to parse ranged scoped signal snapshot row")?;
+        rows.push(decode_signal_snapshot_row(row)?);
+    }
+    Ok(rows)
+}
+
 pub fn fetch_signal_snapshot_for_symbol(
     config: &StorageConfig,
     date: NaiveDate,

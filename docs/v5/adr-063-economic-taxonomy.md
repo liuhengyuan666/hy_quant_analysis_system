@@ -297,9 +297,9 @@ The 3-state structure (Favorable/Neutral/Unfavorable) is frozen. When TASK-081 e
 
 ## References
 
-- `docs/task-080d-findings.md` — Taxonomy discovery analysis
-- `docs/task-080e-findings.md` — Fed Funds distortion audit
-- `docs/task-080f-findings.md` — Z-score integration results
+- `docs/v5/task-080d-findings.md` — Taxonomy discovery analysis
+- `docs/v5/task-080e-findings.md` — Fed Funds distortion audit
+- `docs/v5/task-080f-findings.md` — Z-score integration results
 - `crates/macro-engine/src/lib.rs` — Implementation
 
 ---

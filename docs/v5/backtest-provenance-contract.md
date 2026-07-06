@@ -1,4 +1,4 @@
-# ADR-064: Backtest Provenance Contract
+# Backtest Provenance Contract
 
 **Status:** Accepted  
 **Date:** 2026-06-17  
@@ -20,7 +20,7 @@ However, `run_version` alone is insufficient for full provenance. We need a stro
 - The state machine version that governed it
 - The exact point in time it was generated
 
-This ADR defines the Backtest Provenance Contract for all future backtest persistence.
+This document defines the Backtest Provenance Contract for all future backtest persistence.
 
 ---
 

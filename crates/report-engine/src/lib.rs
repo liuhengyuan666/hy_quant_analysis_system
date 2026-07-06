@@ -441,11 +441,39 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
     ));
     output.push_str("## Trust Summary\n\n");
     if let Some(trust) = &snapshot.trust_summary {
+        // Level, Headline, Message always at top
         output.push_str(&format!(
-            "- Level: {}\n- Headline: {}\n- Message: {}\n- Freshest Market Date: {}\n- Latest Available Date: {}\n- Latest-Day Complete: {}\n- Macro Status: {}\n- Data Health Generated At: {}\n- Data Health Review Symbols: {}\n- Data Health Critical Symbols: {}\n- Data Health Review Macro Sources: {}\n- Data Health Critical Macro Sources: {}\n- Signal Analysis Scope: {}\n- Signal Regime Basis: {}\n- Backtest Matches Current Snapshot: {}\n",
-            trust.level,
-            trust.headline,
-            trust.message,
+            "- Level: {}\n- Headline: {}\n- Message: {}\n\n",
+            trust.level, trust.headline, trust.message,
+        ));
+
+        // CRITICAL section
+        output.push_str("### CRITICAL\n");
+        if let Some(state) = &trust.strategy_state {
+            output.push_str(&format!(
+                "- Strategy State: {}\n- Strategy Recommended Position: {}\n",
+                state,
+                trust
+                    .strategy_recommended_position_pct
+                    .map(|value| format!("{value:.2}%"))
+                    .unwrap_or_else(|| "N/A".to_string())
+            ));
+        }
+        output.push_str(&format!(
+            "- Market Regime Lag: {} day(s)\n",
+            snapshot.regime_stale_days,
+        ));
+        // Extract Signal-State Divergence from notes into CRITICAL
+        if let Some(note) = trust.notes.iter().find(|n| n.contains("Signal-State Divergence")) {
+            let content = note.strip_prefix("Signal-State Divergence: ").unwrap_or(note);
+            output.push_str(&format!("- Signal-State Divergence: {}\n", content));
+        }
+        output.push_str("\n");
+
+        // WARNING section
+        output.push_str("### WARNING\n");
+        output.push_str(&format!(
+            "- Freshest Market Date: {}\n- Latest Available Date: {}\n- Latest-Day Complete: {}\n- Macro Status: {}\n- Scoped Latest-Day Coverage: {}/{}\n- Pipeline Partial Latest: {} ({})\n- Pipeline Stale Stage: {} ({})\n\n",
             trust
                 .freshest_market_date
                 .clone()
@@ -456,14 +484,18 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
                 .unwrap_or_else(|| "N/A".to_string()),
             if trust.latest_day_complete { "yes" } else { "no" },
             trust.macro_status,
-            trust
-                .data_health_generated_at
-                .clone()
-                .unwrap_or_else(|| "N/A".to_string()),
-            trust.data_health_review_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
-            trust.data_health_critical_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
-            trust.data_health_review_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
-            trust.data_health_critical_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.scoped_symbols_on_freshest_market_date,
+            trust.scoped_symbols_expected,
+            if trust.pipeline_has_partial_latest { "yes" } else { "no" },
+            trust.pipeline_partial_latest_stage_count,
+            if trust.pipeline_has_stale_stage { "yes" } else { "no" },
+            trust.pipeline_stale_stage_count,
+        ));
+
+        // INFO section
+        output.push_str("### INFO\n");
+        output.push_str(&format!(
+            "- Signal Analysis Scope: {}\n- Signal Regime Basis: {}\n- Backtest Matches Current Snapshot: {}\n",
             trust
                 .signal_analysis_scope
                 .clone()
@@ -478,36 +510,39 @@ pub fn render_markdown_report(snapshot: &DashboardSnapshot) -> String {
                 None => "N/A",
             },
         ));
-        if let Some(state) = &trust.strategy_state {
-            output.push_str(&format!(
-                "- Strategy State: {}\n- Strategy Recommended Position: {}\n",
-                state,
-                trust
-                    .strategy_recommended_position_pct
-                    .map(|value| format!("{value:.2}%"))
-                    .unwrap_or_else(|| "N/A".to_string())
-            ));
-        }
         output.push_str(&format!(
-            "- Scoped Latest-Day Coverage: {}/{}\n- Pipeline Partial Latest: {} ({})\n- Pipeline Stale Stage: {} ({})\n",
-            trust.scoped_symbols_on_freshest_market_date,
-            trust.scoped_symbols_expected,
-            if trust.pipeline_has_partial_latest { "yes" } else { "no" },
-            trust.pipeline_partial_latest_stage_count,
-            if trust.pipeline_has_stale_stage { "yes" } else { "no" },
-            trust.pipeline_stale_stage_count,
+            "- Data Health Generated At: {}\n",
+            trust
+                .data_health_generated_at
+                .clone()
+                .unwrap_or_else(|| "N/A".to_string()),
         ));
+        output.push_str(&format!(
+            "- Data Health: Review Symbols: {}, Critical Symbols: {}, Review Macro Sources: {}, Critical Macro Sources: {}\n\n",
+            trust.data_health_review_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_critical_symbols.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_review_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+            trust.data_health_critical_macro_sources.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string()),
+        ));
+
+        // Trust Evidence Basis (conditional, informational)
         if snapshot.report_date != snapshot.latest_available_date {
             output.push_str(&format!(
-                "- Trust Evidence Basis: current operational freshness/data-health evidence as of {} while snapshot content remains scoped to report date {}\n",
+                "- Trust Evidence Basis: current operational freshness/data-health evidence as of {} while snapshot content remains scoped to report date {}\n\n",
                 snapshot.latest_available_date,
                 snapshot.report_date,
             ));
         }
-        for note in &trust.notes {
-            output.push_str(&format!("- Note: {}\n", note));
+
+        // Notes (excluding Signal-State Divergence which is handled in CRITICAL)
+        let other_notes: Vec<&String> = trust.notes.iter().filter(|n| !n.contains("Signal-State Divergence")).collect();
+        if !other_notes.is_empty() {
+            output.push_str("Notes (if any):\n");
+            for note in &other_notes {
+                output.push_str(&format!("- {}\n", note));
+            }
+            output.push_str("\n");
         }
-        output.push_str("\n");
     } else {
         output.push_str("- Trust summary is unavailable for this report export\n\n");
     }

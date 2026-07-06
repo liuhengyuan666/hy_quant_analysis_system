@@ -26,7 +26,7 @@ impl TokenBudget {
 
     /// Trim context to fit within budget by priority.
     /// Priority: market > liquidity > regime > breadth > rotation > signals > macro > risk
-    pub fn fit_context(&self, context: &mut research_context::ResearchContext) {
+    pub fn fit_context(&self, context: &mut llm_context::ResearchContext) {
         let context_json = serde_json::to_string_pretty(context).unwrap_or_default();
         let current_tokens = Self::estimate_tokens(&context_json);
 
@@ -35,18 +35,18 @@ impl TokenBudget {
         }
 
         // Priority order for trimming (lowest priority first)
-        let trim_order: [fn(&mut research_context::ResearchContext); 8] = [
+        let trim_order: [fn(&mut llm_context::ResearchContext); 8] = [
             // First trim: risk (lowest priority)
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.risk = research_context::RiskContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.risk = llm_context::RiskContext {
                     skewness: None,
                     kurtosis: None,
                     tail_index: None,
                 };
             },
             // Second trim: macro
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.macro_ = research_context::MacroContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.macro_ = llm_context::MacroContext {
                     spread_10y: None,
                     dxy_index: None,
                     foreign_flow: None,
@@ -54,17 +54,17 @@ impl TokenBudget {
                 };
             },
             // Third trim: signals
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.signals = research_context::SignalsContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.signals = llm_context::SignalsContext {
                     bullish_count: 0,
                     defensive_count: 0,
                     data_starved_count: 0,
                 };
             },
             // Fourth trim: rotation
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.rotation = research_context::RotationContext {
-                    state: research_context::RotationState::Broad,
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.rotation = llm_context::RotationContext {
+                    state: llm_context::RotationState::Broad,
                     top_sectors: Vec::new(),
                     bottom_sectors: Vec::new(),
                     leadership_stability: 0.0,
@@ -75,24 +75,24 @@ impl TokenBudget {
                 };
             },
             // Fifth trim: breadth
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.breadth = research_context::BreadthContext {
-                    condition: research_context::BreadthCondition::Strong,
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.breadth = llm_context::BreadthContext {
+                    condition: llm_context::BreadthCondition::Strong,
                     breadth_pct: 0.0,
                     breadth_delta: 0.0,
                 };
             },
             // Sixth trim: regime (keep only current label)
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.regime = research_context::RegimeContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.regime = llm_context::RegimeContext {
                     current: ctx.regime.current.clone(),
                     confidence: 0.0,
                     macro_stale_days: 0,
                 };
             },
             // Seventh trim: liquidity (keep only pressure)
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.liquidity = research_context::LiquidityContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.liquidity = llm_context::LiquidityContext {
                     pressure: ctx.liquidity.pressure.clone(),
                     spread: None,
                     yield_curve_status: None,
@@ -100,8 +100,8 @@ impl TokenBudget {
                 };
             },
             // Eighth trim: market (keep only current_state)
-            |ctx: &mut research_context::ResearchContext| {
-                ctx.market = research_context::MarketContext {
+            |ctx: &mut llm_context::ResearchContext| {
+                ctx.market = llm_context::MarketContext {
                     current_state: ctx.market.current_state.clone(),
                     previous_state: None,
                     confidence: 0.0,

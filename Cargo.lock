@@ -123,11 +123,14 @@ dependencies = [
  "execution-engine",
  "indicator-engine",
  "keyring",
+ "llm-context",
  "macro-engine",
  "market-store",
+ "report-builder",
  "report-engine",
+ "report-renderer",
+ "reporting",
  "research-context",
- "research-renderer",
  "research-skills",
  "rotation-engine",
  "serde",
@@ -2311,6 +2314,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 
 [[package]]
+name = "llm-context"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "report-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3214,7 +3228,11 @@ dependencies = [
  "market-state-extractor",
  "market-store",
  "regime-audit",
+ "report-builder",
+ "report-renderer",
+ "reporting",
  "research-benchmark",
+ "research-context",
  "research-skills",
  "research-validation",
  "serde",
@@ -3489,6 +3507,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "report-builder"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "core-domain",
+ "reporting",
+ "research-context",
+ "serde_json",
+]
+
+[[package]]
 name = "report-engine"
 version = "0.1.0"
 dependencies = [
@@ -3496,6 +3526,30 @@ dependencies = [
  "chrono",
  "core-domain",
  "serde",
+]
+
+[[package]]
+name = "report-renderer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "core-domain",
+ "llm-context",
+ "report-engine",
+ "reporting",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "reporting"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "research-context",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3594,7 +3648,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
- "research-context",
+ "llm-context",
  "research-skills",
  "serde",
  "serde_json",
@@ -3606,21 +3660,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "core-domain",
- "report-engine",
  "serde",
- "serde_json",
-]
-
-[[package]]
-name = "research-renderer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "core-domain",
- "report-engine",
- "research-context",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -3632,8 +3672,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "core-domain",
+ "llm-context",
  "report-engine",
- "research-context",
  "serde",
  "serde_json",
  "serde_yaml",

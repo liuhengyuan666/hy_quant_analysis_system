@@ -10,22 +10,25 @@ rust-quant-analysis-system/
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
-├── crates/               # 核心库crate（20个目录，20个在workspace中；research-validation物理存在但未加入workspace）
+├── crates/               # 核心库crate（24个物理目录；21个在workspace中，3个未加入：report-builder, reporting, research-validation）
 │   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 7 helper modules）
 │   ├── backtest-engine/  # 回测引擎
-│   ├── core-domain/      # 核心领域模型
+│   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
 │   ├── execution-engine/ # 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 │   ├── gt-regime-generator/ # Ground Truth regime生成
 │   ├── indicator-engine/ # 技术指标计算
+│   ├── llm-context/      # LLM上下文组装（V6新增）
 │   ├── macro-engine/     # 宏观因子与regime分类
 │   ├── market-state-extractor/ # 市场状态提取
 │   ├── market-store/     # 数据存储抽象（ClickHouse/SQLite）
 │   ├── regime-audit/     # Regime审计
+│   ├── report-builder/   # 文档输入与Builder组装（V6 Reporting Platform新增）
 │   ├── report-engine/    # 报告生成
+│   ├── reporting/        # 报告领域模型与渲染抽象（V6新增）
+│   ├── report-renderer/  # 报告渲染器（V6新增）
 │   ├── research-benchmark/ # 研究基准
 │   ├── research-context/ # 研究上下文
-│   ├── research-renderer/ # 研究渲染
 │   ├── research-skills/  # LLM技能路由
 │   ├── research-validation/ # 研究验证（当前未加入workspace）
 │   ├── rotation-engine/  # 轮动排名
@@ -59,6 +62,7 @@ rust-quant-analysis-system/
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
 ├── reports/             # 生成的报告
+├── shadow-production/   # Shadow Production 运行期产物（divergence log、kill criteria 证据等）
 ├── sql/                 # SQL脚本
 └── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```

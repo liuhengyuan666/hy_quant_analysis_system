@@ -1,7 +1,7 @@
 # REPORT-ENGINE KNOWLEDGE BASE
 
 ## OVERVIEW
-Pure snapshot shaping and markdown rendering layer for dashboard/report outputs.
+Pure snapshot shaping and legacy markdown rendering layer for daily dashboard/report outputs. V6 split out presentation-model ownership to `reporting` and document-assembly ownership to `report-builder`. This crate remains the source of `DashboardSnapshot`, `TrustSummary`, and daily-report markdown.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
@@ -12,7 +12,7 @@ Pure snapshot shaping and markdown rendering layer for dashboard/report outputs.
 | Environment contract | `src/lib.rs::DashboardSnapshot.environment` | scope-aware environment payload rendered in UI + markdown |
 | Legacy date collector | `collect_dashboard_dates` | old whole-set helper; prefer scoped store path upstream |
 | Date-specific builder | `build_dashboard_snapshot_for_date` | current selected-date assembly path |
-| Report rendering | `render_markdown_report` | markdown output contract |
+| Daily report rendering | `render_markdown_report` | markdown output contract |
 | Health rendering | `render_data_health_report` | data-health markdown output |
 
 ## CONVENTIONS
@@ -22,6 +22,7 @@ Pure snapshot shaping and markdown rendering layer for dashboard/report outputs.
 - Scoped markdown must label `Scope:` explicitly; consumers should never infer CN/HK from filename alone.
 - Markdown/report wording should keep `Market Regime` (conclusion) separate from `Environment Layer` (decomposition).
 - Markdown rendering should mirror UI semantics, not invent parallel terminology.
+- V6 Research Surface documents are assembled in `report-builder`; do not add research-document logic here.
 
 ## ANTI-PATTERNS
 - Do **not** pull `market-store` or provider logic into this crate.
@@ -30,6 +31,7 @@ Pure snapshot shaping and markdown rendering layer for dashboard/report outputs.
 - Do **not** blur watchlist breadth proxy with true market breadth language.
 - Do **not** let scoped report markdown omit scope labeling or show mixed-market breadth blocks.
 - Do **not** collapse environment and breadth into contradictory terminology across markdown vs desktop UI.
+- Do **not** add V6 Research Surface document assembly here; use `report-builder`.
 
 ## NOTES
 - This crate is small but high-leverage: even tiny payload changes ripple across CLI, desktop, docs, and tests.

@@ -135,9 +135,9 @@ Create `reports/monthly-YYYY-MM.md` with:
 
 ## Related Documents
 
-- `docs/adr-063-economic-taxonomy.md` — Economic Layer taxonomy definition
-- `docs/adr-061-state-semantic-contract.md` — State Layer contract
-- `docs/task-080f-findings.md` — Fed Funds Z-score integration results
+- `docs/v5/adr-063-economic-taxonomy.md` — Economic Layer taxonomy definition
+- `docs/v5/adr-061-decision-brief.md` — State Layer contract
+- `docs/v5/task-080f-findings.md` — Fed Funds Z-score integration results
 - `memory/decisions.md` — ADR decisions log
 
 ---
