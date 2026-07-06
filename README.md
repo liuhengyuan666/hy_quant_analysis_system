@@ -642,11 +642,14 @@ cargo run -p quant-cli -- rotation-ranking [--date <date>] [--scope <scope>]
 > 它们不是买卖建议，而是回答"市场现在发生了什么"。
 
 ```bash
-# Signal-Regime Divergence 统计
-cargo run -p quant-cli -- research-srd [--scope global|cn|hk] [--date YYYY-MM-DD]
+# Signal-Regime Divergence 统计（使用最新可用日期）
+cargo run -p quant-cli -- research-srd [--scope global|cn|hk]
 
-# Market Stretch / 市场拉伸分析
-cargo run -p quant-cli -- research-stretch [--scope global|cn|hk] [--date YYYY-MM-DD]
+# Market Stretch / 市场拉伸分析（使用最新可用日期）
+cargo run -p quant-cli -- research-stretch [--scope global|cn|hk]
+
+# 条件前向收益统计
+cargo run -p quant-cli -- research analytics --condition srd-strong|stretch-extreme-crowding-momentum [--scope global|cn|hk] [--horizon 20|60]
 
 # 季度研究综述：聚合 SRD / Stretch / Analytics 为 Markdown 报告
 cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--output path.md]
@@ -655,8 +658,65 @@ cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM
 说明：
 - `research-srd` 量化"Signal 很强但 State 保守"的背离持续情况，输出 Duration、StrongBuy 数、Average Signal、Breadth trend、Rotation pattern、Historical percentile。
 - `research-stretch` 从 Crowding、Breadth、Momentum、Leverage 四个维度描述市场拉伸程度，每个维度附带 Evidence。
+- `research analytics` 计算特定历史条件出现后的前向收益分布（median / mean / best / worst / positive ratio / median max drawdown），仅用于积累统计证据。
 - `research review` 把观察窗口内的 SRD 分布、Stretch 等级分布、以及条件前向收益统计汇总成一份 Markdown 报告，输出到 `reports/research-quarterly-{scope}-{to}.md`，仅用于积累证据和后续 ADR Review。
 - 建议每日收盘后工作流：`research-srd` → `research-stretch` → `analyze-with-llm --action market_story`；季度末运行 `research review`。
+
+**指标解读（以实际输出为例）**：
+
+`research-srd --scope global` 示例：
+```text
+StrongBuy count:       3
+Buy count:             4
+Average Signal:        50.2
+Duration:              3 days
+Breadth trend:         Weakening
+Rotation pattern:      Technology Dominant
+Historical percentile: 22% (Low)
+Interpretation:        Signals are strong while Strategy remains LeftProbe ...
+Confidence:            Moderate
+```
+- **StrongBuy / Buy count**：当天产生 StrongBuy / Buy 信号的标的数量。数量多说明表层信号偏强。
+- **Average Signal**：所有信号标的的平均最终得分，反映整体信号强度。
+- **Duration**：当前 SRD 状态连续持续的交易天数。持续天数越长，说明"信号强但状态保守"的背离越顽固。
+- **Breadth trend**：广度走势（Improving / Weakening / Stable）。Weakening 表示参与上涨的标的比例在下降，可能预示背离。
+- **Rotation pattern**：当前轮动特征（如 Technology Dominant）。用于判断强势是否集中在少数主题。
+- **Historical percentile**：当前 SRD 强度在过去历史中的百分位。22% 表示当前处于历史较低水平，背离不算极端。
+- **Interpretation / Confidence**：系统给出的定性解读和置信度，仅作参考，不进入决策。
+
+`research-stretch --scope cn` 示例：
+```text
+Overall:               Extreme
+Crowding:              Extreme (Top5 Rotation = 118.2%, Historical Percentile = 68%)
+Breadth:               Elevated (Breadth = 29.2%, SMA5 = 42.5%)
+Momentum:              Elevated (RS120 Max = 73.7, RS120 Top5 Avg = 43.8)
+Leverage:              Normal (data pending)
+Risk Level:            Moderate-High
+```
+- **Overall**：综合拉伸等级（Normal / Elevated / Extreme）。Extreme 表示多个维度同时出现极端读数。
+- **Crowding**：拥挤度。Top5 Rotation 占比越高，说明资金越集中在少数领涨方向；Historical Percentile 表示该拥挤度在历史中的位置。
+- **Breadth**：市场广度。Breadth 为当前日标的站在均线之上的比例；SMA5 为 5 日平滑，用于判断短期趋势。
+- **Momentum**：动量。RS120 Max 是 120 日相对强度最大值，Top5 Avg 是前 5 名平均，用于识别动量是否过热。
+- **Leverage**：杠杆维度（当前数据源 pending， Normal 为占位）。
+- **Risk Level**：综合风险等级，不等于交易信号，只提示需要留意的市场状态。
+
+`research analytics --condition srd-strong --scope global --horizon 20` 示例：
+```text
+Occurrences:              212
+Forward return median:    +0.2%
+Forward return mean:      +0.1%
+Forward return best:      +9.8%
+Forward return worst:     -9.0%
+Positive ratio:           51.9%
+Median max drawdown:      4.0%
+```
+- **Occurrences**：历史样本中满足 `srd-strong` 条件的天数。
+- **Forward return median / mean**：条件发生后 N 个交易日的前向收益中位数 / 均值。正值不代表未来一定涨，仅说明历史统计倾向。
+- **Best / Worst**：历史最好 / 最坏情况，用于评估尾部风险。
+- **Positive ratio**：历史正收益样本占比。51.9% 接近随机，说明该条件单独不具备显著预测力。
+- **Median max drawdown**：持有 N 个交易日的中位数最大回撤，衡量条件触发后的典型风险。
+
+`research review` 会把以上三类指标按季度窗口聚合，输出到 `reports/research-quarterly-{scope}-{to}.md`，适合季度末做 ADR Review。
 
 ### 15.9 收盘前执行过滤（Execution Layer — V5）
 
