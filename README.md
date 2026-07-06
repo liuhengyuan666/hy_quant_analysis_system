@@ -11,6 +11,7 @@
 - `docs/v2/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
 - `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
 - `docs/阶段性更新.md#2026-04-26`：汇总阶段性成果与当前仍待继续推进的方向
+- `docs/shadow-production-playbook.md`：V5 Shadow Production 90 天观察期操作指引
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
 本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
