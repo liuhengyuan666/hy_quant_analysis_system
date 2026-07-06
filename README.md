@@ -14,7 +14,7 @@
 - `docs/shadow-production-playbook.md`：V5 Shadow Production 90 天观察期操作指引
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
-本项目是一个 **本地桌面量化研究系统 V1**，核心目标是：
+本项目是一个 **本地桌面量化研究系统 V6**，核心目标是：
 
 - 用 Rust 构建完整研究链路
 - 用 Tauri 提供桌面端界面
@@ -130,11 +130,11 @@ V6 Reporting Platform 稳定后，新增 Timeline、Desktop、REST API、LLM、E
 ### 暂不作为默认主源
 
 - **Yahoo Finance**：当前环境已实测出现 `403`，因此不作为港股默认主源
-- **Tushare**：保留为后续可选增强源，但当前 V1 不依赖它
+- **Tushare**：保留为后续可选增强源，但当前 V6 不依赖它
 
 ### 当前统一日线口径
 
-为了让 `MA20 / MA60 / MACD` 更稳定，当前 V1 已统一为：
+为了让 `MA20 / MA60 / MACD` 更稳定，当前 V6 已统一为：
 
 - **Eastmoney：`fqt=1`**
 - **Tencent：`qfq`**
@@ -374,7 +374,7 @@ cargo run -p quant-desktop
 
 ---
 
-## 11. 推荐使用流程（适合当前 V1）
+## 11. 推荐使用流程（适合当前 V6）
 
 如果你当前主要做：
 
@@ -757,10 +757,11 @@ Symbol       Signal       State        Reasons
 
 ---
 
-## 附录 A. 当前 V1 的已知限制
+## 附录 A. 当前 V6 的已知限制
 
 - 没有正式测试套件 / CI
 - `app-service` 已模块化（lib.rs + 7 个辅助模块），但 `lib.rs` 仍较为庞大，后续可进一步拆分
-- `market-store` 已拆分为 14 个域模块，不再列为限制项
+- `market-store` 已拆分为 14 个域模块，该限制已解决
 - 数据健康检查已上线，但还没有把 provider 来源逐 bar 持久化
 - 当前更适合研究和辅助判断，不适合直接自动交易
+- V6 Research Surface 为只读观测层，统计结果不进入策略、信号、执行或风控链路
