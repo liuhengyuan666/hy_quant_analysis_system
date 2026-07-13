@@ -10,30 +10,31 @@ rust-quant-analysis-system/
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
-├── crates/               # 核心库crate（24个物理目录；21个在workspace中，3个未加入：report-builder, reporting, research-validation）
+├── crates/               # 核心库crate（25个物理目录；22个在workspace中，3个未加入：report-builder, reporting, research-validation）
 │   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 7 helper modules）
 │   ├── backtest-engine/  # 回测引擎
-│   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块）
+│   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块；V7新增 confirmation/recovery/calibration/consensus）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
 │   ├── execution-engine/ # 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 │   ├── gt-regime-generator/ # Ground Truth regime生成
 │   ├── indicator-engine/ # 技术指标计算
 │   ├── llm-context/      # LLM上下文组装（V6新增）
 │   ├── macro-engine/     # 宏观因子与regime分类
+│   ├── market-fingerprint-engine/ # 市场指纹引擎（V7.2B新增，历史证据相似度匹配）
 │   ├── market-state-extractor/ # 市场状态提取
 │   ├── market-store/     # 数据存储抽象（ClickHouse/SQLite）
 │   ├── regime-audit/     # Regime审计
-│   ├── report-builder/   # 文档输入与Builder组装（V6 Reporting Platform新增）
+│   ├── report-builder/   # 文档输入与Builder组装（V6 Reporting Platform新增；物理目录未加入workspace）
 │   ├── report-engine/    # 报告生成
-│   ├── reporting/        # 报告领域模型与渲染抽象（V6新增）
+│   ├── reporting/        # 报告领域模型与渲染抽象（V6新增；物理目录未加入workspace）
 │   ├── report-renderer/  # 报告渲染器（V6新增）
 │   ├── research-benchmark/ # 研究基准
-│   ├── research-context/ # 研究上下文
+│   ├── research-context/ # 研究上下文（V6 canonical semantic contract）
 │   ├── research-skills/  # LLM技能路由
-│   ├── research-validation/ # 研究验证（当前未加入workspace）
+│   ├── research-validation/ # 研究验证（物理目录未加入workspace）
 │   ├── rotation-engine/  # 轮动排名
 │   ├── signal-engine/    # 信号生成
-│   ├── strategy-engine/  # 策略引擎
+│   ├── strategy-engine/   # 策略引擎
 │   └── task-runner/      # 任务运行器
 ├── config/               # 配置文件
 │   ├── calendars/        # 交易日历（静态JSON，覆盖2024-2027）
@@ -69,7 +70,7 @@ rust-quant-analysis-system/
 
 ## 2. 核心模块调用边界与依赖方向
 
-- app-service 依赖：backtest-engine, data-ingestion, core-domain, indicator-engine, macro-engine, market-store, report-engine, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine, execution-engine
+- app-service 依赖：backtest-engine, core-domain, data-ingestion, execution-engine, indicator-engine, llm-context, macro-engine, market-fingerprint-engine, market-store, report-builder, report-engine, report-renderer, reporting, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine
 - data-ingestion 依赖：core-domain, macro-engine
 - macro-engine 依赖：core-domain
 - signal-engine 依赖：core-domain

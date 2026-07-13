@@ -16,6 +16,7 @@ members = [
   "crates/report-engine",
   "crates/research-benchmark",
   "crates/llm-context",
+  "crates/market-fingerprint-engine",
   "crates/research-context",
   "crates/report-renderer",
   "crates/research-skills",

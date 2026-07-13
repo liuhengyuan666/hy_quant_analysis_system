@@ -642,3 +642,111 @@ ADR-068 established the layered model, but the non-negotiable boundary rules nee
 Adopt 10 Architecture Invariants covering: ResearchContext consumer-neutrality, ResearchDataset boundary, ReportInput payload-only, Formatter no-domain-computation, core-domain no report-builder dependency, ReportingSnapshot as sole metadata carrier, CLI no raw SQL for research data, concrete ReportInput in builders, domain helpers in core-domain::research, and Production Surface frozen. Full rules in docs/architecture-invariants.md; violations default to do-not-merge.
 
 **Tags:** reporting, architecture, invariants, v6
+
+## ADR-070: Market Evolution Semantic Layer
+
+**Status:** Accepted
+
+### Context
+V6 has completed the Observation Layer (Environment, Signal, Stretch, Rotation). The system can describe what the market is doing, but lacks semantic capabilities to answer where the market is evolving. After convergence discussions, V7 should not be a feature list of new reports, but an extension of shared Market Evolution semantics.
+
+### Decision
+Adopt a four-layer Market Evolution Semantic Layer for V7: (1) Observation Layer remains frozen from V6; (2) Market Evolution Layer adds Confirmation and Recovery; (3) Historical Evidence Layer adds Market Fingerprint Engine, Historical Analogues, and Outcome Profile; (4) Research Synthesis Layer adds Consensus. Transition is not an independent ResearchContext field; it belongs inside ConsensusSummary. Rotation does not become a standalone module; instead RotationSummary is upgraded with leadership_transition, rotation_acceleration, and theme_dispersion. Historical Analogues must not expose raw similarity percentages to users; use rank or qualitative levels. Any new semantic capability added to ResearchContext must be a cross-consumer shared independent market concept, not a report-specific field.
+
+**Tags:** v7, research-layer, market-evolution, semantic-layer, research-context, reporting
+
+## ADR-071: Market Fingerprint as Canonical Historical Feature Representation
+
+**Status:** Accepted
+
+### Context
+ADR-070 established the four-layer Market Evolution Semantic Layer. V7.2 was originally planned as a single phase implementing Historical Analogues (KNN). During detailed design, the user and agent concluded that the MarketFingerprint contract should be frozen before similarity algorithms are introduced, to avoid premature algorithmic coupling in the semantic model.
+
+### Decision
+MarketFingerprint is the canonical historical feature representation derived from ResearchContext. Similarity algorithms (Cosine, Euclidean, Mahalanobis, DTW, etc.), normalization strategies, and ranking/OutcomeProfile consumers are all consumers of MarketFingerprint, not part of its definition. V7.2 is therefore split into V7.2A (Market Fingerprint Foundation: MarketFingerprint + MarketFingerprintBuilder contract) and V7.2B (Similarity Engine + OutcomeProfile + CLI). No CLI command is exposed in V7.2A. Future similarity algorithm changes must not modify MarketFingerprint without a new ADR.
+
+**Tags:** v7, market-fingerprint, historical-evidence, canonical-representation, adr-070
+
+## ADR-072: V7.2B Evidence Retrieval Engine Design
+
+**Status:** Accepted
+
+### Context
+V7.2A established MarketFingerprint as a canonical historical feature representation. V7.2B introduces similarity search, normalization, distance metrics, and outcome profiling. Because this is the only algorithmic part of V7, its boundaries must be frozen before implementation to avoid coupling algorithms into the semantic layer or letting the engine drift into prediction/interpretation.
+
+### Decision
+V7.2B is defined as an Evidence Retrieval Engine, not a prediction engine. The architecture is: ResearchContext → MarketFingerprintBuilder → MarketFingerprint → Normalizer → DistanceMetric (trait, replaceable) → SimilarityMatcher → HistoricalMatch → OutcomeProfiler → SearchResult. Key boundaries: (1) Fingerprint Engine does not predict; (2) Matcher does not interpret; (3) DistanceMetric is a trait so Cosine/Euclidean/WeightedCosine/Mahalanobis can be swapped without changing Fingerprint; (4) Normalizer is independent from DistanceMetric; (5) Similarity is exposed as rank or levels (Very High/High/Moderate/Weak), not raw distance percentages; (6) OutcomeProfile is an independent object; (7) SearchResult includes metadata (searched_days, filtered_days, average_distance) plus matches. find_cluster() API is frozen but may be unimplemented in V7.2B.
+
+**Tags:** v7, market-fingerprint, evidence-retrieval, similarity-engine, adr-070, adr-071
+
+## ADR-076: V7.3.1 Consensus Stabilization (Hotfix)
+
+**Status:** Accepted
+
+### Context
+Oracle Review (V7.3) identified maintainability gaps: no version on ConsensusSummary, hard-coded weights/thresholds, dead branch, missing integration test. User accepted these as P0 fixes, rejecting CosineDistance decoupling as premature.
+
+### Decision
+Make Consensus configurable via ConsensusConfig, version ConsensusSummary, extract Calibration Baseline Version constant, remove dead branch in classify_bias, and add an app-service integration test for the Consensus vertical slice.
+
+**Tags:** v7, consensus, research-synthesis, v7-3-1, hotfix, oracle-reviewed
+
+## ADR-077: Research Platform 1.0 Freeze
+
+**Status:** Accepted
+
+### Context
+V7 has reached a watershed. All four Research layers are implemented and stabilized. The platform crosses from active architecture construction into stable semantic contract.
+
+### Decision
+Officially freeze Research Platform 1.0: Observation (V6), Market Evolution (V7.1), Historical Evidence (V7.2), Research Synthesis (V7.3). Future additions are Research Content Evolution feeding into existing frozen layers; any Semantic Architecture change requires a new ADR and explicit un-freeze approval.
+
+**Tags:** v7, research-platform, freeze, semantic-architecture
+
+## ADR-078: Research Attribution Layer (Failure Attribution / Regime Attribution)
+
+**Status:** Accepted
+
+### Context
+Historical Replay (2026-07-09) revealed SRD-strong forward returns are Regime-dependent: 2023 Q2 / 2024 H1 negative, 2025 H2 84.6% positive. This is a Model Bias / Systematic Bias, not a random bug. Shadow Production needs to move from observation to explanation.
+
+### Decision
+Propose an additive Research Attribution Layer on top of Research Platform 1.0 to explain why the same signal/condition performs differently across market regimes. It covers Macro, Breadth, Liquidity, Theme, Crowding, and Volatility attribution. It is read-only and does not modify frozen State/Signal/Execution layers.
+
+**Tags:** v7, research-attribution, failure-attribution, regime-attribution, shadow-production, adr-077, task-093
+
+## ADR-079: Research Snapshot
+
+**Status:** Accepted
+
+### Context
+V8 needs a durable snapshot format that captures a research computation context (Observation/Evolution/Evidence/Synthesis) without embedding Evidence data. Snapshots must be reproducible and reference Evidence by identity.
+
+### Decision
+Introduce ResearchSnapshot as a Research Asset with a unique RA-XXXXXX id, AssetKind::Snapshot, carrying dataset_hash and config_hash. It references Evidence via EvidenceRef { id, version } rather than embedding. The snapshot lives in workspace/snapshots/ and is indexed in workspace/registry/snapshot-index.json.
+
+**Tags:** v8, research-snapshot, research-asset, evidence-ref, workspace, reproducibility
+
+## ADR-080: Research Asset Lifecycle
+
+**Status:** Accepted
+
+### Context
+V8 introduces multiple Research Asset types (Evidence, Snapshot, and future Knowledge/Validation/Hypothesis). Each needs a consistent, auditable lifecycle so consumers know whether an asset is draft, verified, published, superseded, or archived.
+
+### Decision
+All Research Assets share a unified lifecycle: Draft -> Verified -> Published -> Superseded -> Archived. Transitions are managed by WorkspaceManager. Draft assets are produced by computation/replay; Verified requires hash/dependency audit; Published is stable for downstream consumption; Superseded means replaced by a newer version; Archived means expired but retained for history.
+
+**Tags:** v8, research-asset, lifecycle, workspace, draft, verified, published, superseded, archived
+
+## ADR-081: Research Asset Identity
+
+**Status:** Accepted
+
+### Context
+V8 produces durable assets of different kinds (Evidence, Snapshot, etc.). They need a single, uniform identity scheme so references, indexes, and lifecycles are consistent across the workspace.
+
+### Decision
+All Research Assets use a single identity format RA-XXXXXX (6 uppercase alphanumeric characters). Asset type is encoded in metadata via AssetKind (Evidence, Snapshot, etc.). Existing EV- and SN- prefixed assets are grandfathered but new assets no longer use those prefixes.
+
+**Tags:** v8, research-asset, identity, registry, ra-xxxxxx, asset-kind

@@ -35,8 +35,25 @@
    * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径，V4.5 后仅保留 5 个固定 action 的纯 Markdown 输出）
    * 核心规则 4: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
    * 核心规则 5: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
-   * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台
-   * 核心规则 7: **V6 Research Surface** — 只读研究观测工具（`research-srd`、`research-stretch`、`research-analytics`、`research review`），输出 Markdown 观测报告，不进入主决策链路
+    * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台
+    * 核心规则 7: **V6 Research Surface** — 只读研究观测工具（`research-srd`、`research-stretch`、`research-analytics`、`research review`），输出 Markdown 观测报告，不进入主决策链路
+    * 核心规则 8: **V7 Research Platform 1.0** — 已冻结。四层研究语义：Observation (V6) + Market Evolution (V7.1: Confirmation / Recovery) + Historical Evidence (V7.2: Market Fingerprint / Historical Analogues / Outcome Profile / Calibration) + Research Synthesis (V7.3: Consensus / Evidence Aggregation)。只输出研究语言（Bias / Confidence / Evidence），不进入决策链路；新增市场内容属于 Research Content Evolution，不修改语义架构
+
+## 3. V7 Research Platform 1.0 业务能力
+
+* **[市场演化域]（V7.1，已冻结）**
+  * 核心规则 1: `research confirmation` — 判断市场趋势是否被广度、参与度和风险维度确认
+  * 核心规则 2: `research recovery` — 衡量市场从压力中恢复的程度
+
+* **[历史证据域]（V7.2，已冻结）**
+  * 核心规则 1: `research analogues` — 基于 Market Fingerprint 检索历史相似市场状态
+  * 核心规则 2: `research calibration` — 连续运行 Confirmation / Recovery / Analogues，输出统计校准报告，建立版本化 Calibration Baseline
+  * 核心规则 3: Historical Analogues 不对外暴露原始相似度百分比，仅使用 rank / 定性等级
+
+* **[研究综合域]（V7.3，已冻结）**
+  * 核心规则 1: `research consensus` — 基于 Evidence Aggregation 综合 Observation / Evolution / Historical Evidence，输出 Bias / Confidence / Supporting Evidence / Contradicting Evidence
+  * 核心规则 2: Consensus 不是策略决策器，不输出买卖建议、仓位、目标价或止损
+  * 核心规则 3: 权重和阈值通过 `ConsensusConfig` 配置，变更需经 Calibration 验证并可能触发版本递增
 
 ## 4. 新增可解释性能力（TASK-092）
 

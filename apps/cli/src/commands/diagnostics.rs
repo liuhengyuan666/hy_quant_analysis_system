@@ -19,3 +19,19 @@ pub fn handle_check_data_health(context: &AppContext) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(&result)?);
     Ok(())
 }
+
+/// V7 Workflow — Data Health: run provider/gap/jump diagnostics and export the
+/// report in one step, combining the old `check-data-health` and
+/// `export-data-health-report` primitives.
+pub fn handle_data_health(context: &AppContext) -> Result<()> {
+    let check = context.check_data_health()?;
+    let export = context.export_data_health_report()?;
+
+    let combined = serde_json::json!({
+        "check": check,
+        "export": export,
+    });
+
+    println!("{}", serde_json::to_string_pretty(&combined)?);
+    Ok(())
+}

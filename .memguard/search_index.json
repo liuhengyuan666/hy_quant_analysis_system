@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-06T17:18:24Z",
+    "rebuilt_at": "2026-07-13T09:32:45Z",
     "version": "v4"
   },
   "terms": {
@@ -198,6 +198,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -219,6 +227,16 @@
     "1-day": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "1.0": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -434,6 +452,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -482,6 +508,12 @@
         "type": "adr"
       }
     ],
+    "2023": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "2023-01-01`。当前环境": [
       {
         "id": "ADR-030",
@@ -494,9 +526,21 @@
         "type": "adr"
       }
     ],
+    "2024": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "2024-01-01": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "2025": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -509,6 +553,12 @@
     "2026-06-16)。derisk": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "2026-07-09": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -740,6 +790,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -896,6 +954,14 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "40.3": [
@@ -998,6 +1064,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "5.1": [
@@ -1084,6 +1154,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "67天": [
@@ -1119,6 +1197,10 @@
       },
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -1210,6 +1292,12 @@
         "type": "adr"
       }
     ],
+    "84.6": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "840": [
       {
         "id": "ADR-028",
@@ -1298,8 +1386,44 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "abandoned": [
@@ -1327,6 +1451,10 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -1364,6 +1492,14 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "action": [
@@ -1375,6 +1511,12 @@
     "actions": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "active": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -1410,6 +1552,10 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "added": [
@@ -1428,11 +1574,31 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "additions": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "additive": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "adds": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -1443,6 +1609,20 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "adr": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -1538,6 +1718,52 @@
         "type": "adr"
       }
     ],
+    "adr-070": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "adr-071": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "adr-077": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "adr-079": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "adr-079/080/081": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "adr/task": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "adrs": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "affects": [
       {
         "id": "ADR-058",
@@ -1566,8 +1792,16 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "against": [
@@ -1588,6 +1822,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
       }
     ],
     "agentprofilesummary": [
@@ -1599,6 +1837,32 @@
     "ai": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "algorithm": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "algorithmic": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "algorithms": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -1700,6 +1964,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -1724,6 +2004,12 @@
         "type": "adr"
       }
     ],
+    "alphanumeric": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
     "alter": [
       {
         "id": "ADR-066",
@@ -1744,11 +2030,45 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "an": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "analogues": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -1862,6 +2182,52 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "answer": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "answers": [
@@ -1877,6 +2243,14 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -1907,6 +2281,10 @@
       },
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       },
       {
@@ -1955,6 +2333,10 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -2034,6 +2416,12 @@
         "type": "adr"
       }
     ],
+    "approval": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "approved": [
       {
         "id": "ADR-059",
@@ -2084,12 +2472,30 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
       }
     ],
     "archive": [
       {
         "id": "ADR-026",
         "type": "adr"
+      }
+    ],
+    "archived": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "are": [
@@ -2108,6 +2514,30 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "argument": [
@@ -2142,7 +2572,73 @@
         "type": "adr"
       },
       {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "asset": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "asset-kind": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "assetkind": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "assetkind::snapshot": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "assets": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -2168,11 +2664,19 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "attribution": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -2212,6 +2716,16 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "auditable": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "automatic": [
@@ -2232,6 +2746,12 @@
         "type": "adr"
       }
     ],
+    "average_distance": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "avg_episode": [
       {
         "id": "ADR-053",
@@ -2242,6 +2762,18 @@
       {
         "id": "ADR-041",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "back": [
@@ -2330,6 +2862,12 @@
         "type": "adr"
       }
     ],
+    "baseline": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "baseline=0.073": [
       {
         "id": "ADR-055",
@@ -2374,6 +2912,22 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
       }
     ],
     "because": [
@@ -2384,12 +2938,30 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "become": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "been": [
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "before": [
@@ -2407,6 +2979,14 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -2429,6 +3009,12 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "belongs": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -2458,12 +3044,28 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "blindly": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "body": [
       {
         "id": "ADR-038",
         "type": "adr"
+      }
+    ],
+    "bootstrap": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "both": [
@@ -2494,6 +3096,12 @@
         "type": "trap"
       }
     ],
+    "boundaries": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "boundary": [
       {
         "id": "ADR-067",
@@ -2501,6 +3109,12 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "branch": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -2515,6 +3129,10 @@
       },
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -2585,6 +3203,10 @@
       },
       {
         "id": "ADR-065",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -2666,11 +3288,31 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
       {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -2705,6 +3347,14 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       },
       {
@@ -2760,6 +3410,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "calls": [
@@ -2775,6 +3429,14 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -2798,11 +3460,37 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "canonical-model": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "canonical-representation": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "capability": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -2815,6 +3503,10 @@
     "captures": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -2833,6 +3525,12 @@
     "carries": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "carrying": [
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -2866,6 +3564,10 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "causing": [
@@ -2908,6 +3610,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
       }
     ],
     "changes": [
@@ -2917,6 +3623,22 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "changing": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "characters": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -2990,6 +3712,12 @@
         "type": "adr"
       }
     ],
+    "classify_bias": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "class，存在竞争；2": [
       {
         "id": "ADR-038",
@@ -3017,6 +3745,10 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -3120,12 +3852,22 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
       }
     ],
     "commands": [
       {
         "id": "ADR-049",
         "type": "adr"
+      }
+    ],
+    "commit": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "commitrender": [
@@ -3136,6 +3878,24 @@
       {
         "id": "ADR-041",
         "type": "adr"
+      }
+    ],
+    "commits": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "committed": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "committing": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "compare": [
@@ -3185,6 +3945,10 @@
       },
       {
         "id": "ADR-044",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -3254,6 +4018,16 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "computation/replay": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "compute": [
@@ -3272,9 +4046,21 @@
         "type": "adr"
       }
     ],
+    "concept": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "conceptual": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "concluded": [
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -3342,9 +4128,19 @@
         "type": "adr"
       }
     ],
+    "config_hash": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
     "configurable": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -3367,6 +4163,10 @@
     "confirmation": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -3414,6 +4214,32 @@
         "type": "adr"
       }
     ],
+    "consensus": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "consensusconfig": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "consensussummary": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "consequence": [
       {
         "id": "ADR-058",
@@ -3436,6 +4262,20 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "constant": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "constantly": [
@@ -3453,6 +4293,12 @@
     "constructed": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "construction": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -3481,6 +4327,20 @@
     "consumers": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "consumption": [
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -3514,6 +4374,12 @@
         "type": "trap"
       }
     ],
+    "content": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "context": [
       {
         "id": "ADR-053",
@@ -3526,6 +4392,10 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
       }
     ],
     "contract": [
@@ -3535,6 +4405,14 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -3547,6 +4425,12 @@
     "converged：doc": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "convergence": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -3614,6 +4498,24 @@
         "type": "adr"
       }
     ],
+    "cosine": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "cosine/euclidean/weightedcosine/mahalanobis": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "cosinedistance": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "count=400": [
       {
         "id": "",
@@ -3629,6 +4531,14 @@
     "coupling": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -3652,10 +4562,22 @@
         "type": "adr"
       }
     ],
+    "covers": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "create": [
       {
         "id": "ADR-067",
         "type": "adr"
+      }
+    ],
+    "created": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "creates": [
@@ -3697,6 +4619,24 @@
     "critical-fix": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "cross-consumer": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "crosses": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "crowding": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -3924,6 +4864,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -3985,6 +4929,12 @@
     "datahealthpanel.vue": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      }
+    ],
+    "dataset_hash": [
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -4056,6 +5006,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "decision": [
@@ -4071,6 +5025,12 @@
     "decisions": [
       {
         "id": "ADR-026",
+        "type": "adr"
+      }
+    ],
+    "decoupling": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -4128,11 +5088,19 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "definition": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -4172,6 +5140,12 @@
         "type": "adr"
       }
     ],
+    "dependencies": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "dependency": [
       {
         "id": "ADR-069",
@@ -4190,9 +5164,19 @@
         "type": "adr"
       }
     ],
+    "derived": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
     "describe": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -4209,6 +5193,16 @@
       },
       {
         "id": "ADR-062",
+        "type": "adr"
+      }
+    ],
+    "design": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -4248,6 +5242,12 @@
         "type": "adr"
       }
     ],
+    "detailed": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
     "detect": [
       {
         "id": "ADR-060",
@@ -4273,6 +5273,16 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "differently": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -4316,6 +5326,18 @@
         "type": "adr"
       }
     ],
+    "discrepancy": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "discussions": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "display": [
       {
         "id": "ADR-066",
@@ -4329,6 +5351,18 @@
     "displayed": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      }
+    ],
+    "distance": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "distancemetric": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -4434,7 +5468,25 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "doing": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -4470,6 +5522,16 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "draft": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "drawdown": [
@@ -4481,6 +5543,12 @@
     "drawdowns": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "drift": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -4514,6 +5582,12 @@
         "type": "adr"
       }
     ],
+    "dtw": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
     "dual-i18n": [
       {
         "id": "ADR-041",
@@ -4536,6 +5610,16 @@
         "type": "adr"
       }
     ],
+    "durable": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
     "duration": [
       {
         "id": "ADR-052",
@@ -4544,6 +5628,16 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      }
+    ],
+    "during": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "e.g": [
@@ -4568,6 +5662,14 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "eastmoney": [
@@ -4664,6 +5766,12 @@
         "type": "adr"
       }
     ],
+    "embedding": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
     "empty": [
       {
         "id": "ADR-059",
@@ -4704,6 +5812,12 @@
         "type": "adr"
       }
     ],
+    "encoded": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
     "end": [
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
@@ -4717,6 +5831,18 @@
     "engine": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -4758,6 +5884,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "entry": [
@@ -4773,6 +5903,10 @@
       },
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -4814,6 +5948,10 @@
       {
         "id": "ADR-036",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "escape": [
@@ -4840,11 +5978,39 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "etc": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "euclidean": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "ev": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -4892,6 +6058,10 @@
       {
         "id": "ADR-052",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "everything": [
@@ -4910,13 +6080,75 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "evidence-ref": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "evidence-retrieval": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "evidenceref": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "evolution": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
     "evolves": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "evolving": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -4942,6 +6174,12 @@
         "type": "adr"
       }
     ],
+    "exist": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "existing": [
       {
         "id": "ADR-041",
@@ -4954,6 +6192,18 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "expand": [
@@ -4984,9 +6234,27 @@
         "type": "adr"
       }
     ],
+    "expired": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "explain": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "explainability": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "explanation": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -4999,6 +6267,10 @@
     "explicit": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -5040,6 +6312,26 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "exposed": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "extension": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "external": [
@@ -5051,6 +6343,10 @@
     "extract": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -5120,13 +6416,35 @@
         "type": "adr"
       }
     ],
+    "failed": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "fails": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "failure": [
       {
         "id": "ADR-059",
         "type": "adr"
       },
       {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "failure-attribution": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -5214,6 +6532,18 @@
       {
         "id": "ADR-063",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "features/*.js": [
@@ -5243,6 +6573,12 @@
     "fed": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      }
+    ],
+    "feeding": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -5279,6 +6615,12 @@
     "fetching": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      }
+    ],
+    "field": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -5320,9 +6662,35 @@
         "type": "adr"
       }
     ],
+    "filtered_days": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "filtering": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "find_cluster": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "fingerprint": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -5342,6 +6710,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "fit": [
@@ -5385,6 +6757,10 @@
     "fixes": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -5522,11 +6898,27 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
       {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -5555,6 +6947,14 @@
     "format": [
       {
         "id": "ADR-043",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -5664,6 +7064,10 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "forward-return": [
@@ -5675,6 +7079,28 @@
     "found": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      }
+    ],
+    "foundation": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "four": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "four-layer": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -5703,6 +7129,10 @@
       },
       {
         "id": "ADR-065",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -5753,6 +7183,26 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       },
       {
@@ -5822,6 +7272,26 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "full": [
@@ -5868,6 +7338,18 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "gain": [
@@ -5884,6 +7366,12 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "gaps/jumps/healthstatusmeta": [
@@ -5967,6 +7455,12 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "grandfathered": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -6068,6 +7562,18 @@
         "type": "adr"
       }
     ],
+    "h1": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "h2": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "had": [
       {
         "id": "",
@@ -6103,6 +7609,12 @@
     "hard": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "hard-coded": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -6149,6 +7661,24 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "hash/dependency": [
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -6282,6 +7812,12 @@
         "type": "adr"
       }
     ],
+    "high/high/moderate/weak": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "higher": [
       {
         "id": "ADR-060",
@@ -6294,8 +7830,46 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "historical-evidence": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "historicalmatch": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "history": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "hk": [
@@ -6353,6 +7927,12 @@
     "hkhshp": [
       {
         "id": "ADR-031",
+        "type": "adr"
+      }
+    ],
+    "hotfix": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -6450,6 +8030,10 @@
       {
         "id": "ADR-033",
         "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
       }
     ],
     "identical": [
@@ -6478,6 +8062,20 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "identity": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "if": [
@@ -6488,6 +8086,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "imbalance": [
@@ -6537,6 +8139,22 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "implemented": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "implementing": [
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -6616,13 +8234,49 @@
         "type": "adr"
       },
       {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
     "include": [
       {
         "id": "",
+        "type": "trap"
+      }
+    ],
+    "includes": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "inconsistent": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -6638,6 +8292,14 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "independently": [
@@ -6649,6 +8311,18 @@
     "index.html": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "indexed": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "indexes": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -6728,6 +8402,10 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "insight": [
@@ -6760,6 +8438,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "integration": [
@@ -6770,12 +8452,22 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "integrity": [
       {
         "id": "ADR-058",
         "type": "adr"
+      }
+    ],
+    "interdependent": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "intermediate": [
@@ -6797,6 +8489,12 @@
     "interpolation": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      }
+    ],
+    "interpret": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -6828,9 +8526,43 @@
         "type": "adr"
       }
     ],
+    "into": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "introduce": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "introduced": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "introduces": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -6904,7 +8636,39 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -6934,11 +8698,33 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
       }
     ],
     "iterate": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "its": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -7050,6 +8836,10 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "keyring": [
@@ -7088,6 +8878,30 @@
         "type": "adr"
       }
     ],
+    "kinds": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "knn": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "know": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "knowledge/validation/hypothesis": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
     "label": [
       {
         "id": "ADR-052",
@@ -7115,6 +8929,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "lacks": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -7198,6 +9018,22 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "layered": [
@@ -7209,6 +9045,14 @@
     "layers": [
       {
         "id": "ADR-056",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -7227,6 +9071,12 @@
       },
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "leadership_transition": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -7258,6 +9108,22 @@
         "type": "trap"
       }
     ],
+    "letting": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "levels": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "library": [
       {
         "id": "ADR-067",
@@ -7267,6 +9133,16 @@
     "lifecycle": [
       {
         "id": "ADR-038",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "lifecycles": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -7280,6 +9156,12 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      }
+    ],
+    "likely": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "limit": [
@@ -7306,6 +9188,12 @@
         "type": "adr"
       }
     ],
+    "link": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "liquidity": [
       {
         "id": "ADR-052",
@@ -7321,6 +9209,10 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       },
       {
@@ -7350,6 +9242,12 @@
         "type": "adr"
       }
     ],
+    "list": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "list_skills": [
       {
         "id": "ADR-049",
@@ -7359,6 +9257,10 @@
     "lives": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -7498,12 +9400,28 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "lookback/forward": [
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "lookup": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "lost": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "low": [
@@ -7558,6 +9476,10 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "macro-data": [
@@ -7593,6 +9515,12 @@
     "macro_f1": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "mahalanobis": [
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -7638,6 +9566,12 @@
         "type": "adr"
       }
     ],
+    "maintainability": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "maintenance": [
       {
         "id": "ADR-026",
@@ -7650,6 +9584,12 @@
         "type": "adr"
       }
     ],
+    "make": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "makes": [
       {
         "id": "ADR-060",
@@ -7659,6 +9599,12 @@
     "making": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "managed": [
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -7718,6 +9664,38 @@
       {
         "id": "ADR-061",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "market-evolution": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "market-fingerprint": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "market-state": [
@@ -7735,6 +9713,26 @@
     "market_store::insert_report_snapshot(\"llm_analysis": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "marketfingerprint": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "marketfingerprintbuilder": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -7765,6 +9763,18 @@
     "match": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "matcher": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "matches": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -7802,6 +9812,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "meaningful": [
@@ -7813,6 +9827,10 @@
     "means": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -7862,10 +9880,26 @@
         "type": "adr"
       }
     ],
+    "memguard": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "memory": [
       {
         "id": "ADR-026",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "message": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "messages": [
@@ -7877,6 +9911,14 @@
     "metadata": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -7913,6 +9955,10 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -7976,6 +10022,12 @@
         "type": "trap"
       }
     ],
+    "misleading": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "mismatch": [
       {
         "id": "ADR-045",
@@ -7995,6 +10047,10 @@
     "missing": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       },
       {
@@ -8044,11 +10100,33 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "modify": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "module": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -8064,6 +10142,12 @@
         "type": "adr"
       }
     ],
+    "move": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "multi-year": [
       {
         "id": "",
@@ -8075,6 +10159,10 @@
       }
     ],
     "multiple": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
       {
         "id": "",
         "type": "trap"
@@ -8107,6 +10195,22 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
         "type": "adr"
       },
       {
@@ -8174,6 +10278,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -8192,9 +10300,27 @@
         "type": "adr"
       }
     ],
+    "needs": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
     "negative": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -8246,6 +10372,10 @@
       {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "new": [
@@ -8270,8 +10400,34 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "newer": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
       }
     ],
     "next": [
@@ -8300,6 +10456,18 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "no-domain-computation": [
@@ -8321,6 +10489,22 @@
     "non-negotiable": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "normalization": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "normalizer": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -8354,8 +10538,28 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "now": [
@@ -8372,6 +10576,18 @@
         "type": "adr"
       }
     ],
+    "null": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "object": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "objective": [
       {
         "id": "ADR-052",
@@ -8385,6 +10601,24 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "observation/evolution/evidence/synthesis": [
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -8440,7 +10674,37 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "officially": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -8467,6 +10731,14 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -8501,6 +10773,10 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -8582,6 +10858,22 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "oracle": [
@@ -8612,6 +10904,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "oracle-reviewed": [
@@ -8634,6 +10930,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "oranges": [
@@ -8643,6 +10943,10 @@
       }
     ],
     "originally": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
       {
         "id": "ADR-057",
         "type": "adr"
@@ -8670,9 +10974,39 @@
         "type": "adr"
       }
     ],
+    "other": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "outcome": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "outcomeprofile": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "outcomeprofiler": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -8721,6 +11055,12 @@
     "p": [
       {
         "id": "ADR-030",
+        "type": "adr"
+      }
+    ],
+    "p0": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -8810,6 +11150,12 @@
         "type": "adr"
       }
     ],
+    "parallel": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "parameter": [
       {
         "id": "ADR-043",
@@ -8817,6 +11163,16 @@
       },
       {
         "id": "ADR-045",
+        "type": "adr"
+      }
+    ],
+    "part": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -8902,6 +11258,16 @@
         "type": "adr"
       }
     ],
+    "percentages": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "percentile": [
       {
         "id": "ADR-060",
@@ -8915,6 +11281,12 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "performs": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -8993,6 +11365,10 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -9090,9 +11466,29 @@
         "type": "adr"
       }
     ],
+    "planned": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
     "platform": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "plus": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -9127,6 +11523,10 @@
     "positive": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -9164,6 +11564,12 @@
         "type": "adr"
       }
     ],
+    "predict": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "predicted": [
       {
         "id": "ADR-053",
@@ -9181,6 +11587,16 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "prediction/interpretation": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -9221,6 +11637,28 @@
     "predicts": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "prefixed": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "prefixes": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "premature": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -9302,9 +11740,27 @@
         "type": "adr"
       }
     ],
+    "processed": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "produce": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "produced": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "produces": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -9340,6 +11796,10 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "production-change": [
@@ -9356,11 +11816,21 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "profile、reasoning": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "profiling": [
+      {
+        "id": "ADR-072",
         "type": "adr"
       }
     ],
@@ -9373,6 +11843,12 @@
     "proposal": [
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "propose": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -9432,6 +11908,12 @@
         "type": "adr"
       }
     ],
+    "published": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
     "purely": [
       {
         "id": "ADR-052",
@@ -9454,6 +11936,18 @@
         "type": "trap"
       }
     ],
+    "q2": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "qualitative": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "quant-cli": [
       {
         "id": "ADR-030",
@@ -9466,9 +11960,39 @@
         "type": "trap"
       }
     ],
+    "ra-xxxxxx": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "random": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "rank": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "ranking/outcomeprofile": [
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -9500,6 +12024,14 @@
       {
         "id": "ADR-052",
         "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "ratio": [
@@ -9538,6 +12070,14 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "raw。3": [
@@ -9552,6 +12092,12 @@
         "type": "adr"
       }
     ],
+    "re-committing": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "re-evaluated": [
       {
         "id": "ADR-059",
@@ -9561,6 +12107,12 @@
     "re-running": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "reached": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -9575,6 +12127,12 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "read-only": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -9630,6 +12188,18 @@
         "type": "adr"
       }
     ],
+    "record": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "recovery": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "redefine": [
       {
         "id": "ADR-060",
@@ -9644,6 +12214,36 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "reference": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "referenced": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "references": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "reflect": [
@@ -9728,6 +12328,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -9738,9 +12342,21 @@
         "type": "adr"
       }
     ],
+    "regime-attribution": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "regime-calibration": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "regime-dependent": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -9758,11 +12374,21 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "registers": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "registry": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -9775,6 +12401,12 @@
     "rejected": [
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "rejecting": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -9810,6 +12442,10 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "remap。已在": [
@@ -9821,6 +12457,10 @@
     "remove": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       },
       {
@@ -9854,6 +12494,12 @@
         "type": "adr"
       }
     ],
+    "repair": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "repeated": [
       {
         "id": "ADR-068",
@@ -9866,9 +12512,27 @@
         "type": "adr"
       }
     ],
+    "replaceable": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "replaced": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
     "replacing": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "replay": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -9892,6 +12556,12 @@
         "type": "adr"
       }
     ],
+    "report-specific": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "reportdocument/section/formatter": [
       {
         "id": "ADR-068",
@@ -9905,6 +12575,10 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -9928,6 +12602,10 @@
       {
         "id": "ADR-040",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "reports/llm-analysis-{scope}-{date}.md": [
@@ -9945,6 +12623,28 @@
     "reporttypes": [
       {
         "id": "ADR-043",
+        "type": "adr"
+      }
+    ],
+    "representation": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "reproducibility": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "reproducible": [
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -9973,6 +12673,14 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -10006,6 +12714,54 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "research-asset": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "research-attribution": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "research-context": [
@@ -10016,6 +12772,22 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "research-layer": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "research-platform": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
       }
     ],
     "research-skills": [
@@ -10024,9 +12796,21 @@
         "type": "adr"
       }
     ],
+    "research-snapshot": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
     "research-surface": [
       {
         "id": "ADR-066",
+        "type": "adr"
+      }
+    ],
+    "research-synthesis": [
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -10058,6 +12842,18 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "researchdataset": [
@@ -10073,6 +12869,12 @@
     "researchinsight（headline/summary/implications/recommendations），重构前端为四层：insight": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "researchsnapshot": [
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -10100,6 +12902,24 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      }
+    ],
+    "retained": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "retrieval": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "retrying": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "return": [
@@ -10138,6 +12958,10 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "returns": [
@@ -10148,6 +12972,14 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "reusable": [
@@ -10182,6 +13014,10 @@
       {
         "id": "ADR-061",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "reveals": [
@@ -10197,6 +13033,10 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
         "type": "adr"
       }
     ],
@@ -10364,6 +13204,10 @@
       {
         "id": "ADR-040",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "rotation-engine": [
@@ -10378,6 +13222,12 @@
         "type": "adr"
       }
     ],
+    "rotation_acceleration": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
     "rotation_missing": [
       {
         "id": "ADR-028",
@@ -10387,6 +13237,12 @@
     "rotationranksnapshot": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "rotationsummary": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -10446,6 +13302,10 @@
       {
         "id": "ADR-045",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "rust": [
@@ -10472,6 +13332,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "sample": [
@@ -10499,6 +13367,10 @@
       }
     ],
     "scheme": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
       {
         "id": "ADR-057",
         "type": "adr"
@@ -10588,6 +13460,24 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "search": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "searched_days": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "searchresult": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "second": [
@@ -10680,11 +13570,45 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "semantic-architecture": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
       }
     ],
     "semantic-contract": [
       {
         "id": "ADR-061",
+        "type": "adr"
+      }
+    ],
+    "semantic-layer": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "semantics": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -10728,6 +13652,12 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      }
+    ],
+    "sequence": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "serde(default)]`，或在": [
@@ -10798,6 +13728,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
       }
     ],
     "shadow-production": [
@@ -10815,6 +13749,22 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "share": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "shared": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -10896,6 +13846,14 @@
       {
         "id": "ADR-061",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
       }
     ],
     "show": [
@@ -10910,6 +13868,12 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      }
+    ],
+    "showed": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "shows": [
@@ -10948,6 +13912,10 @@
       {
         "id": "ADR-028",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "signal-divergence-audit": [
@@ -10959,6 +13927,12 @@
     "signal-engine": [
       {
         "id": "ADR-028",
+        "type": "adr"
+      }
+    ],
+    "signal/condition": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -11014,6 +13988,32 @@
         "type": "adr"
       }
     ],
+    "similarity": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "similarity-engine": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "similaritymatcher": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "simplification": [
       {
         "id": "ADR-058",
@@ -11029,6 +14029,16 @@
     "simultaneously": [
       {
         "id": "ADR-056",
+        "type": "adr"
+      }
+    ],
+    "single": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -11090,13 +14100,57 @@
         "type": "adr"
       }
     ],
+    "slice": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "slices": [
       {
         "id": "ADR-041",
         "type": "adr"
       }
     ],
+    "sn": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "snapshot": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "snapshots": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
     "so": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
@@ -11140,6 +14194,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "split": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
       }
     ],
     "sprints": [
@@ -11202,6 +14262,12 @@
         "type": "adr"
       }
     ],
+    "srd-strong": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
     "stability": [
       {
         "id": "ADR-053",
@@ -11212,9 +14278,35 @@
         "type": "adr"
       }
     ],
+    "stabilization": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "stabilized": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "stable": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "standalone": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -11270,6 +14362,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "state-audit": [
@@ -11315,6 +14411,12 @@
       },
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "state/signal/execution": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -11372,6 +14474,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "storage": [
@@ -11430,6 +14536,12 @@
         "type": "adr"
       }
     ],
+    "strategies": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
     "strategy": [
       {
         "id": "ADR-067",
@@ -11445,6 +14557,12 @@
     "stress>70": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "stretch": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -11518,10 +14636,20 @@
         "type": "adr"
       }
     ],
+    "subsequent": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "success": [
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "suggested": [
@@ -11534,6 +14662,20 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "superseded_by": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "supports": [
@@ -11592,6 +14734,12 @@
         "type": "adr"
       }
     ],
+    "swapped": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "switch": [
       {
         "id": "ADR-064",
@@ -11644,6 +14792,16 @@
         "type": "adr"
       }
     ],
+    "synthesis": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "system": [
       {
         "id": "ADR-052",
@@ -11651,6 +14809,16 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "systematic": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -11692,6 +14860,12 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      }
+    ],
+    "task": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "task-004": [
@@ -11794,10 +14968,62 @@
         "type": "adr"
       }
     ],
+    "task-093": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "task-106/107/108": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "task-107": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "task-108": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "task-111": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "task-111/114": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "task_lookup": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "tasks": [
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "taskupdated": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "tauri": [
@@ -11858,6 +15084,10 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "text": [
@@ -11882,6 +15112,14 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "that": [
@@ -11900,6 +15138,18 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "the": [
@@ -11944,11 +15194,47 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
       {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -11956,11 +15242,43 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "theme": [
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "theme_dispersion": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
       }
     ],
     "then": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "there": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "therefore": [
+      {
+        "id": "ADR-071",
         "type": "adr"
       }
     ],
@@ -11972,11 +15290,19 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
       }
     ],
     "they": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -11991,6 +15317,20 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "those": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -12084,6 +15424,12 @@
         "type": "adr"
       }
     ],
+    "time": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "timecontext": [
       {
         "id": "ADR-046",
@@ -12152,6 +15498,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -12165,6 +15527,10 @@
       },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
@@ -12248,6 +15614,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-078",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -12288,15 +15658,29 @@
         "type": "adr"
       }
     ],
+    "trait": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "transition": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
     "transitions": [
       {
         "id": "ADR-037",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -12526,6 +15910,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "typed": [
@@ -12537,6 +15925,10 @@
     "types": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -12584,6 +15976,12 @@
         "type": "adr"
       }
     ],
+    "un-freeze": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
     "unavailable": [
       {
         "id": "ADR-053",
@@ -12624,11 +16022,31 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "uniform": [
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "unimplemented": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
       }
     ],
     "unique": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
         "type": "adr"
       }
     ],
@@ -12664,9 +16082,27 @@
         "type": "trap"
       }
     ],
+    "update": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "update*tostore": [
       {
         "id": "ADR-036",
+        "type": "adr"
+      }
+    ],
+    "upgraded": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "uppercase": [
+      {
+        "id": "ADR-081",
         "type": "adr"
       }
     ],
@@ -12706,6 +16142,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
       }
     ],
     "usei18n/t": [
@@ -12717,6 +16161,20 @@
     "user": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "users": [
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -12816,6 +16274,116 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "v7": [
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "v7-3-1": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "v7.1": [
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "v7.2": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "v7.2a": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "v7.2b": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "v7.3": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "v7.3.1": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "v8": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "valid": [
@@ -12888,6 +16456,44 @@
         "type": "adr"
       }
     ],
+    "verified": [
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "verify": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
+    "version": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "vertical": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "very": [
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
     "via": [
       {
         "id": "ADR-049",
@@ -12900,6 +16506,22 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "viewer": [
@@ -12933,6 +16555,10 @@
     "volatility": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -13084,6 +16710,12 @@
         "type": "adr"
       }
     ],
+    "wait": [
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      }
+    ],
     "wants": [
       {
         "id": "ADR-041",
@@ -13110,8 +16742,16 @@
         "type": "adr"
       },
       {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "watch(immediate": [
@@ -13129,6 +16769,12 @@
     "watcher": [
       {
         "id": "ADR-038",
+        "type": "adr"
+      }
+    ],
+    "watershed": [
+      {
+        "id": "ADR-077",
         "type": "adr"
       }
     ],
@@ -13176,6 +16822,12 @@
         "type": "adr"
       }
     ],
+    "weights/thresholds": [
+      {
+        "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
     "were": [
       {
         "id": "ADR-059",
@@ -13189,6 +16841,10 @@
       },
       {
         "id": "ADR-061",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
         "type": "adr"
       }
     ],
@@ -13212,11 +16868,25 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "where": [
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "whether": [
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],
@@ -13233,6 +16903,12 @@
     "while": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "why": [
+      {
+        "id": "ADR-078",
         "type": "adr"
       }
     ],
@@ -13314,9 +16990,33 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "without": [
+      {
+        "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
@@ -13334,11 +17034,47 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
       }
     ],
     "works": [
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "workspace": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "workspace/registry/snapshot-index.json": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "workspace/snapshots": [
+      {
+        "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "workspacemanager": [
+      {
+        "id": "ADR-080",
         "type": "adr"
       }
     ],

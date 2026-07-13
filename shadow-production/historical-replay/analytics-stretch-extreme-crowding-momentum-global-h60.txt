@@ -1,0 +1,20 @@
+﻿Research Report 鈥?GLOBAL
+Scope: GLOBAL | Date: 2026-07-09
+----------------------------------------
+[Analytics] Analytics: stretch-extreme-crowding-momentum | Horizon: 60d
+Conditional Forward Return Analytics | Condition: stretch-extreme-crowding-momentum | Scope: GLOBAL
+  Analytics version:        v1
+  History window:           2017-01-03 ~ 2026-07-09
+  Occurrences:              18
+  Horizon:                  60 trading days
+  Forward return median:    -2.6%
+  Forward return mean:      -1.9%
+  Forward return best:      +1.7%
+  Forward return worst:     -4.5%
+  Positive ratio:           16.7%
+  Median max drawdown:      7.8%
+
+[Disclaimer] 
+Observation tool 鈥?does not influence any decision logic
+
+

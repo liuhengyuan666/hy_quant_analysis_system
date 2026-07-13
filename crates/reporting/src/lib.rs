@@ -50,12 +50,16 @@ pub enum SectionKind {
     Signal,
     Divergence,
     Stretch,
+    Confirmation,
+    Recovery,
     Analytics,
     Review,
     Observation,
     Interpretation,
     Risk,
     Evidence,
+    Consensus,
+    Explanation,
     Disclaimer,
 }
 

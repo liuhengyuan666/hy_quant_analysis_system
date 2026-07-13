@@ -47,6 +47,8 @@ enum ResearchCommand {
         horizon: usize,
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
+        #[arg(long, help = "Save the computed evidence to the workspace")]
+        save_evidence: bool,
     },
     /// Quarterly Review — aggregate SRD/Stretch/Analytics over a window into a Markdown report
     Review {
@@ -58,6 +60,96 @@ enum ResearchCommand {
         to: Option<NaiveDate>,
         #[arg(long, help = "Output Markdown file path")]
         output: Option<std::path::PathBuf>,
+    },
+    /// V7 Workflow — Observe: aggregate SRD, Stretch, Analytics, and Health into a single observation report
+    Observe {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+        #[arg(long, default_value_t = String::from("srd-strong"), help = "Condition for analytics")]
+        condition: String,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, help = "Output Markdown file path")]
+        output: Option<std::path::PathBuf>,
+    },
+    /// Market Confirmation analysis — quantifies Trend, Participation, Risk confirmation
+    Confirmation {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
+    /// Recovery Index analysis — measures market recovery from drawdown/stress
+    Recovery {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
+    /// V7.2C Research Calibration — run the Research Calibration framework over a historical window
+    Calibration {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Window start date (defaults to last 60 trading days)")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "Window end date (defaults to latest available)")]
+        to: Option<NaiveDate>,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, default_value_t = 5, help = "Number of top matches to return")]
+        top_n: usize,
+        #[arg(long, default_value_t = 252, help = "Number of historical trading days to search")]
+        lookback: usize,
+    },
+    /// V7 Workflow — Replay: run historical analytics across conditions and horizons, saving Evidence to workspace
+    Replay {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Window start date (defaults to 90 days before --to)")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "Window end date (defaults to latest available)")]
+        to: Option<NaiveDate>,
+        #[arg(long, help = "Output directory for replay index files", default_value_t = String::from("shadow-production/historical-replay"))]
+        output_dir: String,
+    },
+    /// V7.2B Historical Analogue Search — find similar market conditions and profile outcomes
+    Analogues {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Target date (defaults to latest available)")]
+        date: Option<NaiveDate>,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, default_value_t = 5, help = "Number of top matches to return")]
+        top_n: usize,
+        #[arg(long, default_value_t = 252, help = "Number of historical trading days to search")]
+        lookback: usize,
+    },
+    /// V7.4 / ADR-078 Research Explanation — explain why a condition performs differently across regimes
+    Explain {
+        #[arg(long, help = "Condition to explain (e.g., srd-strong)")]
+        condition: String,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+        #[arg(long, default_value_t = 20, help = "Forward-return horizon for evidence")]
+        horizon: usize,
+    },
+    /// V7.3 Research Consensus — synthesize Observation, Evolution, and Historical Evidence into a research interpretation
+    Consensus {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Target date (defaults to latest available)")]
+        date: Option<NaiveDate>,
+        #[arg(long, default_value_t = 20)]
+        horizon: usize,
+        #[arg(long, default_value_t = 5, help = "Number of top matches to return")]
+        top_n: usize,
+        #[arg(long, default_value_t = 252, help = "Number of historical trading days to search")]
+        lookback: usize,
     },
 }
 
@@ -119,6 +211,8 @@ enum Command {
         scope: ReportScopeArg,
     },
     CheckDataHealth,
+    /// V7 Workflow — Data Health: check provider health and export the report in one step
+    DataHealth,
     RunBacktest {
         #[arg(long, default_value_t = 1000000.0)]
         initial_capital: f64,
@@ -643,6 +737,20 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// Market Confirmation analysis — quantifies Trend, Participation, Risk confirmation
+    ResearchConfirmation {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
+    /// Recovery Index analysis — measures market recovery from drawdown/stress
+    ResearchRecovery {
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Historical date to analyze (defaults to latest available)")]
+        date: Option<NaiveDate>,
+    },
     /// Research Surface: Full rotation ranking (not part of Shadow Production observation chain)
     RotationRanking {
         #[arg(long)]
@@ -683,6 +791,7 @@ fn main() -> Result<()> {
         Command::ExplainLatestGate { scope } => commands::diagnostics::handle_explain_latest_gate(&context, scope)?,
         Command::PipelineDates { scope } => commands::diagnostics::handle_pipeline_dates(&context, scope)?,
         Command::CheckDataHealth => commands::diagnostics::handle_check_data_health(&context)?,
+        Command::DataHealth => commands::diagnostics::handle_data_health(&context)?,
         Command::RunBacktest { initial_capital, max_holdings, fee_rate, slippage_rate, scope, use_state_sizing, max_drawdown } => {
             commands::backtest::handle_run_backtest(&context, initial_capital, max_holdings, fee_rate, slippage_rate, scope, use_state_sizing, max_drawdown)?
         }
@@ -695,11 +804,31 @@ fn main() -> Result<()> {
         Command::Research(cmd) => match cmd {
             ResearchCommand::Srd { scope, date } => commands::research::handle_research_srd(&context, scope, date)?,
             ResearchCommand::Stretch { scope, date } => commands::research::handle_research_stretch(&context, scope, date)?,
-            ResearchCommand::Analytics { condition, horizon, scope } => {
-                commands::research::handle_research_analytics(&context, condition, horizon, scope)?
+            ResearchCommand::Analytics { condition, horizon, scope, save_evidence } => {
+                commands::research::handle_research_analytics(&context, condition, horizon, scope, save_evidence)?
             }
-            ResearchCommand::Review { scope, from, to, output } => {
-                commands::research::handle_research_review(&context, scope, from, to, output)?
+        ResearchCommand::Review { scope, from, to, output } => {
+            commands::research::handle_research_review(&context, scope, from, to, output)?
+        }
+        ResearchCommand::Observe { scope, date, condition, horizon, output } => {
+            commands::research::handle_research_observe(&context, scope, date, condition, horizon, output)?
+        }
+        ResearchCommand::Confirmation { scope, date } => commands::research::handle_research_confirmation(&context, scope, date)?,
+            ResearchCommand::Recovery { scope, date } => commands::research::handle_research_recovery(&context, scope, date)?,
+        ResearchCommand::Calibration { scope, from, to, horizon, top_n, lookback } => {
+            commands::research::handle_research_calibration(&context, scope, from, to, horizon, top_n, lookback)?
+        }
+        ResearchCommand::Replay { scope, from, to, output_dir } => {
+            commands::research::handle_research_replay(&context, scope, from, to, output_dir)?
+        }
+        ResearchCommand::Analogues { scope, date, horizon, top_n, lookback } => {
+                commands::research::handle_research_analogues(&context, scope, date, horizon, top_n, lookback)?
+            }
+            ResearchCommand::Consensus { scope, date, horizon, top_n, lookback } => {
+                commands::research::handle_research_consensus(&context, scope, date, horizon, top_n, lookback)?
+            }
+            ResearchCommand::Explain { condition, scope, date, horizon } => {
+                commands::research::handle_research_explain(&context, condition, scope, date, horizon)?
             }
         },
         Command::ResearchStretch { scope } => commands::research::handle_research_stretch(&context, scope, None)?,
@@ -767,6 +896,8 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::AuditStatePersistenceEconomics { from, to } => commands::audit::handle_audit_state_persistence_economics(&context, from, to)?,
         Command::ValidateStateLayerGt { from, to } => commands::audit::handle_validate_state_layer_gt(&context, from, to)?,
         Command::ResearchSrd { scope } => commands::research::handle_research_srd(&context, scope, None)?,
+        Command::ResearchConfirmation { scope, date } => commands::research::handle_research_confirmation(&context, scope, date)?,
+        Command::ResearchRecovery { scope, date } => commands::research::handle_research_recovery(&context, scope, date)?,
         Command::RotationRanking { date, scope } => commands::audit::handle_rotation_ranking(&context, date, scope)?,
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,

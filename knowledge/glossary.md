@@ -89,3 +89,33 @@
 | **ReportBuilder** | Report Builder Trait | 文档组装接口（Research / Audit / Review），当前无实现者，状态为 Pending Evaluation | 报告与展示域 |
 | **Architecture Invariants** | Architecture Invariants | V6 Reporting Platform 的 10 条分层架构不可违反规则（ADR-069） | 架构域 |
 | **Shadow Production Playbook** | Shadow Production Playbook | Shadow Production 阶段操作细则，见 `docs/shadow-production-playbook.md` | 治理域 |
+| **Research Platform 1.0** | Research Platform 1.0 | 由 Observation (V6) + Market Evolution (V7.1) + Historical Evidence (V7.2) + Research Synthesis (V7.3) 四层组成的研究平台；ADR-077 起正式冻结 | 研究域 |
+| **Research Content Evolution** | Research Content Evolution | 在 Research Platform 1.0 冻结后新增的市场观测、指标、因子、内容；只能通过现有冻结层消费，不修改 Semantic Architecture | 研究域 |
+| **Observation Layer** | Observation Layer | V6 研究层，描述市场当前状态（Environment / Signal / Stretch / Rotation） | 研究域 |
+| **Market Evolution Layer** | Market Evolution Layer | V7.1 研究层，描述市场演化（Confirmation / Recovery） | 研究域 |
+| **Historical Evidence Layer** | Historical Evidence Layer | V7.2 研究层，基于 Market Fingerprint 检索历史相似样本（Normalizer / DistanceMetric / SimilarityMatcher / OutcomeProfiler / Calibration） | 研究域 |
+| **Research Synthesis Layer** | Research Synthesis Layer | V7.3 研究层，基于 Evidence Aggregation 生成 Consensus（Bias / Confidence / Supporting Evidence / Contradicting Evidence） | 研究域 |
+| **Confirmation** | Market Confirmation | 市场演化维度：确认当前趋势是否被广度、参与度和风险维度验证 | 研究域 |
+| **Recovery** | Market Recovery | 市场演化维度：衡量市场从压力中恢复的程度 | 研究域 |
+| **Market Fingerprint** | Market Fingerprint | 描述市场状态的指纹向量，由 ObservationVector 和 EvolutionVector 组成，用于历史相似匹配 | 研究域 |
+| **Fingerprint** | Fingerprint | 一组可比较的市场特征向量，用于 Historical Analogues 相似性计算 | 研究域 |
+| **Historical Analogues** | Historical Analogues | 通过 Market Fingerprint 在当前市场状态与历史状态之间寻找最相似样本，并给出其历史 Outcome Profile | 研究域 |
+| **Outcome Profile** | Outcome Profile | 历史相似样本的前向收益与风险统计（median / mean / best / worst / positive ratio / median max drawdown） | 研究域 |
+| **Distance Metric** | Distance Metric | 衡量两个 Fingerprint 之间相似度的算法（当前为 CosineDistance），属于 Historical Evidence 层内部实现 | 研究域 |
+| **Similarity Matcher** | Similarity Matcher | 基于 Distance Metric 找出 Top-N 历史相似样本的组件 | 研究域 |
+| **Normalizer** | Feature Normalizer | 对 Fingerprint 特征进行归一化，使不同量纲特征可比较 | 研究域 |
+| **Calibration** | Research Calibration | V7.2C 校准框架：连续运行 Confirmation / Recovery / Analogues，记录等级、驱动、匹配日期和前向收益统计，输出 Markdown 校准报告 | 研究域 |
+| **Calibration Baseline Version** | Calibration Baseline Version | 校准报告基线版本（从 1 开始），仅在 Evidence 语义变化时递增；实现优化不触发递增 | 研究域 |
+| **Consensus** | Research Consensus | 研究综合：基于 Evidence Aggregation 对 Observation / Evolution / Historical Evidence 给出研究解释（Bias / Confidence / Evidence） | 研究域 |
+| **Evidence Aggregation** | Evidence Aggregation | Consensus 的核心机制：每项证据贡献 `(source, weight)`，加权求和后通过阈值映射输出 Bias 和 Confidence；不使用硬编码 if-else 规则树 | 研究域 |
+| **ConsensusConfig** | Consensus Configuration | 聚合 `EvidenceWeights`、`BiasThresholds`、`ConfidenceThresholds`、`ConflictedThresholds` 的可配置结构；默认值保持 V7.3 行为 | 研究域 |
+| **ConsensusBias** | Consensus Bias | Consensus 的研究语言倾向：`Constructive` / `Neutral` / `Conflicted` / `Fragile` / `Cautious` | 研究域 |
+| **Confidence** | Consensus Confidence | Consensus 的置信度：`Low` / `Medium` / `High` | 研究域 |
+| **Supporting Evidence** | Supporting Evidence | 支持当前 Bias 的证据列表（WeightedEvidence） | 研究域 |
+| **Contradicting Evidence** | Contradicting Evidence | 与当前 Bias 矛盾的证据列表（WeightedEvidence） | 研究域 |
+| **Semantic Architecture** | Semantic Architecture | 研究平台的分层语义结构（Observation / Evolution / Evidence / Consensus）；ADR-077 后冻结，修改需新 ADR 和显式解冻 | 架构域 |
+| **Candidate Evidence** | Candidate Evidence | Shadow Production 中的候选失效证据，单一窗口可能出现，但不足以触发 Kill Criterion，需要跨多个窗口重复验证 | 治理域 |
+| **Regime Dependency** | Regime Dependency | 量化模型或信号的收益表现依赖于特定市场状态（Regime），在不同 Regime 下可能有效或失效 | 研究域 |
+| **Model Bias** | Model Bias | 模型对特定市场结构、主题或 Regime 的系统性偏好或压制，不是随机误差，而是可识别的结构性偏差 | 研究域 |
+| **Systematic Bias** | Systematic Bias | 模型在特定条件下对多个标的或整个主题产生的系统性错误，例如 State Layer 在高动量/低波动/成长扩散环境下全面压制 Growth 主题 | 研究域 |
+| **Failure Attribution** | Failure Attribution | 研究层能力：不仅判断模型何时失效，还要解释失效时的市场环境（Breadth / Liquidity / Volatility / Macro / Economic / Crowding） | 研究域 |

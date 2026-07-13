@@ -107,3 +107,57 @@
 - [Done] [TASK-097] Abstract an internal `ResearchSnapshot` model that holds SRD, Stretch, Rotation, Breadth, and Analytics results for a single (date, scope). Refactor existing research commands to build ResearchSnapshot first, then render. This unifies query logic and enables Quarterly Review aggregation. No new CLI.
 - [Done] [TASK-098] Design and implement Research Quarterly Review: automatically run SRD/Stretch/Analytics over a 90-day window and generate a Markdown report (Observation Window, SRD summary, Stretch distribution, top findings, potential ADR candidates). Output to reports/research-quarterly-{scope}-{date}.md. This is the synthesis layer that turns Observation + Analytics into accumulated research assets.
 
+
+### 2026-07-08
+- [Done] [TASK-070] V7.1 Market Evolution Layer: implement Confirmation and Recovery in core-domain::research, extend ResearchContext, add CLI commands research-confirmation and research-recovery
+
+
+
+### 2026-07-09
+- [Done] [TASK-071A] V7.2A Market Fingerprint Foundation: create crates/market-fingerprint-engine, define MarketFingerprint and MarketFingerprintBuilder, establish stable contract
+
+- [Done] [TASK-071B] V7.2B Similarity Engine: implement normalization, distance functions, SimilarityMatcher, OutcomeProfile, and CLI research-analogues
+
+- [Done] [TASK-072] V7.3 Research Synthesis Layer: implement Consensus with Transition in core-domain::research, extend ResearchContext, add CLI command research-consensus
+
+- [Done] [TASK-101] ADR-078 Research Attribution Layer: Design and implement the Failure Attribution / Regime Attribution layer on top of Research Platform 1.0. Covers Macro, Breadth, Liquidity, Theme, Crowding, Volatility attribution. Read-only, does not modify frozen State/Signal/Execution layers. Output: reports/attribution/attribution-{scope}-{condition}-{from}-{to}.md.
+
+- [Done] [TASK-102] Historical Replay Automation Pipeline: Automate the Historical Replay workflow (research-review + research-analytics + symbol-scoreboard) to run nightly and generate Candidate Evidence reports. Output to shadow-production/historical-replay/ with dated filenames and summary JSON.
+
+- [Done] [TASK-104] Attribution MVP Implementation (P2): Implement the first 1–2 attribution dimensions (recommended: Breadth + Liquidity) using the ADR-078 framework. Validate the full pipeline: Observation → Evidence → Attribution → Hypothesis → Confidence → Next Validation. Output: a working `research explain` command for the MVP dimensions and a sample report. Do NOT implement all six attribution dimensions at once.
+
+
+### 2026-07-12
+- [Done] [TASK-105] Wire real Evidence into research explain (P0): Reuse existing conditional forward-return analytics (match_srd_strong, match_stretch_extreme) to populate Evidence.occurrences, positive_ratio, median_forward_return, history_window in research explain. Remove placeholder evidence.
+
+
+
+
+## Superseded
+
+### 2026-07-09
+- [Superseded] [TASK-071] V7.2 Historical Evidence Layer: create crates/market-fingerprint-engine, implement MarketFingerprint, Historical Analogues, and Outcome Profile, add CLI command research-analogues
+  Superseded by: Task TASK-071A
+  Reason: V7.2 split into V7.2A (Market Fingerprint Foundation) and V7.2B (Similarity Matcher + Outcome + CLI)
+
+
+
+
+
+
+
+
+
+### 2026-07-12
+- [Superseded] [TASK-106] Elevate Evidence Index to unified Research Layer asset (P1): Create research/evidence/ directory structure with replay/, calibration/, attribution/, validation/ subdirectories. Update run-historical-replay.ps1 to write replay evidence to research/evidence/replay/. Create a unified evidence-index.json aggregator at research/evidence/evidence-index.json.
+  Superseded by: Task TASK-111
+  Reason: Unified workspace.rs approach replaced the standalone evidence directory structure; identity/lifecycle/indexing are now handled by WorkspaceManager.
+
+- [Superseded] [TASK-107] Add Evidence Strength and Evidence Weight to ADR-078 and implementation (P2): Define EvidenceStrength (Weak/Moderate/Strong/Verified) based on historical occurrence count. Define EvidenceWeight placeholder for multi-source aggregation (Replay/Calibration/Manual Review). Update ADR-078, core-domain, report-builder, and research explain output.
+  Superseded by: ADR ADR-079
+  Reason: P2 evolved from Evidence Strength/Weight into Snapshot structure with EvidenceRef. Evidence weighting is deferred to P3 after asset accumulation.
+
+- [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
+  Superseded by: ADR ADR-079
+  Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+

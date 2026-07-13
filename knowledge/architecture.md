@@ -23,24 +23,29 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 
 关键组件：
 - app-service: 核心服务编排（已模块化，lib.rs ~4,890行 + 7 helper modules，后续仍可拆分）
+- core-domain: 核心领域模型；V7 新增 `core-domain::research` 子模块（confirmation / recovery / calibration / consensus / stretch / rotation）
 - data-ingestion: 数据获取（Eastmoney/Tencent/FRED）
 - execution-engine: 执行层（V5 新增，Pattern Library，收盘前执行过滤）
 - macro-engine: 宏观因子计算与regime分类
+- market-fingerprint-engine: 市场指纹引擎（V7.2B 新增），提供 Normalizer、DistanceMetric、SimilarityMatcher、OutcomeProfiler
+- market-state-extractor: 市场状态提取
 - rotation-engine: 轮动排名计算
 - signal-engine: 信号生成
 - backtest-engine: 回测引擎
 - report-engine: 报告生成
-- report-builder: 文档输入与 Builder 组装（V6 Reporting Platform 新增）
-- reporting: 报告领域模型与渲染抽象（V6 Reporting Platform 新增）
-- report-renderer: 报告渲染器（V6 Reporting Platform 新增）
+- report-builder: 文档输入与 Builder 组装（V6 Reporting Platform 新增；物理目录未加入 workspace）
+- reporting: 报告领域模型与渲染抽象（V6 Reporting Platform 新增；物理目录未加入 workspace）
+- report-renderer: 报告渲染器（V6 新增）
 - llm-context: LLM 上下文组装（V6 新增）
 - market-store: 数据存储抽象
+- research-context: 研究上下文（V6 canonical semantic contract）
 - research-skills: LLM技能路由
 
 ## 3. 全局架构约束
 
-- Workspace 结构：23 个 members（apps/cli, apps/desktop/src-tauri, 21 个 crates）
+- Workspace 结构：25 个 members（apps/cli, apps/desktop/src-tauri, 23 个 crates）
 - 注意：以下 crates 物理存在但未加入 workspace members：crates/research-validation、crates/report-builder、crates/reporting
+- V7 Research Platform 1.0 已冻结（ADR-077）：Observation (V6) + Market Evolution (V7.1) + Historical Evidence (V7.2) + Research Synthesis (V7.3) 的语义架构、接口和职责全部冻结；新增内容属于 Research Content Evolution，只能通过现有冻结层消费
 - 数据源策略：Eastmoney主源，Tencent兜底，FRED宏观因子；FRED 运行时支持已持久化 `macro_snapshot` 历史回退
 - 统一日线口径：Eastmoney fqt=1，Tencent qfq（前复权）
 - 当前环境限制：Eastmoney从当前环境不可达，全部标的走Tencent fallback
@@ -48,4 +53,5 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 - TradingCalendar当前只覆盖CN/HK
 - P2 turnover修复仅影响新拉取数据，存量ClickHouse数据需ingest-daily回填
 - V6 Reporting Platform 已冻结：Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定，新增消费者应建立在此平台之上
+- **V7 Research Platform 1.0 已冻结**：Observation / Evolution / Evidence / Consensus 四层语义架构稳定，新增市场观测内容只能作为 Research Content Evolution 输入现有层，不允许修改 Semantic Architecture
 - 分层架构不可变规则见 `docs/architecture-invariants.md`（ADR-069）：数据所有权、语义所有权、展示所有权、渲染所有权、消费者边界

@@ -17,6 +17,7 @@ data-ingestion = { path = "../data-ingestion" }
 indicator-engine = { path = "../indicator-engine" }
 keyring.workspace = true
 macro-engine = { path = "../macro-engine" }
+market-fingerprint-engine = { path = "../market-fingerprint-engine" }
 market-store = { path = "../market-store" }
 report-engine = { path = "../report-engine" }
 llm-context = { path = "../llm-context" }
@@ -36,3 +37,4 @@ uuid.workspace = true
 
 [dev-dependencies]
 wiremock = "0.6"
+tempfile = "3"

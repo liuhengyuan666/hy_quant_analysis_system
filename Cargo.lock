@@ -125,6 +125,7 @@ dependencies = [
  "keyring",
  "llm-context",
  "macro-engine",
+ "market-fingerprint-engine",
  "market-store",
  "report-builder",
  "report-engine",
@@ -137,6 +138,7 @@ dependencies = [
  "serde_json",
  "signal-engine",
  "strategy-engine",
+ "tempfile",
  "tokio",
  "toml 0.8.2",
  "uuid",
@@ -2355,6 +2357,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "market-fingerprint-engine"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core-domain",
+ "research-context",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "market-state-extractor"
 version = "0.1.0"
 dependencies = [
@@ -3225,6 +3238,7 @@ dependencies = [
  "gt-regime-generator",
  "indicator-engine",
  "macro-engine",
+ "market-fingerprint-engine",
  "market-state-extractor",
  "market-store",
  "regime-audit",

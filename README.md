@@ -7,6 +7,8 @@
 - `docs/日常操作手册.md`：适合每天快速更新、查看、导出结果
 - `docs/分析使用手册.md`：适合趋势 / 长线分析时理解 MA20 / MA60 / MACD / regime / rotation / signal
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
+- `docs/设计规划-v7.md`：V7 Market Evolution Semantic Layer 设计规划（Observation → Evolution → Evidence → Consensus）
+- `shadow-production/historical-replay/historical-replay-report-2026-07-09.md`：Shadow Production 历史复盘测试报告（State Layer Regime Dependency / Model Bias 分析）
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
 - `docs/v2/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
 - `docs/文档状态说明.md`：区分当前实现主参考、活跃设计、历史归档与运行产物
@@ -14,7 +16,7 @@
 - `docs/shadow-production-playbook.md`：V5 Shadow Production 90 天观察期操作指引
 - 这些文档也已接入桌面端 UI，可通过 Dashboard 内的 **Help / Usage** 入口直接查看
 
-本项目是一个 **本地桌面量化研究系统 V6**，核心目标是：
+本项目是一个 **本地桌面量化研究系统 V8**，核心目标是：
 
 - 用 Rust 构建完整研究链路
 - 用 Tauri 提供桌面端界面
@@ -66,9 +68,13 @@
 V5  Engine-centric
       ↓
 V6  Pipeline → Canonical Semantic Model → Stable Reporting Platform (Frozen)
+      ↓
+V7  Observation → Market Evolution → Historical Evidence → Research Synthesis (Frozen)
+      ↓
+V8  Durable Research Assets: computation → workspace → reproducible artifacts
 ```
 
-V6 Reporting Platform 稳定后，新增 Timeline、Desktop、REST API、LLM、Email、PDF 等能力应建立在此平台之上，而不是继续调整平台本身。
+V6 Reporting Platform 与 V7 Research Platform 均已冻结。新增消费者/能力应建立在两层平台之上，而不是继续调整平台本身。V8 开始将研究产物（Evidence、Snapshot、未来的 Knowledge/Validation/Hypothesis）以可复现、可审计、可版本化的 Research Asset 形式持久化到本地 workspace。
 
 ---
 
@@ -92,6 +98,16 @@ V6 Reporting Platform 稳定后，新增 Timeline、Desktop、REST API、LLM、E
 - **V4.5**：Research Layer — 5 个按钮的只读叙事分析（Markdown 纯文本输出，无 Agent/无 Skill/无评分）
 - **V5**：Execution Layer（Pattern Library）— 收盘前执行过滤（`preclose-analysis`）
 - **V6**：Research Surface — `research-srd`（Signal-Regime Divergence 统计）、`research-stretch`（市场拉伸观测）与 `research review`（季度研究综述）
+- **V7**：Market Evolution Semantic Layer + Historical Evidence Layer + Research Synthesis Layer
+  - V7.1：`research confirmation` / `research recovery`（市场确认 / 恢复）
+  - V7.2：`research analogues` / `research calibration`（历史相似匹配 / 校准框架）
+  - V7.3：`research consensus`（研究综合：Bias / Confidence / Evidence）
+  - V7.3.1：Research Platform 1.0 正式冻结（ADR-077）；`ConsensusConfig`、版本化 `ConsensusSummary`、`Calibration Baseline Version` 常量
+- **V8**：Durable Research Assets（可持久化研究资产）— Evidence / Snapshot 进入本地 workspace，统一身份 `RA-XXXXXX`、统一生命周期 `Draft → Verified → Published → Superseded → Archived`，通过 `research analytics --save-evidence` 与 Historical Replay 持续积累
+  - V8.0：Evidence 直接由 `research explain` / `research analytics` / `research review` 产出
+  - V8.1：Snapshot 引用 Evidence 而非嵌入（`EvidenceRef`）
+  - V8.2：统一生命周期（ADR-080）与统一身份（ADR-081）
+  - V8.3：P3（Evidence Score/Weight）延迟，直到积累 1000+ 资产、Replay 稳定 30 天、Calibration 稳定 2 周期
 
 ### 当前适用场景
 
@@ -206,12 +222,22 @@ rust-quant-analysis-system/
 │   ├── report-engine/
 │   ├── rotation-engine/
 │   ├── signal-engine/
-│   └── strategy-engine/
+│   ├── strategy-engine/
+│   └── workspace/                 (V8: Research Asset orchestration lives inside app-service)
 ├── config/
 ├── infra/
-├── reports/
+├── reports/                       (rendered reports)
+├── workspace/                     (V8: durable Research Asset storage, gitignored)
+│   ├── evidence/
+│   ├── snapshots/
+│   ├── registry/
+│   │   ├── evidence-index.json
+│   │   └── snapshot-index.json
+│   └── README.md
 └── sql/
 ```
+
+> **注意**：`workspace/` 是 V8 新增的本地研究资产目录，默认不进入 git。它由 `app-service::workspace` 管理，CLI 通过 `--save-evidence` 或 Historical Replay 写入。
 
 ---
 
@@ -652,6 +678,9 @@ cargo run -p quant-cli -- research-stretch [--scope global|cn|hk]
 # 条件前向收益统计
 cargo run -p quant-cli -- research analytics --condition srd-strong|stretch-extreme-crowding-momentum [--scope global|cn|hk] [--horizon 20|60]
 
+# 条件前向收益统计 + 保存为可复现 Research Asset（V8）
+cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
+
 # 季度研究综述：聚合 SRD / Stretch / Analytics 为 Markdown 报告
 cargo run -p quant-cli -- research review [--scope global|cn|hk] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--output path.md]
 ```
@@ -719,6 +748,79 @@ Median max drawdown:      4.0%
 
 `research review` 会把以上三类指标按季度窗口聚合，输出到 `reports/research-quarterly-{scope}-{to}.md`，适合季度末做 ADR Review。
 
+### 15.8 V7：Market Evolution + Historical Evidence + Research Synthesis Layer
+
+> **V7 新增**：在 V6 Observation 基础上扩展为四层研究平台：Observation → Market Evolution → Historical Evidence → Research Synthesis。
+>
+> 已冻结为 Research Platform 1.0（ADR-077）。新增消费者/内容只能通过现有层消费，不修改语义架构。
+
+```bash
+# V7.1 Market Evolution（市场演化层）
+# 判断市场趋势是否被广度、参与度和风险维度确认
+cargo run -p quant-cli -- research confirmation --scope global|cn|hk [--date YYYY-MM-DD]
+
+# 衡量市场从压力中恢复的程度
+cargo run -p quant-cli -- research recovery --scope global|cn|hk [--date YYYY-MM-DD]
+
+# V7.2 Historical Evidence（历史证据层）
+# 基于 Market Fingerprint 检索历史相似市场状态
+cargo run -p quant-cli -- research analogues --scope global|cn|hk [--date YYYY-MM-DD] [--top-n 5] [--lookback 252]
+
+# 连续运行 Confirmation / Recovery / Analogues，输出校准报告
+cargo run -p quant-cli -- research calibration --scope global|cn|hk [--from YYYY-MM-DD] [--to YYYY-MM-DD]
+
+# V7.3 Research Synthesis（研究综合层）
+# 综合 Observation / Evolution / Historical Evidence 输出研究语言解释
+cargo run -p quant-cli -- research consensus --scope global|cn|hk [--date YYYY-MM-DD] [--horizon 20] [--top-n 5] [--lookback 252]
+
+# V7 Workflow — 工作流命令（建立在 V7 平台之上，不修改平台语义）
+# 一键聚合 SRD + Stretch + Analytics + Health 为单份日报
+cargo run -p quant-cli -- research observe --scope global|cn|hk [--date YYYY-MM-DD] [--condition <name>] [--horizon 20|60] [--output path.md]
+
+# 批量重放条件 × 周期，保存 Evidence 并输出 replay 索引
+cargo run -p quant-cli -- research replay --scope global|cn|hk [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--output-dir path]
+
+# 数据健康检查 + 报告留档，合并原 check-data-health 和 export-data-health-report
+cargo run -p quant-cli -- data-health
+```
+
+**说明**：
+- `research confirmation` 输出确认等级（Strong / Moderate / Weak / None）及三维度得分（Trend / Participation / Risk）。
+- `research recovery` 输出恢复指数（0-100）及驱动因素（如 Breadth improving / Volatility shrinking）。
+- `research analogues` 输出历史相似匹配、距离等级（Very High / High / Moderate / Weak）及 Outcome Profile（前向收益统计）。
+- `research calibration` 输出 `reports/research-calibration-{scope}-{start}-{end}.md`，包含 Evidence 分布、距离直方图、Calibration Baseline Version。
+- `research consensus` 输出 `reports/research-consensus-{scope}-{date}.md`，包含 Bias、Confidence、Supporting/Contradicting Evidence、Summary。不输出买卖建议。
+- `research observe` 输出 `reports/research-observe-{scope}-{date}.md`，聚合 `research-srd` + `research-stretch` + `research analytics`（默认条件 `srd-strong`、默认周期 `20`）+ `check-data-health`，供每日研究速览。可通过 `--condition` 与 `--horizon` 自定义分析条件。
+- `research replay` 输出 `workspace/evidence/replay/RA-XXXXXX/body.json` 与 `shadow-production/historical-replay/` 索引文件，替代 PowerShell 历史复盘脚本。
+- `data-health` 同时输出终端 JSON 摘要与 `reports/data-health-*.md` 留档报告，合并原 `check-data-health` 与 `export-data-health-report`。
+- 以上工作流命令保留原有底层命令（`research-srd`、`research-stretch`、`research analytics`、`check-data-health`、`export-data-health-report`）不变。
+
+**输出示例**（`research consensus --scope global`）：
+```text
+Research Consensus
+  Bias:                  Constructive
+  Confidence:            Medium
+  Aggregate score:       0.34
+
+Supporting Evidence:
+  - Recovery (+0.12): Recovery improving
+  - Analogues (+0.10): Historical analogues constructive
+  - Signal (+0.10): Signal moderately constructive
+  - Confirmation (+0.09): Confirmation moderate
+
+Contradicting Evidence:
+  - Stretch (-0.07): Stretch elevated
+
+Summary:
+  Research view is Constructive with Medium confidence. ...
+```
+
+**历史复盘与 Shadow Production**：
+- 详见 [`shadow-production/historical-replay/historical-replay-report-2026-07-09.md`](shadow-production/historical-replay/historical-replay-report-2026-07-09.md)
+- 核心发现：SRD-strong 全历史接近随机（Global H20 positive ratio 51.9%），但存在明显 **Regime Dependency**：2025 H2 出现 StrongBuy + DeRisk + 84.6% 正前向收益，而 2023 Q2 / 2024 H1 全部负收益。
+- 这证明 State Layer v1.0 不是"对"或"错"，而是在特定市场阶段（高动量 / 低波动 / 主题扩散）存在 **Systematic Bias / Model Bias**。
+- 下一步方向：建立 **Failure Attribution / Regime Attribution** 层，解释 Signal 在不同 Regime 下表现不同的原因。
+
 ### 15.9 收盘前执行过滤（Execution Layer — V5）
 
 > **V5 新增**：基于实时行情数据的 Pattern Library 执行过滤器，不修改任何信号/状态/回测逻辑。
@@ -755,13 +857,75 @@ Symbol       Signal       State        Reasons
 - 输出同时写入 `reports/execution-samples/YYYY-MM-DD.json`
 - 90 天内仅作为观测工具，禁止声称性能优势或优化参数
 
+### 15.10 V8：Research Asset Workspace（持久化研究资产）
+
+> **V8 新增**：把研究产物（Evidence、Snapshot）从一次性报告提升为可复现、可审计、可版本化的本地 Research Asset。
+> 新增消费者/能力只能基于 V6/V7 平台消费，不能修改 V6/V7 平台本身；V8 负责把这些平台的产物以统一身份和生命周期管理起来。
+
+V8 核心目标：
+
+- **统一身份**：所有 Research Asset 使用 `RA-XXXXXX`（6 位大写数字字母），通过 metadata 中的 `AssetKind` 区分 Evidence / Snapshot / 未来扩展类型。
+- **统一生命周期**：`Draft → Verified → Published → Superseded → Archived`。`Draft` 由计算直接产出，`Verified` 经过自动审计，`Published` 进入稳定引用，`Superseded` 被新版本替代，`Archived` 过期但仍可回溯。
+- **引用而非嵌入**：Snapshot 通过 `EvidenceRef { id, version }` 引用 Evidence，而不是把 Evidence 数据复制进 Snapshot。
+- **可复现**：每个 Asset 携带 `dataset_hash` 和 `config_hash`；重新计算同一输入应得到可对比的 hash。
+- **本地优先**：所有 Research Asset 默认保存在 `workspace/` 目录，不进入 git；用户负责自行备份或归档。
+
+目录结构：
+
+```text
+workspace/
+├── evidence/                    ← 按条件 / 日期组织的 Evidence Asset
+│   ├── replay/                  ← Historical Replay 批量产出的 Evidence
+│   └── analytics/               ← `research analytics --save-evidence` 产出的 Evidence
+├── snapshots/                   ← 引用 Evidence 的 Snapshot Asset
+└── registry/
+    ├── evidence-index.json      ← Evidence 索引（id, kind, version, scope, created_at, state）
+    └── snapshot-index.json      ← Snapshot 索引（id, kind, version, scope, created_at, state）
+```
+
+常用命令：
+
+```bash
+# 1. 把一次条件前向收益统计保存为 Evidence Asset
+cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
+
+# 2. 批量重放并保存 Evidence（推荐每日收盘后运行，通过 shadow-production 脚本）
+# 脚本路径：shadow-production/historical-replay/run-historical-replay.ps1
+
+# 3. 查看已保存的 Evidence 与 Snapshot 索引
+# 直接查看 workspace/registry 下的 JSON 索引文件
+```
+
+索引文件位置：
+
+- `workspace/registry/evidence-index.json` — 所有 Evidence Asset 的 id、kind、version、scope、state、hashes
+- `workspace/registry/snapshot-index.json` — 所有 Snapshot Asset 的 id、kind、version、scope、state、refs
+
+**V8 当前阶段（P0/P1/P2 完成，P3 延迟）**：
+
+- P0 Evidence 已落地：由 `research explain` / `research analytics` / `research review` 直接产出真实 Evidence。
+- P2 Snapshot 已落地：Snapshot 结构已定义，支持引用 Evidence（ADR-079）。
+- P1 Workspace 已落地：统一身份、统一生命周期、Evidence/Snapshot 写入器、索引（ADR-080 / ADR-081）。
+- P3（Evidence Score / Weight）**尚未开始**，必须满足以下三个门限后才可推进：
+  1. Evidence Assets > 1000
+  2. Historical Replay 稳定运行 > 30 天
+  3. Calibration Baseline 稳定 > 2 个周期
+
+**P3 之前推荐动作**：
+
+- 连续 4 周运行 Historical Replay（GLOBAL / CN / HK，90 日窗口），每日把结果写入 workspace。
+- 不要在没有真实资产积累的情况下设计 Evidence 权重；权重应基于真实资产分布，而不是假设。
+- 相关 ADR：`docs/v6/adr-079-research-snapshot.md`、`docs/v6/adr-080-research-asset-lifecycle.md`、`docs/v6/adr-081-research-asset-identity.md`。
+
 ---
 
-## 附录 A. 当前 V6 的已知限制
+## 附录 A. 当前 V8 的已知限制
 
 - 没有正式测试套件 / CI
-- `app-service` 已模块化（lib.rs + 7 个辅助模块），但 `lib.rs` 仍较为庞大，后续可进一步拆分
+- `app-service` 已模块化（lib.rs + 8 个辅助模块，含 V8 新增 `workspace`），但 `lib.rs` 仍较为庞大，后续可进一步拆分
 - `market-store` 已拆分为 14 个域模块，该限制已解决
 - 数据健康检查已上线，但还没有把 provider 来源逐 bar 持久化
 - 当前更适合研究和辅助判断，不适合直接自动交易
-- V6 Research Surface 为只读观测层，统计结果不进入策略、信号、执行或风控链路
+- V6 Research Surface 与 V7 Research Platform 均为只读观测层，统计结果不进入策略、信号、执行或风控链路
+- V8 Research Asset 已建立身份 / 生命周期 / workspace 持久化，但 **P3 Evidence Score/Weight 尚未开始**；在达到 1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定之前，不会引入数值化权重
+- V8 workspace 默认本地保存，用户需要自行备份；目前没有自动云端同步或归档策略

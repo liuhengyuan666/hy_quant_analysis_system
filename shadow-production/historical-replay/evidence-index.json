@@ -1,0 +1,54 @@
+﻿{
+    "generated_at":  "2026-07-09T22:25:11",
+    "evidence":  [
+                     {
+                         "id":  "EV-2026-07-09-GLOBAL-SRD-STRONG-H20",
+                         "status":  "candidate",
+                         "positive_ratio":  0.519,
+                         "occurrences":  212,
+                         "artifact":  "analytics-srd-strong-global-h20.txt",
+                         "condition":  "srd-strong",
+                         "horizon":  20,
+                         "generated_at":  "2026-07-09T22:25:11",
+                         "scope":  "global",
+                         "median_forward_return":  0.002
+                     },
+                     {
+                         "id":  "EV-2026-07-09-GLOBAL-SRD-STRONG-H60",
+                         "status":  "candidate",
+                         "positive_ratio":  0.457,
+                         "occurrences":  184,
+                         "artifact":  "analytics-srd-strong-global-h60.txt",
+                         "condition":  "srd-strong",
+                         "horizon":  60,
+                         "generated_at":  "2026-07-09T22:25:11",
+                         "scope":  "global",
+                         "median_forward_return":  -0.005
+                     },
+                     {
+                         "id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H20",
+                         "status":  "candidate",
+                         "positive_ratio":  0.857,
+                         "occurrences":  21,
+                         "artifact":  "analytics-stretch-extreme-crowding-momentum-global-h20.txt",
+                         "condition":  "stretch-extreme-crowding-momentum",
+                         "horizon":  20,
+                         "generated_at":  "2026-07-09T22:25:11",
+                         "scope":  "global",
+                         "median_forward_return":  0.022000000000000002
+                     },
+                     {
+                         "id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H60",
+                         "status":  "candidate",
+                         "positive_ratio":  0.16699999999999998,
+                         "occurrences":  18,
+                         "artifact":  "analytics-stretch-extreme-crowding-momentum-global-h60.txt",
+                         "condition":  "stretch-extreme-crowding-momentum",
+                         "horizon":  60,
+                         "generated_at":  "2026-07-09T22:25:11",
+                         "scope":  "global",
+                         "median_forward_return":  -0.026000000000000002
+                     }
+                 ],
+    "schema_version":  "v1"
+}
