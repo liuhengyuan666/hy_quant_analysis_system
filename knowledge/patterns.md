@@ -84,3 +84,14 @@
 - **Research Surface 允许新增**：观测/诊断工具（symbol-diagnostics, symbol-scoreboard, rotation-ranking）作为独立 CLI 工具，不进入主观察链路
 - **Explainability Layer 约束**：可以解释现有决策，但不得生成新评分、排名或决策信号
 - **ADR 优先级**：User instruction > Active ADRs > Traps > Search results > Model knowledge
+
+## 10. V7 Research Platform 1.0 范式 (Research Architecture)
+
+- **研究分层不可变**：Observation (V6) → Market Evolution (V7.1) → Historical Evidence (V7.2) → Research Synthesis (V7.3)；ADR-077 后四层语义架构冻结，新增内容只能作为 Research Content Evolution 输入现有层
+- **领域计算归属**：所有可复用的研究计算位于 `core-domain::research`；`app-service` 只编排，不存放量化逻辑
+- **Evidence Aggregation**：Consensus 采用加权证据聚合 `(source, weight)`，不使用硬编码 if-else 规则树；新增证据类型时加入聚合层并重新跑 Calibration
+- **研究语言输出**：Consensus 只输出研究语言（Bias / Confidence / Supporting Evidence / Contradicting Evidence / Summary），不输出买卖建议、仓位、目标价或止损
+- **版本化漂移检测**：`ConsensusSummary` 和 `Calibration Baseline Version` 必须携带版本号，用于长期行为漂移检测
+- **可配置化权重**：`ConsensusConfig` 将证据权重和阈值集中配置，默认值保持 V7.3 行为；权重/阈值变更需经 Calibration 验证并可能触发 Baseline Version 递增
+- **Calibration 语义不变量**：`CURRENT_CALIBRATION_BASELINE_VERSION` 仅在 Evidence 语义变化时递增（距离度量、归一化、特征权重、阈值、报告统计语义），实现优化不触发递增
+- **Historical Analogues 不暴露原始相似度**：对外使用 rank 或定性等级（Very High / High / Moderate / Low），避免用户误读原始距离值
