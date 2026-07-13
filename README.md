@@ -103,6 +103,7 @@ V6 Reporting Platform 与 V7 Research Platform 均已冻结。新增消费者/�
   - V7.2：`research analogues` / `research calibration`（历史相似匹配 / 校准框架）
   - V7.3：`research consensus`（研究综合：Bias / Confidence / Evidence）
   - V7.3.1：Research Platform 1.0 正式冻结（ADR-077）；`ConsensusConfig`、版本化 `ConsensusSummary`、`Calibration Baseline Version` 常量
+  - V7.4：新增工作流命令 — `research observe`（聚合 SRD / Stretch / Analytics / Health）、`research replay`（历史 Evidence 重放）、`data-health`（合并检查 + 导出）
 - **V8**：Durable Research Assets（可持久化研究资产）— Evidence / Snapshot 进入本地 workspace，统一身份 `RA-XXXXXX`、统一生命周期 `Draft → Verified → Published → Superseded → Archived`，通过 `research analytics --save-evidence` 与 Historical Replay 持续积累
   - V8.0：Evidence 直接由 `research explain` / `research analytics` / `research review` 产出
   - V8.1：Snapshot 引用 Evidence 而非嵌入（`EvidenceRef`）
@@ -400,7 +401,7 @@ cargo run -p quant-desktop
 
 ---
 
-## 11. 推荐使用流程（适合当前 V6）
+## 11. 推荐使用流程（适合当前 V6/V7）
 
 如果你当前主要做：
 
@@ -419,10 +420,11 @@ cargo run -p quant-desktop
 2. 跑指标 / 宏观 / 轮动 / 信号
 3. 先看一次 trust summary
 4. 再下钻 pipeline freshness / completeness
-5. 再跑一次数据健康检查
+5. 跑一次 `cargo run -p quant-cli -- data-health`（同时检查 + 导出报告）
 6. 查看 dashboard
 7. 导出日报
-8. 有需要时再跑回测
+8. 跑一次 `cargo run -p quant-cli -- research observe --scope global`（聚合 SRD / Stretch / Analytics / Health 日报）
+9. 有需要时再跑回测
 
 如果你日常主要使用桌面端，更推荐的实际顺序是：
 
@@ -459,21 +461,25 @@ cargo run -p quant-cli -- compute-signals
 # 7. 检查各阶段日期是否推进
 cargo run -p quant-cli -- pipeline-dates
 
-# 8. 数据健康检查
-cargo run -p quant-cli -- check-data-health
+# 8. 数据健康检查（检查 + 导出报告，V7 工作流）
+cargo run -p quant-cli -- data-health
 
 # 9. 查看 dashboard
 cargo run -p quant-cli -- dashboard-snapshot
 
 # 10. 导出日报（若前面有阶段 lagging，会 fail-loud）
 cargo run -p quant-cli -- export-report
+
+# 11. 每日研究速览（V7 工作流）
+cargo run -p quant-cli -- research observe --scope global
 ```
 
 补充说明：
 
 - `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
 - 如果 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，优先单独重跑一次 `compute-signals`
-- `check-data-health` 更偏向 provider 可达性、缺口、异常波动、turnover 缺失、宏观源状态
+- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要与 Markdown 报告
+- 如需单独检查（不导出报告），仍可运行 `check-data-health`；如需单独导出报告，仍可运行 `export-data-health-report`
 - 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
 - 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
 - `GLOBAL / CN / HK` 的 dashboard/report/strategy/signal/backtest 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化；signal 和 backtest 均携带显式 provenance 字段（`analysis_scope`、`regime_basis_scope`、`matches current snapshot`）
@@ -495,6 +501,12 @@ cargo run -p quant-cli -- export-report [--scope <scope>] [--date <date>]
 
 # 导出数据健康报告
 cargo run -p quant-cli -- export-data-health-report
+
+# 数据健康检查 + 报告留档（V7 工作流）
+cargo run -p quant-cli -- data-health
+
+# 每日研究观测报告（V7 工作流）
+cargo run -p quant-cli -- research observe --scope global|cn|hk [--date YYYY-MM-DD]
 ```
 
 说明：
@@ -505,6 +517,8 @@ cargo run -p quant-cli -- export-data-health-report
 - `--scope global|cn|hk` 可切到对应 scope 的 dashboard 语义
 - `dashboard-snapshot` 现在会返回 scope 对应的 `market_regime + environment`
 - `dashboard-snapshot` 还会返回 `trust_summary`，用于汇总 freshness / data-health / provenance 的可用性判断
+- `data-health` 同时输出终端 JSON 摘要与 Markdown 报告，合并原 `check-data-health` 与 `export-data-health-report`
+- `research observe` 输出聚合了 SRD / Stretch / Analytics / Health 的 Markdown 日报，供每日研究速览
 - signal / backtest 当前应结合显式 provenance（例如 `analysis_scope`、`regime_basis_scope`、`matches current snapshot`）一起阅读，而不是只按当前 dashboard scope 直觉推断
 - `export-report` 不带参数时，默认导出当前最新分析日期的日报
 - `export-report --date YYYY-MM-DD` 可导出指定历史日期的日报
