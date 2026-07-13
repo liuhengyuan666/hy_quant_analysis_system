@@ -4,6 +4,7 @@ use reporting::{
     ReportDocument, ReportLayout, ReportMetadata, ReportSection, ReportingSnapshot, SectionContent,
     SectionKind, TableData,
 };
+use research_context::ConsensusSummary;
 
 /// ReportBuilder trait — Pending Evaluation.
 ///
@@ -44,6 +45,26 @@ pub struct SrdReportInput {
     pub state_label: String,
 }
 
+/// Confirmation (市场确认) 报告输入。
+#[derive(Debug, Clone)]
+pub struct ConfirmationReportInput {
+    pub trend_score: f64,
+    pub trend_label: String,
+    pub participation_score: f64,
+    pub participation_label: String,
+    pub risk_score: f64,
+    pub risk_label: String,
+    pub overall: String,
+}
+
+/// Recovery (恢复指数) 报告输入。
+#[derive(Debug, Clone)]
+pub struct RecoveryReportInput {
+    pub index: f64,
+    pub label: String,
+    pub drivers: Vec<String>,
+}
+
 /// Stretch (市场拉伸) 报告输入。
 #[derive(Debug, Clone)]
 pub struct StretchReportInput {
@@ -76,6 +97,35 @@ pub struct AnalyticsReportInput {
     pub forward_return_worst: f64,
     pub positive_ratio: f64,
     pub median_max_drawdown: f64,
+}
+
+/// Research Consensus (V7.3) 报告输入。
+#[derive(Debug, Clone)]
+pub struct ConsensusReportInput {
+    pub summary: ConsensusSummary,
+}
+
+/// Research Explanation (V7.4 / ADR-078) 报告输入。
+///
+/// Carries the full explanation chain: Observation → Evidence → Attribution →
+/// Hypothesis → Confidence → Limitations → Next Validation.
+#[derive(Debug, Clone)]
+pub struct ExplanationReportInput {
+    pub condition: String,
+    pub observation_state: String,
+    pub observation_signal_summary: String,
+    pub observation_breadth_pct: Option<f64>,
+    pub observation_liquidity_score: Option<f64>,
+    pub observation_macro_regime: Option<String>,
+    pub evidence_occurrences: usize,
+    pub evidence_history_window: String,
+    pub evidence_positive_ratio: f64,
+    pub evidence_median_forward_return: f64,
+    pub attributions: Vec<core_domain::research::attribution::AttributionResult>,
+    pub hypothesis: String,
+    pub confidence: core_domain::research::attribution::Confidence,
+    pub limitations: Vec<String>,
+    pub next_validation: String,
 }
 
 /// 综述报告输入。
@@ -159,8 +209,44 @@ impl ResearchReportBuilder {
         })
     }
 
+    pub fn build_confirmation(snapshot: &ReportingSnapshot, input: &ConfirmationReportInput) -> Result<ReportDocument> {
+        let sections = build_confirmation_sections(snapshot, input);
+        Ok(ReportDocument {
+            layout: ReportLayout::Detail,
+            sections,
+            metadata: build_metadata(snapshot),
+        })
+    }
+
+    pub fn build_recovery(snapshot: &ReportingSnapshot, input: &RecoveryReportInput) -> Result<ReportDocument> {
+        let sections = build_recovery_sections(snapshot, input);
+        Ok(ReportDocument {
+            layout: ReportLayout::Detail,
+            sections,
+            metadata: build_metadata(snapshot),
+        })
+    }
+
     pub fn build_analytics(snapshot: &ReportingSnapshot, input: &AnalyticsReportInput) -> Result<ReportDocument> {
         let sections = build_analytics_sections(snapshot, input);
+        Ok(ReportDocument {
+            layout: ReportLayout::Detail,
+            sections,
+            metadata: build_metadata(snapshot),
+        })
+    }
+
+    pub fn build_consensus(snapshot: &ReportingSnapshot, input: &ConsensusReportInput) -> Result<ReportDocument> {
+        let sections = build_consensus_sections(snapshot, input);
+        Ok(ReportDocument {
+            layout: ReportLayout::Detail,
+            sections,
+            metadata: build_metadata(snapshot),
+        })
+    }
+
+    pub fn build_explanation(snapshot: &ReportingSnapshot, input: &ExplanationReportInput) -> Result<ReportDocument> {
+        let sections = build_explanation_sections(snapshot, input);
         Ok(ReportDocument {
             layout: ReportLayout::Detail,
             sections,
@@ -437,6 +523,280 @@ fn build_analytics_sections(snapshot: &ReportingSnapshot, input: &AnalyticsRepor
 }
 
 // =====================================================================
+// Section builders — Confirmation
+// =====================================================================
+
+fn build_confirmation_sections(snapshot: &ReportingSnapshot, input: &ConfirmationReportInput) -> Vec<ReportSection> {
+    let mut sections = Vec::new();
+
+    sections.push(ReportSection {
+        kind: SectionKind::Confirmation,
+        title: format!("Market Confirmation | Scope: {} | Date: {}", snapshot.research.scope.as_str(), snapshot.research.date),
+        content: SectionContent::Markdown(format!(
+            "  Overall:               {}\n\
+             \x20 Trend:                 {} ({:.1})\n\
+             \x20 Participation:       {} ({:.1})\n\
+             \x20 Risk:                {} ({:.1})",
+            input.overall,
+            input.trend_label, input.trend_score,
+            input.participation_label, input.participation_score,
+            input.risk_label, input.risk_score,
+        )),
+    });
+
+    sections.push(ReportSection {
+        kind: SectionKind::Disclaimer,
+        title: String::new(),
+        content: SectionContent::Markdown("Observation tool \u{2014} does not influence any decision logic".to_string()),
+    });
+
+    sections
+}
+
+// =====================================================================
+// Section builders — Recovery
+// =====================================================================
+
+fn build_recovery_sections(snapshot: &ReportingSnapshot, input: &RecoveryReportInput) -> Vec<ReportSection> {
+    let mut sections = Vec::new();
+
+    let drivers_md = if input.drivers.is_empty() {
+        "(no recovery drivers detected)".to_string()
+    } else {
+        input.drivers.iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n")
+    };
+
+    sections.push(ReportSection {
+        kind: SectionKind::Recovery,
+        title: format!("Recovery Index | Scope: {} | Date: {}", snapshot.research.scope.as_str(), snapshot.research.date),
+        content: SectionContent::Markdown(format!(
+            "  Recovery Index:      {:.1} ({})\n\
+             \x20 Drivers:\n{}",
+            input.index,
+            input.label,
+            drivers_md,
+        )),
+    });
+
+    sections.push(ReportSection {
+        kind: SectionKind::Disclaimer,
+        title: String::new(),
+        content: SectionContent::Markdown("Observation tool \u{2014} does not influence any decision logic".to_string()),
+    });
+
+    sections
+}
+
+// =====================================================================
+// Section builders — Consensus
+// =====================================================================
+
+fn build_consensus_sections(snapshot: &ReportingSnapshot, input: &ConsensusReportInput) -> Vec<ReportSection> {
+    let mut sections = Vec::new();
+    let summary = &input.summary;
+
+    let bias_label = match summary.bias {
+        research_context::ConsensusBias::Constructive => "Constructive",
+        research_context::ConsensusBias::Neutral => "Neutral",
+        research_context::ConsensusBias::Conflicted => "Conflicted",
+        research_context::ConsensusBias::Fragile => "Fragile",
+        research_context::ConsensusBias::Cautious => "Cautious",
+    };
+    let confidence_label = match summary.confidence {
+        research_context::Confidence::Low => "Low",
+        research_context::Confidence::Medium => "Medium",
+        research_context::Confidence::High => "High",
+    };
+
+    let supporting_md = if summary.supporting_evidence.is_empty() {
+        "  (none)".to_string()
+    } else {
+        summary
+            .supporting_evidence
+            .iter()
+            .map(|e| format!("  - {} ({:+.2}): {}", e.source, e.weight, e.description))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    let contradicting_md = if summary.contradicting_evidence.is_empty() {
+        "  (none)".to_string()
+    } else {
+        summary
+            .contradicting_evidence
+            .iter()
+            .map(|e| format!("  - {} ({:+.2}): {}", e.source, e.weight, e.description))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    sections.push(ReportSection {
+        kind: SectionKind::Consensus,
+        title: format!(
+            "Research Consensus | Scope: {} | Date: {}",
+            snapshot.research.scope.as_str(),
+            snapshot.research.date
+        ),
+        content: SectionContent::Markdown(format!(
+            "  Consensus version:     {}\n\
+             \x20 Bias:                  {}\n\
+             \x20 Confidence:            {}\n\
+             \x20 Aggregate score:       {:.2}\n\n\
+             Supporting Evidence:\n{}\n\n\
+             Contradicting Evidence:\n{}\n\n\
+             Summary:\n  {}",
+            summary.version,
+            bias_label,
+            confidence_label,
+            summary.aggregate_score,
+            supporting_md,
+            contradicting_md,
+            summary.summary
+        )),
+    });
+
+    sections.push(ReportSection {
+        kind: SectionKind::Disclaimer,
+        title: String::new(),
+        content: SectionContent::Markdown(
+            "Research synthesis \u{2014} does not influence any decision logic and does not provide buy/sell recommendations."
+                .to_string(),
+        ),
+    });
+
+    sections
+}
+
+// =====================================================================
+// Section builders — Explanation
+// =====================================================================
+
+fn build_explanation_sections(_snapshot: &ReportingSnapshot, input: &ExplanationReportInput) -> Vec<ReportSection> {
+    let mut sections = Vec::new();
+
+    // Header
+    sections.push(ReportSection {
+        kind: SectionKind::Explanation,
+        title: format!(
+            "Research Explanation | Condition: {} | Scope: {} | Date: {}",
+            input.condition, _snapshot.research.scope.as_str(), _snapshot.research.date
+        ),
+        content: SectionContent::Markdown(
+            "Observation → Evidence → Attribution → Hypothesis → Confidence → Limitations → Next Validation".to_string(),
+        ),
+    });
+
+    // Observation
+    let mut observation_md = format!(
+        "  State:            {}\n\
+         \x20 Signal summary:   {}",
+        input.observation_state, input.observation_signal_summary
+    );
+    if let Some(pct) = input.observation_breadth_pct {
+        observation_md.push_str(&format!("\n\x20 Breadth pct:      {:.1}%", pct));
+    }
+    if let Some(score) = input.observation_liquidity_score {
+        observation_md.push_str(&format!("\n\x20 Liquidity score:  {:.1}", score));
+    }
+    if let Some(regime) = &input.observation_macro_regime {
+        observation_md.push_str(&format!("\n\x20 Macro regime:     {}", regime));
+    }
+    sections.push(ReportSection {
+        kind: SectionKind::Observation,
+        title: "Observation".to_string(),
+        content: SectionContent::Markdown(observation_md),
+    });
+
+    // Evidence
+    let evidence_md = if input.evidence_occurrences == 0 {
+        "  (no historical evidence computed yet — Phase 1 architecture only)".to_string()
+    } else {
+        format!(
+            "  Occurrences:            {}\n\
+             \x20 History window:         {}\n\
+             \x20 Positive ratio:         {:.1}%\n\
+             \x20 Median forward return:  {:+.1}%",
+            input.evidence_occurrences,
+            input.evidence_history_window,
+            input.evidence_positive_ratio * 100.0,
+            input.evidence_median_forward_return * 100.0
+        )
+    };
+    sections.push(ReportSection {
+        kind: SectionKind::Evidence,
+        title: "Evidence".to_string(),
+        content: SectionContent::Markdown(evidence_md),
+    });
+
+    // Attribution
+    let attributions_md = if input.attributions.is_empty() {
+        "  (no attribution dimensions registered yet — Phase 1 architecture only)".to_string()
+    } else {
+        input
+            .attributions
+            .iter()
+            .map(|a| {
+                let score_str = a
+                    .score
+                    .map(|s| format!(" ({:.1})", s))
+                    .unwrap_or_default();
+                format!(
+                    "  - {}: {}{}\n    {}",
+                    a.dimension, a.level, score_str, a.reason
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    sections.push(ReportSection {
+        kind: SectionKind::Explanation,
+        title: "Attribution".to_string(),
+        content: SectionContent::Markdown(attributions_md),
+    });
+
+    // Hypothesis
+    sections.push(ReportSection {
+        kind: SectionKind::Interpretation,
+        title: "Hypothesis".to_string(),
+        content: SectionContent::Markdown(format!("  {}", input.hypothesis)),
+    });
+
+    // Confidence + Limitations + Next Validation
+    let limitations_md = if input.limitations.is_empty() {
+        "  (none listed)".to_string()
+    } else {
+        input
+            .limitations
+            .iter()
+            .map(|l| format!("  - {}", l))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    sections.push(ReportSection {
+        kind: SectionKind::Interpretation,
+        title: "Confidence & Validation Plan".to_string(),
+        content: SectionContent::Markdown(format!(
+            "  Confidence:       {}\n\n\
+             Limitations:\n{}\n\n\
+             Next Validation:\n  {}",
+            input.confidence, limitations_md, input.next_validation
+        )),
+    });
+
+    // Disclaimer
+    sections.push(ReportSection {
+        kind: SectionKind::Disclaimer,
+        title: String::new(),
+        content: SectionContent::Markdown(
+            "Research explanation \u{2014} does not influence any decision logic and does not provide buy/sell recommendations. \
+             All attributions are hypotheses, not facts.".to_string(),
+        ),
+    });
+
+    sections
+}
+
+// =====================================================================
 // Section builders — Review
 // =====================================================================
 
@@ -651,8 +1011,9 @@ mod tests {
     use chrono::NaiveDate;
     use core_domain::AnalysisScope;
     use research_context::{
-        BreadthSummary, DivergenceSummary, MarketStateSummary, ResearchContext, RotationItem,
-        RotationSummary, SignalItem, SignalSummary, TrustSummary,
+        BreadthSummary, ConfirmationDimension, ConfirmationSummary, DivergenceSummary,
+        MarketStateSummary, RecoverySummary, ResearchContext, RotationItem, RotationSummary,
+        SignalItem, SignalSummary, TrustSummary,
     };
 
     fn dummy_context() -> ResearchContext {
@@ -682,6 +1043,9 @@ mod tests {
                 bottom: vec![],
                 rotation_state: "Concentrated".to_string(),
                 leadership_stability: 0.7,
+                leadership_transition: "Stable".to_string(),
+                rotation_acceleration: None,
+                theme_dispersion: None,
             },
             signal: SignalSummary {
                 signals: vec![SignalItem {
@@ -702,6 +1066,26 @@ mod tests {
                 headline: "Data healthy".to_string(),
                 is_data_complete: true,
             },
+            confirmation: ConfirmationSummary {
+                trend: ConfirmationDimension {
+                    score: 75.0,
+                    label: "Strong".to_string(),
+                },
+                participation: ConfirmationDimension {
+                    score: 45.0,
+                    label: "Moderate".to_string(),
+                },
+                risk: ConfirmationDimension {
+                    score: 70.0,
+                    label: "Strong".to_string(),
+                },
+                overall: "Moderate".to_string(),
+            },
+            recovery: RecoverySummary {
+                score: 42.0,
+                drivers: vec!["Breadth improving".to_string()],
+            },
+            consensus: None,
         }
     }
 
@@ -810,7 +1194,71 @@ mod tests {
             }],
         };
         let doc = AuditReportBuilder::build_scoreboard(&snapshot, &input).expect("build should succeed");
-
         assert!(!doc.sections.is_empty());
     }
+
+    #[test]
+    fn confirmation_builder_produces_document() {
+        let snapshot = dummy_snapshot();
+        let input = ConfirmationReportInput {
+            trend_score: 75.0,
+            trend_label: "Strong".to_string(),
+            participation_score: 45.0,
+            participation_label: "Moderate".to_string(),
+            risk_score: 70.0,
+            risk_label: "Strong".to_string(),
+            overall: "Moderate".to_string(),
+        };
+        let doc = ResearchReportBuilder::build_confirmation(&snapshot, &input).expect("build should succeed");
+        assert!(!doc.sections.is_empty());
+    }
+
+    #[test]
+    fn recovery_builder_produces_document() {
+        let snapshot = dummy_snapshot();
+        let input = RecoveryReportInput {
+            index: 42.0,
+            label: "Moderate".to_string(),
+            drivers: vec!["Breadth improving".to_string()],
+        };
+        let doc = ResearchReportBuilder::build_recovery(&snapshot, &input).expect("build should succeed");
+        assert!(!doc.sections.is_empty());
+    }
+
+    #[test]
+    fn explanation_builder_produces_document() {
+        let snapshot = dummy_snapshot();
+        let input = ExplanationReportInput {
+            condition: "srd-strong".to_string(),
+            observation_state: "DE_RISK".to_string(),
+            observation_signal_summary: "StrongBuy dominant".to_string(),
+            observation_breadth_pct: Some(60.0),
+            observation_liquidity_score: None,
+            observation_macro_regime: Some("risk_on".to_string()),
+            evidence_occurrences: 17,
+            evidence_history_window: "2024-01-01 ~ 2026-07-09".to_string(),
+            evidence_positive_ratio: 0.824,
+            evidence_median_forward_return: 0.012,
+            attributions: vec![core_domain::research::attribution::AttributionResult::unknown(
+                "framework",
+                "Phase 1 architecture placeholder.",
+            )],
+            hypothesis: "State Layer may under-react when breadth is broad and momentum is broad-based.".to_string(),
+            confidence: core_domain::research::attribution::Confidence::Low,
+            limitations: vec![
+                "Attribution dimensions not yet implemented (TASK-104).".to_string(),
+                "Single historical window (2025 H2) is Candidate Evidence only.".to_string(),
+            ],
+            next_validation: "Continue Shadow Production for 90 days; expect similar positive forward returns if the same attribution profile repeats.".to_string(),
+        };
+        let doc = ResearchReportBuilder::build_explanation(&snapshot, &input).expect("build should succeed");
+        assert!(!doc.sections.is_empty());
+        let has_observation = doc.sections.iter().any(|s| matches!(s.kind, SectionKind::Observation));
+        let has_evidence = doc.sections.iter().any(|s| matches!(s.kind, SectionKind::Evidence));
+        let has_explanation = doc.sections.iter().any(|s| matches!(s.kind, SectionKind::Explanation));
+        assert!(has_observation);
+        assert!(has_evidence);
+        assert!(has_explanation);
+    }
 }
+

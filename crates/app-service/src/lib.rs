@@ -38,13 +38,16 @@ pub mod breadth;
 pub mod core;
 pub mod dashboard;
 pub mod llm;
+pub mod research_evidence;
 pub mod sync;
 pub mod trust;
+pub mod workspace;
 
 use crate::breadth::*;
 use crate::core::*;
 use crate::dashboard::*;
 use crate::llm::*;
+use crate::research_evidence::compute_condition_evidence;
 use crate::sync::*;
 use crate::trust::*;
 
@@ -168,6 +171,19 @@ pub struct AppContext {
     pub calendar: core_domain::calendar::TradingCalendar,
     /// Dashboard 可用日期缓存
     available_dates_cache: std::sync::Arc<AvailableDatesCache>,
+}
+
+/// Summary of one Evidence asset produced by `AppContext::research_replay`.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayEvidenceSummary {
+    pub id: String,
+    pub condition: String,
+    pub scope: String,
+    pub horizon: usize,
+    pub occurrences: usize,
+    pub positive_ratio: f64,
+    pub median_forward_return: f64,
+    pub workspace_path: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -498,6 +514,7 @@ struct ResearchDataset {
     states_history: Vec<core_domain::StrategyStateSnapshot>,
     env_history: Vec<EnvironmentSnapshot>,
     rotations: Vec<core_domain::RotationRankSnapshot>,
+    rotation_history: BTreeMap<NaiveDate, Vec<core_domain::RotationRankSnapshot>>,
     all_regimes: Vec<core_domain::MarketRegimeSnapshot>,
     signal_history: BTreeMap<NaiveDate, Vec<(f64, core_domain::SignalLabel)>>,
 }
@@ -695,6 +712,74 @@ impl ResearchSnapshot {
         let (momentum_level, _, _) = self.stretch_momentum();
         let leverage_level = self.stretch_leverage();
         weighted_stretch_overall(crowding_level, breadth_level, momentum_level, leverage_level)
+    }
+}
+
+// V7.2B: Forward-return provider backed by anchor symbol daily bar close prices.
+//
+// Implements `ForwardReturnProvider` by looking up close prices in a
+// pre-loaded `BTreeMap<NaiveDate, f64>` and computing forward returns
+// and max drawdowns over the given horizon.
+struct AnchorBarForwardProvider<'a> {
+    close_by_date: &'a BTreeMap<NaiveDate, f64>,
+}
+
+impl<'a> market_fingerprint_engine::ForwardReturnProvider
+    for AnchorBarForwardProvider<'a>
+{
+    fn forward_return(&self, date: NaiveDate, horizon_days: usize) -> Option<f64> {
+        let start_price = self.close_by_date.get(&date).copied()?;
+        if start_price <= 0.0 {
+            return None;
+        }
+        let future_dates: Vec<NaiveDate> = self
+            .close_by_date
+            .keys()
+            .copied()
+            .filter(|k| k > &date)
+            .collect();
+        if future_dates.len() < horizon_days {
+            return None;
+        }
+        let end_date = future_dates[horizon_days - 1];
+        let end_price = self.close_by_date.get(&end_date).copied()?;
+        Some((end_price - start_price) / start_price)
+    }
+
+    fn forward_max_drawdown(&self, date: NaiveDate, horizon_days: usize) -> Option<f64> {
+        let start_price = self.close_by_date.get(&date).copied()?;
+        if start_price <= 0.0 {
+            return None;
+        }
+        let future_dates: Vec<NaiveDate> = self
+            .close_by_date
+            .keys()
+            .copied()
+            .filter(|k| k > &date)
+            .take(horizon_days)
+            .collect();
+        if future_dates.is_empty() {
+            return None;
+        }
+        let prices: Vec<f64> = future_dates
+            .iter()
+            .filter_map(|d| self.close_by_date.get(d).copied())
+            .collect();
+        if prices.is_empty() {
+            return None;
+        }
+        let mut peak = start_price;
+        let mut max_dd: f64 = 0.0;
+        for &p in &prices {
+            if p > peak {
+                peak = p;
+            }
+            let dd = (p - peak) / peak;
+            if dd < max_dd {
+                max_dd = dd;
+            }
+        }
+        Some(max_dd)
     }
 }
 
@@ -3413,6 +3498,800 @@ impl AppContext {
         Ok((context, snapshot))
     }
 
+    /// V7.4 / ADR-078 — Compute reproducible conditional forward-return evidence.
+    ///
+    /// Returns an `Evidence` value containing raw facts (matched dates and
+    /// forward returns) plus derived statistics. This is a Research Surface
+    /// tool and does not modify any decision logic.
+    ///
+    /// Future: this computation may migrate into a dedicated `research-engine`
+    /// crate once that boundary is introduced. AppService will then only
+    /// orchestrate the call.
+    pub fn research_condition_evidence(
+        &self,
+        condition: &str,
+        scope: core_domain::AnalysisScope,
+        horizon: usize,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<core_domain::research::attribution::Evidence> {
+        compute_condition_evidence(self, condition, scope, horizon, from, to)
+    }
+
+    // -----------------------------------------------------------------------
+    // V7 Workflow — Replay: accumulate Evidence across conditions/horizons
+    // -----------------------------------------------------------------------
+
+    /// Run historical analytics for a set of conditions and horizons, saving each result
+    /// as an Evidence Asset in the workspace. This replaces the external PowerShell pipeline
+    /// with a native Domain Command that understands Evidence / Workspace / Registry.
+    pub fn research_replay(
+        &self,
+        scope: core_domain::AnalysisScope,
+        from: NaiveDate,
+        to: NaiveDate,
+        conditions: &[String],
+        horizons: &[usize],
+    ) -> Result<Vec<ReplayEvidenceSummary>> {
+        let workspace = workspace::WorkspaceManager::default_workspace()
+            .context("Failed to initialize workspace")?;
+
+        let anchor_symbol = match scope {
+            core_domain::AnalysisScope::Global | core_domain::AnalysisScope::Cn => "000300",
+            core_domain::AnalysisScope::Hk => "HSCEI",
+        };
+
+        let anchor_bars = market_store::fetch_daily_bars(&self.storage, anchor_symbol)?;
+        let close_by_date: BTreeMap<NaiveDate, f64> =
+            anchor_bars.iter().map(|b| (b.date, b.close)).collect();
+
+        let earliest_date = close_by_date.keys().next().copied().unwrap_or(from);
+        let target_date = close_by_date.keys().last().copied().unwrap_or(to);
+
+        let mut summaries = Vec::new();
+
+        for condition in conditions {
+            for horizon in horizons {
+                let evidence = self.research_condition_evidence(
+                    condition,
+                    scope,
+                    *horizon,
+                    earliest_date,
+                    target_date,
+                )?;
+
+                let id = workspace.write_evidence(
+                    &evidence,
+                    condition,
+                    scope,
+                    *horizon,
+                    "replay",
+                    workspace::ResearchAssetLifecycle::Draft,
+                )?;
+
+                let occurrences = evidence.occurrences;
+                let (positive_ratio, median_forward_return) = if occurrences > 0 {
+                    let positive = evidence.forward_returns.iter().filter(|&&r| r > 0.0).count() as f64
+                        / occurrences as f64;
+                    let mut sorted = evidence.forward_returns.clone();
+                    sorted.sort_by(|a, b| a.total_cmp(b));
+                    let median = if sorted.len() % 2 == 1 {
+                        sorted[sorted.len() / 2]
+                    } else {
+                        let mid = sorted.len() / 2;
+                        (sorted[mid - 1] + sorted[mid]) / 2.0
+                    };
+                    (positive, median)
+                } else {
+                    (0.0, 0.0)
+                };
+
+                let workspace_path = workspace
+                    .paths
+                    .evidence
+                    .join("replay")
+                    .join(id.as_string())
+                    .join("body.json");
+
+                summaries.push(ReplayEvidenceSummary {
+                    id: id.as_string().to_string(),
+                    condition: condition.clone(),
+                    scope: scope.as_str().to_string(),
+                    horizon: *horizon,
+                    occurrences,
+                    positive_ratio,
+                    median_forward_return,
+                    workspace_path: workspace_path.to_string_lossy().to_string(),
+                });
+            }
+        }
+
+        Ok(summaries)
+    }
+
+    // -----------------------------------------------------------------------
+    // V7.2B Evidence Retrieval Engine
+    // -----------------------------------------------------------------------
+
+    /// V7.2B Evidence Retrieval Engine — Historical Analogue Search.
+    ///
+    /// Builds `MarketFingerprint`s for all available historical dates in `scope`,
+    /// normalizes them, and finds the `top_n` most similar dates to the target.
+    /// Optionally profiles forward outcomes for the matched dates using the
+    /// scope's anchor symbol daily bars.
+    ///
+    /// This is an observation tool: it retrieves historical evidence, not predictions.
+    pub fn research_analogues(
+        &self,
+        scope: ReportScope,
+        date: Option<NaiveDate>,
+        horizon_days: usize,
+        top_n: usize,
+        lookback_days: usize,
+    ) -> Result<market_fingerprint_engine::SearchResult> {
+        use market_fingerprint_engine::{
+            normalize_all, CosineDistance, MarketFingerprintBuilder,
+            OutcomeProfiler, SimilarityMatcher,
+        };
+
+        // 1. Resolve target date
+        let target_date = match date {
+            Some(d) => d,
+            None => market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?
+                .context("No signal data available")?,
+        };
+
+        // 2. Determine anchor symbol
+        let anchor_symbol = match scope {
+            core_domain::AnalysisScope::Global | core_domain::AnalysisScope::Cn => "000300",
+            core_domain::AnalysisScope::Hk => "HSCEI",
+        };
+
+        // 3. Fetch anchor symbol daily bars for ForwardReturnProvider
+        let anchor_bars =
+            market_store::fetch_daily_bars(&self.storage, anchor_symbol)?;
+        let close_by_date: BTreeMap<NaiveDate, f64> =
+            anchor_bars.iter().map(|b| (b.date, b.close)).collect();
+
+        // 4. Fetch available historical dates for the scope and limit lookback
+        let all_dates = self.dashboard_available_dates_for_scope(scope)?;
+        if all_dates.is_empty() {
+            anyhow::bail!(
+                "No historical dates available for scope {:?}",
+                scope
+            );
+        }
+
+        let lookback = lookback_days.max(1);
+        let mut dates: Vec<NaiveDate> = all_dates
+            .into_iter()
+            .filter(|d| *d <= target_date)
+            .collect();
+        dates.sort();
+        if dates.len() > lookback {
+            dates = dates.split_off(dates.len() - lookback);
+        }
+
+        if dates.is_empty() {
+            anyhow::bail!(
+                "No historical dates on or before {} for scope {:?}",
+                target_date, scope
+            );
+        }
+
+        let range_start = dates.first().copied().unwrap();
+        let range_end = dates.last().copied().unwrap();
+
+        // 5. Bulk fetch all data needed for the date range
+        let all_signals = market_store::fetch_signal_snapshots_for_range_with_scope(
+            &self.storage, scope, range_start, range_end,
+        )?;
+        let mut signals_by_date: BTreeMap<NaiveDate, Vec<core_domain::SignalSnapshot>> =
+            BTreeMap::new();
+        for s in all_signals {
+            signals_by_date.entry(s.date).or_default().push(s);
+        }
+
+        let all_envs = market_store::fetch_environment_snapshots_for_scope(
+            &self.storage, scope, range_start, range_end,
+        )?;
+        let mut env_by_date: BTreeMap<NaiveDate, core_domain::EnvironmentSnapshot> =
+            BTreeMap::new();
+        for e in all_envs {
+            env_by_date.insert(e.date, e);
+        }
+
+        let scope_str = scope.as_str().to_uppercase();
+        let all_regimes = market_store::fetch_market_regimes(&self.storage)?;
+        let regimes_for_scope: Vec<core_domain::MarketRegimeSnapshot> = all_regimes
+            .into_iter()
+            .filter(|r| r.market.eq_ignore_ascii_case(&scope_str))
+            .collect();
+        let mut regimes_by_date: BTreeMap<NaiveDate, core_domain::MarketRegimeSnapshot> =
+            BTreeMap::new();
+        for r in regimes_for_scope {
+            regimes_by_date.insert(r.date, r);
+        }
+
+        let all_rotations = market_store::fetch_rotation_ranks_for_range(
+            &self.storage, range_start, range_end,
+        )?;
+        let instruments = self.seed_universe().unwrap_or_default();
+        let market_filter = match scope {
+            core_domain::AnalysisScope::Cn => Some(core_domain::Market::Cn),
+            core_domain::AnalysisScope::Hk => Some(core_domain::Market::Hk),
+            core_domain::AnalysisScope::Global => None,
+        };
+        let mut rotations_by_date: BTreeMap<NaiveDate, Vec<core_domain::RotationRankSnapshot>> =
+            BTreeMap::new();
+        for r in all_rotations {
+            let in_scope = market_filter.as_ref().map_or(true, |m| {
+                instruments.iter().any(|i| i.symbol == r.symbol && i.market == *m)
+            });
+            if in_scope {
+                rotations_by_date.entry(r.date).or_default().push(r);
+            }
+        }
+
+        // 6. Build MarketFingerprint for each historical date in-memory
+        let mut fingerprints: Vec<market_fingerprint_engine::MarketFingerprint> =
+            Vec::with_capacity(dates.len());
+        let mut target_index_opt: Option<usize> = None;
+
+        for &d in &dates {
+            let signals = signals_by_date.get(&d).cloned().unwrap_or_default();
+            let env = env_by_date.get(&d).cloned();
+            let regime = regimes_by_date.get(&d).cloned();
+            let rotations = rotations_by_date.get(&d).cloned().unwrap_or_default();
+
+            let mut rotation_history: BTreeMap<
+                NaiveDate,
+                Vec<core_domain::RotationRankSnapshot>,
+            > = BTreeMap::new();
+            for (&hist_date, hist_rotations) in &rotations_by_date {
+                if hist_date < d {
+                    rotation_history.insert(hist_date, hist_rotations.clone());
+                }
+            }
+
+            let all_regimes_for_date: Vec<core_domain::MarketRegimeSnapshot> =
+                regime.into_iter().collect();
+            let env_history: Vec<core_domain::EnvironmentSnapshot> = env.into_iter().collect();
+
+            let dataset = ResearchDataset {
+                date: d,
+                scope,
+                signals,
+                states_history: Vec::new(),
+                env_history,
+                rotations,
+                rotation_history,
+                all_regimes: all_regimes_for_date,
+                signal_history: BTreeMap::new(),
+            };
+
+            let research_ctx = build_research_context_from_dataset(&dataset)?;
+            let fp = MarketFingerprintBuilder::build(&research_ctx);
+            if d == target_date {
+                target_index_opt = Some(fingerprints.len());
+            }
+            fingerprints.push(fp);
+        }
+
+        // 7. Resolve target index
+        let target_index = target_index_opt
+            .or_else(|| {
+                fingerprints
+                    .iter()
+                    .position(|fp| fp.date == target_date)
+            })
+            .context(format!(
+                "Target date {} not found in historical fingerprint list for scope {:?}",
+                target_date, scope
+            ))?;
+
+        // 8. Normalize all fingerprints
+        let normalized = normalize_all(&fingerprints);
+
+        // 9. Run similarity search
+        let matcher = SimilarityMatcher::new(CosineDistance);
+        let mut result = matcher.search(target_index, &fingerprints, &normalized, top_n);
+
+        // 10. Profile forward outcomes for the matched dates
+        let provider = AnchorBarForwardProvider {
+            close_by_date: &close_by_date,
+        };
+        result.outcome = OutcomeProfiler::profile(&result.matches, horizon_days, &provider);
+
+        Ok(result)
+    }
+
+    /// Bulk fetch the research data needed for a date range and build both
+    /// `ResearchContext` and `MarketFingerprint` for every date in the range.
+    ///
+    /// This is the performance-critical path used by `research_analogues` and
+    /// `run_research_calibration`. It avoids per-date DB round-trips by loading
+    /// signals, environment snapshots, regimes, and rotation ranks in a single pass.
+    fn build_research_bundle_for_range(
+        &self,
+        scope: ReportScope,
+        range_start: NaiveDate,
+        range_end: NaiveDate,
+    ) -> Result<Vec<(NaiveDate, research_context::ResearchContext, market_fingerprint_engine::MarketFingerprint)>> {
+        use market_fingerprint_engine::MarketFingerprintBuilder;
+
+        // 1. Bulk fetch signals
+        let all_signals = market_store::fetch_signal_snapshots_for_range_with_scope(
+            &self.storage, scope, range_start, range_end,
+        )?;
+        let mut signals_by_date: BTreeMap<NaiveDate, Vec<core_domain::SignalSnapshot>> = BTreeMap::new();
+        for s in all_signals {
+            signals_by_date.entry(s.date).or_default().push(s);
+        }
+
+        // 2. Bulk fetch environment snapshots
+        let all_envs = market_store::fetch_environment_snapshots_for_scope(
+            &self.storage, scope, range_start, range_end,
+        )?;
+        let mut env_by_date: BTreeMap<NaiveDate, core_domain::EnvironmentSnapshot> = BTreeMap::new();
+        for e in all_envs {
+            env_by_date.insert(e.date, e);
+        }
+
+        // 3. Bulk fetch market regimes for the scope
+        let scope_str = scope.as_str().to_uppercase();
+        let all_regimes = market_store::fetch_market_regimes(&self.storage)?;
+        let regimes_for_scope: Vec<core_domain::MarketRegimeSnapshot> = all_regimes
+            .into_iter()
+            .filter(|r| r.market.eq_ignore_ascii_case(&scope_str))
+            .collect();
+        let mut regimes_by_date: BTreeMap<NaiveDate, core_domain::MarketRegimeSnapshot> = BTreeMap::new();
+        for r in regimes_for_scope {
+            regimes_by_date.insert(r.date, r);
+        }
+
+        // 4. Bulk fetch rotation ranks and filter by scope
+        let all_rotations = market_store::fetch_rotation_ranks_for_range(
+            &self.storage, range_start, range_end,
+        )?;
+        let instruments = self.seed_universe().unwrap_or_default();
+        let market_filter = match scope {
+            core_domain::AnalysisScope::Cn => Some(core_domain::Market::Cn),
+            core_domain::AnalysisScope::Hk => Some(core_domain::Market::Hk),
+            core_domain::AnalysisScope::Global => None,
+        };
+        let mut rotations_by_date: BTreeMap<NaiveDate, Vec<core_domain::RotationRankSnapshot>> = BTreeMap::new();
+        for r in all_rotations {
+            let in_scope = market_filter.as_ref().map_or(true, |m| {
+                instruments.iter().any(|i| i.symbol == r.symbol && i.market == *m)
+            });
+            if in_scope {
+                rotations_by_date.entry(r.date).or_default().push(r);
+            }
+        }
+
+        // 5. Build ResearchContext + MarketFingerprint for each date in the range
+        let mut bundles = Vec::new();
+        let mut d = range_start;
+        while d <= range_end {
+            let signals = signals_by_date.get(&d).cloned().unwrap_or_default();
+            if signals.is_empty() {
+                d += chrono::Duration::days(1);
+                continue;
+            }
+            let env = env_by_date.get(&d).cloned();
+            let regime = regimes_by_date.get(&d).cloned();
+            let rotations = rotations_by_date.get(&d).cloned().unwrap_or_default();
+
+            let mut rotation_history: BTreeMap<NaiveDate, Vec<core_domain::RotationRankSnapshot>> = BTreeMap::new();
+            for (&hist_date, hist_rotations) in &rotations_by_date {
+                if hist_date < d {
+                    rotation_history.insert(hist_date, hist_rotations.clone());
+                }
+            }
+
+            let all_regimes_for_date: Vec<core_domain::MarketRegimeSnapshot> = regime.into_iter().collect();
+            let env_history: Vec<core_domain::EnvironmentSnapshot> = env.into_iter().collect();
+
+            let dataset = ResearchDataset {
+                date: d,
+                scope,
+                signals,
+                states_history: Vec::new(),
+                env_history,
+                rotations,
+                rotation_history,
+                all_regimes: all_regimes_for_date,
+                signal_history: BTreeMap::new(),
+            };
+
+            let research_ctx = build_research_context_from_dataset(&dataset)?;
+            let fp = MarketFingerprintBuilder::build(&research_ctx);
+            bundles.push((d, research_ctx, fp));
+
+            d += chrono::Duration::days(1);
+        }
+
+        Ok(bundles)
+    }
+
+    // -----------------------------------------------------------------------
+    // V7.2C Research Calibration Framework
+    // -----------------------------------------------------------------------
+
+    /// Run the Research Calibration framework over a historical window.
+    ///
+    /// For each day in the window, collects:
+    /// - Confirmation observation (overall label, sub-scores, breadth)
+    /// - Recovery observation (score, label, drivers, breadth delta)
+    /// - Analogues search result (matches, average distance, outcome)
+    ///
+    /// Then delegates to `core_domain::research::calibration` for pure
+    /// statistics and renders a markdown report to `reports/calibration/`.
+    pub fn run_research_calibration(
+        &self,
+        scope: ReportScope,
+        window_start: Option<NaiveDate>,
+        window_end: Option<NaiveDate>,
+        horizon_days: usize,
+        top_n: usize,
+        lookback_days: usize,
+    ) -> Result<std::path::PathBuf> {
+        use core_domain::research::calibration::{
+            calibrate, AnaloguesObservation, CalibrationInput, ConfirmationObservation,
+            CURRENT_CALIBRATION_BASELINE_VERSION, MatchObservation, RecoveryObservation,
+            render_markdown,
+        };
+        use market_fingerprint_engine::{
+            normalize_all, CosineDistance, DistanceMetric, OutcomeProfiler, SimilarityMatcher,
+        };
+
+        // 1. Resolve window
+        let end = match window_end {
+            Some(d) => d,
+            None => market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?
+                .context("No signal data available")?,
+        };
+        let start = match window_start {
+            Some(d) => d,
+            None => {
+                let available = self.dashboard_available_dates_for_scope(scope)?;
+                let days = 60usize;
+                available
+                    .into_iter()
+                    .filter(|d| *d <= end)
+                    .take(days)
+                    .last()
+                    .unwrap_or(end)
+            }
+        };
+
+        if start > end {
+            anyhow::bail!("Calibration window start must be on or before end");
+        }
+
+        // 2. Determine extended range: lookback trading days before start
+        // dashboard_available_dates_for_scope returns dates in descending order
+        // (newest first), so going back in time means increasing the index.
+        let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+        let start_idx = available_dates
+            .iter()
+            .position(|d| *d == start)
+            .unwrap_or(0);
+        let extended_start_idx = (start_idx + lookback_days.max(1))
+            .min(available_dates.len().saturating_sub(1));
+        let extended_start = available_dates
+            .get(extended_start_idx)
+            .copied()
+            .unwrap_or(start);
+
+        // 3. Build ResearchContext + MarketFingerprint bundles once for the extended range
+        let bundles = self.build_research_bundle_for_range(scope, extended_start, end)?;
+        if bundles.is_empty() {
+            anyhow::bail!("No research bundles available for calibration window");
+        }
+
+        // 4. Fetch anchor bars once for outcome profiling
+        let anchor_symbol = match scope {
+            core_domain::AnalysisScope::Global | core_domain::AnalysisScope::Cn => "000300",
+            core_domain::AnalysisScope::Hk => "HSCEI",
+        };
+        let anchor_bars = market_store::fetch_daily_bars(&self.storage, anchor_symbol)?;
+        let close_by_date: BTreeMap<NaiveDate, f64> =
+            anchor_bars.iter().map(|b| (b.date, b.close)).collect();
+        let provider = AnchorBarForwardProvider {
+            close_by_date: &close_by_date,
+        };
+
+        // 5. Collect daily observations for the calibration window
+        let mut confirmations = Vec::new();
+        let mut recoveries = Vec::new();
+        let mut analogues = Vec::new();
+
+        for (d, ctx, _) in &bundles {
+            if *d < start || *d > end {
+                continue;
+            }
+
+            confirmations.push(ConfirmationObservation {
+                date: *d,
+                overall: ctx.confirmation.overall.clone(),
+                trend_score: ctx.confirmation.trend.score,
+                participation_score: ctx.confirmation.participation.score,
+                risk_score: ctx.confirmation.risk.score,
+                breadth_pct: ctx.breadth.breadth_pct,
+            });
+
+            recoveries.push(RecoveryObservation {
+                date: *d,
+                score: ctx.recovery.score,
+                label: Self::recovery_bucket_label(ctx.recovery.score),
+                drivers: ctx.recovery.drivers.clone(),
+                breadth_5d_delta: ctx.breadth.delta_5d.unwrap_or(0.0),
+            });
+        }
+
+        // 6. Run analogue search for each calibration date using the cached fingerprints
+        let matcher = SimilarityMatcher::new(CosineDistance);
+        for (idx, (d, _, _)) in bundles.iter().enumerate() {
+            if *d < start || *d > end {
+                continue;
+            }
+
+            let lookback = lookback_days.max(1);
+            let subset_start = idx.saturating_sub(lookback);
+            let subset: Vec<market_fingerprint_engine::MarketFingerprint> = bundles[subset_start..=idx]
+                .iter()
+                .map(|(_, _, fp)| fp.clone())
+                .collect();
+
+            if subset.len() < 2 {
+                continue;
+            }
+
+            let target_index = subset.len() - 1;
+            let normalized = normalize_all(&subset);
+            let mut result = matcher.search(target_index, &subset, &normalized, top_n);
+            result.outcome = OutcomeProfiler::profile(&result.matches, horizon_days, &provider);
+
+            let target_fv = &normalized[target_index];
+            let all_distances: Vec<f64> = normalized
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != target_index)
+                .map(|(_, fv)| CosineDistance.distance(target_fv, fv))
+                .collect();
+
+            let top_matches: Vec<MatchObservation> = result
+                .matches
+                .iter()
+                .map(|m| MatchObservation {
+                    date: m.date,
+                    level: Self::match_level_label(&m.level),
+                })
+                .collect();
+            analogues.push(AnaloguesObservation {
+                date: *d,
+                searched_days: result.searched_days,
+                filtered_days: result.filtered_days,
+                average_distance: result.average_distance,
+                top_matches,
+                outcome_median: result.outcome.as_ref().map(|o| o.median),
+                outcome_win_rate: result.outcome.as_ref().map(|o| o.win_rate),
+                all_distances,
+            });
+        }
+
+        // Determine the actual trading days in the calibration window
+        let calibration_dates: Vec<NaiveDate> = available_dates
+            .iter()
+            .filter(|d| **d >= start && **d <= end)
+            .copied()
+            .collect();
+
+        // 7. Build calibration report
+        let input = CalibrationInput {
+            scope: format!("{:?}", scope),
+            window_start: start,
+            window_end: end,
+            expected_dates: calibration_dates,
+            baseline_version: CURRENT_CALIBRATION_BASELINE_VERSION,
+            generated_at: chrono::Utc::now(),
+            confirmations,
+            recoveries,
+            analogues,
+        };
+        let report = calibrate(input);
+        let markdown = render_markdown(&report);
+
+        // 8. Write to reports/calibration/
+        let scope_label = scope_label(scope).to_lowercase();
+        let output_dir = std::path::PathBuf::from("reports/calibration");
+        std::fs::create_dir_all(&output_dir)?;
+        let output_path = output_dir.join(format!(
+            "research-calibration-{}-{}-{}.md",
+            scope_label, start, end
+        ));
+        std::fs::write(&output_path, markdown)?;
+
+        Ok(output_path)
+    }
+
+    // -----------------------------------------------------------------------
+    // V7.3 Research Synthesis Layer — Consensus
+    // -----------------------------------------------------------------------
+
+    /// Run the V7.3 Research Consensus synthesizer for a single date.
+    ///
+    /// Aggregates Observation (Signal, Stretch), Evolution (Confirmation,
+    /// Recovery), and Historical Evidence (Analogues forward outlook) into a
+    /// research-language consensus. Writes a markdown report to
+    /// `reports/consensus/` and returns the file path.
+    pub fn run_research_consensus(
+        &self,
+        scope: ReportScope,
+        date: Option<NaiveDate>,
+        horizon_days: usize,
+        top_n: usize,
+        lookback_days: usize,
+    ) -> Result<std::path::PathBuf> {
+        use core_domain::research::classification::classify_level;
+        use core_domain::research::consensus::{consensus, ConsensusConfig, EvidenceInput};
+        use core_domain::research::stretch::weighted_stretch_overall;
+        use market_fingerprint_engine::{
+            normalize_all, CosineDistance, OutcomeProfiler, SimilarityMatcher,
+        };
+        use report_builder::{ConsensusReportInput, ResearchReportBuilder};
+        use report_renderer::MarkdownFormatter;
+        use reporting::{Formatter, ReportingSnapshot};
+
+        // 1. Resolve target date
+        let target_date = match date {
+            Some(d) => d,
+            None => market_store::fetch_latest_table_date(&self.storage, "signal_snapshot")?
+                .context("No signal data available")?,
+        };
+
+        // 2. Determine extended range for analogue search
+        let available_dates = self.dashboard_available_dates_for_scope(scope)?;
+        let target_idx = available_dates
+            .iter()
+            .position(|d| *d == target_date)
+            .context("Target date not available for the selected scope")?;
+        let lookback = lookback_days.max(1);
+        let extended_idx = (target_idx + lookback).min(available_dates.len().saturating_sub(1));
+        let extended_start = available_dates.get(extended_idx).copied().unwrap_or(target_date);
+
+        // 3. Build ResearchContext + MarketFingerprint bundles once
+        let bundles = self.build_research_bundle_for_range(scope, extended_start, target_date)?;
+        let target_bundle = bundles
+            .iter()
+            .find(|(d, _, _)| *d == target_date)
+            .context("No research bundle found for target date")?;
+        let target_ctx = &target_bundle.1;
+
+        // 4. Run analogue search using the cached fingerprints
+        let matcher = SimilarityMatcher::new(CosineDistance);
+        let target_index = bundles.len() - 1;
+        let subset: Vec<_> = bundles.iter().map(|(_, _, fp)| fp.clone()).collect();
+        let normalized = normalize_all(&subset);
+        let mut result = matcher.search(target_index, &subset, &normalized, top_n);
+
+        // 5. Profile forward outcome
+        let anchor_symbol = match scope {
+            core_domain::AnalysisScope::Global | core_domain::AnalysisScope::Cn => "000300",
+            core_domain::AnalysisScope::Hk => "HSCEI",
+        };
+        let anchor_bars = market_store::fetch_daily_bars(&self.storage, anchor_symbol)?;
+        let close_by_date: BTreeMap<NaiveDate, f64> =
+            anchor_bars.iter().map(|b| (b.date, b.close)).collect();
+        let provider = AnchorBarForwardProvider {
+            close_by_date: &close_by_date,
+        };
+        result.outcome = OutcomeProfiler::profile(&result.matches, horizon_days, &provider);
+
+        // 6. Build EvidenceInput from Observation + Evolution + Historical Evidence
+        let signal_score = target_ctx.signal.average_score / 100.0;
+
+        let confirmation_avg = (target_ctx.confirmation.trend.score
+            + target_ctx.confirmation.participation.score
+            + target_ctx.confirmation.risk.score)
+            / 3.0
+            / 100.0;
+
+        let recovery_score = target_ctx.recovery.score / 100.0;
+
+        // Stretch evidence: compute from the target bundle's rotations/env.
+        let rotations = bundles
+            .iter()
+            .find(|(d, _, _)| *d == target_date)
+            .map(|(_, _, fp)| fp.observation.rotation.clone())
+            .unwrap_or_default();
+        let total_momentum: f64 = rotations.iter().map(|(_, score)| score).sum();
+        let mut sorted_rotations = rotations.clone();
+        sorted_rotations.sort_by(|(_, a), (_, b)| b.total_cmp(a));
+        let top5_sum: f64 = sorted_rotations.iter().take(5).map(|(_, score)| score).sum();
+        let concentration_pct = if total_momentum > 0.0 {
+            (top5_sum / total_momentum) * 100.0
+        } else {
+            0.0
+        };
+        let rs120_max = rotations
+            .iter()
+            .map(|(_, score)| score)
+            .fold(0.0_f64, |max_so_far: f64, score| max_so_far.max(*score));
+        let crowding_level = classify_level(concentration_pct, 30.0, 50.0, true);
+        let breadth_pct = target_ctx.breadth.breadth_pct;
+        let breadth_level = classify_level(breadth_pct, 35.0, 20.0, false);
+        let momentum_level = classify_level(rs120_max, 70.0, 85.0, true);
+        let leverage_level = "Normal";
+        let (_, stretch_score) =
+            weighted_stretch_overall(crowding_level, breadth_level, momentum_level, leverage_level);
+        let stretch_normalized = (stretch_score / 2.0).clamp(0.0, 1.0);
+
+        // Analogues evidence: use win-rate centered around 50%.
+        let analogues_score = result
+            .outcome
+            .as_ref()
+            .map(|o| ((o.win_rate - 0.5) * 2.0).clamp(-1.0, 1.0));
+
+        let evidence_input = EvidenceInput {
+            signal: Some(signal_score.clamp(0.0, 1.0)),
+            stretch: Some(stretch_normalized),
+            confirmation: Some(confirmation_avg.clamp(0.0, 1.0)),
+            recovery: Some(recovery_score.clamp(0.0, 1.0)),
+            analogues: analogues_score,
+        };
+
+        let summary = consensus(evidence_input, &ConsensusConfig::default());
+
+        // 7. Build report
+        let reporting_snapshot = ReportingSnapshot {
+            generated_at: chrono::Utc::now(),
+            research: target_ctx.clone(),
+        };
+        let input = ConsensusReportInput { summary };
+        let doc = ResearchReportBuilder::build_consensus(&reporting_snapshot, &input)?;
+
+        let mut formatter = MarkdownFormatter::new();
+        report_renderer::render(&mut formatter, &doc);
+        let markdown = formatter.finalize();
+
+        // 8. Write to reports/consensus/
+        let scope_label = scope_label(scope).to_lowercase();
+        let output_dir = std::path::PathBuf::from("reports/consensus");
+        std::fs::create_dir_all(&output_dir)?;
+        let output_path = output_dir.join(format!(
+            "research-consensus-{}-{}.md",
+            scope_label, target_date
+        ));
+        std::fs::write(&output_path, markdown)?;
+
+        Ok(output_path)
+    }
+
+    /// Map a 0-100 recovery score to a human-readable bucket label.
+    fn recovery_bucket_label(score: f64) -> String {
+        match score {
+            s if s >= 80.0 => "80-100".to_string(),
+            s if s >= 60.0 => "60-80".to_string(),
+            s if s >= 40.0 => "40-60".to_string(),
+            s if s >= 20.0 => "20-40".to_string(),
+            _ => "0-20".to_string(),
+        }
+    }
+
+    /// Map a fingerprint MatchLevel to its string representation.
+    fn match_level_label(level: &market_fingerprint_engine::MatchLevel) -> String {
+        use market_fingerprint_engine::MatchLevel;
+        match level {
+            MatchLevel::VeryHigh => "Very High".to_string(),
+            MatchLevel::High => "High".to_string(),
+            MatchLevel::Moderate => "Moderate".to_string(),
+            MatchLevel::Weak => "Weak".to_string(),
+        }
+    }
+
     /// Phase 1: Single query owner — fetch all research data in one place.
     fn fetch_research_dataset(
         &self,
@@ -3452,6 +4331,32 @@ impl AppContext {
             })
             .collect();
 
+        // 4b. rotation history for the last 20 trading days for leadership evolution
+        let rotation_lookback = date - chrono::Duration::days(30);
+        let hist_rotations = market_store::fetch_rotation_ranks_for_range(
+            &self.storage,
+            rotation_lookback,
+            date,
+        )?;
+        let mut rotation_history: BTreeMap<NaiveDate, Vec<core_domain::RotationRankSnapshot>> =
+            BTreeMap::new();
+        for r in hist_rotations {
+            rotation_history
+                .entry(r.date)
+                .or_default()
+                .push(r);
+        }
+        // Apply the same scope filter to historical rotations
+        for day_rotations in rotation_history.values_mut() {
+            day_rotations.retain(|r| {
+                market_filter.as_ref().map_or(true, |m| {
+                    instruments.iter().any(|i| i.symbol == r.symbol && i.market == *m)
+                })
+            });
+        }
+        // Remove empty entries after filtering
+        rotation_history.retain(|_, v| !v.is_empty());
+
         // 5. all_regimes
         let all_regimes = market_store::fetch_market_regimes(&self.storage)?;
 
@@ -3476,6 +4381,7 @@ impl AppContext {
             states_history,
             env_history,
             rotations,
+            rotation_history,
             all_regimes,
             signal_history,
         })
@@ -3712,9 +4618,13 @@ impl AppContext {
 fn build_research_context_from_dataset(
     dataset: &ResearchDataset,
 ) -> Result<research_context::ResearchContext> {
+    use core_domain::research::confirmation::{compute_confirmation, ConfirmationInputs, ConfirmationScores};
+    use core_domain::research::recovery::{breadth_improving, compute_recovery_index, drawdown_recovering, price_recovering, volatility_contracting, RecoveryInputs};
+    use core_domain::research::rotation::{leadership_transition as compute_leadership_transition, rotation_acceleration, theme_dispersion, RotationItemInput};
     use research_context::{
-        BreadthSummary, DivergenceSummary, MarketStateSummary, RotationItem, RotationSummary,
-        SignalItem, SignalSummary, TrustSummary,
+        BreadthSummary, ConfirmationDimension, ConfirmationSummary, DivergenceSummary,
+        MarketStateSummary, RecoverySummary, RotationItem, RotationSummary, SignalItem,
+        SignalSummary, TrustSummary,
     };
 
     // Find env for date
@@ -3818,11 +4728,59 @@ fn build_research_context_from_dataset(
             0.5
         };
 
+        let current_items: Vec<RotationItemInput> = dataset
+            .rotations
+            .iter()
+            .map(|r| RotationItemInput {
+                symbol: r.symbol.clone(),
+                momentum_score: r.momentum_score,
+                rank: r.rank,
+            })
+            .collect();
+        let previous_items: Option<Vec<RotationItemInput>> = dataset
+            .rotation_history
+            .iter()
+            .filter(|(d, _)| **d < dataset.date)
+            .max_by_key(|(d, _)| *d)
+            .map(|(_, rs)| {
+                rs.iter()
+                    .map(|r| RotationItemInput {
+                        symbol: r.symbol.clone(),
+                        momentum_score: r.momentum_score,
+                        rank: r.rank,
+                    })
+                    .collect()
+            });
+        let recent_history: Vec<Vec<RotationItemInput>> = dataset
+            .rotation_history
+            .iter()
+            .filter(|(d, _)| **d != dataset.date)
+            .map(|(_, rs)| {
+                rs.iter()
+                    .map(|r| RotationItemInput {
+                        symbol: r.symbol.clone(),
+                        momentum_score: r.momentum_score,
+                        rank: r.rank,
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let leadership_transition = previous_items
+            .as_ref()
+            .map(|prev| compute_leadership_transition(&current_items, prev).as_str().to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+        let rotation_acceleration = rotation_acceleration(&current_items, &recent_history);
+        let theme_dispersion = theme_dispersion(&current_items);
+
         RotationSummary {
             top,
             bottom,
             rotation_state: rotation_state.to_string(),
             leadership_stability,
+            leadership_transition,
+            rotation_acceleration,
+            theme_dispersion,
         }
     };
 
@@ -3874,6 +4832,65 @@ fn build_research_context_from_dataset(
         is_data_complete: !dataset.signals.is_empty() && env.is_some(),
     };
 
+    // Build ConfirmationSummary (V7.1 Market Evolution)
+    let confirmation_inputs = ConfirmationInputs {
+        trend_score: regime.map(|r| r.trend_score).unwrap_or(50.0),
+        risk_score: regime.map(|r| r.risk_score).unwrap_or(50.0),
+        environment_score: env.map(|e| e.environment_score).unwrap_or(50.0),
+        breadth_pct: env.map(|e| e.breadth_pct).unwrap_or(50.0),
+        volume_expansion_pct: env.map(|e| e.volume_expansion_pct).unwrap_or(None),
+        turnover_coverage_pct: env.map(|e| e.turnover_coverage_pct).unwrap_or(None),
+        leadership_stability: rotation.leadership_stability,
+        rotation_broad: rotation.rotation_state == "broad",
+    };
+    let confirmation_scores = compute_confirmation(&confirmation_inputs);
+    let confirmation = ConfirmationSummary {
+        trend: ConfirmationDimension {
+            score: confirmation_scores.trend,
+            label: ConfirmationScores::label(confirmation_scores.trend).to_string(),
+        },
+        participation: ConfirmationDimension {
+            score: confirmation_scores.participation,
+            label: ConfirmationScores::label(confirmation_scores.participation).to_string(),
+        },
+        risk: ConfirmationDimension {
+            score: confirmation_scores.risk,
+            label: ConfirmationScores::label(confirmation_scores.risk).to_string(),
+        },
+        overall: ConfirmationScores::label(confirmation_scores.overall).to_string(),
+    };
+
+    // Build RecoverySummary (V7.1 Market Evolution)
+    // NOTE: V7.1 MVP uses proxies from existing regime/environment data because
+    // the ResearchDataset does not yet include anchor-symbol daily bars. A
+    // future iteration can replace these proxies with actual drawdown/recovery
+    // measurements from price history.
+    let recovery_inputs = RecoveryInputs {
+        drawdown_pct: (100.0 - regime.map(|r| r.trend_score).unwrap_or(50.0)) / 100.0 * 0.3,
+        breadth_5d_delta: env.map(|e| e.breadth_5d_delta.unwrap_or(0.0)).unwrap_or(0.0),
+        realized_vol: regime.map(|r| r.risk_score / 100.0 * 0.5).unwrap_or(0.2),
+        vol_20d_avg: env.map(|e| e.liquidity_proxy_score / 100.0 * 0.5).unwrap_or(0.2),
+        price_recovery_pct: (regime.map(|r| r.trend_score).unwrap_or(50.0) - 30.0).max(0.0) / 100.0,
+    };
+    let recovery_score = compute_recovery_index(&recovery_inputs);
+    let mut recovery_drivers = Vec::new();
+    if breadth_improving(recovery_inputs.breadth_5d_delta) {
+        recovery_drivers.push("Breadth improving".to_string());
+    }
+    if volatility_contracting(recovery_inputs.realized_vol, recovery_inputs.vol_20d_avg) {
+        recovery_drivers.push("Volatility shrinking".to_string());
+    }
+    if drawdown_recovering(recovery_inputs.drawdown_pct) {
+        recovery_drivers.push("Drawdown recovering".to_string());
+    }
+    if price_recovering(recovery_inputs.price_recovery_pct) {
+        recovery_drivers.push("Price recovering from low".to_string());
+    }
+    let recovery = RecoverySummary {
+        score: recovery_score,
+        drivers: recovery_drivers,
+    };
+
     Ok(research_context::ResearchContext {
         version: 1,
         scope: dataset.scope,
@@ -3884,6 +4901,9 @@ fn build_research_context_from_dataset(
         signal,
         divergence,
         trust,
+        confirmation,
+        recovery,
+        consensus: None,
     })
 }
 
@@ -3917,9 +4937,11 @@ fn build_research_snapshot_from_dataset(dataset: &ResearchDataset) -> ResearchSn
 fn build_research_context_from_dashboard(
     snapshot: &report_engine::DashboardSnapshot,
 ) -> research_context::ResearchContext {
+    use core_domain::research::confirmation::{compute_confirmation, ConfirmationInputs, ConfirmationScores};
+    use core_domain::research::recovery::{breadth_improving, compute_recovery_index, drawdown_recovering, price_recovering, volatility_contracting, RecoveryInputs};
     use research_context::{
-        BreadthSummary, DivergenceSummary, MarketStateSummary, RotationItem, RotationSummary,
-        SignalItem, SignalSummary, TrustSummary,
+        BreadthSummary, ConfirmationDimension, ConfirmationSummary, DivergenceSummary, MarketStateSummary,
+        RecoverySummary, RotationItem, RotationSummary, SignalItem, SignalSummary, TrustSummary,
     };
 
     let market_state = MarketStateSummary {
@@ -4010,6 +5032,9 @@ fn build_research_context_from_dashboard(
             bottom,
             rotation_state: rotation_state.to_string(),
             leadership_stability,
+            leadership_transition: "Unknown".to_string(),
+            rotation_acceleration: None,
+            theme_dispersion: None,
         }
     };
 
@@ -4056,6 +5081,66 @@ fn build_research_context_from_dashboard(
             is_data_complete: false,
         });
 
+    // Build ConfirmationSummary (V7.1 Market Evolution) from DashboardSnapshot data
+    let env_ref = snapshot.environment.as_ref();
+    let confirmation_inputs = ConfirmationInputs {
+        trend_score: snapshot.trend_score,
+        risk_score: snapshot.risk_score,
+        environment_score: env_ref.map(|e| e.environment_score).unwrap_or(50.0),
+        breadth_pct: env_ref.map(|e| e.breadth_pct).unwrap_or(50.0),
+        volume_expansion_pct: env_ref.and_then(|e| e.volume_expansion_pct),
+        turnover_coverage_pct: env_ref.and_then(|e| e.turnover_coverage_pct),
+        leadership_stability: rotation.leadership_stability,
+        rotation_broad: rotation.rotation_state == "broad",
+    };
+    let confirmation_scores = compute_confirmation(&confirmation_inputs);
+    let confirmation = ConfirmationSummary {
+        trend: ConfirmationDimension {
+            score: confirmation_scores.trend,
+            label: ConfirmationScores::label(confirmation_scores.trend).to_string(),
+        },
+        participation: ConfirmationDimension {
+            score: confirmation_scores.participation,
+            label: ConfirmationScores::label(confirmation_scores.participation).to_string(),
+        },
+        risk: ConfirmationDimension {
+            score: confirmation_scores.risk,
+            label: ConfirmationScores::label(confirmation_scores.risk).to_string(),
+        },
+        overall: ConfirmationScores::label(confirmation_scores.overall).to_string(),
+    };
+
+    // Build RecoverySummary (V7.1 Market Evolution) from DashboardSnapshot data
+    let recovery_inputs = RecoveryInputs {
+        drawdown_pct: (100.0 - snapshot.trend_score) / 100.0 * 0.3,
+        breadth_5d_delta: env_ref
+            .and_then(|e| e.breadth_5d_delta)
+            .unwrap_or(0.0),
+        realized_vol: snapshot.risk_score / 100.0 * 0.5,
+        vol_20d_avg: env_ref
+            .map(|e| e.liquidity_proxy_score / 100.0 * 0.5)
+            .unwrap_or(0.2),
+        price_recovery_pct: (snapshot.trend_score - 30.0).max(0.0) / 100.0,
+    };
+    let recovery_score = compute_recovery_index(&recovery_inputs);
+    let mut recovery_drivers = Vec::new();
+    if breadth_improving(recovery_inputs.breadth_5d_delta) {
+        recovery_drivers.push("Breadth improving".to_string());
+    }
+    if volatility_contracting(recovery_inputs.realized_vol, recovery_inputs.vol_20d_avg) {
+        recovery_drivers.push("Volatility shrinking".to_string());
+    }
+    if drawdown_recovering(recovery_inputs.drawdown_pct) {
+        recovery_drivers.push("Drawdown recovering".to_string());
+    }
+    if price_recovering(recovery_inputs.price_recovery_pct) {
+        recovery_drivers.push("Price recovering from low".to_string());
+    }
+    let recovery = RecoverySummary {
+        score: recovery_score,
+        drivers: recovery_drivers,
+    };
+
     research_context::ResearchContext {
         version: 1,
         scope: parse_scope(&snapshot.scope),
@@ -4067,6 +5152,9 @@ fn build_research_context_from_dashboard(
         signal,
         divergence,
         trust,
+        confirmation,
+        recovery,
+        consensus: None,
     }
 }
 
@@ -4888,5 +5976,130 @@ mod tests {
         let _ctx = AppContext::new(StorageConfig::default());
         let context = build_research_context(60.0, 0.0, llm_context::LiquidityPressure::Low, 0);
         assert_eq!(generate_recommendation(&context), "maintain");
+    }
+
+    /// V7.3.1: Integration smoke test for the Consensus vertical slice.
+    ///
+    /// This test does not hit the database; it verifies that a `ConsensusSummary`
+    /// produced by the evidence aggregator flows correctly through the
+    /// app-service → report-builder → report-renderer pipeline and that the
+    /// resulting Markdown report contains the required research-language fields
+    /// (version, bias, confidence, aggregate score, evidence lists, disclaimer).
+    #[test]
+    fn consensus_report_vertical_slice_renders_markdown() {
+        use core_domain::research::consensus::{
+            consensus, ConsensusConfig, EvidenceInput,
+        };
+        use report_builder::{ConsensusReportInput, ResearchReportBuilder};
+        use report_renderer::MarkdownFormatter;
+        use reporting::{Formatter, ReportingSnapshot};
+        use research_context::{
+            BreadthSummary, ConfirmationDimension, ConfirmationSummary, Confidence, ConsensusBias,
+            DivergenceSummary, MarketStateSummary, RecoverySummary, ResearchContext,
+            RotationSummary, SignalSummary, TrustLevel, TrustSummary,
+        };
+
+        // 1. Build evidence input and run aggregation (same path as run_research_consensus)
+        let input = EvidenceInput {
+            signal: Some(0.6),
+            stretch: Some(0.2),
+            confirmation: Some(0.5),
+            recovery: Some(0.4),
+            analogues: Some(0.1),
+        };
+        let core_summary = consensus(input, &ConsensusConfig::default());
+        assert_eq!(core_summary.version, 1);
+        assert!(matches!(core_summary.bias, ConsensusBias::Constructive));
+        assert!(matches!(core_summary.confidence, Confidence::Medium | Confidence::High));
+        assert!(!core_summary.supporting_evidence.is_empty());
+
+        // 2. Wrap in a minimal ResearchContext / ReportingSnapshot
+        let context = ResearchContext {
+            version: 1,
+            scope: core_domain::AnalysisScope::Global,
+            date: NaiveDate::from_ymd_opt(2026, 7, 8).unwrap(),
+            market_state: MarketStateSummary {
+                label: "risk_on".to_string(),
+                trend_score: 75.0,
+                liquidity_score: 60.0,
+                risk_score: 40.0,
+                confidence: 0.8,
+            },
+            breadth: BreadthSummary {
+                breadth_pct: 65.0,
+                sma5: Some(62.0),
+                delta_5d: Some(3.0),
+                condition: "Strong".to_string(),
+            },
+            rotation: RotationSummary {
+                top: vec![],
+                bottom: vec![],
+                rotation_state: "Broad".to_string(),
+                leadership_stability: 0.7,
+                leadership_transition: "Stable".to_string(),
+                rotation_acceleration: None,
+                theme_dispersion: None,
+            },
+            signal: SignalSummary {
+                signals: vec![],
+                bullish_count: 3,
+                strong_buy_count: 2,
+                average_score: 72.0,
+            },
+            divergence: DivergenceSummary {
+                divergence_duration: 0,
+                samples: vec![],
+            },
+            trust: TrustSummary {
+                level: TrustLevel::Unassessed,
+                headline: "Data healthy".to_string(),
+                is_data_complete: true,
+            },
+            confirmation: ConfirmationSummary {
+                trend: ConfirmationDimension {
+                    score: 75.0,
+                    label: "Strong".to_string(),
+                },
+                participation: ConfirmationDimension {
+                    score: 45.0,
+                    label: "Moderate".to_string(),
+                },
+                risk: ConfirmationDimension {
+                    score: 70.0,
+                    label: "Strong".to_string(),
+                },
+                overall: "Moderate".to_string(),
+            },
+            recovery: RecoverySummary {
+                score: 42.0,
+                drivers: vec!["Breadth improving".to_string()],
+            },
+            consensus: Some(core_summary),
+        };
+        let snapshot = ReportingSnapshot {
+            generated_at: chrono::Utc::now(),
+            research: context,
+        };
+
+        // 3. Build and render the consensus report
+        let report_input = ConsensusReportInput {
+            summary: snapshot.research.consensus.clone().unwrap(),
+        };
+        let doc = ResearchReportBuilder::build_consensus(&snapshot, &report_input)
+            .expect("build_consensus should succeed");
+        let mut formatter = MarkdownFormatter::new();
+        report_renderer::render(&mut formatter, &doc);
+        let markdown = formatter.finalize();
+
+        // 4. Assert research-language content and no decision advice
+        assert!(markdown.contains("Research Consensus"));
+        assert!(markdown.contains("Consensus version:"));
+        assert!(markdown.contains("Constructive"));
+        assert!(markdown.contains("Aggregate score:"));
+        assert!(markdown.contains("Supporting Evidence:"));
+        assert!(markdown.contains("Contradicting Evidence:"));
+        assert!(markdown.contains("does not provide buy/sell recommendations"));
+        assert!(!markdown.contains("Buy"));
+        assert!(!markdown.contains("Sell"));
     }
 }

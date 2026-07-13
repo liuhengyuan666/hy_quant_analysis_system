@@ -2,6 +2,8 @@ use chrono::NaiveDate;
 use core_domain::AnalysisScope;
 use serde::{Deserialize, Serialize};
 
+pub use core_domain::research::consensus::{Confidence, ConsensusBias, ConsensusSummary, WeightedEvidence};
+
 /// Trust level for data quality assessment.
 ///
 /// Semantic model field: MUST use this enum instead of String.
@@ -45,6 +47,10 @@ pub struct ResearchContext {
     pub signal: SignalSummary,
     pub divergence: DivergenceSummary,
     pub trust: TrustSummary,
+    pub confirmation: ConfirmationSummary,
+    pub recovery: RecoverySummary,
+    #[serde(default)]
+    pub consensus: Option<ConsensusSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +76,11 @@ pub struct RotationSummary {
     pub bottom: Vec<RotationItem>,
     pub rotation_state: String,
     pub leadership_stability: f64,
+    pub leadership_transition: String,
+    #[serde(default)]
+    pub rotation_acceleration: Option<f64>,
+    #[serde(default)]
+    pub theme_dispersion: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,4 +123,37 @@ pub struct TrustSummary {
     pub level: TrustLevel,
     pub headline: String,
     pub is_data_complete: bool,
+}
+
+/// A single dimension of market confirmation (e.g. Trend, Participation, Risk).
+///
+/// `score` is a normalized 0-100 index. `label` is a human-readable
+/// classification derived from that score by the orchestration layer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmationDimension {
+    pub score: f64,
+    pub label: String,
+}
+
+/// Market confirmation summary.
+///
+/// Answers: "Has the market confirmed?" It aggregates trend, participation,
+/// and risk evidence into three dimensions plus an overall verdict.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmationSummary {
+    pub trend: ConfirmationDimension,
+    pub participation: ConfirmationDimension,
+    pub risk: ConfirmationDimension,
+    pub overall: String,
+}
+
+/// Recovery summary.
+///
+/// Answers: "How much has the market recovered?" The `score` is the
+/// user-facing Recovery Index (0-100). `drivers` lists the observable
+/// factors contributing to the current recovery reading.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecoverySummary {
+    pub score: f64,
+    pub drivers: Vec<String>,
 }
