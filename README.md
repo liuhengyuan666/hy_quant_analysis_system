@@ -7,7 +7,6 @@
 - `docs/日常操作手册.md`：适合每天快速更新、查看、导出结果
 - `docs/分析使用手册.md`：适合趋势 / 长线分析时理解 MA20 / MA60 / MACD / regime / rotation / signal
 - `docs/系统架构与数据流.md`：梳理系统整体架构、数据来源、数据流转路径与关键日期语义
-- `docs/设计规划-v7.md`：V7 Market Evolution Semantic Layer 设计规划（Observation → Evolution → Evidence → Consensus）
 - `shadow-production/historical-replay/historical-replay-report-2026-07-09.md`：Shadow Production 历史复盘测试报告（State Layer Regime Dependency / Model Bias 分析）
 - `docs/功能模块与处理逻辑.md`：梳理各模块职责、输入输出、数据来源与处理逻辑
 - `docs/v2/V2-Phase1-环境层详细技术设计.md`：V2 Phase 1（per-scope regime + environment layer）工程设计
@@ -414,17 +413,31 @@ cargo run -p quant-desktop
 
 > **优先使用桌面端的 `Refresh data` 作为默认刷新入口；CLI 全链路命令继续保留为显式工程/高级用户路径。**
 
-推荐日常流程：
+### 每日推荐 CLI 工作流（收盘后）
 
-1. 更新日线数据
-2. 跑指标 / 宏观 / 轮动 / 信号
-3. 先看一次 trust summary
-4. 再下钻 pipeline freshness / completeness
-5. 跑一次 `cargo run -p quant-cli -- data-health`（同时检查 + 导出报告）
-6. 查看 dashboard
-7. 导出日报
-8. 跑一次 `cargo run -p quant-cli -- research observe --scope global`（聚合 SRD / Stretch / Analytics / Health 日报）
-9. 有需要时再跑回测
+如果你选择 CLI，每天收盘后按这个顺序跑即可：
+
+```bash
+# 1. 检查 gate → 刷新全链路（如需）→ 导出市场日报
+cargo run -p quant-cli -- sync-and-export --scope global
+
+# 2. 数据健康检查 + 报告留档（V7 工作流）
+cargo run -p quant-cli -- data-health
+
+# 3. 每日研究观测（聚合 SRD / Stretch / Analytics / Health，V7 工作流）
+cargo run -p quant-cli -- research observe --scope global
+
+# 4. 收盘前执行过滤（V5 Execution Layer / Pattern Library）
+cargo run -p quant-cli -- preclose-analysis --scope global
+```
+
+说明：
+
+- `sync-and-export` 是 V3 推荐默认路径：一键完成 gate 检查、全链路刷新、导出日报。
+- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要和 Markdown 报告。
+- `research observe` 聚合 `research-srd` + `research-stretch` + `research analytics` + `check-data-health`，输出到 `reports/research-observe-global-{date}.md`。
+- `preclose-analysis` 只回答「今天买不买」，不回答「买什么」；在 `signal ≥ Buy` 且 `state ≠ NO_TRADE` 的候选上运行 Pattern Library 过滤。
+- 所有底层命令（`check-data-health`、`export-data-health-report`、`research-srd`、`research-stretch` 等）均保留不变。
 
 如果你日常主要使用桌面端，更推荐的实际顺序是：
 
