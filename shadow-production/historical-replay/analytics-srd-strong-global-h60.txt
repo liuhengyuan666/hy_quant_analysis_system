@@ -1,0 +1,20 @@
+﻿Research Report 鈥?GLOBAL
+Scope: GLOBAL | Date: 2026-07-09
+----------------------------------------
+[Analytics] Analytics: srd-strong | Horizon: 60d
+Conditional Forward Return Analytics | Condition: srd-strong | Scope: GLOBAL
+  Analytics version:        v1
+  History window:           2017-01-03 ~ 2026-07-09
+  Occurrences:              184
+  Horizon:                  60 trading days
+  Forward return median:    -0.5%
+  Forward return mean:      +0.7%
+  Forward return best:      +18.0%
+  Forward return worst:     -10.0%
+  Positive ratio:           45.7%
+  Median max drawdown:      7.6%
+
+[Disclaimer] 
+Observation tool 鈥?does not influence any decision logic
+
+

@@ -1,0 +1,34 @@
+﻿Research Report 鈥?GLOBAL
+Scope: GLOBAL | Date: 2026-07-09
+----------------------------------------
+[Signal] Symbol Scoreboard
+Symbol | Name | Score | Signal | Momentum | Regime
+000688 | 绉戝垱50 | 86.0 | Strong Buy | 44.49 | DeRisk
+000698 | 绉戝垱100 | 86.0 | Strong Buy | 33.00 | DeRisk
+512480 | 鍗婂浣揈TF | 79.7 | Buy | 16.67 | DeRisk
+159995 | 鑺墖ETF | 76.7 | Buy | 13.91 | DeRisk
+399006 | 鍒涗笟鏉挎寚 | 73.8 | Buy | 11.21 | DeRisk
+399673 | 鍒涗笟鏉?0 | 70.7 | Buy | 10.65 | DeRisk
+000905 | 涓瘉500 | 68.8 | Buy | 8.20 | DeRisk
+512000 | 鍒稿晢ETF | 66.5 | Buy | 5.45 | DeRisk
+512400 | 鏈夎壊ETF | 60.0 | Watch | -10.81 | DeRisk
+516150 | 鍢夊疄涓瘉绋€鍦熶骇涓欵TF | 60.0 | Watch | -5.29 | DeRisk
+000510 | 涓瘉A500 | 59.6 | Watch | 4.49 | DeRisk
+515790 | 鍏変紡ETF | 59.6 | Watch | -9.89 | DeRisk
+000300 | 娌繁300 | 57.9 | Watch | 3.31 | DeRisk
+159611 | 鐢靛姏ETF | 56.1 | Watch | -7.52 | DeRisk
+000016 | 涓婅瘉50 | 55.6 | Watch | 2.60 | DeRisk
+515880 | 閫氫俊ETF | 49.5 | Hold | -15.35 | DeRisk
+159851 | 閲戣瀺绉戞妧ETF | 43.5 | Hold | -12.33 | DeRisk
+513050 | 涓浜掕仈缃慐TF | 39.0 | Hold | -9.29 | DeRisk
+000852 | 涓瘉1000 | 37.9 | Hold | 2.75 | DeRisk
+562500 | 鏈哄櫒浜篍TF | 36.8 | Hold | 4.72 | DeRisk
+HSTECH | 鎭掔敓绉戞妧鎸囨暟 | 34.8 | Reduce | -4.53 | DeRisk
+000922 | 涓瘉绾㈠埄 | 34.0 | Reduce | -7.47 | DeRisk
+HSCEI | 鎭掔敓鍥戒紒鎸囨暟 | 34.0 | Reduce | -6.55 | DeRisk
+515070 | 浜哄伐鏅鸿兘ETF | 28.3 | Reduce | -8.77 | DeRisk
+000001 | 涓婅瘉鎸囨暟 | 28.0 | Reduce | 0.68 | DeRisk
+512800 | 閾惰ETF | 27.5 | Reduce | -5.20 | DeRisk
+
+
+Explainability Layer (TASK-092) | Research Surface 鈥?not in Shadow Production chain.

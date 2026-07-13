@@ -1,0 +1,133 @@
+# Research Report — GLOBAL
+
+Scope: GLOBAL | Date: 2025-06-30
+
+## Research Quarterly Review
+
+**Scope**: GLOBAL
+
+**Observation Window**: 2025-01-01 ~ 2025-06-30
+
+**Report Version**: v1
+
+**Generated At**: 2026-07-09 11:10:05
+
+**Status**: Observation-only synthesis. Does not modify any decision logic.
+
+## Observation Coverage
+
+- Days with complete research data: 122
+- Calendar window: 181 days
+
+## Signal-Regime Divergence (SRD) Summary
+
+- SRD days: 25
+- SRD frequency: 20.5%
+- Average divergence duration: 5.8 days
+- Longest consecutive SRD streak: 11 days
+
+**Latest SRD dates**:
+- 2025-06-27
+- 2025-06-25
+- 2025-03-24
+- 2025-03-20
+- 2025-03-19
+- 2025-03-18
+- 2025-03-17
+- 2025-03-14
+- 2025-03-13
+- 2025-03-12
+
+
+## Market Stretch Distribution
+
+### Overall
+
+- Normal: 44 days
+- Elevated: 60 days
+- Extreme: 18 days
+
+### By Dimension
+
+**Crowding**:
+
+- Normal: 46 days
+- Elevated: 38 days
+- Extreme: 38 days
+
+**Momentum**:
+
+- Normal: 67 days
+- Elevated: 13 days
+- Extreme: 42 days
+
+**Breadth**:
+
+- Normal: 77 days
+- Elevated: 11 days
+- Extreme: 34 days
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `srd-strong` | Horizon: 20 days
+
+- **Occurrences**: 25
+- **Forward return median**: +0.2%
+- **Forward return mean**: -1.0%
+- **Forward return best**: +5.2%
+- **Forward return worst**: -9.0%
+- **Positive ratio**: 60.0%
+- **Median max drawdown**: 2.3%
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `srd-strong` | Horizon: 60 days
+
+- **Occurrences**: 25
+- **Forward return median**: -0.9%
+- **Forward return mean**: -0.1%
+- **Forward return best**: +14.9%
+- **Forward return worst**: -3.6%
+- **Positive ratio**: 16.0%
+- **Median max drawdown**: 10.5%
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `stretch-extreme-crowding-momentum` | Horizon: 20 days
+
+- **Occurrences**: 4
+- **Forward return median**: +3.0%
+- **Forward return mean**: +2.6%
+- **Forward return best**: +3.3%
+- **Forward return worst**: +1.5%
+- **Positive ratio**: 100.0%
+- **Median max drawdown**: 2.3%
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `stretch-extreme-crowding-momentum` | Horizon: 60 days
+
+- **Occurrences**: 4
+- **Forward return median**: -1.1%
+- **Forward return mean**: -1.0%
+- **Forward return best**: -0.3%
+- **Forward return worst**: -1.5%
+- **Positive ratio**: 0.0%
+- **Median max drawdown**: 10.5%
+
+
+## Evidence Worth ADR Review
+
+- SRD streak reached 11 days — worth reviewing in a future ADR if the pattern persists across the 90-day observation window.
+- Market Stretch = Extreme on 18 days — worth tracking whether extremes correlate with subsequent drawdowns.
+- SRD and Stretch Extreme co-occurred on 1 days — worth noting as a potential compound regime tension.
+
+
+## 
+
+**Disclaimer**: This report is produced by the Research Layer for evidence accumulation only. It does not modify Strategy State, Signal, Execution, or Risk logic. Historical statistics are not predictions of future returns.
+

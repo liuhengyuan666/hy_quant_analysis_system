@@ -1,0 +1,121 @@
+# Research Report — GLOBAL
+
+Scope: GLOBAL | Date: 2023-06-30
+
+## Research Quarterly Review
+
+**Scope**: GLOBAL
+
+**Observation Window**: 2023-04-01 ~ 2023-06-30
+
+**Report Version**: v1
+
+**Generated At**: 2026-07-09 11:11:35
+
+**Status**: Observation-only synthesis. Does not modify any decision logic.
+
+## Observation Coverage
+
+- Days with complete research data: 62
+- Calendar window: 91 days
+
+## Signal-Regime Divergence (SRD) Summary
+
+- SRD days: 13
+- SRD frequency: 21.0%
+- Average divergence duration: 68.0 days
+- Longest consecutive SRD streak: 13 days
+
+**Latest SRD dates**:
+- 2023-04-20
+- 2023-04-19
+- 2023-04-18
+- 2023-04-17
+- 2023-04-14
+- 2023-04-13
+- 2023-04-12
+- 2023-04-11
+- 2023-04-10
+- 2023-04-07
+
+
+## Market Stretch Distribution
+
+### Overall
+
+- Normal: 36 days
+- Elevated: 26 days
+- Extreme: 0 days
+
+### By Dimension
+
+**Crowding**:
+
+- Normal: 34 days
+- Elevated: 2 days
+- Extreme: 26 days
+
+**Momentum**:
+
+- Normal: 62 days
+- Elevated: 0 days
+- Extreme: 0 days
+
+**Breadth**:
+
+- Normal: 23 days
+- Elevated: 13 days
+- Extreme: 26 days
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `srd-strong` | Horizon: 20 days
+
+- **Occurrences**: 13
+- **Forward return median**: -3.1%
+- **Forward return mean**: -3.1%
+- **Forward return best**: -1.0%
+- **Forward return worst**: -5.2%
+- **Positive ratio**: 0.0%
+- **Median max drawdown**: 4.9%
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `srd-strong` | Horizon: 60 days
+
+- **Occurrences**: 13
+- **Forward return median**: -6.2%
+- **Forward return mean**: -6.1%
+- **Forward return best**: -4.2%
+- **Forward return worst**: -7.4%
+- **Positive ratio**: 0.0%
+- **Median max drawdown**: 9.0%
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `stretch-extreme-crowding-momentum` | Horizon: 20 days
+
+- **Occurrences**: 0
+- Not enough observations.
+
+
+## Conditional Forward-Return Analytics
+
+### Condition: `stretch-extreme-crowding-momentum` | Horizon: 60 days
+
+- **Occurrences**: 0
+- Not enough observations.
+
+
+## Evidence Worth ADR Review
+
+- SRD streak reached 13 days — worth reviewing in a future ADR if the pattern persists across the 90-day observation window.
+
+
+## 
+
+**Disclaimer**: This report is produced by the Research Layer for evidence accumulation only. It does not modify Strategy State, Signal, Execution, or Risk logic. Historical statistics are not predictions of future returns.
+

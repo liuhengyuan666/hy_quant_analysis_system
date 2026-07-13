@@ -1,0 +1,30 @@
+﻿{
+    "generated_at":  "2026-07-09T22:25:11",
+    "candidates":  [
+                       {
+                           "id":  "CD-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H20",
+                           "evidence_id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H20",
+                           "status":  "candidate_evidence",
+                           "positive_ratio":  0.857,
+                           "window":  "2026-04-01 ~ 2026-07-09",
+                           "condition":  "stretch-extreme-crowding-momentum",
+                           "horizon":  20,
+                           "occurrences":  21,
+                           "scope":  "global",
+                           "attribution_status":  "pending"
+                       },
+                       {
+                           "id":  "CD-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H60",
+                           "evidence_id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H60",
+                           "status":  "candidate_evidence",
+                           "positive_ratio":  0.16699999999999998,
+                           "window":  "2026-04-01 ~ 2026-07-09",
+                           "condition":  "stretch-extreme-crowding-momentum",
+                           "horizon":  60,
+                           "occurrences":  18,
+                           "scope":  "global",
+                           "attribution_status":  "pending"
+                       }
+                   ],
+    "schema_version":  "v1"
+}
