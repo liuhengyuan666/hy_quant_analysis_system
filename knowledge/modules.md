@@ -5,13 +5,17 @@
 ## 1. 物理目录树大纲
 ```text
 rust-quant-analysis-system/
+├── .cargo/               # Rust构建配置（Windows栈大小等）
+├── .omo/                 # Opencode运行时配置
+├── .opencode/            # Opencode技能配置（knowledgeguard等）
+├── .sisyphus/            # Sisyphus运行时配置
 ├── apps/
 │   ├── cli/              # CLI应用程序（quant-cli）
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
 ├── crates/               # 核心库crate（25个物理目录；22个在workspace中，3个未加入：report-builder, reporting, research-validation）
-│   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 7 helper modules）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 8 helper modules，含V8 workspace）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块；V7新增 confirmation/recovery/calibration/consensus）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
@@ -59,14 +63,18 @@ rust-quant-analysis-system/
 │   ├── product.md        # 产品定义（MemGuard维护）
 │   ├── structure.md      # 结构定义（MemGuard维护）
 │   ├── tasks_archive.md  # 任务归档
-│   └── tech.md           # 技术约束（MemGuard维护）
+│   ├── tech.md           # 技术约束（MemGuard维护）
+│   └── tests/            # 测试用例/压力测试记录
 ├── research/             # 研究产物
 │   └── agents/           # Agent相关研究
 ├── reports/             # 生成的报告
+├── screen_pic/           # 项目截图资源（README引用）
 ├── shadow-production/   # Shadow Production 运行期产物（divergence log、kill criteria 证据等）
 ├── sql/                 # SQL脚本
 └── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```
+
+> 说明：`workspace/` 是 V8 运行时生成的研究资产目录（gitignored），由 `app-service::workspace` 管理，CLI 通过 `--save-evidence` 或 Historical Replay 写入。首次运行前可能不存在。
 
 ## 2. 核心模块调用边界与依赖方向
 

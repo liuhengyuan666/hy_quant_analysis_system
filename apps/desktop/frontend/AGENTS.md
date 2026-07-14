@@ -1,13 +1,13 @@
 # FRONTEND KNOWLEDGE BASE
 
 ## OVERVIEW
-Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render tree in main.js, Vue components mounting to #vue-app, shared reactive state via src/store.js (10 properties synced).
+Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render tree in main.js, Vue components mounting to #vue-app, shared reactive state via src/store.js (~20 properties synced).
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
 | Root state + commands | `src/main.js` top section | `state`, `COMMANDS`, load/render orchestration |
-| Shared reactive state | `src/store.js` | Vue reactive store with 10 synced properties |
+| Shared reactive state | `src/store.js` | Vue reactive store with ~20 properties: snapshot, insight, status, selectedScope, selectedReportDate, availableDates, loading, error, exporting, exportResult, refreshStatus, recentReports, llmAnalysis, llmConfig, precloseAnalyzing, executionResults, ... |
 | Vue entry point | `src/main-vue.js` | Vue app creation and mounting |
 | Vue root component | `src/App.vue` | Reads from shared store, renders Vue panels, wires events |
 | Shared helpers | `src/lib/dashboard-utils.js` | formatting, normalization, scope/report helpers |
@@ -21,13 +21,13 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 | i18n infrastructure  | `src/i18n.js`                           | vue-i18n@11 config, setLocale/getLocale |
 | Language toggle      | `src/components/LanguageToggle.vue`     | Top-right corner toggle |
 | Locale files         | `src/locales/zh.json`, `src/locales/en.json` | ~280 translation keys each |
-| Vue components | `src/components/*.vue` | 20+ Vue panels (BreadthPanel, MetricCard, DateSelector, LanguageToggle, etc.) |
+| Vue components | `src/components/*.vue` | 25+ Vue panels (BreadthPanel, MetricCard, DateSelector, LanguageToggle, DataHealthPanel, SignalDetailModal, UsageGuidesPanel, etc.) |
 | Visual system | `src/styles.css` | panel/grid/pill/refresh/report-history styles + Vue CSS variable bridge |
 
 ## CONVENTIONS
 - Plain JS and Vue coexist during progressive migration.
 - `main.js` owns root state, command names, and render scheduling; feature slices own local actions/renderers once extracted.
-- `src/store.js` provides shared reactive state with 10 properties: snapshot, status, selectedScope, selectedReportDate, availableDates, loading, error, exporting, exportResult, refreshStatus.
+- `src/store.js` provides shared reactive state with ~20 properties covering snapshot, insight, status, selectedScope, selectedReportDate, availableDates, loading, error, exporting, exportResult, refreshStatus, recentReports, llmAnalysis/llmConfig, precloseAnalyzing, executionResults, etc.
 - main.js calls sync*ToStore() functions at all state mutation points.
 - Vue components read from store via computed(), never load data independently.
 - Startup and scope changes should use `dashboard_bundle`; historical date changes should stay on `dashboard_snapshot`.
@@ -62,7 +62,6 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 - `main.js` retains root state and global orchestration; all panel rendering migrated to Vue components.
 - Phase 3 complete: all panels migrated to Vue components. i18n implemented with vue-i18n@11 (zh/en).
 - Phase 0 deleted ~700 lines dead code (`features/*.js`, `renderers/*.js`).
-- Store has 10 synced properties covering all Vue component dependencies.
-- App.vue wires all component events (DateSelector, SignalsPanel, RefreshProgress, SignalDetailModal, LanguageToggle).
-- `node_modules/` and `dist/` are generated artifacts.
-- V6 Research Surface is currently CLI-only; desktop UI additions would start here as new Vue panels wired through Tauri commands.
+- Store has ~20 synced properties covering all Vue component dependencies.
+- App.vue wires all component events (DateSelector, SignalsPanel, RefreshProgress, SignalDetailModal, LanguageToggle, TopStatusBar, etc.).
+- V6/V7 Research Surface commands are currently CLI-only; desktop UI additions would start here as new Vue panels wired through Tauri commands.
