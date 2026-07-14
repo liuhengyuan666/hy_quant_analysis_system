@@ -418,26 +418,30 @@ cargo run -p quant-desktop
 如果你选择 CLI，每天收盘后按这个顺序跑即可：
 
 ```bash
-# 1. 检查 gate → 刷新全链路（如需）→ 导出市场日报
-cargo run -p quant-cli -- sync-and-export --scope global
+# 1. 强制刷新全链路（包含 ingest-daily），确保拉取最新数据
+cargo run -p quant-cli -- refresh-all --to <today>
 
-# 2. 数据健康检查 + 报告留档（V7 工作流）
+# 2. 导出市场日报
+cargo run -p quant-cli -- export-report --scope global
+
+# 3. 数据健康检查 + 报告留档（V7 工作流）
 cargo run -p quant-cli -- data-health
 
-# 3. 每日研究观测（聚合 SRD / Stretch / Analytics / Health，V7 工作流）
+# 4. 每日研究观测（聚合 SRD / Stretch / Analytics / Health，V7 工作流）
 cargo run -p quant-cli -- research observe --scope global
 
-# 4. 收盘前执行过滤（V5 Execution Layer / Pattern Library）
+# 5. 收盘前执行过滤（V5 Execution Layer / Pattern Library）
 cargo run -p quant-cli -- preclose-analysis --scope global
 ```
 
 说明：
 
-- `sync-and-export` 是 V3 推荐默认路径：一键完成 gate 检查、全链路刷新、导出日报。
-- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要和 Markdown 报告。
+- `refresh-all` 会按正确顺序执行 `ingest → indicators → macro → rotation → strategy → signals → backtests`，并尝试拉取 `<today>` 的最新数据。只要数据源已更新，就能把最新日历日数据刷入库。
+- `export-report` 导出 `reports/daily-report-global-{date}.md`。若前面某个 stage lagging，会 fail-loud，需要先跑 `explain-latest-gate` 排查。
+- `data-health` 合并 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要和 Markdown 报告。
 - `research observe` 聚合 `research-srd` + `research-stretch` + `research analytics` + `check-data-health`，输出到 `reports/research-observe-global-{date}.md`。
 - `preclose-analysis` 只回答「今天买不买」，不回答「买什么」；在 `signal ≥ Buy` 且 `state ≠ NO_TRADE` 的候选上运行 Pattern Library 过滤。
-- 所有底层命令（`check-data-health`、`export-data-health-report`、`research-srd`、`research-stretch` 等）均保留不变。
+- 如果某天只是想基于「已有数据」快速导出报告，可以临时用 `cargo run -p quant-cli -- sync-and-export --scope global` 代替第 1、2 步；但它不会主动拉取新数据。
 
 如果你日常主要使用桌面端，更推荐的实际顺序是：
 
@@ -453,50 +457,26 @@ cargo run -p quant-cli -- preclose-analysis --scope global
 > **这组命令必须按顺序执行**，不能倒序或跳过中间阶段，否则 `export-report` 会因 latest gate 落后而被拒绝。
 
 ```bash
-# 1. 拉取行情
-cargo run -p quant-cli -- ingest-daily --from 2026-06-01 --to 2026-06-05
+# 1. 强制刷新全链路（包含 ingest-daily），确保拉取最新数据
+cargo run -p quant-cli -- refresh-all --to <today>
 
-# 2. 计算技术指标
-cargo run -p quant-cli -- compute-indicators
+# 2. 导出市场日报
+cargo run -p quant-cli -- export-report --scope global
 
-# 3. 计算宏观与市场环境（同时重建 macro / regime / environment / strategy_state）
-cargo run -p quant-cli -- compute-macro --from 2026-06-01 --to 2026-06-05
-
-# 4. 计算轮动强弱
-cargo run -p quant-cli -- compute-rotation
-
-# 5. 计算策略偏好
-cargo run -p quant-cli -- compute-strategy-preferences
-
-# 6. 生成最终信号
-cargo run -p quant-cli -- compute-signals
-
-# 7. 检查各阶段日期是否推进
-cargo run -p quant-cli -- pipeline-dates
-
-# 8. 数据健康检查（检查 + 导出报告，V7 工作流）
+# 3. 数据健康检查 + 报告（V7 工作流）
 cargo run -p quant-cli -- data-health
 
-# 9. 查看 dashboard
-cargo run -p quant-cli -- dashboard-snapshot
-
-# 10. 导出日报（若前面有阶段 lagging，会 fail-loud）
-cargo run -p quant-cli -- export-report
-
-# 11. 每日研究速览（V7 工作流）
+# 4. 每日研究速览（V7 工作流）
 cargo run -p quant-cli -- research observe --scope global
 ```
 
 补充说明：
 
-- `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
-- 如果 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，优先单独重跑一次 `compute-signals`
-- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要与 Markdown 报告
-- 如需单独检查（不导出报告），仍可运行 `check-data-health`；如需单独导出报告，仍可运行 `export-data-health-report`
-- 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
-- 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
-- `GLOBAL / CN / HK` 的 dashboard/report/strategy/signal/backtest 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化；signal 和 backtest 均携带显式 provenance 字段（`analysis_scope`、`regime_basis_scope`、`matches current snapshot`）
-- **默认 `export-report` 现在会在 latest gate 落后时直接失败，不再静默导出旧日期日报；如果确实要导出历史日报，请显式传 `--date YYYY-MM-DD`**
+- `refresh-all` 会按正确顺序执行 `ingest → indicators → macro → rotation → strategy → signals → backtests`，并尝试拉取 `<today>` 的最新数据。只要数据源已更新，就能把最新日历日数据刷入库。
+- `export-report` 导出 `reports/daily-report-global-{date}.md`。若前面某个 stage lagging，会 fail-loud。
+- `data-health` 合并 `check-data-health` 与 `export-data-health-report`，同时输出终端 JSON 摘要与 Markdown 报告。
+- `research observe` 聚合 SRD / Stretch / Analytics / Health 输出 Markdown 报告。
+- 如果只是想基于已有数据快速导出，可临时用 `sync-and-export` 代替第 1、2 步，但它不会主动拉取新数据。
 
 ---
 
