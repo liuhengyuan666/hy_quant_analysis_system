@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use app_service::{AppContext, ReportScope};
 use chrono::NaiveDate;
-use execution_replay::{ValidationReportFormatter, ValidationFormatter};
+use execution_replay::{ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter};
 use std::path::PathBuf;
 
 /// V8 Execution Platform Validation CLI — single historical case replay.
@@ -103,4 +103,39 @@ fn format_candidates_markdown(candidates: &[execution_replay::ValidationCandidat
     }
 
     lines.join("\n")
+}
+
+/// V8 Execution Platform — compute Execution Statistics over a set of records.
+///
+/// Supports two input paths:
+/// - A Golden Suite file (`--suite`), treated as a Representative Sample.
+/// - A historical date range (`--from`, `--to`, `--scope`), treated as the Full Population.
+///
+/// Output is either JSON or Markdown and contains only empirical facts; no
+/// calibration conclusions or recommendations.
+pub fn handle_execution_statistics(
+    context: &AppContext,
+    suite_path: Option<PathBuf>,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    scope: Option<ReportScope>,
+    decision_filter: Option<String>,
+    output: String,
+) -> Result<()> {
+    let stats = match suite_path {
+        Some(path) => context.execution_statistics_from_suite(&path)?,
+        None => {
+            let from = from.context("--from required when --suite is not provided")?;
+            let to = to.context("--to required when --suite is not provided")?;
+            let scope = scope.context("--scope required when --suite is not provided")?;
+            context.execution_statistics_from_range(from, to, scope, decision_filter.as_deref())?
+        }
+    };
+
+    let text = match output.to_lowercase().as_str() {
+        "json" => ExecutionStatisticsFormatter::json(&stats),
+        _ => ExecutionStatisticsFormatter::markdown(&stats),
+    };
+    println!("{}", text);
+    Ok(())
 }

@@ -7,6 +7,8 @@ pub mod evaluation;
 pub mod formatter;
 pub mod outcome;
 pub mod runner;
+pub mod statistics;
+pub mod statistics_formatter;
 pub mod validation_suite;
 
 pub use evaluation::RuleBasedEvaluationEngine;
@@ -16,6 +18,12 @@ pub use runner::{
     MockOutcomeResolver, ValidationReportFormatter, ValidationResult, ValidationRunner,
     ValidationSummary,
 };
+pub use statistics::{
+    compute_execution_statistics, AssessmentHistograms, DecisionDistribution,
+    EvidenceFrequency, EvidencePairMatrix, ExecutionStatistics, ExecutionStatisticsMeta,
+    OutcomeBucket, OutcomeMatrix, PriorDistribution,
+};
+pub use statistics_formatter::ExecutionStatisticsFormatter;
 pub use validation_suite::{ValidationCandidate, ValidationCase, ValidationSuite};
 
 /// Convenience helper to resolve and evaluate a single `ExecutionEvent`.

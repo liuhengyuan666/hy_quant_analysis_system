@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+﻿use anyhow::{Context, Result};
 use chrono::NaiveDate;
 use core_domain::AnalysisScope;
 use data_ingestion::load_universe;
@@ -6,8 +6,9 @@ use execution_engine::v2::event::ExecutionEvent;
 use execution_engine::v2::request::{ExecutionMarketView, ExecutionPolicy, ExecutionRequest, QuoteSnapshot};
 use execution_engine::v2::{DefaultExecutionPipeline, ExecutionPipeline};
 use execution_replay::{
-    replay_single, ExecutionResearchRecord, MarketStoreOutcomeResolver, RuleBasedEvaluationEngine,
-    ValidationCandidate, ValidationRunner, ValidationSummary, ValidationSuite,
+    replay_single, compute_execution_statistics, ExecutionResearchRecord, MarketStoreOutcomeResolver,
+    RuleBasedEvaluationEngine, ValidationCandidate, ValidationRunner, ValidationSuite,
+    ValidationSummary,
 };
 use market_store::{
     fetch_daily_bars_for_symbols_in_range, fetch_latest_market_regime_on_or_before,
@@ -32,14 +33,18 @@ fn build_execution_event(
     symbol: &str,
     date: NaiveDate,
     scope: AnalysisScope,
+    strategy_state: Option<core_domain::StrategyStateSnapshot>,
 ) -> Result<ExecutionEvent> {
     let signal = fetch_signal_snapshot_for_symbol(storage, date, symbol, scope)
         .context("failed to fetch signal snapshot")?
         .with_context(|| format!("no signal snapshot for {} on {:?}", symbol, date))?;
 
-    let strategy_state = fetch_latest_strategy_state_on_or_before(storage, date, scope)
-        .context("failed to fetch strategy state")?
-        .with_context(|| format!("no strategy state for {:?} on or before {:?}", scope, date))?;
+    let strategy_state = match strategy_state {
+        Some(s) => s,
+        None => fetch_latest_strategy_state_on_or_before(storage, date, scope)
+            .context("failed to fetch strategy state")?
+            .with_context(|| format!("no strategy state for {:?} on or before {:?}", scope, date))?,
+    };
 
     let bars = fetch_daily_bars_for_symbols_in_range(storage, &[symbol.to_string()], date, date)
         .context("failed to fetch daily bar")?;
@@ -122,7 +127,7 @@ pub fn run_single_execution_replay(
     date: NaiveDate,
     scope: AnalysisScope,
 ) -> Result<ExecutionResearchRecord> {
-    let event = build_execution_event(storage, symbol, date, scope)?;
+    let event = build_execution_event(storage, symbol, date, scope, None)?;
     let resolver = MarketStoreOutcomeResolver::new(storage.clone());
     let evaluator = RuleBasedEvaluationEngine;
     let as_of = date
@@ -195,7 +200,7 @@ impl AppContext {
                 }
             };
 
-            match build_execution_event(&self.storage, &symbol, date, scope_value) {
+            match build_execution_event(&self.storage, &symbol, date, scope_value, Some(state.clone())) {
                 Ok(event) => {
                     let decision_state = format!("{:?}", event.decision.state);
                     if let Some(filter) = decision_filter {
@@ -243,9 +248,123 @@ impl AppContext {
                 "global" => AnalysisScope::Global,
                 other => anyhow::bail!("unknown scope: {}", other),
             };
-            build_execution_event(&self.storage, &case.symbol, case.date, scope)
+            build_execution_event(&self.storage, &case.symbol, case.date, scope, None)
         });
 
         Ok(summary)
+    }
+
+    /// Computes Execution Statistics from a Golden Suite (representative sample).
+    ///
+    /// Runs every case, replays it, and feeds the resulting records into the
+    /// frozen Execution Statistics contract.
+    pub fn execution_statistics_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::ExecutionStatistics> {
+        let suite = ValidationSuite::from_file(suite_path)
+            .with_context(|| format!("failed to load suite from {:?}", suite_path))?;
+
+        let resolver = MarketStoreOutcomeResolver::new(self.storage.clone());
+        let evaluator = RuleBasedEvaluationEngine;
+        let as_of_days = 180;
+
+        let mut records = Vec::new();
+        for case in &suite.cases {
+            let scope = match case.scope.to_lowercase().as_str() {
+                "cn" => AnalysisScope::Cn,
+                "hk" => AnalysisScope::Hk,
+                "global" => AnalysisScope::Global,
+                other => {
+                    anyhow::bail!("unknown scope: {}", other);
+                }
+            };
+            let event = build_execution_event(&self.storage, &case.symbol, case.date, scope, None)?;
+            let as_of = case
+                .date
+                .checked_add_signed(chrono::Duration::days(as_of_days))
+                .context("failed to compute as-of date")?;
+            let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+            records.push(record);
+        }
+
+        Ok(compute_execution_statistics(&records))
+    }
+
+    /// Computes Execution Statistics over a historical date range (full population).
+    ///
+    /// Discovers all validation candidates in the range, replays each one, and
+    /// feeds the resulting records into the frozen Execution Statistics contract.
+    pub fn execution_statistics_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::ExecutionStatistics> {
+        let scope_value = match scope {
+            ReportScope::Global => AnalysisScope::Global,
+            ReportScope::Cn => AnalysisScope::Cn,
+            ReportScope::Hk => AnalysisScope::Hk,
+        };
+
+        let universe = load_universe(&self.storage.universe_abspath()?)?;
+        let symbols: Vec<String> = universe
+            .into_iter()
+            .filter(|instrument| instrument.enabled && instrument_in_scope(instrument, scope))
+            .map(|instrument| instrument.symbol)
+            .collect();
+
+        let signals = fetch_signal_snapshots_for_range_with_scope(&self.storage, scope_value, from, to)?;
+        let mut records = Vec::new();
+        let mut state_cache: BTreeMap<NaiveDate, core_domain::StrategyStateSnapshot> = BTreeMap::new();
+
+        let resolver = MarketStoreOutcomeResolver::new(self.storage.clone());
+        let evaluator = RuleBasedEvaluationEngine;
+        let as_of_days = 180;
+
+        for signal in signals {
+            if !symbols.contains(&signal.symbol) {
+                continue;
+            }
+
+            let date = signal.date;
+            let symbol = signal.symbol.clone();
+
+            let state = match state_cache.get(&date) {
+                Some(s) => s.clone(),
+                None => match fetch_latest_strategy_state_on_or_before(&self.storage, date, scope_value)? {
+                    Some(s) => {
+                        state_cache.insert(date, s.clone());
+                        s
+                    }
+                    None => continue,
+                },
+            };
+
+            let event = match build_execution_event(&self.storage, &symbol, date, scope_value, Some(state)) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            if let Some(filter) = decision_filter {
+                let decision_state = format!("{:?}", event.decision.state);
+                if !decision_state.eq_ignore_ascii_case(filter) {
+                    continue;
+                }
+            }
+
+            let as_of = date
+                .checked_add_signed(chrono::Duration::days(as_of_days))
+                .context("failed to compute as-of date")?;
+            let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+            records.push(record);
+        }
+
+        let mut stats = compute_execution_statistics(&records);
+        stats.meta.scope = Some(format!("{:?}", scope));
+        stats.meta.from_date = Some(from);
+        stats.meta.to_date = Some(to);
+        Ok(stats)
     }
 }
