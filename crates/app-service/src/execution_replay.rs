@@ -53,6 +53,24 @@ fn build_execution_event(
         .next()
         .with_context(|| format!("no daily bar for {} on {:?}", symbol, date))?;
 
+    // Fetch a short lookback to find the previous close for feature extraction.
+    let prev_close = if let Some(lookback_start) = date.checked_sub_signed(chrono::Duration::days(5)) {
+        let prev_bars = fetch_daily_bars_for_symbols_in_range(
+            storage,
+            &[symbol.to_string()],
+            lookback_start,
+            date.checked_sub_signed(chrono::Duration::days(1)).unwrap_or(lookback_start),
+        )
+        .context("failed to fetch previous daily bar")?;
+        prev_bars
+            .into_iter()
+            .last()
+            .map(|b| b.close)
+            .unwrap_or(bar.close)
+    } else {
+        bar.close
+    };
+
     let quote = QuoteSnapshot {
         symbol: bar.symbol.clone(),
         ts: chrono::Utc::now(), // historical replay uses current timestamp for artifact provenance
@@ -61,7 +79,7 @@ fn build_execution_event(
         low: bar.low,
         close: bar.close,
         volume: bar.volume,
-        prev_close: bar.close, // TODO: fetch previous close
+        prev_close,
     };
 
     // Fetch the real market regime label from the Research/Regime layer.
@@ -136,6 +154,109 @@ pub fn run_single_execution_replay(
 
     replay_single(&resolver, &evaluator, &event, as_of)
         .context("replay failed")
+}
+
+/// Loads a suite of cases and replays each into an `ExecutionResearchRecord`.
+fn load_records_from_suite(
+    storage: &StorageConfig,
+    suite_path: &std::path::Path,
+) -> Result<Vec<ExecutionResearchRecord>> {
+    let suite = ValidationSuite::from_file(suite_path)
+        .with_context(|| format!("failed to load suite from {:?}", suite_path))?;
+
+    let resolver = MarketStoreOutcomeResolver::new(storage.clone());
+    let evaluator = RuleBasedEvaluationEngine;
+    let as_of_days = 180;
+
+    let mut records = Vec::new();
+    for case in &suite.cases {
+        let scope = match case.scope.to_lowercase().as_str() {
+            "cn" => AnalysisScope::Cn,
+            "hk" => AnalysisScope::Hk,
+            "global" => AnalysisScope::Global,
+            other => anyhow::bail!("unknown scope: {}", other),
+        };
+        let event = build_execution_event(storage, &case.symbol, case.date, scope, None)?;
+        let as_of = case
+            .date
+            .checked_add_signed(chrono::Duration::days(as_of_days))
+            .context("failed to compute as-of date")?;
+        let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+        records.push(record);
+    }
+
+    Ok(records)
+}
+
+/// Loads all validation candidates in a date range and replays each into an
+/// `ExecutionResearchRecord`.
+fn load_records_from_range(
+    storage: &StorageConfig,
+    from: NaiveDate,
+    to: NaiveDate,
+    scope: ReportScope,
+    decision_filter: Option<&str>,
+) -> Result<Vec<ExecutionResearchRecord>> {
+    let scope_value = match scope {
+        ReportScope::Global => AnalysisScope::Global,
+        ReportScope::Cn => AnalysisScope::Cn,
+        ReportScope::Hk => AnalysisScope::Hk,
+    };
+
+    let universe = load_universe(&storage.universe_abspath()?)?;
+    let symbols: Vec<String> = universe
+        .into_iter()
+        .filter(|instrument| instrument.enabled && instrument_in_scope(instrument, scope))
+        .map(|instrument| instrument.symbol)
+        .collect();
+
+    let signals = fetch_signal_snapshots_for_range_with_scope(storage, scope_value, from, to)?;
+    let mut records = Vec::new();
+    let mut state_cache: BTreeMap<NaiveDate, core_domain::StrategyStateSnapshot> = BTreeMap::new();
+
+    let resolver = MarketStoreOutcomeResolver::new(storage.clone());
+    let evaluator = RuleBasedEvaluationEngine;
+    let as_of_days = 180;
+
+    for signal in signals {
+        if !symbols.contains(&signal.symbol) {
+            continue;
+        }
+
+        let date = signal.date;
+        let symbol = signal.symbol.clone();
+
+        let state = match state_cache.get(&date) {
+            Some(s) => s.clone(),
+            None => match fetch_latest_strategy_state_on_or_before(storage, date, scope_value)? {
+                Some(s) => {
+                    state_cache.insert(date, s.clone());
+                    s
+                }
+                None => continue,
+            },
+        };
+
+        let event = match build_execution_event(storage, &symbol, date, scope_value, Some(state)) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        if let Some(filter) = decision_filter {
+            let decision_state = format!("{:?}", event.decision.state);
+            if !decision_state.eq_ignore_ascii_case(filter) {
+                continue;
+            }
+        }
+
+        let as_of = date
+            .checked_add_signed(chrono::Duration::days(as_of_days))
+            .context("failed to compute as-of date")?;
+        let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+        records.push(record);
+    }
+
+    Ok(records)
 }
 
 impl AppContext {
@@ -477,6 +598,54 @@ impl AppContext {
         trace.meta.from_date = Some(from);
         trace.meta.to_date = Some(to);
         Ok(trace)
+    }
+
+    /// 2A-4A: Distribution Coverage Review.
+    ///
+    /// Analyzes intraday features to understand whether the current Distribution
+    /// observation condition is too strict or too loose. No pipeline code is modified.
+    pub fn execution_distribution_coverage_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::DistributionCoverageReview> {
+        let records = load_records_from_suite(&self.storage, suite_path)?;
+        Ok(execution_replay::compute_distribution_coverage_review(&records))
+    }
+
+    /// 2A-4A: Distribution Coverage Review over a historical date range.
+    pub fn execution_distribution_coverage_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::DistributionCoverageReview> {
+        let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
+        Ok(execution_replay::compute_distribution_coverage_review(&records))
+    }
+
+    /// 2A-4B: Decision Margin Review.
+    ///
+    /// Analyzes how `assessment.dominant_direction` maps to final decisions for
+    /// each EvidenceKind. No pipeline code is modified.
+    pub fn execution_decision_margin_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::DecisionMarginReview> {
+        let records = load_records_from_suite(&self.storage, suite_path)?;
+        Ok(execution_replay::compute_decision_margin_review(&records))
+    }
+
+    /// 2A-4B: Decision Margin Review over a historical date range.
+    pub fn execution_decision_margin_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::DecisionMarginReview> {
+        let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
+        Ok(execution_replay::compute_decision_margin_review(&records))
     }
 }
 

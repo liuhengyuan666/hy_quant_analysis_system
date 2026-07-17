@@ -824,6 +824,36 @@ enum Command {
         #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
         output: String,
     },
+    /// 2A-4A: Distribution Coverage Review — analyze Distribution observation condition coverage
+    ExecutionDistributionCoverage {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-4B: Decision Margin Review — analyze Assessment direction → Decision mapping
+    ExecutionDecisionMargin {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
     /// TASK-071B: State lead/lag analysis (before/during/after episode returns)
     AuditLeadLag {
         #[arg(long)]
@@ -977,6 +1007,12 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         }
         Command::ExecutionEvidenceTrace { suite, from, to, scope, decision, output } => {
             commands::execution_replay::handle_execution_evidence_trace(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDistributionCoverage { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_distribution_coverage(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDecisionMargin { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_decision_margin(&context, suite, from, to, scope.map(Into::into), decision, output)?
         }
         Command::AuditLeadLag { from, to } => commands::audit::handle_audit_lead_lag(&context, from, to)?,
     }

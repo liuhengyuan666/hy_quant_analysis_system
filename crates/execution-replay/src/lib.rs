@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use execution_engine::v2::event::ExecutionEvent;
 
+pub mod decision_margin;
+pub mod decision_margin_formatter;
+pub mod distribution_coverage;
+pub mod distribution_coverage_formatter;
 pub mod evaluation;
 pub mod evidence_trace;
 pub mod evidence_trace_formatter;
@@ -13,6 +17,15 @@ pub mod statistics;
 pub mod statistics_formatter;
 pub mod validation_suite;
 
+pub use decision_margin::{
+    compute_decision_margin_review, DecisionMarginReview, DirectionBucket, EvidenceDecisionProfile,
+};
+pub use distribution_coverage::{
+    compute_distribution_coverage_review, DistributionConditionCoverage, DistributionCoverageReview,
+    PercentileSummary,
+};
+pub use decision_margin_formatter::DecisionMarginFormatter;
+pub use distribution_coverage_formatter::DistributionCoverageFormatter;
 pub use evaluation::RuleBasedEvaluationEngine;
 pub use evidence_trace::{compute_evidence_trace, EvidenceTrace, EvidenceTraceMeta, EvidenceTraceRow};
 pub use evidence_trace_formatter::EvidenceTraceFormatter;
