@@ -750,3 +750,75 @@ V8 produces durable assets of different kinds (Evidence, Snapshot, etc.). They n
 All Research Assets use a single identity format RA-XXXXXX (6 uppercase alphanumeric characters). Asset type is encoded in metadata via AssetKind (Evidence, Snapshot, etc.). Existing EV- and SN- prefixed assets are grandfathered but new assets no longer use those prefixes.
 
 **Tags:** v8, research-asset, identity, registry, ra-xxxxxx, asset-kind
+
+## ADR-082: Execution Platform Architecture
+
+**Status:** Accepted
+
+### Context
+V5 Execution Layer remains a rule-based Pattern Library that does not consume the V6/V7 Research Context. Execution decisions are made via short-circuit if-else rules, StrategyState is used as a hard gate, and the layer is isolated from the Research Platform. A new Execution Platform is needed as a V8 downstream consumer that unifies with the existing Research Pipeline philosophy.
+
+### Decision
+Introduce an Execution Platform as a V8 downstream consumer with a layered pipeline: Quote → Feature → Observation → Evidence → Assessment → Decision → Replay. Execution consumes ResearchContext via an ExecutionMarketView projection, not by owning it. StrategyState becomes a weighted evidence contributor rather than a hard gate. LLM participates only in the Explanation layer after Decision, never in Decision itself. The platform outputs verifiable facts, not investment advice.
+
+**Tags:** v8, execution-platform, architecture-freeze, pipeline, evidence, llm-boundary
+
+## ADR-083: Execution Evidence Model
+
+**Status:** Accepted
+
+### Context
+Execution Platform needs a unified semantic language to reason about intraday market behavior, research context, and strategy state. The system currently uses different terms across layers (Observation, Reason, Insight) which fragments the consumer interface.
+
+### Decision
+Use Evidence as the unified unit across Research, Execution, and Review layers. An Evidence carries kind, confidence, direction, source, and a typed payload (not serde_json::Value). Intraday Observations are converted into Evidence before assessment. EvidenceKind is semantic (e.g., TrendParticipation, MomentumExpansion, DistributionRisk). EvidencePayload is a typed enum capturing structured metadata per kind. Formatters derive human-readable text from Evidence kind + payload, not from a pre-computed reason string.
+
+**Tags:** v8, execution-platform, evidence, semantic-model
+
+## ADR-084: LLM Boundary in Execution Platform
+
+**Status:** Accepted
+
+### Context
+As LLM capabilities are integrated into the desktop and reporting surfaces, there is a risk that LLM starts to be treated as a decision maker or signal generator. The boundary between deterministic execution and LLM-assisted explanation must be explicitly defined.
+
+### Decision
+Within the Execution Platform, LLM responsibilities are strictly limited to: Explain, Summarize, Compare, Highlight, and Recommend Reading. LLM MUST NOT perform signal generation, strategy decision making, risk evaluation, or execution state determination. All execution states must originate from ExecutionDecision. LLM consumes ExecutionExplanation produced by report-engine, not raw engine internals. This boundary applies across Research, Reporting, and Execution consumers.
+
+**Tags:** v8, execution-platform, llm, boundary
+
+## ADR-090: V8 Execution Platform Phase 1 Complete: Enter Research Calibration
+
+**Status:** Accepted
+
+### Context
+V8 Execution Platform validation results: Golden Suite 80% pass, 9,083 candidate discovery records showing 98.62% Wait, 1.38% BuyNow, 0% Reduce. Root cause is State/Prior evidence overweight, not threshold.
+
+### Decision
+Phase 1 (Architecture/Engineering) is complete. Enter Research Calibration phase. 2A: Execution Analytics, 2B: Research Asset Accumulation, 2C: Calibration, 2D: Bayesian Assessment, 2E: ML Ranking. Immediate priorities: wire real market_regime_label, add Execution Analytics, expand Golden Suite Reduce cases, accumulate ≥100-300 records, defer HK repair.
+
+**Tags:** v8, execution, calibration, research-asset, analytics
+
+## ADR-091: V8 Execution Platform: Architecture Frozen, Enter Research Calibration Phase 2A (with Exit Criteria)
+
+**Status:** Accepted
+
+### Context
+Refinement of ADR-090. V8 Execution Platform validation results show bottleneck shifted from Architecture to Data. Architecture is frozen. Need a Stage Transition ADR with Entry/Exit Criteria.
+
+### Decision
+V8 Execution Platform Architecture is frozen. Future work shifts from architecture optimization to research calibration unless objective evidence indicates architectural deficiencies. Phase 2A: (1) wire real market_regime_label and freeze ExecutionEvent, (2) implement Execution Statistics module, (3) incremental validation 100 -> 1000 -> 9000+, (4) expand Golden Suite only after Evidence Frequency analysis, (5) defer HK repair until CN Calibration done. Entry Criteria (met): Execution Pipeline closed-loop, Replay closed-loop, ExecutionEvent v2.1 frozen, DTOs frozen, Validation CLI complete, Golden Suite established, Discovery Dataset > 9000 records, V5 intact. Exit Criteria (to end Phase 2A): Research Asset >= 300, Execution Statistics Report delivered for 3 rounds, First Calibration Proposal formed, Evidence Frequency Baseline established.
+
+**Tags:** v8, execution, stage-transition, calibration, research-asset, statistics
+
+## ADR-092: Phase 2A Execution Plan: Exit Criteria and Incremental Statistics
+
+**Status:** Accepted
+
+### Context
+Refinement of ADR-091 (Accepted). V8 Execution Platform has entered Phase 2A. User feedback clarifies: Phase 2A is a stage-transition ADR, not a general architecture decision, and requires explicit Exit Criteria and a 6-step sub-phase plan.
+
+### Decision
+Phase 2A is split into 6 sub-steps: 2A-1 wire real market_regime_label and freeze ExecutionEvent; 2A-2 build Execution Statistics module (not 'Analytics'); 2A-3 run 100-record validation; 2A-4 run 1,000-record validation; 2A-5 run 9,000+ full validation; 2A-6 produce Calibration Proposal. Golden Suite expansion should wait until Evidence Frequency analysis shows why Reduce decisions are absent.
+
+**Tags:** v8, execution, phase-2a, calibration, statistics, exit-criteria

@@ -133,6 +133,44 @@
 
 
 
+
+### 2026-07-17
+- [Done] [TASK-115] Architecture Freeze: draft ADR-082 Execution Platform (main ADR covering platform boundary, pipeline, replay, LLM boundary summary, evidence summary)
+- [Done] [TASK-116] Supplement ADR: draft ADR-083 Execution Evidence Model (typed payload, EvidenceKind, Observation→Evidence conversion)
+
+- [Done] [TASK-117] Supplement ADR: draft ADR-084 LLM Boundary in Execution Platform (LLM roles and anti-roles)
+
+- [Done] [TASK-118] DTO Freeze: define ExecutionRequest, ExecutionMarketView, ExecutionPolicy, Evidence, ExecutionAssessment, ExecutionDecision DTOs in Rust
+
+- [Done] [TASK-126] Milestone 1: Execution Pipeline Closed Loop (DTO → Feature → Observation → Evidence → Assessment → Decision) complete with tests and clean compilation
+- [Done] [TASK-127] Architecture Review: verify no God Object, no circular deps, no DTO leakage, no ResearchContext leakage, no Presentation in Domain, no Magic Numbers, Policy boundaries intact before entering Phase 2 (Replay/Explanation/LLM)
+
+- [Done] [TASK-128] ExecutionEvent DTO: define ExecutionEvent as the single source of truth for all downstream consumers (Replay, Research Asset, Report, LLM)
+
+- [Done] [TASK-129] End-to-End Execution Pipeline: compose FeatureExtractor→ObservationEngine→EvidenceBuilder→AssessmentEngine→DecisionEngine into ExecutionEvent
+
+- [Done] [TASK-134] Architecture Gate: confirm ExecutionEvent as Canonical Output, version ExecutionEvent, add Policy hash, move Replay Contract to execution-replay crate
+
+- [Done] [TASK-135] Replay Contract: define ExecutionReplayRecord / ExecutionOutcome / ExecutionEvaluation in execution-replay crate
+
+- [Done] [TASK-136] ADR-085: Execution Evaluation ADR documenting Event → Outcome → Evaluation → Research Asset
+
+- [Done] [TASK-137] OutcomeResolver + EvaluationEngine: implement RuleBasedEvaluationEngine and stub/initial MarketStoreOutcomeResolver
+
+- [Done] [TASK-139] Architecture Gate 2: ExecutionEvent Sufficiency Review + add market_regime_label + bump schema to v2.1
+
+- [Done] [TASK-138] First Replay Validation: run one historical replay pass to verify ExecutionEvent carries enough information for Evaluation
+
+- [Done] [TASK-141] Golden Validation Suite: 10 historical cases covering Decision Boundary + YAML loader + README
+
+- [Done] [TASK-142] 10-Case Manual Review: run Validation CLI for each suite case and verify Acceptance Checklist
+
+- [Done] [TASK-143] First real Golden Suite validation run: 8 PASS, 2 FAIL, root cause identified as State evidence overweight
+
+- [Done] [TASK-144] Expanded validation report: Golden Suite + 9,083 candidate discovery records across CN/Global, identified over-conservatism and zero Reduce decisions
+
+- [Done] [TASK-145] 2A-1 Restore Fact Lineage: wire real market_regime_label from ResearchContext.market_state.label into ExecutionEvent with Unknown fallback, 3 regression tests, ADR-082 Rule-15 added
+
 ## Superseded
 
 ### 2026-07-09
@@ -160,4 +198,21 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
