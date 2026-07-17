@@ -8,6 +8,8 @@
 | Execution Statistics 全量 | `reports/execution-validation/execution_statistics_cn_full_2026-07-17.json` |
 | Evidence Trace 全量 | `reports/execution-validation/evidence_trace_cn_full_2026-07-17.md` |
 | Evidence Trace JSON | `reports/execution-validation/evidence_trace_cn_full_2026-07-17.json` |
+| Distribution Coverage Review | `reports/execution-validation/distribution_coverage_cn_full_2026-07-17.md` |
+| Decision Margin Review | `reports/execution-validation/decision_margin_cn_full_2026-07-17.md` |
 
 > 注意：`reports/` 目录是 gitignored 的运行产物，上述报告文件仅在本地 workspace 中保留。
 
@@ -273,6 +275,8 @@ cargo run -p quant-cli -- execution-statistics \
 
 ## 第一次 Evidence Trace / Funnel（2A-3）结果（2026-07-17）
 
+> **更新说明**：在最初运行 Evidence Trace 后，发现 `build_execution_event` 中 `quote.prev_close` 被写死为 `bar.close`（TODO 占位），导致 `today_return` 全部为 0，盘中观察条件失真。已在 2A-4 启动前修复为真实前收盘价。本表数字为修复后重跑结果。
+
 使用命令：
 
 ```bash
@@ -281,45 +285,223 @@ cargo run -p quant-cli -- execution-evidence-trace \
   --output markdown
 ```
 
-样本：CN 2024-01-01 至 2025-06-30，共 8,616 条 `ExecutionResearchRecord`。
+样本：CN 2024-01-01 至 2025-06-30，共 8,615 条 `ExecutionResearchRecord`。
 
-### 核心发现
+### 核心发现（修复 prev_close 后）
 
 | EvidenceKind | Observation | Obs→Evd | Evidence | Evd→Asm | Assessment | Wait | BuyNow | Reduce |
 |---|---|---|---|---|---|---|---|---|
-| RiskExpansion | 436 | 100% | 436 | 100% | 436 | 97.9% | 2.1% | **0.0%** |
-| Distribution | 0 | — | 0 | — | 0 | — | — | — |
-| MomentumFailure | 0 | — | 0 | — | 0 | — | — | — |
-| LiquidityConfirmation | 0 | — | 0 | — | 0 | — | — | — |
+| RiskExpansion | 440 | 100% | 440 | 100% | 440 | 98.2% | 1.8% | **0.0%** |
+| Distribution | 2,043 | 100% | 2,043 | 100% | 2,043 | 100.0% | 0.0% | **0.0%** |
+| MomentumFailure | 16 | 100% | 16 | 100% | 16 | 100.0% | 0.0% | **0.0%** |
+| MarketAcceptance | 2,470 | 100% | 2,470 | 100% | 2,470 | 95.0% | 5.0% | 0.0% |
+| MomentumExpansion | 2,526 | 100% | 2,526 | 100% | 2,526 | 81.7% | 4.1% | 0.0% |
+| TrendParticipation | 1,779 | 100% | 1,779 | 100% | 1,779 | 94.2% | 5.8% | 0.0% |
 
-### 根因定位
+### 根因定位（更新）
 
-1. **RiskExpansion 并没有死在 Observation → Evidence 层。**
-   - 436 次观察 → 436 条 Evidence（100% 转换）
-   - 436 条 Evidence → 436 次进入 Assessment（100% 保留）
-   - 全部 436 次被归类为 **Conflicting**（方向为 -1.0）
-   - 但决策结果：Wait=427 / BuyNow=9 / Reduce=0
+1. **Distribution 并非死在 Observation 层。**
+   - 修复 `prev_close` 后，2,043 条记录触发了 Distribution 观察（占全部记录 23.7%）。
+   - 2,043 次观察 → 2,043 条 Evidence（100% 转换）。
+   - 2,043 条 Evidence → 2,043 次进入 Assessment（100% 保留），全部被归类为 **Conflicting**。
+   - 但决策结果：Wait=2,043 / BuyNow=0 / Reduce=0。
 
-2. **Distribution 死在 Observation 层。**
-   - 8,616 条记录中没有任何 Distribution 观察。
-   - 因此 Distribution 根本没有机会进入 Evidence → Assessment → Decision。
+2. **RiskExpansion 同样死在 Assessment → Decision。**
+   - 440 次观察 → 440 条 Evidence → 440 次 Assessment，全部 Conflicting。
+   - 决策结果：Wait=432 / BuyNow=8 / Reduce=0。
+
+3. **MomentumFailure 数量极少。**
+   - 仅 16 条，同样全部 Conflicting → Wait，未产生 Reduce。
+
+### 结论（更新）
+
+**Reduce 为 0 的根因不在 Observation 层，而在 Assessment → Decision 层。**
+
+- Observation 层：在真实前收盘价基础上，Distribution 能够正常触发，条件转换率 100%。
+- Assessment 层：这些 bearish 证据被正确识别为 Conflicting（方向 -1.0）。
+- Decision 层：尽管存在大量 bearish Assessment，系统从未输出 Reduce。
+
+因此，下一步需要重点审查 **Decision 层** 的阈值、confidence/consensus 门槛、State 证据权重，而不是调整 Observation 条件。
+
+### 修复 `prev_close` 的代码变更
+
+- 文件：`crates/app-service/src/execution_replay.rs`
+- 变更：在 `build_execution_event` 中，从 `market-store` 拉取当前日期前最近一个交易日的收盘价作为 `quote.prev_close`，不再使用 `bar.close` 占位。
+- 影响：所有依赖 `today_return` 的盘中观察（Distribution、FailedBreakout、BreakoutAttempt 等）恢复为真实数据。
+- 注意：`volume_ma20` 仍为 `1.0` 占位，因此 `volume_ratio` 当前为绝对成交量而非比值；这是 Distribution Coverage Review 中需要特别说明的限制。
+
+## 2A-4A: Distribution Coverage Review（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-distribution-coverage \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,615 条 `ExecutionResearchRecord`。
+
+### 特征百分位
+
+| Feature | Count | Min | P10 | P25 | P50 | P75 | P90 | P95 | Max | Mean |
+|---------|------:|----:|----:|----:|----:|----:|----:|----:|----:|-----:|
+| close_position | 8,615 | 0.000 | 0.048 | 0.190 | 0.492 | 0.800 | 0.955 | 1.000 | 1.000 | 0.494 |
+| volume_ratio | 8,615 | 61,863 | 763,402 | 2,223,551 | 7,807,645 | 83,677,504 | 214,638,218 | 309,008,444 | 1,313,460,195 | 65,301,695 |
+| today_return | 8,615 | -0.133 | -0.019 | -0.009 | 0.000 | 0.008 | 0.020 | 0.030 | 0.179 | 0.000 |
+
+### 条件覆盖统计
+
+| 条件 | 满足记录数 | 占全部记录 | 占下跌日 |
+|---|---:|---:|---:|
+| `today_return < 0.0` | 4,252 | 49.4% | 100% |
+| 下跌日 + `close_position < 0.2` | 2,042 | 23.7% | 48.0% |
+| 下跌日 + `volume_ratio > 1.5` | 4,252 | 49.4% | 100% |
+| **满足全部三个条件** | **2,042** | **23.7%** | **48.0%** |
+| 实际产生 Distribution 观察 | 2,042 | 23.7% | 48.0% |
+| 条件覆盖率 | 100% | — | — |
 
 ### 结论
 
-**Reduce 为 0 是两层原因叠加：**
+1. **Distribution 条件转换率 = 100%**：所有满足三个条件的记录都产生了 Distribution 观察。
+2. **Distribution 条件满足率极高**：23.7% 的记录满足条件，48% 的下跌日满足条件。这在直觉上偏宽松，但原因见下方限制。
+3. **条件本身不是严格，而是 `volume_ratio` 被高估**：`volume_ma20` 在 `ExecutionRequest` 中被硬编码为 `1.0`，因此 `volume_ratio` 实际等于绝对成交量（动辄几十万、几百万），远大于 `1.5` 阈值。这导致 `volume_ratio > 1.5` 对所有记录恒成立。
+4. **因此，Distribution 条件实际上退化为 `close_position < 0.2 && today_return < 0.0`**。
 
-- **Observation 层**：Distribution 从未触发。这是 ObservationEngine 的阈值/条件问题。
-- **Decision 层**：RiskExpansion 已经正确到达 Assessment 并被识别为 bearish，但 DecisionEngine 没有把它转换为 Reduce。这是 Decision 规则或 Prior 权重问题。
+### 限制
 
-**所以不能单一地修改 ObservationEngine 或 Policy 阈值。** 需要分别处理：
-
-1. 先修复 Distribution 的 Observation 生成条件，让它能进入 Evidence。
-2. 再调整 RiskExpansion / Distribution 在 Assessment → Decision 中的权重或阈值，使其能产出 Reduce。
+- `volume_ratio` 不是真实比值，而是绝对成交量。在 `volume_ma20` 修复为真实 20 日均量之前，**不能根据当前覆盖率判断条件是否过严或过松**。
+- 即便在当前失真条件下，Distribution 也能被 Observation 层正常触发，说明 Observation 层不是 Reduce=0 的瓶颈。
 
 ### 后续行动
 
-1. 打开 `crates/execution-engine/src/v2/observation.rs`，检查 Distribution 观察的触发条件：`close_position < 0.2 && volume_ratio > 1.5 && today_return < 0.0`。
-2. 找出真实历史中符合派发特征的交易日，验证这些条件是否过严。
-3. 在 RiskExpansion 已触发的 436 条记录中，抽样检查为什么 dominant_direction 没有低于 `reduce_threshold`（-0.3）。
-4. 在以上两步完成之前，**不修改任何阈值或权重**。
-5. 记录这些发现作为下一份 ADR / Root Cause Review 的输入。
+1. 修复 `volume_ma20` 占位，从 `market-store` 拉取真实 20 日成交量均线。
+2. 在真实 `volume_ratio` 下重新运行 Distribution Coverage Review。
+3. 根据真实覆盖率，判断是否需要调整 `close_position` 或 `volume_ratio` 阈值。
+4. 在真实 `volume_ratio` 出来之前，不调整 Observation 条件。
+
+## 2A-4B: Decision Margin Review（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-decision-margin \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,615 条 `ExecutionResearchRecord`。
+
+### 总体：Assessment.dominant_direction → Decision 映射
+
+对每条记录都存在的固定证据（Confirmation / Recovery / Breadth / StrategyState / LeadershipRotation / SignalStrength）：
+
+- 记录总数：8,615
+- 方向为负（`dominant_direction < 0`）且低于 Reduce 阈值（`-0.3`）的记录：152
+- 这些记录中最终为 Reduce 的：0
+- 这些记录中最终为 Wait 的：152
+- **Reduce Recall = 0.0%**
+
+这意味着：**有 152 条记录的 Assessment 已经明确偏向 bearish 并跨过了 Reduce 阈值，但 Decision 层仍然输出 Wait。**
+
+### 关键证据的 Decision Margin
+
+| EvidenceKind | 记录数 | `dominant_direction < -0.3` 记录数 | 最终为 Reduce | 最终为 Wait | Reduce Recall |
+|---|---|---:|---:|---:|---:|
+| Distribution | 2,043 | 91 | 0 | 91 | 0.0% |
+| RiskExpansion | 440 | 84 | 0 | 84 | 0.0% |
+| MarketAcceptance | 2,470 | 0 | 0 | 0 | — |
+| MomentumExpansion | 2,168 | 0 | 0 | 0 | — |
+| TrendParticipation | 1,779 | 0 | 0 | 0 | — |
+| 固定证据 | 8,615 | 152 | 0 | 152 | 0.0% |
+
+### 方向分布直方图（固定证据，全部 8,615 条记录）
+
+| Range | Total | BuyNow | Wait | Reduce |
+|---|--:|--:|--:|--:|
+| [-0.40, -0.30) | 144 | 0 | 144 | 0 |
+| [-0.30, -0.20) | 587 | 0 | 587 | 0 |
+| [-0.20, -0.10) | 1,298 | 0 | 1,298 | 0 |
+| [-0.10, 0.00) | 2,009 | 0 | 2,009 | 0 |
+| [0.00, 0.10) | 1,291 | 0 | 1,291 | 0 |
+| [0.10, 0.20) | 1,144 | 0 | 1,144 | 0 |
+| [0.20, 0.30) | 579 | 0 | 579 | 0 |
+| [0.30, 0.40) | 534 | 0 | 534 | 0 |
+| [0.40, 0.50) | 626 | 0 | 626 | 0 |
+| [0.50, 0.60) | 271 | 61 | 210 | 0 |
+| [0.60, 0.70) | 122 | 61 | 61 | 0 |
+| [0.70, 0.80) | 2 | 2 | 0 | 0 |
+
+### 关键发现
+
+1. **负向方向高度集中在 [-0.10, 0.00) 区间**：2,009 条记录（约 23.3%）的 `dominant_direction` 在 -0.1 ~ 0.0 之间，非常接近中性但没有跨过 Reduce 阈值。这是最常见的 bearish 但不触发 Reduce 的区域。
+2. **没有记录跨到 -0.4 以下**：最 bearish 的区间 `[-0.40, -0.30)` 只有 144 条记录，且全部在 -0.4 以上。系统几乎没有遇到极度 bearish 的共识。
+3. **BuyNow 集中在 [0.50, 0.70)**：124 个 BuyNow 全部来自 `dominant_direction >= 0.5` 的记录，说明 BuyNow 阈值（0.3）和实际分布一致。
+4. **Reduce 阈值附近是问题区域**：144 条在 `[-0.40, -0.30)` 和 587 条在 `[-0.30, -0.20)` 的记录都接近或低于 Reduce 阈值，但没有任何一条输出 Reduce。这意味着即使方向足够负，其他条件（confidence、consensus、risk）在抑制 Reduce。
+
+### 为什么跨阈值仍然 Wait？
+
+查看 `execution-engine` 的 `DecisionEngine` 逻辑（顺序判断）：
+
+```rust
+1. if risk == Critical -> Wait
+2. if risk == High -> Wait
+3. if confidence < confidence_threshold -> Wait
+4. if consensus < consensus_threshold -> Wait
+5. if dominant_direction > buy_threshold -> BuyNow
+6. if dominant_direction < reduce_threshold -> Reduce
+7. else -> Wait
+```
+
+因此，即使 `dominant_direction < -0.3`（满足第 6 条），也可能因为前面的 `risk`、`confidence` 或 `consensus` 不满足而提前退出到 Wait。
+
+从 Decision Margin 数据看，这是 **最主要的可能性**：系统在 bearish 方向上积累了足够证据，但 confidence 或 consensus 没有过门。
+
+### 结论
+
+**Reduce = 0 的根因不是 threshold 设置过高，而是系统在 bearish 方向上无法同时满足 confidence/consensus 门槛。**
+
+- 如果降低 `reduce_threshold`（比如从 -0.3 降到 -0.2），会纳入更多 bearish 记录，但这些记录仍然可能因为 confidence/consensus 低而 Wait，不会增加 Reduce。
+- 如果直接强制输出 Reduce，可能会因为 confidence 不足而引入错误 Reduce。
+- 真正的方向是：**检查 bearish 证据的 confidence / consensus 聚合方式，以及 Prior（State）证据对 bearish 方向的抑制权重。**
+
+### 后续行动
+
+1. 抽样 152 条 `missed Reduce` 记录，输出它们的 `confidence`、`consensus`、`risk`、`coverage` 以及各证据的 confidence 和 direction。
+2. 判断是：
+   - `consensus` 太低（证据方向不统一）？
+   - `confidence` 太低（证据本身置信度不够）？
+   - `risk` 被评定为 High/Critical（虽然是 bearish 但风险被判断为不可交易）？
+   - Prior（State）证据太强（DeRisk/NoTrade 的 bearish 权重压倒盘中观察）？
+3. 在以上判断明确之前，不修改任何 threshold、weight 或 policy。
+4. 此发现写入 `docs/v8/adr-095-decision-path-review.md`。
+
+## 2A-4 综合结论
+
+### 已验证的事实
+
+| 问题 | 原假设 | 验证结果 |
+|---|---|---|
+| Distribution 为什么不产生？ | Observation 条件过严 | **否**。修复 `prev_close` 后条件转换率 100%，问题在于 `volume_ma20` 占位导致 `volume_ratio` 失真 |
+| RiskExpansion 为什么不产生 Reduce？ | Threshold 过高 | **否**。有 91~152 条记录跨过了 Reduce 阈值，但 confidence/consensus 或 risk 门槛抑制了 Reduce |
+| Observation 层是瓶颈？ | 可能 | **否**。Observation → Evidence → Assessment 转换率接近 100% |
+| Decision 层是瓶颈？ | 可能 | **是**。大量 bearish Assessment 没有输出 Reduce |
+
+### 下一步不是修改代码，而是继续分析
+
+目前我们已经把问题缩小到 **Decision 层内部**。但 Decision 层内部有三个可能：
+
+1. **confidence / consensus 门槛**：bearish 证据不够统一或不够强。
+2. **risk 评估**：系统把 bearish 市场判断为 High/Critical Risk，从而抑制交易。
+3. **Prior 权重**：StrategyState（DeRisk / NoTrade）的 bearish 方向太强，但 confidence 不高，导致整体 consensus 被压低。
+
+在 2A-5 Calibration Proposal 之前，需要再增加一个 **Confidence/Consensus/Risk 分解 Review**，输出每个 `missed Reduce` 记录的这些指标，才能判断调哪里。
+
+### 当前代码修改记录
+
+| 文件 | 修改 | 原因 |
+|---|---|---|
+| `crates/app-service/src/execution_replay.rs` | `quote.prev_close` 从 `bar.close` 占位改为真实前收盘价 | 否则 `today_return` 恒为 0，所有盘中观察失真，Review 无法进行 |
+| 其他文件 | 无 | 未修改 Observation、Evidence、Assessment、Decision 逻辑或任何 Policy/Threshold |
+
+**未修复的已知占位**：`volume_ma20` 仍为 `1.0`，导致 `volume_ratio` 失真。需要在继续校准前修复。
