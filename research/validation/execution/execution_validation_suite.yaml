@@ -1,0 +1,148 @@
+# Execution Platform V2 Golden Validation Suite
+#
+# This file is the canonical regression dataset for the V2 Execution Platform.
+# Every case is a historical symbol/date that exercises a specific Decision
+# Boundary.  The suite is intentionally small (10 cases) so it can be reviewed
+# manually; once all cases pass, the platform is considered stable enough for
+# larger-scale statistical validation.
+#
+# How to use:
+#   cargo run -p quant-cli -- validate-execution-replay --symbol <symbol> --date <date> --scope <scope> --output explain
+#   cargo run -p quant-cli -- validate-execution-replay --symbol <symbol> --date <date> --scope <scope> --output trace
+#
+# When updating the platform (Observation, Evidence, Assessment, Decision, Policy,
+# or Evaluation rules), re-run the suite and compare results against the
+# Expected Decision and Pattern Type recorded here.
+#
+# NOTE: This suite was populated from real ClickHouse data using:
+#   cargo run -p quant-cli -- find-validation-candidates --from 2024-01-01 --to 2025-06-30 --scope cn
+# Market regime labels are currently projected from the placeholder in
+# app-service/execution_replay.rs and will be refined once ResearchContext is
+# fully wired into the validation path.
+
+suite: execution-platform-v2
+version: "1.0.1"
+description: "Golden regression dataset for Execution Platform V2 validation (populated from real market data)"
+
+schema:
+  id: "permanent case identifier"
+  symbol: "instrument symbol"
+  date: "YYYY-MM-DD"
+  scope: "global|cn|hk"
+  market_regime: "label from ResearchContext.market_state.label"
+  pattern_type: "human-readable pattern class"
+  expected_decision: "BuyNow | Wait | Reduce | Skip"
+  reason: "why this case was selected"
+  validated_by: "Manual | HistoricalStudy | ResearchAsset | StrategyReview"
+  notes: "free-form review notes"
+
+cases:
+  - id: STRONG_TREND-001
+    symbol: "512800"
+    date: "2024-10-16"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "StrongTrend"
+    expected_decision: "BuyNow"
+    reason: "典型确认上涨趋势日：信号强（Buy, 78.9）、状态 FullTrend、风险 Low、置信度 0.70"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. 当前平台实际输出 BuyNow，可作为 PASS 基准。"
+
+  - id: WEAK_TREND-001
+    symbol: "000300"
+    date: "2024-10-08"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "WeakTrend"
+    expected_decision: "Wait"
+    reason: "政策刺激后大幅高开，信号强但状态为 NoTrade，测试 BuyNow/Wait 边界"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. 信号 Buy 但 NoTrade 状态阻止 BuyNow，Decision=Wait。"
+
+  - id: FALSE_BREAKOUT-001
+    symbol: "000688"
+    date: "2024-02-19"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "FalseBreakout"
+    expected_decision: "Wait"
+    reason: "反弹过程中信号为 Reduce 但决策为 Wait，测试假突破/反弹失败边界"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. SignalLabel=Reduce，StrategyState=NoTrade，Decision=Wait。"
+
+  - id: GAP_TOO_HIGH-001
+    symbol: "000300"
+    date: "2024-10-08"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "GapTooHigh"
+    expected_decision: "Wait"
+    reason: "2024-10-08 大幅高开，多数标的跳空远离均线，NoTrade 状态阻止追涨"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. 与 WEAK_TREND-001 为同一日期，但侧重 NoChase 边界。"
+
+  - id: DISTRIBUTION-001
+    symbol: "159995"
+    date: "2024-06-03"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "Distribution"
+    expected_decision: "Reduce"
+    reason: "DeRisk 状态下信号 Reduce，测试派发/减仓边界"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. SignalLabel=Reduce，StrategyState=DeRisk，但当前平台输出 Wait。此案例预计 FAIL，用于评估 NoTrade/DeRisk 证据是否过度抑制 Reduce。"
+
+  - id: PANIC_SELLOFF-001
+    symbol: "512800"
+    date: "2024-01-22"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "PanicSellOff"
+    expected_decision: "Wait"
+    reason: "2024-01-22 恐慌性下跌，策略状态 LeftProbe，测试系统不反向抄底"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. 所有 symbol 均为 Wait，Risk 多为 Medium/High。"
+
+  - id: RECOVERY-001
+    symbol: "000922"
+    date: "2024-02-19"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "Recovery"
+    expected_decision: "BuyNow"
+    reason: "恐慌后反弹日，信号 Buy 但状态 NoTrade，测试从 State 到执行的切换"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. 当前平台输出 Wait（NoTrade 状态）。此案例预计 FAIL，用于评估 NoTrade 是否过度保守。"
+
+  - id: SIDEWAYS-001
+    symbol: "159611"
+    date: "2024-06-03"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "Sideways"
+    expected_decision: "Wait"
+    reason: "DeRisk 状态下信号 Buy 但 Confidence 仅 0.54，无明确方向"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. SignalLabel=Buy，StrategyState=DeRisk，Decision=Wait。"
+
+  - id: LIQUIDITY_COLLAPSE-001
+    symbol: "000698"
+    date: "2024-01-22"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "LiquidityCollapse"
+    expected_decision: "Wait"
+    reason: "恐慌下跌日 Risk 为 High，流动性风险阻止任何买入"
+    validated_by: "HistoricalStudy"
+    notes: "discovered via find-validation-candidates. Risk=High，Decision=Wait。"
+
+  - id: REGIME_SWITCH-001
+    symbol: "000300"
+    date: "2024-02-19"
+    scope: "cn"
+    market_regime: "Bullish"
+    pattern_type: "RegimeSwitch"
+    expected_decision: "Wait"
+    reason: "市场从恐慌底部反弹，状态 NoTrade，方向不确定，是最难的保守边界"
+    validated_by: "StrategyReview"
+    notes: "discovered via find-validation-candidates. 大量 symbol 信号为 Buy/Reduce 混合，但统一输出 Wait。"
