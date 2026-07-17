@@ -846,3 +846,15 @@ After completing 2A-2 Execution Statistics, full CN dataset shows Reduce=0.00% a
 Add Phase 2A-3 Evidence Trace Analysis and 2A-4 Root Cause Review before any Calibration. Implement an EvidenceTrace/EvidenceFunnel module that counts, per EvidenceKind, how many observations survive each pipeline stage. Do NOT modify ObservationEngine, EvidenceBuilder, Assessment, or Decision until the funnel identifies the failing layer.
 
 **Tags:** v8, execution, evidence-trace, phase-2a, root-cause, calibration
+
+## ADR-095: Phase 2A-4 Decision Path Review: Distribution Coverage + Decision Margin
+
+**Status:** Accepted
+
+### Context
+After 2A-3 Evidence Trace found that Reduce=0 is caused by two paths: Distribution Observation=0 and RiskExpansion reaching Assessment but not Reduce. User insists on not modifying code yet; instead perform two focused reviews before any Calibration.
+
+### Decision
+Phase 2A-4 is renamed to Decision Path Review with two sub-reviews: 2A-4A Distribution Coverage Review (analyze feature percentiles and which days should trigger Distribution observation) and 2A-4B Decision Margin Review (analyze dominant_direction histogram and Assessment→Decision mapping for RiskExpansion records). No code modification until both reviews complete.
+
+**Tags:** v8, execution, decision-path-review, distribution-coverage, decision-margin, calibration

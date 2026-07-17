@@ -164,8 +164,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-147",
-      "description": "2A-3 Evidence Trace: implement EvidenceTrace/Funnel module to identify per-stage survival of each EvidenceKind across Pipeline layers, run on full CN dataset to find where Reduce evidence dies",
+      "id": "TASK-148",
+      "description": "2A-4 Decision Path Review: implement Distribution Coverage Review and Decision Margin Review diagnostic tools, run on full CN dataset, document findings without modifying pipeline code",
       "status": "Todo",
       "superseded_by": null
     }
