@@ -822,3 +822,15 @@ Refinement of ADR-091 (Accepted). V8 Execution Platform has entered Phase 2A. Us
 Phase 2A is split into 6 sub-steps: 2A-1 wire real market_regime_label and freeze ExecutionEvent; 2A-2 build Execution Statistics module (not 'Analytics'); 2A-3 run 100-record validation; 2A-4 run 1,000-record validation; 2A-5 run 9,000+ full validation; 2A-6 produce Calibration Proposal. Golden Suite expansion should wait until Evidence Frequency analysis shows why Reduce decisions are absent.
 
 **Tags:** v8, execution, phase-2a, calibration, statistics, exit-criteria
+
+## ADR-093: Execution Statistics Contract Freeze (Phase 2A-2)
+
+**Status:** Accepted
+
+### Context
+V8 Execution Platform Phase 2A-2. Architecture Gate added before implementation.
+
+### Decision
+Execution Statistics contract is frozen to six outputs: EvidenceFrequency, EvidencePairMatrix, DecisionDistribution, PriorDistribution, AssessmentHistograms, OutcomeMatrix. Output is ExecutionStatistics domain object; Formatter handles JSON/Markdown. Sample strategy is Representative -> Expanded -> Full (no hardcoded numbers). No correlation, feature importance, SHAP, ML, or calibration conclusions in Phase 2A-2.
+
+**Tags:** v8, execution, statistics, phase-2a, contract-freeze

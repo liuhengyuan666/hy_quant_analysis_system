@@ -29,6 +29,7 @@ shadow_production_observation
 - [Todo] [TASK-132] Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)
 - [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
 - [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
+- [Todo] [TASK-146] 2A-2 Execution Statistics: implement ExecutionStatistics domain object with six frozen outputs, JSON/Markdown formatter, run Golden Suite / Representative Sample / Full Dataset
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

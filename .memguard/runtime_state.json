@@ -162,6 +162,12 @@
       "description": "Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions",
       "status": "InProgress",
       "superseded_by": null
+    },
+    {
+      "id": "TASK-146",
+      "description": "2A-2 Execution Statistics: implement ExecutionStatistics domain object with six frozen outputs, JSON/Markdown formatter, run Golden Suite / Representative Sample / Full Dataset",
+      "status": "Todo",
+      "superseded_by": null
     }
   ],
   "done_tasks": [],

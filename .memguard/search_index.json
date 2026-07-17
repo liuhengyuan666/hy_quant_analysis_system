@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-17T15:46:17Z",
+    "rebuilt_at": "2026-07-17T15:51:05Z",
     "version": "v4"
   },
   "terms": {
@@ -741,6 +741,10 @@
     "2a-2": [
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -1818,6 +1822,10 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "additions": [
@@ -2830,6 +2838,10 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "architecture-freeze": [
@@ -2997,6 +3009,12 @@
       },
       {
         "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "assessmenthistograms": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -3423,6 +3441,10 @@
       },
       {
         "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -3897,6 +3919,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -4618,6 +4644,10 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "concrete": [
@@ -4998,6 +5028,16 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "contract-freeze": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "contributor": [
@@ -5091,6 +5131,12 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "correlation": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -5649,6 +5695,12 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "decisiondistribution": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -6211,6 +6263,10 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -6918,9 +6974,21 @@
         "type": "adr"
       }
     ],
+    "evidencefrequency": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "evidencekind": [
       {
         "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "evidencepairmatrix": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -7008,6 +7076,10 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "execution-platform": [
@@ -7049,6 +7121,12 @@
     "executionmarketview": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "executionstatistics": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -7115,6 +7193,12 @@
       },
       {
         "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "expanded": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -7485,6 +7569,10 @@
       },
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -7978,6 +8066,10 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "formatters": [
@@ -8113,6 +8205,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -8302,6 +8398,10 @@
       {
         "id": "ADR-091",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "full": [
@@ -8315,6 +8415,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -8413,6 +8517,10 @@
       },
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -8648,6 +8756,12 @@
         "type": "adr"
       }
     ],
+    "handles": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "handling": [
       {
         "id": "ADR-049",
@@ -8691,6 +8805,10 @@
       },
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       },
       {
@@ -9240,6 +9358,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "implemented": [
@@ -9257,6 +9379,12 @@
     "import": [
       {
         "id": "ADR-043",
+        "type": "adr"
+      }
+    ],
+    "importance": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -9355,6 +9483,10 @@
       },
       {
         "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       },
       {
@@ -9864,6 +9996,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -10013,6 +10149,12 @@
       },
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "json/markdown": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -11382,6 +11524,10 @@
       {
         "id": "ADR-090",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "mode": [
@@ -11824,6 +11970,10 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "no-domain-computation": [
@@ -11958,9 +12108,19 @@
         "type": "trap"
       }
     ],
+    "numbers": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "object": [
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -12290,6 +12450,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -12418,6 +12582,12 @@
         "type": "adr"
       }
     ],
+    "outcomematrix": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "outcomeprofile": [
       {
         "id": "ADR-071",
@@ -12444,9 +12614,19 @@
         "type": "adr"
       }
     ],
+    "output": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "outputs": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -12854,11 +13034,19 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "phase-2a": [
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -13017,6 +13205,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -13271,6 +13463,12 @@
     "principle": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "priordistribution": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -14318,6 +14516,12 @@
         "type": "adr"
       }
     ],
+    "representative": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "reproducibility": [
       {
         "id": "ADR-079",
@@ -15110,6 +15314,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "sanitization": [
@@ -15534,6 +15742,12 @@
         "type": "adr"
       }
     ],
+    "shap": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "share": [
       {
         "id": "ADR-080",
@@ -15869,6 +16083,12 @@
     "single-state": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "six": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -16306,6 +16526,10 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "status": [
@@ -16427,6 +16651,10 @@
       },
       {
         "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -17520,6 +17748,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -18495,6 +18727,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       },
       {
