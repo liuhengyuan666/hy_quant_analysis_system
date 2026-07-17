@@ -834,3 +834,15 @@ V8 Execution Platform Phase 2A-2. Architecture Gate added before implementation.
 Execution Statistics contract is frozen to six outputs: EvidenceFrequency, EvidencePairMatrix, DecisionDistribution, PriorDistribution, AssessmentHistograms, OutcomeMatrix. Output is ExecutionStatistics domain object; Formatter handles JSON/Markdown. Sample strategy is Representative -> Expanded -> Full (no hardcoded numbers). No correlation, feature importance, SHAP, ML, or calibration conclusions in Phase 2A-2.
 
 **Tags:** v8, execution, statistics, phase-2a, contract-freeze
+
+## ADR-094: Phase 2A-3/4: Evidence Trace and Root Cause Review Before Calibration
+
+**Status:** Accepted
+
+### Context
+After completing 2A-2 Execution Statistics, full CN dataset shows Reduce=0.00% and RiskExpansion=0.74%. User correctly argues we cannot yet conclude ObservationEngine is too conservative; we need an Evidence Trace/Funnel to determine where each EvidenceKind dies (Observation → Evidence → Assessment → Decision).
+
+### Decision
+Add Phase 2A-3 Evidence Trace Analysis and 2A-4 Root Cause Review before any Calibration. Implement an EvidenceTrace/EvidenceFunnel module that counts, per EvidenceKind, how many observations survive each pipeline stage. Do NOT modify ObservationEngine, EvidenceBuilder, Assessment, or Decision until the funnel identifies the failing layer.
+
+**Tags:** v8, execution, evidence-trace, phase-2a, root-cause, calibration
