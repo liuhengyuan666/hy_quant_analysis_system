@@ -367,4 +367,116 @@ impl AppContext {
         stats.meta.to_date = Some(to);
         Ok(stats)
     }
+
+    /// Computes an Evidence Trace from a Golden Suite (representative sample).
+    ///
+    /// Traces every EvidenceKind through Observation → Evidence → Assessment →
+    /// Decision so engineers can see where a particular evidence signal dies.
+    pub fn execution_evidence_trace_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::EvidenceTrace> {
+        let suite = ValidationSuite::from_file(suite_path)
+            .with_context(|| format!("failed to load suite from {:?}", suite_path))?;
+
+        let resolver = MarketStoreOutcomeResolver::new(self.storage.clone());
+        let evaluator = RuleBasedEvaluationEngine;
+        let as_of_days = 180;
+
+        let mut records = Vec::new();
+        for case in &suite.cases {
+            let scope = match case.scope.to_lowercase().as_str() {
+                "cn" => AnalysisScope::Cn,
+                "hk" => AnalysisScope::Hk,
+                "global" => AnalysisScope::Global,
+                other => {
+                    anyhow::bail!("unknown scope: {}", other);
+                }
+            };
+            let event = build_execution_event(&self.storage, &case.symbol, case.date, scope, None)?;
+            let as_of = case
+                .date
+                .checked_add_signed(chrono::Duration::days(as_of_days))
+                .context("failed to compute as-of date")?;
+            let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+            records.push(record);
+        }
+
+        Ok(execution_replay::compute_evidence_trace(&records))
+    }
+
+    /// Computes an Evidence Trace over a historical date range (full population).
+    pub fn execution_evidence_trace_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::EvidenceTrace> {
+        let scope_value = match scope {
+            ReportScope::Global => AnalysisScope::Global,
+            ReportScope::Cn => AnalysisScope::Cn,
+            ReportScope::Hk => AnalysisScope::Hk,
+        };
+
+        let universe = load_universe(&self.storage.universe_abspath()?)?;
+        let symbols: Vec<String> = universe
+            .into_iter()
+            .filter(|instrument| instrument.enabled && instrument_in_scope(instrument, scope))
+            .map(|instrument| instrument.symbol)
+            .collect();
+
+        let signals = fetch_signal_snapshots_for_range_with_scope(&self.storage, scope_value, from, to)?;
+        let mut records = Vec::new();
+        let mut state_cache: BTreeMap<NaiveDate, core_domain::StrategyStateSnapshot> = BTreeMap::new();
+
+        let resolver = MarketStoreOutcomeResolver::new(self.storage.clone());
+        let evaluator = RuleBasedEvaluationEngine;
+        let as_of_days = 180;
+
+        for signal in signals {
+            if !symbols.contains(&signal.symbol) {
+                continue;
+            }
+
+            let date = signal.date;
+            let symbol = signal.symbol.clone();
+
+            let state = match state_cache.get(&date) {
+                Some(s) => s.clone(),
+                None => match fetch_latest_strategy_state_on_or_before(&self.storage, date, scope_value)? {
+                    Some(s) => {
+                        state_cache.insert(date, s.clone());
+                        s
+                    }
+                    None => continue,
+                },
+            };
+
+            let event = match build_execution_event(&self.storage, &symbol, date, scope_value, Some(state)) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            if let Some(filter) = decision_filter {
+                let decision_state = format!("{:?}", event.decision.state);
+                if !decision_state.eq_ignore_ascii_case(filter) {
+                    continue;
+                }
+            }
+
+            let as_of = date
+                .checked_add_signed(chrono::Duration::days(as_of_days))
+                .context("failed to compute as-of date")?;
+            let record = replay_single(&resolver, &evaluator, &event, as_of)?;
+            records.push(record);
+        }
+
+        let mut trace = execution_replay::compute_evidence_trace(&records);
+        trace.meta.scope = Some(format!("{:?}", scope));
+        trace.meta.from_date = Some(from);
+        trace.meta.to_date = Some(to);
+        Ok(trace)
+    }
 }
+

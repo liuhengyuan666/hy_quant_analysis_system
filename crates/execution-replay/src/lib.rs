@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use execution_engine::v2::event::ExecutionEvent;
 
 pub mod evaluation;
+pub mod evidence_trace;
+pub mod evidence_trace_formatter;
 pub mod formatter;
 pub mod outcome;
 pub mod runner;
@@ -12,6 +14,8 @@ pub mod statistics_formatter;
 pub mod validation_suite;
 
 pub use evaluation::RuleBasedEvaluationEngine;
+pub use evidence_trace::{compute_evidence_trace, EvidenceTrace, EvidenceTraceMeta, EvidenceTraceRow};
+pub use evidence_trace_formatter::EvidenceTraceFormatter;
 pub use formatter::ValidationFormatter;
 pub use outcome::MarketStoreOutcomeResolver;
 pub use runner::{

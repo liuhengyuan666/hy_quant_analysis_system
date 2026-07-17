@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use app_service::{AppContext, ReportScope};
 use chrono::NaiveDate;
-use execution_replay::{ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter};
+use execution_replay::{
+    EvidenceTraceFormatter, ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter,
+};
 use std::path::PathBuf;
 
 /// V8 Execution Platform Validation CLI — single historical case replay.
@@ -135,6 +137,37 @@ pub fn handle_execution_statistics(
     let text = match output.to_lowercase().as_str() {
         "json" => ExecutionStatisticsFormatter::json(&stats),
         _ => ExecutionStatisticsFormatter::markdown(&stats),
+    };
+    println!("{}", text);
+    Ok(())
+}
+
+/// V8 Execution Platform — compute an Evidence Trace over a set of records.
+///
+/// Traces each EvidenceKind through Observation → Evidence → Assessment →
+/// Decision. This is a root-cause tool, not a user-facing trading command.
+pub fn handle_execution_evidence_trace(
+    context: &AppContext,
+    suite_path: Option<PathBuf>,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    scope: Option<ReportScope>,
+    decision_filter: Option<String>,
+    output: String,
+) -> Result<()> {
+    let trace = match suite_path {
+        Some(path) => context.execution_evidence_trace_from_suite(&path)?,
+        None => {
+            let from = from.context("--from required when --suite is not provided")?;
+            let to = to.context("--to required when --suite is not provided")?;
+            let scope = scope.context("--scope required when --suite is not provided")?;
+            context.execution_evidence_trace_from_range(from, to, scope, decision_filter.as_deref())?
+        }
+    };
+
+    let text = match output.to_lowercase().as_str() {
+        "json" => EvidenceTraceFormatter::json(&trace),
+        _ => EvidenceTraceFormatter::markdown(&trace),
     };
     println!("{}", text);
     Ok(())

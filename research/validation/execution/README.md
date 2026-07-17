@@ -1,5 +1,16 @@
 # Execution Platform V2 Golden Validation Suite
 
+## 验证报告（gitignored 运行产物）
+
+| 报告 | 路径 |
+|---|---|
+| Golden Suite 首次运行 | `reports/execution-validation/golden_suite_run_2026-07-17.json` |
+| Execution Statistics 全量 | `reports/execution-validation/execution_statistics_cn_full_2026-07-17.json` |
+| Evidence Trace 全量 | `reports/execution-validation/evidence_trace_cn_full_2026-07-17.md` |
+| Evidence Trace JSON | `reports/execution-validation/evidence_trace_cn_full_2026-07-17.json` |
+
+> 注意：`reports/` 目录是 gitignored 的运行产物，上述报告文件仅在本地 workspace 中保留。
+
 ## 目的
 
 这个目录保存 Execution Platform V2 的**永久回归测试数据集**。它不是临时测试，而是平台每次重大演进（Observation、Evidence、Assessment、Decision、Policy、Evaluation）都需要重新跑一遍的基准。
@@ -259,3 +270,56 @@ cargo run -p quant-cli -- execution-statistics \
 2. 对比手动标注的 Reduce 案例，确认它们是否会产生这些 Evidence。
 3. 在动态 Evidence 充足之前，不调整 Prior 权重或阈值。
 4. 继续积累 Research Asset，目标 ≥300 条，再进入 Calibration。
+
+## 第一次 Evidence Trace / Funnel（2A-3）结果（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-evidence-trace \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,616 条 `ExecutionResearchRecord`。
+
+### 核心发现
+
+| EvidenceKind | Observation | Obs→Evd | Evidence | Evd→Asm | Assessment | Wait | BuyNow | Reduce |
+|---|---|---|---|---|---|---|---|---|
+| RiskExpansion | 436 | 100% | 436 | 100% | 436 | 97.9% | 2.1% | **0.0%** |
+| Distribution | 0 | — | 0 | — | 0 | — | — | — |
+| MomentumFailure | 0 | — | 0 | — | 0 | — | — | — |
+| LiquidityConfirmation | 0 | — | 0 | — | 0 | — | — | — |
+
+### 根因定位
+
+1. **RiskExpansion 并没有死在 Observation → Evidence 层。**
+   - 436 次观察 → 436 条 Evidence（100% 转换）
+   - 436 条 Evidence → 436 次进入 Assessment（100% 保留）
+   - 全部 436 次被归类为 **Conflicting**（方向为 -1.0）
+   - 但决策结果：Wait=427 / BuyNow=9 / Reduce=0
+
+2. **Distribution 死在 Observation 层。**
+   - 8,616 条记录中没有任何 Distribution 观察。
+   - 因此 Distribution 根本没有机会进入 Evidence → Assessment → Decision。
+
+### 结论
+
+**Reduce 为 0 是两层原因叠加：**
+
+- **Observation 层**：Distribution 从未触发。这是 ObservationEngine 的阈值/条件问题。
+- **Decision 层**：RiskExpansion 已经正确到达 Assessment 并被识别为 bearish，但 DecisionEngine 没有把它转换为 Reduce。这是 Decision 规则或 Prior 权重问题。
+
+**所以不能单一地修改 ObservationEngine 或 Policy 阈值。** 需要分别处理：
+
+1. 先修复 Distribution 的 Observation 生成条件，让它能进入 Evidence。
+2. 再调整 RiskExpansion / Distribution 在 Assessment → Decision 中的权重或阈值，使其能产出 Reduce。
+
+### 后续行动
+
+1. 打开 `crates/execution-engine/src/v2/observation.rs`，检查 Distribution 观察的触发条件：`close_position < 0.2 && volume_ratio > 1.5 && today_return < 0.0`。
+2. 找出真实历史中符合派发特征的交易日，验证这些条件是否过严。
+3. 在 RiskExpansion 已触发的 436 条记录中，抽样检查为什么 dominant_direction 没有低于 `reduce_threshold`（-0.3）。
+4. 在以上两步完成之前，**不修改任何阈值或权重**。
+5. 记录这些发现作为下一份 ADR / Root Cause Review 的输入。
