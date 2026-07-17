@@ -1,5 +1,5 @@
 [package]
-name = "execution-engine"
+name = "execution-replay"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,12 +7,12 @@ authors.workspace = true
 
 [dependencies]
 core-domain = { path = "../core-domain" }
+execution-engine = { path = "../execution-engine" }
+market-store = { path = "../market-store" }
 research-context = { path = "../research-context" }
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-uuid = { version = "1.8", features = ["v4"] }
-attohttpc.workspace = true
-thiserror.workspace = true
+serde_yaml.workspace = true
+anyhow.workspace = true
 tracing.workspace = true
-encoding_rs = "0.8"

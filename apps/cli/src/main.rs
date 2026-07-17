@@ -763,6 +763,37 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// V8 Execution Platform Validation — single historical case replay and trace
+    ValidateExecutionReplay {
+        #[arg(long, help = "Symbol to validate")]
+        symbol: String,
+        #[arg(long, help = "Historical date to validate")]
+        date: NaiveDate,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, default_value = "explain", help = "Output format: json, explain, trace, markdown")]
+        output: String,
+    },
+    /// V8 Execution Platform Validation — run a golden suite and produce a pass/fail summary
+    ValidateExecutionSuite {
+        #[arg(long, help = "Path to the validation suite YAML")]
+        suite: std::path::PathBuf,
+        #[arg(long, default_value = "summary", help = "Output format: summary, detail, json")]
+        output: String,
+    },
+    /// V8 Execution Platform Validation — discover historical candidates with complete data
+    FindValidationCandidates {
+        #[arg(long)]
+        from: NaiveDate,
+        #[arg(long)]
+        to: NaiveDate,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
     /// TASK-071B: State lead/lag analysis (before/during/after episode returns)
     AuditLeadLag {
         #[arg(long)]
@@ -902,6 +933,15 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,
         Command::PrecloseAnalysis { scope } => commands::execution::handle_preclose_analysis(&context, scope.into())?,
+        Command::ValidateExecutionReplay { symbol, date, scope, output } => {
+            commands::execution_replay::handle_validate_execution_replay(&context, symbol, date, scope.into(), output)?
+        }
+        Command::ValidateExecutionSuite { suite, output } => {
+            commands::execution_replay::handle_validate_execution_suite(&context, suite, output)?
+        }
+        Command::FindValidationCandidates { from, to, scope, decision, output } => {
+            commands::execution_replay::handle_find_validation_candidates(&context, from, to, scope.into(), decision, output)?
+        }
         Command::AuditLeadLag { from, to } => commands::audit::handle_audit_lead_lag(&context, from, to)?,
     }
     Ok(())
