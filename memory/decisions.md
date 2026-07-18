@@ -858,3 +858,15 @@ After 2A-3 Evidence Trace found that Reduce=0 is caused by two paths: Distributi
 Phase 2A-4 is renamed to Decision Path Review with two sub-reviews: 2A-4A Distribution Coverage Review (analyze feature percentiles and which days should trigger Distribution observation) and 2A-4B Decision Margin Review (analyze dominant_direction histogram and Assessment→Decision mapping for RiskExpansion records). No code modification until both reviews complete.
 
 **Tags:** v8, execution, decision-path-review, distribution-coverage, decision-margin, calibration
+
+## ADR-096: Decision Gate Analysis: Why Bearish Assessments Do Not Become Reduce
+
+**Status:** Accepted
+
+### Context
+2A-4 Decision Margin Review found that 152 records have dominant_direction < -0.3 but all result in Wait. User wants to identify the exact gate in DecisionEngine that blocks Reduce: risk, confidence, or consensus. volume_ma20 fix is deferred.
+
+### Decision
+Phase 2A-4.5 (or 2A-4B) is Decision Gate Analysis. It will enumerate every Reduce candidate (dominant_direction < reduce_threshold) and report which DecisionEngine gate blocks it: RiskCritical, RiskHigh, ConfidenceTooLow, or ConsensusTooLow. Per-record detail included. volume_ma20 remains unfixed for now.
+
+**Tags:** v8, execution, decision-gate, confidence, consensus, risk, reduce

@@ -29,7 +29,7 @@ shadow_production_observation
 - [Todo] [TASK-132] Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)
 - [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
 - [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
-- [Todo] [TASK-148] 2A-4 Decision Path Review: implement Distribution Coverage Review and Decision Margin Review diagnostic tools, run on full CN dataset, document findings without modifying pipeline code
+- [Todo] [TASK-149] 2A-4.5 Decision Gate Analysis: implement tool to enumerate Reduce candidates and report which DecisionEngine gate blocks them, run on full CN dataset, document findings
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。
