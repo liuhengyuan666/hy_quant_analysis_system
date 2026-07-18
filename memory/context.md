@@ -29,7 +29,7 @@ shadow_production_observation
 - [Todo] [TASK-132] Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)
 - [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
 - [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
-- [Todo] [TASK-150] 2A-4C Risk Semantics Review: implement analysis tool for RiskLevel::High records, output evidence composition, decision context, future outcomes, and semantic mapping proposal, run on full CN dataset, document in ADR-097
+- [Todo] [TASK-151] 2A-5 Directional Confidence Calibration Experiment: implement calibration framework, run baseline/C1/C2/C3/asymmetric thresholds on full CN dataset, generate coverage/precision/opportunity cost metrics, document in ADR-098
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

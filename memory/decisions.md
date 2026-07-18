@@ -882,3 +882,15 @@ Decision Gate Analysis found 54 RiskHigh records block Reduce and 98 ConfidenceT
 Phase 2A-4C is Risk Semantics Review. It will analyze RiskLevel::High records to determine: (1) which evidences compose High risk, (2) the distribution of direction/confidence/consensus for High risk records, (3) the forward outcome of RiskHigh+Wait records to validate whether waiting was harmful, and (4) a proposed semantic mapping of EntryRisk vs HoldingRisk. No code changes to RiskLevel or DecisionEngine.
 
 **Tags:** v8, execution, risk-semantics, domain-modeling, entry-risk, holding-risk, reduce
+
+## ADR-098: Directional Confidence Calibration Experiment
+
+**Status:** Accepted
+
+### Context
+Risk Semantics Review (ADR-097) confirmed RiskHigh semantics are correct and the only remaining bottleneck is confidence threshold. Reduce=0 is caused by 98 bearish candidates with confidence 0.45-0.55 being blocked by the 0.6 threshold. User wants to validate threshold changes via replay outcome before making them defaults.
+
+### Decision
+Phase 2A-5 is Directional Confidence Calibration Experiment. It will run DecisionEngine with alternative confidence thresholds (0.55, 0.50, 0.45) and with asymmetric thresholds (buy=0.6, reduce=0.5) on the same records, measuring coverage, precision, and opportunity cost. No changes to DecisionEngine, ExecutionPolicy defaults, or volume_ma20 until experiment results are evaluated.
+
+**Tags:** v8, execution, calibration, confidence, reduce, experiment, replay

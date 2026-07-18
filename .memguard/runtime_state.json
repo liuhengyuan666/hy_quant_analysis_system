@@ -164,8 +164,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-150",
-      "description": "2A-4C Risk Semantics Review: implement analysis tool for RiskLevel::High records, output evidence composition, decision context, future outcomes, and semantic mapping proposal, run on full CN dataset, document in ADR-097",
+      "id": "TASK-151",
+      "description": "2A-5 Directional Confidence Calibration Experiment: implement calibration framework, run baseline/C1/C2/C3/asymmetric thresholds on full CN dataset, generate coverage/precision/opportunity cost metrics, document in ADR-098",
       "status": "Todo",
       "superseded_by": null
     }
