@@ -697,5 +697,81 @@ impl AppContext {
         let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
         Ok(execution_replay::compute_risk_semantics_review(&records))
     }
+
+    /// 2A-5: Directional Confidence Calibration Experiment.
+    ///
+    /// Replays the same set of records under a set of alternative confidence
+    /// thresholds, measuring coverage, precision, and opportunity cost without
+    /// modifying any engine defaults.
+    pub fn execution_calibration_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::CalibrationReview> {
+        let records = load_records_from_suite(&self.storage, suite_path)?;
+        let experiments = default_calibration_experiments();
+        Ok(execution_replay::compute_calibration_review(&records, &experiments))
+    }
+
+    /// 2A-5: Directional Confidence Calibration Experiment over a historical date range.
+    pub fn execution_calibration_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::CalibrationReview> {
+        let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
+        let experiments = default_calibration_experiments();
+        Ok(execution_replay::compute_calibration_review(&records, &experiments))
+    }
+}
+
+fn default_calibration_experiments() -> Vec<execution_replay::CalibrationExperiment> {
+    use execution_replay::{CalibrationExperiment, CalibrationPolicy, CalibrationPolicyKind};
+    vec![
+        CalibrationExperiment {
+            id: "baseline".into(),
+            policy: CalibrationPolicy {
+                name: "Baseline 0.60".into(),
+                description: "Current default confidence threshold.".into(),
+                kind: CalibrationPolicyKind::Uniform { confidence_threshold: 0.6 },
+            },
+        },
+        CalibrationExperiment {
+            id: "c1".into(),
+            policy: CalibrationPolicy {
+                name: "C1: Uniform 0.55".into(),
+                description: "Slightly lower confidence threshold for both sides.".into(),
+                kind: CalibrationPolicyKind::Uniform { confidence_threshold: 0.55 },
+            },
+        },
+        CalibrationExperiment {
+            id: "c2".into(),
+            policy: CalibrationPolicy {
+                name: "C2: Uniform 0.50".into(),
+                description: "Moderately lower confidence threshold.".into(),
+                kind: CalibrationPolicyKind::Uniform { confidence_threshold: 0.50 },
+            },
+        },
+        CalibrationExperiment {
+            id: "c3".into(),
+            policy: CalibrationPolicy {
+                name: "C3: Uniform 0.45".into(),
+                description: "Aggressively lower confidence threshold.".into(),
+                kind: CalibrationPolicyKind::Uniform { confidence_threshold: 0.45 },
+            },
+        },
+        CalibrationExperiment {
+            id: "asymmetric".into(),
+            policy: CalibrationPolicy {
+                name: "Asymmetric 0.60/0.50".into(),
+                description: "Buy-side confidence stays at 0.6, reduce-side confidence drops to 0.5.".into(),
+                kind: CalibrationPolicyKind::Directional {
+                    buy_confidence_threshold: 0.6,
+                    reduce_confidence_threshold: 0.5,
+                },
+            },
+        },
+    ]
 }
 

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use execution_engine::v2::event::ExecutionEvent;
 
+pub mod calibration;
+pub mod calibration_formatter;
 pub mod decision_gate;
 pub mod decision_gate_formatter;
 pub mod decision_margin;
@@ -28,6 +30,11 @@ pub use distribution_coverage::{
     compute_distribution_coverage_review, DistributionConditionCoverage, DistributionCoverageReview,
     PercentileSummary,
 };
+pub use calibration::{
+    compute_calibration_review, CalibrationDecisionRecord, CalibrationExperiment, CalibrationPolicy,
+    CalibrationPolicyKind, CalibrationResult, CalibrationReview,
+};
+pub use calibration_formatter::CalibrationFormatter;
 pub use decision_gate::{
     compute_decision_gate_analysis, DecisionGateAnalysis, DecisionGateRecord, GateFailureReason,
 };
