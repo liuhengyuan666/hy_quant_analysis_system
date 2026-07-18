@@ -12,6 +12,8 @@
 | Decision Margin Review | `reports/execution-validation/decision_margin_cn_full_2026-07-17.md` |
 | Decision Gate Analysis | `reports/execution-validation/decision_gate_cn_full_2026-07-17.md` |
 | Decision Gate JSON | `reports/execution-validation/decision_gate_cn_full_2026-07-17.json` |
+| Risk Semantics Review | `reports/execution-validation/risk_semantics_cn_full_2026-07-17.md` |
+| Risk Semantics JSON | `reports/execution-validation/risk_semantics_cn_full_2026-07-17.json` |
 
 > 注意：`reports/` 目录是 gitignored 的运行产物，上述报告文件仅在本地 workspace 中保留。
 
@@ -598,3 +600,161 @@ dominant_direction < -0.300
 2. 进入 2A-4C **Risk Semantics Review**（用户建议）：专门分析那 54 条 `Risk High` 阻塞的记录，判断 "High Risk" 应该对应 "Wait" 还是 "Reduce"。
 3. 在 Risk Semantics Review 完成后，才进入 2A-5 Calibration Proposal。
 4. 在 Calibration Proposal 中，需要评估是否区分 buy/reduce 的 `confidence_threshold`（例如，buy 保持 0.6，reduce 降至 0.45），而不是单一阈值。
+
+## 2A-4C: Risk Semantics Review（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-risk-semantics \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,616 条 `ExecutionResearchRecord`。
+
+本 Review 目标是回答：**`RiskLevel::High` 到底代表 Entry Risk（不能买）还是 Holding Risk（应该卖）？**
+
+### Table 1: Risk Distribution
+
+| Risk Level | Count | % of Total |
+|------------|------:|-----------:|
+| Low | 288 | 3.3% |
+| Medium | 7,420 | 86.1% |
+| High | 908 | 10.5% |
+
+### Table 2: RiskHigh Evidence Composition
+
+| Evidence | Count | % of High Risk | Proposed Category |
+|----------|------:|---------------:|-------------------|
+| Breadth | 908 | 100.0% | Ambiguous |
+| Confirmation | 908 | 100.0% | Ambiguous |
+| LeadershipRotation | 908 | 100.0% | Entry Risk |
+| Recovery | 908 | 100.0% | Ambiguous |
+| SignalStrength | 908 | 100.0% | Ambiguous |
+| StrategyState | 908 | 100.0% | Ambiguous |
+| Distribution | 774 | 85.2% | **Holding Risk** |
+| RiskExpansion | 211 | 23.2% | **Holding Risk** |
+| MomentumExpansion | 116 | 12.8% | Entry Risk |
+| MarketAcceptance | 64 | 7.0% | Entry Risk |
+| TrendParticipation | 61 | 6.7% | Ambiguous |
+| MomentumFailure | 3 | 0.3% | **Holding Risk** |
+
+### 发现 1：Holding Risk Evidence 确实大量存在
+
+- 85.2% 的 RiskHigh 记录包含 `Distribution`
+- 23.2% 包含 `RiskExpansion`
+- 0.3% 包含 `MomentumFailure`
+
+这说明：从证据组成看，RiskHigh 确实偏向 **Holding Risk** 类型。
+
+### Table 3: RiskHigh Decision Context
+
+- High risk 记录：908
+- Direction：mean=-0.105, p50=-0.133, min=-0.508, max=0.512
+- Confidence：mean=0.498, p50=0.481, p75=0.532, max=0.785
+- Consensus：mean=0.621, p50=0.665, p75=0.701, max=0.736
+- **所有 908 条 High Risk 记录的决策都是 Wait**
+
+### Table 4: RiskHigh Future Outcome Analysis
+
+| Group | Count | T+20 Mean | T+60 Mean | T+120 Mean | Negative T+20 % | MAE Mean | Max Drawdown Mean |
+|-------|------:|----------:|----------:|-----------:|----------------:|---------:|------------------:|
+| High Risk | 908 | 4.72% | 7.30% | 16.32% | 40.1% | -11.49% | -18.14% |
+| High Risk + Wait | 908 | 4.72% | 7.30% | 16.32% | 40.1% | -11.49% | -18.14% |
+| **RiskHigh + Bearish + Wait (blocked Reduce)** | **54** | **6.25%** | **4.86%** | **2.91%** | **29.6%** | **-14.30%** | **-20.00%** |
+| Medium Risk | 7,420 | 1.83% | 7.51% | 16.47% | 47.2% | -10.18% | -15.52% |
+| Low Risk | 288 | -2.41% | -1.34% | 10.35% | 69.8% | -16.09% | -18.62% |
+
+### 发现 2：RiskHigh + Wait 的平均收益为 **正**
+
+- 全部 908 条 High Risk 记录 T+20 平均收益：**+4.72%**
+- 那 54 条 bearish + RiskHigh + Wait 阻塞候选 T+20 平均收益：**+6.25%**
+- 这些 bearish 候选的 negative T+20 比例只有 29.6%，低于 Medium Risk（47.2%）和 Low Risk（69.8%）
+
+这说明：**在当前数据集上，RiskHigh 阻塞 Reduce 是正确的**。这些 bearish 但 High Risk 的日子随后出现了反弹，如果当时 Reduce 会错过这部分收益。
+
+### 发现 3：Low Risk 反而是最差的
+
+- Low Risk 记录 T+20 平均收益：**-2.41%**
+- Negative T+20 比例：**69.8%**
+- 这看起来反常，但说明当前风险评分与后续收益没有简单线性关系，至少在这个 dataset 上。
+
+### Table 5: Risk Semantic Mapping Proposal（不改代码）
+
+| Evidence | Proposed Type | Rationale |
+|----------|---------------|-----------|
+| Distribution | Holding Risk | 派发特征，应触发减仓 |
+| RiskExpansion | Holding Risk | 风险扩张，应触发减仓 |
+| MomentumFailure | Holding Risk | 动量失效，应触发减仓 |
+| MomentumExpansion | Entry Risk | 追涨动量可能过伸 |
+| MarketAcceptance | Entry Risk | 市场过度接受，可能反转 |
+| LeadershipRotation | Entry Risk | 轮动不稳定，开仓风险高 |
+| 其他 | Ambiguous | 依赖方向与上下文 |
+
+### 结论：RiskHigh 语义当前是合理的
+
+尽管从证据组成看，RiskHigh 偏向 Holding Risk，但**事后 outcome 数据显示，RiskHigh + Wait 的平均收益为正**。这说明：
+
+1. 当前 `RiskHigh -> Wait` 的语义在这个数据集上是**保护性的**，不是错误。
+2. 在 CN 2024-2025 这个时间窗口，High Risk 往往发生在短期恐慌/派发后，随后出现反弹。
+3. 因此，**不建议把 RiskHigh 改为直接触发 Reduce**。这会导致追涨杀跌。
+
+### 修正后的阻塞归因
+
+| 阻塞 | 原始判断 | 更新判断 |
+|---|---|---|
+| Confidence 低 | Calibration 问题 | **仍然是主要问题** |
+| Risk High | Domain Modeling 问题 | **当前语义合理，不需要修改** |
+
+### 后续行动
+
+1. 在 `docs/v8/adr-097-risk-semantics-review.md` 中记录本发现。
+2. 不修改 RiskLevel 或 DecisionEngine 语义。
+3. 进入 2A-5 Calibration Proposal 时，重点只考虑 **confidence threshold 校准**，并评估是否对 buy/reduce 使用非对称阈值。
+4. 继续延后修复 `volume_ma20`（与当前 Decision 层问题无关）。
+
+## 2A-4 最终综合结论
+
+### 已完成的所有 Review
+
+| 阶段 | 工具 | 核心结论 |
+|------|------|----------|
+| 2A-4A | Distribution Coverage Review | Distribution 触发率 100%，条件本身不是瓶颈；`volume_ma20` 占位导致 `volume_ratio` 失真 |
+| 2A-4B | Decision Margin Review | 152 条记录跨过 reduce threshold 但没 Reduce，问题在 Decision 层 |
+| 2A-4.5 | Decision Gate Analysis | 64.5% 被 Confidence 阻塞，35.5% 被 RiskHigh 阻塞，0% 被 Consensus 阻塞 |
+| 2A-4C | Risk Semantics Review | RiskHigh 当前语义合理（RiskHigh + Wait 平均收益为正），不是主要问题 |
+
+### 最终归因
+
+**Reduce = 0 的根因几乎完全是 Confidence 阈值 0.6 对 bearish 方向过高。**
+
+- 98 条 bearish 候选因 confidence 0.45~0.55 被阻塞。
+- RiskHigh 阻塞的 54 条候选事后看平均收益为正，不应改为 Reduce。
+- Consensus 不是问题。
+- Observation 不是问题。
+
+### 进入 2A-5 Calibration Proposal 的前提
+
+| 条件 | 状态 |
+|---|---|
+| 明确根因 | ✅ Confidence 阈值对 bearish 过高 |
+| 排除其他解释 | ✅ Risk/Consensus/Observation 都不是主要问题 |
+| 不改代码 | ✅ 只加诊断工具，未改任何决策逻辑 |
+| 数据 bug 处理 | ⚠️ `volume_ma20` 仍占位，但与当前根因无关；可延后 |
+
+### 2A-5 建议方向
+
+1. **非对称 confidence threshold**：BuyNow 保持 0.6，Reduce 降至 0.45~0.5。
+2. **保持 RiskHigh 语义**：不改为触发 Reduce。
+3. **不改 consensus / reduce threshold**：数据不支持。
+4. **Calibration 验证**：必须在这 98 条 confidence-阻塞候选上测试，确保降低 threshold 后 Reduce 行为合理。
+
+**当前代码修改记录**：
+
+| 文件 | 修改 | 原因 |
+|---|---|---|
+| `crates/app-service/src/execution_replay.rs` | `prev_close` 占位改真实前收盘价 | 否则盘中观察失真 |
+| 其他 | 无 | 未改 Observation/Evidence/Assessment/Decision/Policy |
+
+**未修复占位**：`volume_ma20 = 1.0`（延后处理）。
