@@ -10,6 +10,8 @@
 | Evidence Trace JSON | `reports/execution-validation/evidence_trace_cn_full_2026-07-17.json` |
 | Distribution Coverage Review | `reports/execution-validation/distribution_coverage_cn_full_2026-07-17.md` |
 | Decision Margin Review | `reports/execution-validation/decision_margin_cn_full_2026-07-17.md` |
+| Decision Gate Analysis | `reports/execution-validation/decision_gate_cn_full_2026-07-17.md` |
+| Decision Gate JSON | `reports/execution-validation/decision_gate_cn_full_2026-07-17.json` |
 
 > 注意：`reports/` 目录是 gitignored 的运行产物，上述报告文件仅在本地 workspace 中保留。
 
@@ -505,3 +507,94 @@ cargo run -p quant-cli -- execution-decision-margin \
 | 其他文件 | 无 | 未修改 Observation、Evidence、Assessment、Decision 逻辑或任何 Policy/Threshold |
 
 **未修复的已知占位**：`volume_ma20` 仍为 `1.0`，导致 `volume_ratio` 失真。需要在继续校准前修复。
+
+## 2A-4.5 / 2A-4C: Decision Gate Analysis（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-decision-gate \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,616 条 `ExecutionResearchRecord`。
+
+### Decision Gate Funnel
+
+```
+Bearish Assessment Candidates
+dominant_direction < -0.300
+152
+
+  |
+  +-- Risk Critical: 0
+  |
+  +-- Risk High: 54
+  |
+  +-- Confidence too low: 98
+  |
+  +-- Consensus too low: 0
+  |
+  +-- Passed all gates: 0
+  |
+  +-- Final Reduce: 0
+```
+
+### 汇总表
+
+| Gate | Count | % of Candidates |
+|------|------:|----------------:|
+| Risk Critical | 0 | 0.0% |
+| Risk High | 54 | 35.5% |
+| Confidence too low | 98 | 64.5% |
+| Consensus too low | 0 | 0.0% |
+| Passed all gates | 0 | 0.0% |
+| **Final Reduce** | 0 | 0.0% |
+
+### 关键发现
+
+1. **Confidence 是主要阻塞门**：64.5% 的 bearish 候选因 `confidence < 0.6` 被阻塞。
+2. **Risk High 是次要阻塞门**：35.5% 的 bearish 候选因 `risk == High` 被阻塞。
+3. **Consensus 从未阻塞**：所有候选的 `consensus >= 0.5`，说明 bearish 证据方向相对一致。
+4. **没有候选通过所有门**：即使通过了 risk/confidence/consensus 检查，也会进入 `if dominant_direction < reduce_threshold -> Reduce` 分支，但当前数据表明所有候选都被前面的门拦截了。
+
+### 抽查记录特征
+
+前 50 条 `missed Reduce` 记录特征：
+
+| 特征 | 观察 |
+|---|---|
+| StrategyState | 全部为 `NoTrade`（因为 State 按 scope 统一） |
+| dominant_direction | -0.303 ~ -0.388 |
+| confidence | 0.412 ~ 0.558，集中在 0.44~0.53 |
+| consensus | 0.587 ~ 0.674，普遍高于 0.5 门槛 |
+| risk | Medium 或 High |
+
+### 结论
+
+**Reduce = 0 的直接原因：Confidence 阈值 0.6 对 bearish 场景来说过高。**
+
+- 大多数 bearish 候选的 confidence 在 0.45~0.55 之间，距离 0.6 只差 0.05~0.15。
+- Consensus 不是问题，因为所有候选都通过了 0.5 的 consensus 门槛。
+- Risk High 阻塞了 35.5% 的候选，这本身也提出了一个语义问题：为什么 High Risk 不直接对应 Reduce，而是 Wait？
+
+### 对 Calibration 的启示
+
+| 方向 | 可能性 | 依据 |
+|---|---|---|
+| 降低 `confidence_threshold` | 高 | 98 条记录因 confidence 低于 0.6 被阻塞；降低 0.05~0.1 可能释放大量 Reduce |
+| 调整 Risk 语义 | 中 | 54 条记录因 `risk == High` 被阻塞；"High Risk" 当前意味着 "不交易" 而非 "减仓" |
+| 调整 `reduce_threshold` | 低 | 已经有 152 条记录跨过 -0.3；再降低只会增加候选，但不会解决 confidence 阻塞 |
+| 调整 `consensus_threshold` | 极低 | 没有任何候选被 consensus 阻塞 |
+
+### 未修复占位说明
+
+- `volume_ma20 = 1.0` 仍未修复，因此 `volume_ratio` 仍然失真。但本 Review 发现的主要阻塞门是 confidence，与 `volume_ratio` 无直接关系。继续按用户要求延后修复 `volume_ma20`。
+
+### 后续行动
+
+1. 在 `docs/v8/adr-096-decision-gate-analysis.md` 中记录本发现。
+2. 进入 2A-4C **Risk Semantics Review**（用户建议）：专门分析那 54 条 `Risk High` 阻塞的记录，判断 "High Risk" 应该对应 "Wait" 还是 "Reduce"。
+3. 在 Risk Semantics Review 完成后，才进入 2A-5 Calibration Proposal。
+4. 在 Calibration Proposal 中，需要评估是否区分 buy/reduce 的 `confidence_threshold`（例如，buy 保持 0.6，reduce 降至 0.45），而不是单一阈值。
