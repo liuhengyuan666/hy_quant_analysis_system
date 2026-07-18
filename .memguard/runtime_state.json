@@ -164,8 +164,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-149",
-      "description": "2A-4.5 Decision Gate Analysis: implement tool to enumerate Reduce candidates and report which DecisionEngine gate blocks them, run on full CN dataset, document findings",
+      "id": "TASK-150",
+      "description": "2A-4C Risk Semantics Review: implement analysis tool for RiskLevel::High records, output evidence composition, decision context, future outcomes, and semantic mapping proposal, run on full CN dataset, document in ADR-097",
       "status": "Todo",
       "superseded_by": null
     }

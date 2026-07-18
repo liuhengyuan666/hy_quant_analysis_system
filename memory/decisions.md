@@ -870,3 +870,15 @@ Phase 2A-4 is renamed to Decision Path Review with two sub-reviews: 2A-4A Distri
 Phase 2A-4.5 (or 2A-4B) is Decision Gate Analysis. It will enumerate every Reduce candidate (dominant_direction < reduce_threshold) and report which DecisionEngine gate blocks it: RiskCritical, RiskHigh, ConfidenceTooLow, or ConsensusTooLow. Per-record detail included. volume_ma20 remains unfixed for now.
 
 **Tags:** v8, execution, decision-gate, confidence, consensus, risk, reduce
+
+## ADR-097: Risk Semantics Review: Entry Risk vs Holding Risk
+
+**Status:** Accepted
+
+### Context
+Decision Gate Analysis found 54 RiskHigh records block Reduce and 98 ConfidenceTooLow records block Reduce. User wants to understand if RiskLevel::High is a Domain Modeling issue: it currently means 'do not trade' but in bearish contexts it should mean 'exit position'. Need to analyze evidence composition, decision context, and future outcomes of RiskHigh records.
+
+### Decision
+Phase 2A-4C is Risk Semantics Review. It will analyze RiskLevel::High records to determine: (1) which evidences compose High risk, (2) the distribution of direction/confidence/consensus for High risk records, (3) the forward outcome of RiskHigh+Wait records to validate whether waiting was harmful, and (4) a proposed semantic mapping of EntryRisk vs HoldingRisk. No code changes to RiskLevel or DecisionEngine.
+
+**Tags:** v8, execution, risk-semantics, domain-modeling, entry-risk, holding-risk, reduce
