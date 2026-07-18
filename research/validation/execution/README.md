@@ -14,6 +14,8 @@
 | Decision Gate JSON | `reports/execution-validation/decision_gate_cn_full_2026-07-17.json` |
 | Risk Semantics Review | `reports/execution-validation/risk_semantics_cn_full_2026-07-17.md` |
 | Risk Semantics JSON | `reports/execution-validation/risk_semantics_cn_full_2026-07-17.json` |
+| Calibration Experiment | `reports/execution-validation/calibration_cn_full_2026-07-17.md` |
+| Calibration JSON | `reports/execution-validation/calibration_cn_full_2026-07-17.json` |
 
 > 注意：`reports/` 目录是 gitignored 的运行产物，上述报告文件仅在本地 workspace 中保留。
 
@@ -758,3 +760,106 @@ cargo run -p quant-cli -- execution-risk-semantics \
 | 其他 | 无 | 未改 Observation/Evidence/Assessment/Decision/Policy |
 
 **未修复占位**：`volume_ma20 = 1.0`（延后处理）。
+
+## 2A-5: Directional Confidence Calibration Experiment（2026-07-17）
+
+使用命令：
+
+```bash
+cargo run -p quant-cli -- execution-calibration \
+  --scope cn --from 2024-01-01 --to 2025-06-30 \
+  --output markdown
+```
+
+样本：CN 2024-01-01 至 2025-06-30，共 8,616 条 `ExecutionResearchRecord`。
+
+### 实验设计
+
+| 实验 | 置信度阈值 |
+|---|---|
+| Baseline | 0.60 |
+| C1 | 0.55 |
+| C2 | 0.50 |
+| C3 | 0.45 |
+| Asymmetric | buy 0.60 / reduce 0.50 |
+
+所有实验在相同记录上重跑 `DecisionEngine`，仅修改 confidence threshold，不修改其他 policy 或引擎逻辑。
+
+### 结果汇总
+
+| 实验 | Reduce Candidates | Reduce Count | Avoided Loss | Missed Recovery | Precision | Recall | F1 | Avg T+20 (Reduce) |
+|------|------------------:|-------------:|-------------:|----------------:|----------:|-------:|---:|------------------:|
+| Baseline 0.60 | 152 | 0 | 0 | 0 | N/A | 0.0% | N/A | N/A |
+| C1: 0.55 | 152 | 0 | 0 | 0 | N/A | 0.0% | N/A | N/A |
+| C2: 0.50 | 152 | 12 | 2 | 10 | 16.7% | 3.4% | 5.6% | +1.5% |
+| C3: 0.45 | 152 | 65 | 24 | 41 | 36.9% | 40.7% | 38.7% | +2.1% |
+| Asymmetric 0.60/0.50 | 152 | 12 | 2 | 10 | 16.7% | 3.4% | 5.6% | +1.5% |
+
+### 关键发现 1：C1 (0.55) 没有释放任何 Reduce
+
+因为 98 条 confidence-阻塞候选的 confidence 集中在 **0.45~0.55**，所以 0.55 阈值不够低，一条都没有释放。
+
+### 关键发现 2：C2 / Asymmetric 0.60/0.50 只释放 12 条，但精度极低
+
+- 12 个 Reduce 中，只有 2 个真正避免亏损（precision 16.7%）
+- 10 个 Reduce 错过后续反弹（missed recovery 83.3%）
+- 这说明：**把 threshold 降到 0.50 仍然不够，而且会产生大量错误 Reduce**
+
+### 关键发现 3：C3 (0.45) 释放 65 条，但精度仍低于 50%
+
+- 65 个 Reduce 中，24 个正确避免亏损，41 个错过后续反弹
+- Precision 36.9%，Recall 40.7%，F1 38.7%
+- 所有 Reduce 候选的平均 T+20 是 +2.4%，而 Reduce 后的平均 T+20 是 +2.1%，几乎没有差异
+
+### 关键发现 4：Asymmetric 与 C2 完全相同
+
+因为当前 152 条 bearish 候选的 confidence 都 < 0.5，所以把 buy confidence 保持在 0.6 不影响 bearish 侧。只要 reduce confidence 降到 0.5，结果就与 Uniform 0.50 相同。
+
+### 结论：单纯降低 Confidence 阈值不足以产生有效 Reduce
+
+这是本轮最重要的发现：
+
+> **即使把 confidence threshold 降到 0.45，Reduce 的 precision 也只有 37%。超过 60% 的 Reduce 会错过后续反弹。**
+
+这意味着：
+
+1. **Confidence 阈值不是唯一问题**。降低它可以释放 Reduce，但释放出来的 Reduce 质量不高。
+2. **Bearish 证据本身预测力不足**。当前证据（Distribution / RiskExpansion 等）不足以区分「真正需要减仓」和「短期恐慌后反弹」的情况。
+3. **不能简单通过降低 confidence threshold 解决 Reduce=0**。
+
+### 对 2A-5 的修正
+
+之前的假设：
+
+> 降低 confidence threshold 即可释放 Reduce。
+
+现在的结论：
+
+> 降低 confidence threshold 可以释放 Reduce，但会引入大量错误 Reduce。需要先提高 bearish 证据质量，再降低 threshold。
+
+### 后续可能方向
+
+1. **修复 `volume_ma20`**：让 `volume_ratio` 真实化，可能改变 Distribution 触发条件，从而改变 bearish 证据质量。
+2. **Distribution 条件细化**：不仅仅是 `close_position < 0.2 && volume_ratio > 1.5 && today_return < 0`，可能需要加入更多条件（如连续分布、市场结构等）。
+3. **RiskExpansion 条件细化**：当前 RiskExpansion 数量 440 条，可能触发条件过宽或过窄。
+4. **引入新的 Holding Risk Evidence**：例如多日动量崩溃、Breadth 连续恶化等。
+5. **动态 confidence**：根据证据类型或市场状态使用不同的 confidence 要求。
+
+### 2A-5 最终建议
+
+**不降低 confidence threshold。先修复数据/观察质量。**
+
+具体顺序：
+
+1. 修复 `volume_ma20` 占位。
+2. 重新跑 Distribution Coverage Review、Evidence Trace、Decision Gate、Calibration。
+3. 如果 bearish 证据质量提升后，再降低 confidence threshold。
+
+### 当前代码修改记录
+
+| 文件 | 修改 | 原因 |
+|---|---|---|
+| `crates/app-service/src/execution_replay.rs` | `prev_close` 占位改真实前收盘价 | 否则盘中观察失真 |
+| 其他 | 无 | 未改任何决策逻辑或默认值 |
+
+**未修复占位**：`volume_ma20 = 1.0`（现在明确成为下一步）。
