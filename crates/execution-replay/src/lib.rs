@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use execution_engine::v2::event::ExecutionEvent;
 
+pub mod decision_gate;
+pub mod decision_gate_formatter;
 pub mod decision_margin;
 pub mod decision_margin_formatter;
 pub mod distribution_coverage;
@@ -24,6 +26,10 @@ pub use distribution_coverage::{
     compute_distribution_coverage_review, DistributionConditionCoverage, DistributionCoverageReview,
     PercentileSummary,
 };
+pub use decision_gate::{
+    compute_decision_gate_analysis, DecisionGateAnalysis, DecisionGateRecord, GateFailureReason,
+};
+pub use decision_gate_formatter::DecisionGateFormatter;
 pub use decision_margin_formatter::DecisionMarginFormatter;
 pub use distribution_coverage_formatter::DistributionCoverageFormatter;
 pub use evaluation::RuleBasedEvaluationEngine;

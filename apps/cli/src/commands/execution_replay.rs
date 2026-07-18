@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use app_service::{AppContext, ReportScope};
 use chrono::NaiveDate;
 use execution_replay::{
-    DecisionMarginFormatter, DistributionCoverageFormatter, EvidenceTraceFormatter,
-    ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter,
+    DecisionGateFormatter, DecisionMarginFormatter, DistributionCoverageFormatter,
+    EvidenceTraceFormatter, ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter,
 };
 use std::path::PathBuf;
 
@@ -225,6 +225,34 @@ pub fn handle_execution_decision_margin(
     let text = match output.to_lowercase().as_str() {
         "json" => DecisionMarginFormatter::json(&review),
         _ => DecisionMarginFormatter::markdown(&review),
+    };
+    println!("{}", text);
+    Ok(())
+}
+
+/// 2A-4C/2A-4.5: Decision Gate Analysis.
+pub fn handle_execution_decision_gate(
+    context: &AppContext,
+    suite_path: Option<PathBuf>,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    scope: Option<ReportScope>,
+    decision_filter: Option<String>,
+    output: String,
+) -> Result<()> {
+    let analysis = match suite_path {
+        Some(path) => context.execution_decision_gate_from_suite(&path)?,
+        None => {
+            let from = from.context("--from required when --suite is not provided")?;
+            let to = to.context("--to required when --suite is not provided")?;
+            let scope = scope.context("--scope required when --suite is not provided")?;
+            context.execution_decision_gate_from_range(from, to, scope, decision_filter.as_deref())?
+        }
+    };
+
+    let text = match output.to_lowercase().as_str() {
+        "json" => DecisionGateFormatter::json(&analysis),
+        _ => DecisionGateFormatter::markdown(&analysis),
     };
     println!("{}", text);
     Ok(())

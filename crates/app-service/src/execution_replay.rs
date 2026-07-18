@@ -647,5 +647,30 @@ impl AppContext {
         let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
         Ok(execution_replay::compute_decision_margin_review(&records))
     }
+
+    /// 2A-4C/2A-4.5: Decision Gate Analysis.
+    ///
+    /// Enumerates every Reduce candidate (dominant_direction < reduce_threshold)
+    /// and reports which DecisionEngine gate blocked it: RiskCritical, RiskHigh,
+    /// ConfidenceTooLow, or ConsensusTooLow. No pipeline code is modified.
+    pub fn execution_decision_gate_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::DecisionGateAnalysis> {
+        let records = load_records_from_suite(&self.storage, suite_path)?;
+        Ok(execution_replay::compute_decision_gate_analysis(&records))
+    }
+
+    /// 2A-4C/2A-4.5: Decision Gate Analysis over a historical date range.
+    pub fn execution_decision_gate_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::DecisionGateAnalysis> {
+        let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
+        Ok(execution_replay::compute_decision_gate_analysis(&records))
+    }
 }
 

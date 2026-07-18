@@ -854,6 +854,21 @@ enum Command {
         #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
         output: String,
     },
+    /// 2A-4C/2A-4.5: Decision Gate Analysis — why bearish assessments don't become Reduce
+    ExecutionDecisionGate {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
     /// TASK-071B: State lead/lag analysis (before/during/after episode returns)
     AuditLeadLag {
         #[arg(long)]
@@ -1013,6 +1028,9 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         }
         Command::ExecutionDecisionMargin { suite, from, to, scope, decision, output } => {
             commands::execution_replay::handle_execution_decision_margin(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDecisionGate { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_decision_gate(&context, suite, from, to, scope.map(Into::into), decision, output)?
         }
         Command::AuditLeadLag { from, to } => commands::audit::handle_audit_lead_lag(&context, from, to)?,
     }
