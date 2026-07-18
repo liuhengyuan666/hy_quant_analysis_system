@@ -672,5 +672,30 @@ impl AppContext {
         let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
         Ok(execution_replay::compute_decision_gate_analysis(&records))
     }
+
+    /// 2A-4C: Risk Semantics Review.
+    ///
+    /// Analyzes RiskLevel::High records to determine whether risk is being used
+    /// as Entry Risk (suppress BuyNow) or Holding Risk (drive Reduce), and whether
+    /// the current semantics suppress necessary Reduce actions. No pipeline code is modified.
+    pub fn execution_risk_semantics_from_suite(
+        &self,
+        suite_path: &std::path::Path,
+    ) -> Result<execution_replay::RiskSemanticsReview> {
+        let records = load_records_from_suite(&self.storage, suite_path)?;
+        Ok(execution_replay::compute_risk_semantics_review(&records))
+    }
+
+    /// 2A-4C: Risk Semantics Review over a historical date range.
+    pub fn execution_risk_semantics_from_range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+        scope: ReportScope,
+        decision_filter: Option<&str>,
+    ) -> Result<execution_replay::RiskSemanticsReview> {
+        let records = load_records_from_range(&self.storage, from, to, scope, decision_filter)?;
+        Ok(execution_replay::compute_risk_semantics_review(&records))
+    }
 }
 

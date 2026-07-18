@@ -3,7 +3,8 @@ use app_service::{AppContext, ReportScope};
 use chrono::NaiveDate;
 use execution_replay::{
     DecisionGateFormatter, DecisionMarginFormatter, DistributionCoverageFormatter,
-    EvidenceTraceFormatter, ExecutionStatisticsFormatter, ValidationFormatter, ValidationReportFormatter,
+    EvidenceTraceFormatter, ExecutionStatisticsFormatter, RiskSemanticsFormatter,
+    ValidationFormatter, ValidationReportFormatter,
 };
 use std::path::PathBuf;
 
@@ -253,6 +254,34 @@ pub fn handle_execution_decision_gate(
     let text = match output.to_lowercase().as_str() {
         "json" => DecisionGateFormatter::json(&analysis),
         _ => DecisionGateFormatter::markdown(&analysis),
+    };
+    println!("{}", text);
+    Ok(())
+}
+
+/// 2A-4C: Risk Semantics Review.
+pub fn handle_execution_risk_semantics(
+    context: &AppContext,
+    suite_path: Option<PathBuf>,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    scope: Option<ReportScope>,
+    decision_filter: Option<String>,
+    output: String,
+) -> Result<()> {
+    let review = match suite_path {
+        Some(path) => context.execution_risk_semantics_from_suite(&path)?,
+        None => {
+            let from = from.context("--from required when --suite is not provided")?;
+            let to = to.context("--to required when --suite is not provided")?;
+            let scope = scope.context("--scope required when --suite is not provided")?;
+            context.execution_risk_semantics_from_range(from, to, scope, decision_filter.as_deref())?
+        }
+    };
+
+    let text = match output.to_lowercase().as_str() {
+        "json" => RiskSemanticsFormatter::json(&review),
+        _ => RiskSemanticsFormatter::markdown(&review),
     };
     println!("{}", text);
     Ok(())

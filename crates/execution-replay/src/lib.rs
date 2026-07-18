@@ -14,6 +14,8 @@ pub mod evidence_trace;
 pub mod evidence_trace_formatter;
 pub mod formatter;
 pub mod outcome;
+pub mod risk_semantics;
+pub mod risk_semantics_formatter;
 pub mod runner;
 pub mod statistics;
 pub mod statistics_formatter;
@@ -30,6 +32,10 @@ pub use decision_gate::{
     compute_decision_gate_analysis, DecisionGateAnalysis, DecisionGateRecord, GateFailureReason,
 };
 pub use decision_gate_formatter::DecisionGateFormatter;
+pub use risk_semantics::{
+    compute_risk_semantics_review, RiskSemanticsReview, RiskSemanticMapping,
+};
+pub use risk_semantics_formatter::RiskSemanticsFormatter;
 pub use decision_margin_formatter::DecisionMarginFormatter;
 pub use distribution_coverage_formatter::DistributionCoverageFormatter;
 pub use evaluation::RuleBasedEvaluationEngine;
