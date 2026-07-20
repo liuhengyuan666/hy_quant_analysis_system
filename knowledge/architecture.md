@@ -22,7 +22,8 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 ```
 
 关键组件：
-- app-service: 核心服务编排（已模块化，lib.rs ~4,890行 + 7 helper modules，后续仍可拆分）
+- app-service: 核心服务编排（已模块化，lib.rs ~5,568行 + 10 helper modules：breadth / config_loader / core / dashboard / execution_replay / llm / research_evidence / sync / trust / workspace，后续仍可拆分）
+- execution-replay: V8 Execution Platform 证据重放引擎（51 个模块，计算+formatter 成对组织）：Evidence Registry、Context Integrity Gate/Validator/Audit、Shadow Mode、Shadow Deployment、Holding Risk Bundle/Calibration/Persistence、Risk Lifecycle、Decision Gate/Margin、Bearish Analysis、Transition Analysis 等
 - core-domain: 核心领域模型；V7 新增 `core-domain::research` 子模块（confirmation / recovery / calibration / consensus / stretch / rotation）
 - data-ingestion: 数据获取（Eastmoney/Tencent/FRED）
 - execution-engine: 执行层（V5 新增，Pattern Library，收盘前执行过滤）
@@ -49,9 +50,12 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 - 数据源策略：Eastmoney主源，Tencent兜底，FRED宏观因子；FRED 运行时支持已持久化 `macro_snapshot` 历史回退
 - 统一日线口径：Eastmoney fqt=1，Tencent qfq（前复权）
 - 当前环境限制：Eastmoney从当前环境不可达，全部标的走Tencent fallback
+- Tencent 当日 bar 定稿时分标的不一致：股票/指数/行业ETF 收盘后较快，黄金ETF（518880，跟踪SGE夜盘品种）当日 qfq bar 定稿明显更晚，且 CDN 节点间不同步（同一请求形状不同时刻返回结果不一致）；当日 ingest 缺该 bar 属正常，次日 refresh 自动补齐，无需代码干预
 - 静态JSON日历覆盖2024-2027，后续需要人工维护
 - TradingCalendar当前只覆盖CN/HK
 - P2 turnover修复仅影响新拉取数据，存量ClickHouse数据需ingest-daily回填
 - V6 Reporting Platform 已冻结：Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定，新增消费者应建立在此平台之上
 - **V7 Research Platform 1.0 已冻结**：Observation / Evolution / Evidence / Consensus 四层语义架构稳定，新增市场观测内容只能作为 Research Content Evolution 输入现有层，不允许修改 Semantic Architecture
 - 分层架构不可变规则见 `docs/architecture-invariants.md`（ADR-069）：数据所有权、语义所有权、展示所有权、渲染所有权、消费者边界
+- **V8 Research Asset**：统一身份 `RA-XXXXXX`、统一生命周期 `Draft → Verified → Published → Superseded → Archived`，本地 `workspace/` 持久化（gitignored）；P3（Evidence Score/Weight）在 1000+ 资产 / 30 天 Replay 稳定 / 2 周期 Calibration 稳定前不得启动
+- **V8 Execution Platform（Phase 2C Shadow Validation）**：`execution-replay` crate 提供 Evidence → Risk State → Shadow Assessment 链路；当前为只读观察，禁止 DecisionEngine 消费 ShadowRiskAssessment、禁止修改 ExecutionPolicy、禁止自动交易、禁止新增 Evidence

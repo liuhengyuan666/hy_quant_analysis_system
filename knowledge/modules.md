@@ -6,6 +6,7 @@
 ```text
 rust-quant-analysis-system/
 ├── .cargo/               # Rust构建配置（Windows栈大小等）
+├── .memguard/            # MemGuard运行时状态（runtime_state.json / search_index.json / backups）
 ├── .omo/                 # Opencode运行时配置
 ├── .opencode/            # Opencode技能配置（knowledgeguard等）
 ├── .sisyphus/            # Sisyphus运行时配置
@@ -14,12 +15,13 @@ rust-quant-analysis-system/
 │   └── desktop/          # 桌面端应用程序（Tauri + Vue 3）
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
-├── crates/               # 核心库crate（25个物理目录；22个在workspace中，3个未加入：report-builder, reporting, research-validation）
-│   ├── app-service/      # 核心服务编排（已模块化：lib.rs + 8 helper modules，含V8 workspace）
+├── crates/               # 核心库crate（26个物理目录；23个在workspace中，3个未加入：report-builder, reporting, research-validation）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs ~5,568行 + 10 helper modules，含V8 workspace / execution_replay）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块；V7新增 confirmation/recovery/calibration/consensus）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
 │   ├── execution-engine/ # 执行层（V5 新增，Pattern Library，收盘前执行过滤）
+│   ├── execution-replay/ # V8 Execution Platform：Evidence Registry / Context Integrity / Shadow Mode / Shadow Deployment / Holding Risk / Risk Lifecycle（51个模块，计算+formatter成对组织）
 │   ├── gt-regime-generator/ # Ground Truth regime生成
 │   ├── indicator-engine/ # 技术指标计算
 │   ├── llm-context/      # LLM上下文组装（V6新增）
@@ -69,7 +71,11 @@ rust-quant-analysis-system/
 │   └── agents/           # Agent相关研究
 ├── reports/             # 生成的报告
 ├── screen_pic/           # 项目截图资源（README引用）
-├── shadow-production/   # Shadow Production 运行期产物（divergence log、kill criteria 证据等）
+├── shadow-production/   # Shadow Production 运行期产物与运维脚本
+│   ├── daily-log.ps1 / weekly-review.ps1  # 每日/每周观察脚本
+│   ├── shadow-validation-daily.ps1 / shadow-validation-weekly.ps1  # V8 Phase 2C Shadow Validation 运行脚本
+│   ├── kill-criteria.md  # Kill criteria 定义
+│   └── historical-replay/ # Historical Replay 产物与报告
 ├── sql/                 # SQL脚本
 └── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```
@@ -78,7 +84,8 @@ rust-quant-analysis-system/
 
 ## 2. 核心模块调用边界与依赖方向
 
-- app-service 依赖：backtest-engine, core-domain, data-ingestion, execution-engine, indicator-engine, llm-context, macro-engine, market-fingerprint-engine, market-store, report-builder, report-engine, report-renderer, reporting, research-context, research-renderer, research-skills, rotation-engine, signal-engine, strategy-engine
+- app-service 依赖：backtest-engine, core-domain, data-ingestion, execution-engine, execution-replay, indicator-engine, llm-context, macro-engine, market-fingerprint-engine, market-store, report-builder, report-engine, report-renderer, reporting, research-context, research-skills, rotation-engine, signal-engine, strategy-engine
+- execution-replay 依赖：execution-engine（消费 ExecutionEvent，V8 Shadow Validation 证据重放）
 - data-ingestion 依赖：core-domain, macro-engine
 - macro-engine 依赖：core-domain
 - signal-engine 依赖：core-domain
