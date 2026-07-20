@@ -1,5 +1,5 @@
 {
-  "current_phase": "shadow_production_observation",
+  "current_phase": "shadow_validation",
   "active_tasks": [
     {
       "id": "TASK-000",
@@ -164,8 +164,8 @@
       "superseded_by": null
     },
     {
-      "id": "TASK-151",
-      "description": "2A-5 Directional Confidence Calibration Experiment: implement calibration framework, run baseline/C1/C2/C3/asymmetric thresholds on full CN dataset, generate coverage/precision/opportunity cost metrics, document in ADR-098",
+      "id": "TASK-030",
+      "description": "[TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.",
       "status": "Todo",
       "superseded_by": null
     }

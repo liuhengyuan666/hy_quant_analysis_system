@@ -894,3 +894,27 @@ Risk Semantics Review (ADR-097) confirmed RiskHigh semantics are correct and the
 Phase 2A-5 is Directional Confidence Calibration Experiment. It will run DecisionEngine with alternative confidence thresholds (0.55, 0.50, 0.45) and with asymmetric thresholds (buy=0.6, reduce=0.5) on the same records, measuring coverage, precision, and opportunity cost. No changes to DecisionEngine, ExecutionPolicy defaults, or volume_ma20 until experiment results are evaluated.
 
 **Tags:** v8, execution, calibration, confidence, reduce, experiment, replay
+
+## ADR-099: Restore Real Volume Context Before Evidence Calibration
+
+**Status:** Accepted
+
+### Context
+2A-5 Calibration Experiment rejected the threshold-only approach. Lowering confidence threshold releases Reduce actions but precision is too low (36.9% at best). The root cause is weak bearish evidence quality, not the threshold itself. The most immediate data quality issue is volume_ma20 being hardcoded to 1.0, making volume_ratio equal to absolute volume and degenerating the Distribution condition.
+
+### Decision
+Phase 2A-6 is Restore Real Volume Context. Fix the volume_ma20 placeholder by fetching the previous 20 trading days of bars from market-store and computing the real 20-day volume moving average. Do not modify any Observation thresholds or Decision logic. After the fix, re-run the entire Decision Path Review chain to see if evidence quality improves enough to re-enter calibration.
+
+**Tags:** v8, execution, evidence-quality, volume-ma20, distribution, calibration-v2
+
+## ADR-103: Transition Evidence Blocked by Upstream ResearchContext Data Quality
+
+**Status:** Accepted
+
+### Context
+Phase 2B-2 Transition Evidence Modeling. After rejecting RecoveryFailure (ADR-102), attempts to validate BreadthDeterioration and LeadershipDecay produced zero samples because the underlying ResearchContext-derived ExecutionMarketView fields are placeholders, not real market data.
+
+### Decision
+Transition Evidence work is blocked until ResearchContext.breadth and ResearchContext.rotation.leadership_stability are populated with real computed values. breadth_pct and leadership_stability are currently constant placeholders (50.0 and 0.50) across all ExecutionResearchRecord samples, making BreadthDeterioration and LeadershipDecay uncomputable.
+
+**Tags:** v8, execution-platform, transition-evidence, data-quality

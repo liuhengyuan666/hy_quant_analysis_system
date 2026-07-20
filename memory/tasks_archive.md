@@ -171,6 +171,72 @@
 
 - [Done] [TASK-145] 2A-1 Restore Fact Lineage: wire real market_regime_label from ResearchContext.market_state.label into ExecutionEvent with Unknown fallback, 3 regression tests, ADR-082 Rule-15 added
 
+- [Done] [TASK-146] 2A-2 Execution Statistics: implement ExecutionStatistics domain object with six frozen outputs, JSON/Markdown formatter, run Golden Suite / Representative Sample / Full Dataset
+
+- [Done] [TASK-147] 2A-3 Evidence Trace: implement EvidenceTrace/Funnel module to identify per-stage survival of each EvidenceKind across Pipeline layers, run on full CN dataset to find where Reduce evidence dies
+
+- [Done] [TASK-148] 2A-4 Decision Path Review: implement Distribution Coverage Review and Decision Margin Review diagnostic tools, run on full CN dataset, document findings without modifying pipeline code
+
+
+### 2026-07-18
+- [Done] [TASK-149] 2A-4.5 Decision Gate Analysis: implement tool to enumerate Reduce candidates and report which DecisionEngine gate blocks them, run on full CN dataset, document findings
+
+- [Done] [TASK-150] 2A-4C Risk Semantics Review: implement analysis tool for RiskLevel::High records, output evidence composition, decision context, future outcomes, and semantic mapping proposal, run on full CN dataset, document in ADR-097
+
+- [Done] [TASK-151] 2A-5 Directional Confidence Calibration Experiment: implement calibration framework, run baseline/C1/C2/C3/asymmetric thresholds on full CN dataset, generate coverage/precision/opportunity cost metrics, document in ADR-098
+
+- [Done] [TASK-152] 2A-6 Restore Real Volume Context: fetch real 20-day volume MA from market-store, fix volume_ma20 placeholder, re-run full Decision Path Review chain
+
+- [Done] [TASK-153] 2B-1 Bearish Evidence Analysis: analyze the 145 bearish candidates and their evidence composition + outcome to identify which evidence combinations distinguish true exit signals from temporary risk. Output a Bearish Candidate Matrix and hypothesis set for Holding Risk Evidence.
+
+- [Done] [TASK-153.5] TASK-153.5 RiskExpansion Coverage Exploration: determine whether RiskExpansion is scarce alpha or under-covered due to strict observation conditions. Output: observation coverage, near-miss analysis, outcome lift for near-misses, candidate generation potential. No production logic changes.
+
+- [Done] [TASK-156] 2B-0: Implement and run a ResearchContext Fact Integrity Gate that audits all ResearchContext-derived fields in ExecutionMarketView for variance and placeholder detection. Fix breadth_pct and leadership_stability constant-placeholder issue before resuming Transition Evidence work.
+
+- [Done] [TASK-157] Analyze LeadershipDecay signal across T+5, T+20, T+60, T+120 horizons to determine whether it is an Immediate/Short-term Exit signal or a Medium-term Holding Risk signal. Output a LeadershipDecay Research Profile.
+
+- [Done] [TASK-159] Integrate execution-context-integrity-audit into the test/CI workflow so that any new ExecutionMarketView field must pass variance, provenance, and placeholder detection. Prevent future fact-lineage failures like the hardcoded breadth_pct/leadership_stability placeholder.
+
+- [Done] [TASK-160.1] Validate that sustained deterioration is a stronger Holding Risk signal than single-day snapshots. Implement LeadershipDecay persistence analysis (consecutive days and velocity) as a Research Asset, run experiments on CN 2024-01-01 to 2025-06-30 at T+60 horizon, and integrate persistence into Holding Risk Bundle V2. Acceptance: sample >=300, precision >=55%, lift >=1.3, false reduce rate <40%. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+
+### 2026-07-19
+- [Done] [TASK-160.2A] Design LiquidityPressure as a sustained capital-pressure Research Asset (not snapshot). Definition combines turnover/volume decay, price weakness, breadth not recovering, and persistence over >=3 days. Validate at T+60 horizon on CN 2024-01-01 to 2025-06-30: sample >=30, precision >=50%, lift >=1.2. If validated, integrate into Holding Risk Bundle V3. Role: HoldingRisk, Horizon: MediumTerm. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-160.2B] Design ConfirmationDecay as a change-based (delta/velocity/persistence) Research Asset, not a snapshot. Study whether confirmation strength is continuously declining: confirmation_delta_5d, confirmation_velocity (slope), consecutive decline days, and price weakness. Validate at T+20 and T+60 on CN 2024-01-01 to 2025-06-30. If validated, integrate into Holding Risk Bundle V4 as a Confirmatory Dimension (not primary). Role: HoldingRisk/Confirmation, Horizon: ShortTerm/MediumTerm. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-160.3] Materialize EvidenceRole / EvidenceHorizon / ValidationStatus in code so Research Assets have identity. Design EvidenceDescriptor with id, role, horizon, validation_status, target_metric, dependencies, standalone_validity, decision_candidate. Register LeadershipDecay (HoldingRisk, MediumTerm, standalone), LiquidityPressure (Amplifier, MediumTerm, bundle-only), ConfirmationDecay (Confirmation, MediumTerm, requires LD+LP), BreadthDeterioration and RecoveryFailure (rejected). Add CLI to view registry and validate evidence usage. Prevent DecisionEngine from misusing non-standalone evidence. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-161] Define HoldingRiskScore (e.g., LeadershipDecay*0.5 + LiquidityPressure*0.25 + ConfirmationDecay*0.25) and validate it as a stable Research Asset at T+60. Run score bucket analysis, regime split (bullish/bearish/sideways), and walk-forward validation (train 2024, validate 2025H1). Acceptance: sample >=300, precision >=60%, lift >=1.3, cross-regime stability. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-163] Build a risk state machine around HoldingRiskScore: Risk Entry (score >= 0.75 for >= 3 days), Risk Peak (local max score), Risk Recovery (score < 0.5 for >= 3 days), Holding Period, and false alarm analysis. Validate on CN 2024-01-01 to 2025-06-30. This upgrades HoldingRiskScore from an indicator to a complete risk state machine. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-164] Validate HoldingRiskScore on 2022-2023 bear market data to confirm stability across regimes. Run calibration and risk lifecycle analysis on 2022-01-01 to 2023-12-31 CN data, then compare with 2024-2025 results. Acceptance: False Alarm < 35%, Avg T+60 Return < 0, Risk Event count >= 50, Precision decay < 30%. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-166] Design a State Risk Model that identifies 'already dangerous' market regimes, not 'deteriorating' transitions. Components: TrendBreakdown (price below MA, negative MA slope), VolatilityExpansion (ATR percentile > 70%), MarketBreadthCollapse (breadth_pct < 30%, state not delta), LiquidityStress (volume_ratio < 0.6, state not delta). Goal: classify regimes with RiskOff recall > 70% on CN 2023-01-01 to 2023-12-31. Role: RegimeRisk. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-168] Replace oversold/mean-reversion State Risk components with accelerating-decline components. New components: DowntrendAcceleration (return slope < 0 and worsening), VolatilityNegativeDrift (amplitude increase + negative return + breadth deterioration), PersistentBreadthCollapse (breadth continuously deteriorating for >= 2 days), LiquidityStress (volume continuously declining + price pressure for >= 2 days). Goal: RiskOff recall > 70% on CN 2023-01-01 to 2023-12-31. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-167] Implement Shadow Mode Runtime Wiring: use market_regime_label as State Context and HoldingRiskScore as Transition Evidence. Generate daily shadow output with date, market_regime, holding_risk_score, risk_state, transition_detected, decision_candidate, and evidence details. This is a read-only bypass; no changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy. Validate on recent dates (2026-07-01 to 2026-07-17).
+
+- [Done] [TASK-169] Freeze the Shadow Mode boundary with a formal Shadow Deployment Contract. Define ShadowRiskAssessment struct with date, regime, holding_risk_score, evidence, lifecycle_state, simulated_action. Explicitly prohibit DecisionEngine from consuming ShadowRiskAssessment. This is the entry point for Phase 2C Shadow Validation (4-8 weeks real-market observation). No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-173] Define ValidationRequirement with min_samples, min_precision, min_lift, max_false_alarm for Evidence Assets. Add validation requirement check to EvidenceDescriptor so 'Validated' status requires meeting statistical thresholds. Unify Live Integrity Contract with Replay Integrity Contract (contract-driven, not hardcoded). This is required before TASK-165 Decision Integration. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+
+### 2026-07-20
+- [Done] [TASK-170] Add --live mode to execution-context-integrity-gate so it validates the current day's ResearchContext -> ExecutionMarketView projection, not just historical replay data. This prevents placeholder pollution during Phase 2C Shadow Validation. The live gate must run as a precondition in shadow-validation-daily.ps1 before shadow-deployment. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-171] Add explicit [RESEARCH ONLY] warning to simulated_action in Shadow Deployment output, and rename simulated_action to research_interpretation to prevent operator misreading as actionable recommendation. This is a governance fix to prevent bypassing the DecisionEngine consumption prohibition. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-172] Implement ShadowValidationStatus with NORMAL/INSUFFICIENT_EVENTS/ACTIVE states. Define explicit protocol for '0 Transition Detection events for N consecutive weeks' (e.g., after 20 trading days with 0 events, enter INSUFFICIENT_EVENTS state). This provides monitoring for the Shadow Validation phase and prevents misinterpretation of zero-event periods. No changes to ObservationEngine/EvidenceBuilder/AssessmentEngine/DecisionEngine/ExecutionPolicy.
+
+- [Done] [TASK-154] 2B-2 Holding Risk Evidence Design: design new exit-specific evidence kinds (e.g., BreadthDeterioration, LeadershipLoss, RecoveryFailure) as Research Assets, validate against historical replay, and do not wire into DecisionEngine until precision criteria are met.
+
+- [Done] [TASK-155] 2B-3 Calibration v2: after Holding Risk Evidence is validated, re-run the full Decision Path Review chain and Directional Confidence Calibration. Only propose threshold/policy changes if Reduce precision reaches ≥50% in replay.
+
+- [Done] [TASK-158] Combine multiple medium-term holding risk signals (LeadershipDecay, BreadthDeterioration, LiquidityDeterioration) into a Holding Risk Evidence Bundle. Evaluate at T+60 natural horizon, not T+20. Output a Holding Risk Score profile as a Research Asset.
+
 ## Superseded
 
 ### 2026-07-09
@@ -198,6 +264,36 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
