@@ -1,57 +1,32 @@
-﻿{
-    "top_candidates":  [
-                           {
-                               "id":  "CD-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H60",
-                               "evidence_id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H60",
-                               "status":  "candidate_evidence",
-                               "positive_ratio":  0.16699999999999998,
-                               "window":  "2026-04-01 ~ 2026-07-09",
-                               "condition":  "stretch-extreme-crowding-momentum",
-                               "horizon":  60,
-                               "occurrences":  18,
-                               "scope":  "global",
-                               "attribution_status":  "pending"
-                           },
-                           {
-                               "id":  "CD-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H20",
-                               "evidence_id":  "EV-2026-07-09-GLOBAL-STRETCH-EXTREME-CROWDING-MOMENTUM-H20",
-                               "status":  "candidate_evidence",
-                               "positive_ratio":  0.857,
-                               "window":  "2026-04-01 ~ 2026-07-09",
-                               "condition":  "stretch-extreme-crowding-momentum",
-                               "horizon":  20,
-                               "occurrences":  21,
-                               "scope":  "global",
-                               "attribution_status":  "pending"
-                           }
-                       ],
-    "schema_version":  "v1",
-    "conditions_analyzed":  [
-                                "srd-strong",
-                                "stretch-extreme-crowding-momentum"
-                            ],
-    "scope_summaries":  [
-                            {
-                                "conditions":  [
-                                                   "srd-strong",
-                                                   "stretch-extreme-crowding-momentum"
-                                               ],
-                                "scope":  "global",
-                                "to":  "2026-07-09",
-                                "from":  "2026-04-01",
-                                "evidence_count":  4,
-                                "horizons":  [
-                                                 20,
-                                                 60
-                                             ]
-                            }
-                        ],
-    "total_candidates":  2,
-    "generated_at":  "2026-07-09T22:25:11",
-    "from":  "2026-04-01",
-    "scopes":  [
-                   "global"
-               ],
-    "total_evidence":  4,
-    "to":  "2026-07-09"
+{
+  "conditions_analyzed": [
+    "srd-strong",
+    "stretch-extreme-crowding-momentum"
+  ],
+  "from": "2026-05-01",
+  "generated_at": "2026-07-20T16:44:46.365625300+00:00",
+  "schema_version": "v1",
+  "scope_summaries": [
+    {
+      "conditions": [
+        "srd-strong",
+        "stretch-extreme-crowding-momentum"
+      ],
+      "evidence_count": 4,
+      "from": "2026-05-01",
+      "horizons": [
+        20,
+        60
+      ],
+      "scope": "HK",
+      "to": "2026-07-20"
+    }
+  ],
+  "scopes": [
+    "HK"
+  ],
+  "to": "2026-07-20",
+  "top_candidates": [],
+  "total_candidates": 0,
+  "total_evidence": 4
 }
