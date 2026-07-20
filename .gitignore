@@ -46,3 +46,6 @@ audit_result.json
 
 # Reports directory (generated)
 /reports/
+
+# V8 Research Asset workspace (runtime-generated Research Assets)
+/workspace/
