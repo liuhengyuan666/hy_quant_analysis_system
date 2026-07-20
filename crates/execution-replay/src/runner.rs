@@ -195,6 +195,7 @@ impl ReplayOutcomeResolver for MockOutcomeResolver {
         };
 
         Ok(ExecutionOutcome {
+            t5_return: Some(t20 * 0.25),
             t20_return: Some(t20),
             t60_return: Some(t20 * 1.5),
             t120_return: Some(t20 * 2.0),

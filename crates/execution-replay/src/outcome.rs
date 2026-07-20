@@ -86,6 +86,7 @@ impl ReplayOutcomeResolver for MarketStoreOutcomeResolver {
             let _ = day;
         }
 
+        let t5_return = forward_bars.get(4).map(|b| (b.close - entry_price) / entry_price);
         let t20_return = forward_bars.get(19).map(|b| (b.close - entry_price) / entry_price);
         let t60_return = forward_bars.get(59).map(|b| (b.close - entry_price) / entry_price);
         let t120_return = forward_bars.get(119).map(|b| (b.close - entry_price) / entry_price);
@@ -93,6 +94,7 @@ impl ReplayOutcomeResolver for MarketStoreOutcomeResolver {
         let holding_days = Some(forward_bars.len() as u32);
 
         Ok(ExecutionOutcome {
+            t5_return,
             t20_return,
             t60_return,
             t120_return,

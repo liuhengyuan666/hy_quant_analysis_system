@@ -3,8 +3,17 @@ use serde::{Deserialize, Serialize};
 
 use execution_engine::v2::event::ExecutionEvent;
 
+pub mod bearish_analysis;
+pub mod bearish_analysis_formatter;
 pub mod calibration;
 pub mod calibration_formatter;
+pub mod confirmation_decay;
+pub mod confirmation_decay_formatter;
+pub mod context_integrity_audit;
+pub mod context_integrity_audit_formatter;
+pub mod context_integrity_contract;
+pub mod context_integrity_validator;
+pub mod context_integrity_validator_formatter;
 pub mod decision_gate;
 pub mod decision_gate_formatter;
 pub mod decision_margin;
@@ -12,17 +21,41 @@ pub mod decision_margin_formatter;
 pub mod distribution_coverage;
 pub mod distribution_coverage_formatter;
 pub mod evaluation;
+pub mod evidence_registry;
+pub mod evidence_registry_formatter;
 pub mod evidence_trace;
 pub mod evidence_trace_formatter;
 pub mod formatter;
+pub mod holding_risk_bundle;
+pub mod holding_risk_bundle_formatter;
+pub mod holding_risk_calibration;
+pub mod holding_risk_calibration_formatter;
+pub mod holding_risk_persistence;
+pub mod holding_risk_persistence_formatter;
+pub mod liquidity_pressure;
+pub mod liquidity_pressure_formatter;
 pub mod outcome;
+pub mod regime_risk_formatter;
+pub mod regime_risk_model;
+pub mod risk_lifecycle;
+pub mod risk_lifecycle_formatter;
+pub mod shadow_deployment;
+pub mod shadow_deployment_formatter;
+pub mod shadow_mode;
+pub mod shadow_mode_formatter;
+pub mod state_risk_acceleration;
+pub mod state_risk_acceleration_formatter;
 pub mod risk_semantics;
 pub mod risk_semantics_formatter;
 pub mod runner;
 pub mod statistics;
 pub mod statistics_formatter;
+pub mod transition_analysis;
+pub mod transition_analysis_formatter;
 pub mod validation_suite;
 
+pub use bearish_analysis::{compute_bearish_analysis, BearishAnalysis};
+pub use bearish_analysis_formatter::BearishAnalysisFormatter;
 pub use decision_margin::{
     compute_decision_margin_review, DecisionMarginReview, DirectionBucket, EvidenceDecisionProfile,
 };
@@ -35,10 +68,50 @@ pub use calibration::{
     CalibrationPolicyKind, CalibrationResult, CalibrationReview,
 };
 pub use calibration_formatter::CalibrationFormatter;
+pub use confirmation_decay::{
+    compute_confirmation_decay_analysis, compute_confirmation_decay_analysis_with_params,
+    ConfirmationDecayAnalysis, ConfirmationDecaySignal,
+};
+pub use confirmation_decay_formatter::ConfirmationDecayFormatter;
+pub use context_integrity_audit::{
+    compute_context_integrity_report, ContextIntegrityReport, FieldIntegrityReport,
+    FieldIntegrityStatus,
+};
+pub use context_integrity_audit_formatter::ContextIntegrityAuditFormatter;
+pub use context_integrity_contract::{ContextIntegrityRule, ExecutionContextIntegrityContract};
+pub use context_integrity_validator::{
+    validate_execution_context, validate_with_contract, ContextIntegrityValidation,
+    ContextIntegrityViolation, FieldValidation,
+};
+pub use context_integrity_validator_formatter::ContextIntegrityValidatorFormatter;
 pub use decision_gate::{
     compute_decision_gate_analysis, DecisionGateAnalysis, DecisionGateRecord, GateFailureReason,
 };
 pub use decision_gate_formatter::DecisionGateFormatter;
+pub use regime_risk_model::{
+    compute_regime_risk_analysis, compute_regime_risk_score, RegimeClassification,
+    RegimeDistribution, RegimeRiskAnalysis, StateRiskBucket,
+};
+pub use regime_risk_formatter::RegimeRiskFormatter;
+pub use risk_lifecycle::{
+    compute_risk_lifecycle_analysis, RiskLifecycleAnalysis, RiskLifecycleEvent,
+};
+pub use risk_lifecycle_formatter::RiskLifecycleFormatter;
+pub use shadow_deployment::{
+    compute_shadow_deployment_report, EvidenceSummary, ShadowDeploymentReport,
+    ShadowDeploymentSummary, ShadowRiskAssessment,
+};
+pub use shadow_deployment_formatter::ShadowDeploymentFormatter;
+pub use shadow_mode::{
+    compute_shadow_mode_report, EvidenceDetails, ShadowModeOutput, ShadowModeReport,
+    ShadowModeSummary,
+};
+pub use shadow_mode_formatter::ShadowModeFormatter;
+pub use state_risk_acceleration::{
+    compute_state_risk_acceleration_analysis, compute_state_risk_acceleration_score,
+    StateRiskAccelerationAnalysis,
+};
+pub use state_risk_acceleration_formatter::StateRiskAccelerationFormatter;
 pub use risk_semantics::{
     compute_risk_semantics_review, RiskSemanticsReview, RiskSemanticMapping,
 };
@@ -46,6 +119,11 @@ pub use risk_semantics_formatter::RiskSemanticsFormatter;
 pub use decision_margin_formatter::DecisionMarginFormatter;
 pub use distribution_coverage_formatter::DistributionCoverageFormatter;
 pub use evaluation::RuleBasedEvaluationEngine;
+pub use evidence_registry::{
+    EvidenceDescriptor, EvidenceHorizon, EvidenceId, EvidenceRegistry, EvidenceRole,
+    TargetMetric, ValidationStatus,
+};
+pub use evidence_registry_formatter::EvidenceRegistryFormatter;
 pub use evidence_trace::{compute_evidence_trace, EvidenceTrace, EvidenceTraceMeta, EvidenceTraceRow};
 pub use evidence_trace_formatter::EvidenceTraceFormatter;
 pub use formatter::ValidationFormatter;
@@ -60,6 +138,35 @@ pub use statistics::{
     OutcomeBucket, OutcomeMatrix, PriorDistribution,
 };
 pub use statistics_formatter::ExecutionStatisticsFormatter;
+pub use holding_risk_bundle::{
+    compute_holding_risk_bundle_analysis, compute_holding_risk_bundle_v2_analysis,
+    compute_holding_risk_bundle_v3_analysis, compute_holding_risk_bundle_v4_analysis,
+    HoldingRiskBundleAnalysis, LiquidityDeteriorationSignal, ScoreBucket,
+};
+pub use holding_risk_bundle_formatter::HoldingRiskBundleFormatter;
+pub use holding_risk_calibration::{
+    compute_holding_risk_calibration, compute_holding_risk_score, HoldingRiskCalibrationAnalysis,
+    RegimeBucketStats, ScoreBucketStats, WalkForwardStats,
+};
+pub use holding_risk_calibration_formatter::HoldingRiskCalibrationFormatter;
+pub use holding_risk_persistence::{
+    compute_holding_risk_persistence_analysis, HoldingRiskPersistenceAnalysis,
+    LeadershipDecayPersistenceSignal, PersistenceExperiment,
+};
+pub use holding_risk_persistence_formatter::HoldingRiskPersistenceFormatter;
+pub use liquidity_pressure::{
+    compute_liquidity_pressure_analysis, compute_liquidity_pressure_analysis_with_params,
+    LiquidityPressureAnalysis, LiquidityPressureSignal,
+};
+pub use liquidity_pressure_formatter::LiquidityPressureFormatter;
+pub use transition_analysis::{
+    compute_leadership_decay_horizon_analysis, compute_transition_analysis, FailureBreakdown,
+    HorizonProfile, LeadershipDecayHorizonAnalysis, RecoveryFailureSignal, TransitionAnalysis,
+    TransitionCandidate,
+};
+pub use transition_analysis_formatter::{
+    LeadershipDecayHorizonFormatter, TransitionAnalysisFormatter,
+};
 pub use validation_suite::{ValidationCandidate, ValidationCase, ValidationSuite};
 
 /// Convenience helper to resolve and evaluate a single `ExecutionEvent`.
@@ -95,6 +202,8 @@ where
 /// contain any judgment about whether the decision was good or bad.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ExecutionOutcome {
+    #[serde(default)]
+    pub t5_return: Option<f64>,
     pub t20_return: Option<f64>,
     pub t60_return: Option<f64>,
     pub t120_return: Option<f64>,
