@@ -5,7 +5,7 @@ use serde_json;
 use std::fs;
 use std::path::PathBuf;
 
-pub fn handle_preclose_analysis(context: &AppContext, scope: ReportScope) -> Result<()> {
+pub fn handle_portfolio_decision(context: &AppContext, scope: ReportScope) -> Result<()> {
     let decisions = context.analyze_preclose(scope)?;
     
     // Print table to stdout

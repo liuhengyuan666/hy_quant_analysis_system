@@ -1348,3 +1348,165 @@ pub fn handle_research_replay(
     Ok(())
 }
 
+// ─────────────────────────────────────────────────────────────
+// RV1 New Commands
+// ─────────────────────────────────────────────────────────────
+
+/// Multi-strategy independent scoring + scenario comparison + attribution.
+/// Phase 2 will add full independent scoring per strategy; Phase 1 shows existing 4-strategy scores.
+pub fn handle_strategy_perspectives(
+    context: &AppContext,
+    symbol: Option<String>,
+    date: Option<NaiveDate>,
+    scope_arg: ReportScopeArg,
+    mode: String,
+    scenario: Option<String>,
+) -> Result<()> {
+    let scope: app_service::ReportScope = scope_arg.into();
+    let scope_str = scope.as_str().to_uppercase();
+
+    // Fetch strategy preferences directly from market-store
+    let all_prefs = market_store::fetch_strategy_preferences(&context.storage)?;
+    let prefs: Vec<_> = all_prefs
+        .iter()
+        .filter(|p| p.analysis_scope == scope_str)
+        .collect();
+
+    // Determine target date: latest date in prefs, or explicit date
+    let target_date = date.unwrap_or_else(|| {
+        prefs.iter().map(|p| p.date).max().unwrap_or_else(|| chrono::Local::now().date_naive())
+    });
+
+    let day_prefs: Vec<_> = prefs.iter().filter(|p| p.date == target_date).collect();
+
+    match mode.as_str() {
+        "scoreboard" => {
+            println!("Strategy Scoreboard — Scope: {:?}, Date: {}", scope, target_date);
+            println!();
+            println!("{:<10} {:<12} {:<12} {:<12} {:<12} {:<12}", "Symbol", "ValueLeft", "TrendPullbk", "TrendBrkout", "MomentumR", "Best");
+            println!("{}", "-".repeat(70));
+
+            for p in &day_prefs {
+                println!(
+                    "{:<10} {:<12.1} {:<12.1} {:<12.1} {:<12.1} {:<12}",
+                    p.symbol,
+                    p.value_left_score,
+                    p.trend_pullback_score,
+                    p.trend_breakout_score,
+                    p.momentum_right_score,
+                    format!("{:?}", p.best_strategy),
+                );
+            }
+        }
+        "detail" => {
+            let sym = symbol.as_deref().unwrap_or("000300");
+            println!("Strategy Perspectives — Symbol: {}, Scope: {:?}, Date: {}", sym, scope, target_date);
+            println!();
+
+            let p = day_prefs.iter().find(|p| p.symbol == sym);
+            if let Some(p) = p {
+                println!("{:<20} {:>8}", "Strategy", "Score");
+                println!("{}", "-".repeat(30));
+                println!("{:<20} {:>8.1}", "ValueLeft", p.value_left_score);
+                println!("{:<20} {:>8.1}", "TrendPullback", p.trend_pullback_score);
+                println!("{:<20} {:>8.1}", "TrendBreakout", p.trend_breakout_score);
+                println!("{:<20} {:>8.1}", "MomentumRight", p.momentum_right_score);
+                println!();
+                println!("Best Strategy: {:?}", p.best_strategy);
+                println!("Confidence: {:.1}", p.confidence);
+                println!("Alignment: {} strategies ≥ 60", p.alignment);
+            } else {
+                println!("Symbol {} not found in strategy preferences for {}", sym, target_date);
+            }
+        }
+        _ => {
+            anyhow::bail!("Unknown mode '{}'. Use 'scoreboard' or 'detail'.", mode);
+        }
+    }
+
+    if let Some(scn) = scenario {
+        println!("\nScenario: {} (Phase 2 — full scenario weighting not yet implemented)", scn);
+    }
+
+    Ok(())
+}
+
+/// View Evidence Asset status in workspace registry.
+pub fn handle_evidence_status() -> Result<()> {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let evidence_index = PathBuf::from("workspace/registry/evidence-index.json");
+    let snapshot_index = PathBuf::from("workspace/registry/snapshot-index.json");
+
+    println!("Evidence Asset Status");
+    println!("{}", "=".repeat(50));
+
+    if evidence_index.exists() {
+        let content = fs::read_to_string(&evidence_index)?;
+        let index: serde_json::Value = serde_json::from_str(&content)?;
+        if let Some(evidence) = index.as_array() {
+            println!("\nEvidence Assets: {}", evidence.len());
+            for item in evidence.iter().take(20) {
+                println!(
+                    "  {} | {} | {} | {}",
+                    item["id"].as_str().unwrap_or("?"),
+                    item["kind"].as_str().unwrap_or("?"),
+                    item["scope"].as_str().unwrap_or("?"),
+                    item["state"].as_str().unwrap_or("?"),
+                );
+            }
+            if evidence.len() > 20 {
+                println!("  ... and {} more", evidence.len() - 20);
+            }
+        } else {
+            println!("\nEvidence index exists but is empty or malformed");
+        }
+    } else {
+        println!("\nNo evidence index found at workspace/registry/evidence-index.json");
+        println!("Run `research analytics --save-evidence` or `historical-replay` to create Evidence Assets.");
+    }
+
+    if snapshot_index.exists() {
+        let content = fs::read_to_string(&snapshot_index)?;
+        let index: serde_json::Value = serde_json::from_str(&content)?;
+        if let Some(snapshots) = index.as_array() {
+            println!("\nSnapshot Assets: {}", snapshots.len());
+        }
+    }
+
+    Ok(())
+}
+
+/// Run calibration baseline validation.
+pub fn handle_validation_check(
+    context: &AppContext,
+    scope_arg: ReportScopeArg,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+) -> Result<()> {
+    let scope: app_service::ReportScope = scope_arg.into();
+    println!("Running validation check for scope {:?}...", scope);
+    let result = context.run_research_calibration(
+        scope,
+        from,
+        to,
+        20,   // horizon
+        5,    // top_n
+        252,  // lookback
+    )?;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+/// Run historical analytics replay (wraps research replay).
+pub fn handle_historical_replay(
+    context: &AppContext,
+    scope_arg: ReportScopeArg,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    output_dir: String,
+) -> Result<()> {
+    handle_research_replay(context, scope_arg, from, to, output_dir)
+}
+

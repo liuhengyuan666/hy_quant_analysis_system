@@ -7,4 +7,3 @@ pub mod llm;
 pub mod research;
 pub mod audit;
 pub mod execution;
-pub mod execution_replay;

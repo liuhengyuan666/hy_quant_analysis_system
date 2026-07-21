@@ -239,7 +239,7 @@ mod tests {
 
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: crate::types::ExecutionState::BuyNow,
+            state: crate::types::ExecutionState::Increase,
             confidence: 0.82,
             risk: RiskLevel::Low,
             evidences: evidences.clone(),

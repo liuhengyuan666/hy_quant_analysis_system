@@ -30,6 +30,10 @@ pub fn handle_set_llm_api_key(context: &AppContext, key: String) -> Result<()> {
     Ok(())
 }
 
+pub fn handle_llm_analyze(context: &AppContext, scope: ReportScopeArg, action: String, quiet: bool) -> Result<()> {
+    handle_analyze_with_llm(context, scope, action, quiet)
+}
+
 pub fn handle_analyze_with_llm(_context: &AppContext, scope: ReportScopeArg, action: String, quiet: bool) -> Result<()> {
     if !quiet {
         eprintln!("[analyze-with-llm] Running research action '{}'...", action);
