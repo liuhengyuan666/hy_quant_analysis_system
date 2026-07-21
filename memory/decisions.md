@@ -942,3 +942,15 @@ RV1 Phase 1/1.5 完成后，系统处于最适合冻结领域模型的位置。G
 冻结四个现有对象为 RV1 核心领域模型（冻结≠新建）：1) MarketRegimeSnapshot（Market Understanding 层）；2) EnvironmentSnapshot（环境分解层）；3) Evidence（证据单元，含 Horizon/Role 语义）；4) PortfolioDecision（组合姿态：Increase/Maintain/Reduce/Avoid）。明确禁令：(a) 禁止新建 MarketState 或任何与 regime+environment 同构的市场状态抽象；(b) daily-analysis 输出契约永久固定为 Integrity+Signals+Portfolio Posture，LLM 为独立后续步骤（daily-analysis → llm-analyze，不嵌入）；(c) Phase 2 本质为 Strategy Preference Exposure（暴露 strategy-engine 已计算但被 signal-engine 丢弃的分数），允许消费已有策略分数/场景加权(config/scenarios.toml)/输出解释归因，禁止新策略类型、新评分指标、新 Evidence 类型（除非重走 Integrity+Validation+Registry 完整流程）。
 
 **Tags:** rv1, domain-freeze, market-regime, environment, evidence, portfolio-decision, phase-2-gate
+
+## ADR-106: RV1 LLM Boundary Freeze: Explanation Right, Decision Never
+
+**Status:** Accepted
+
+### Context
+GPT 复核 TASK-201 时发现 TASK-202 原始描述（portfolio-decision 用 LLM 替代硬编码 Pattern Library）将 LLM 放入决策路径，违反 ADR-084。V8 的教训表明：LLM 进入决策路径会产生决策黑盒、prompt 规则引擎、LLM override、portfolio policy 膨胀。同时 ADR-084 的语境是 Execution Platform，RV1 已重定位为 Daily Portfolio Decision Assistant，边界需要在新领域语言下重锚定。另外 ADR-074（V4.5 研究层不给 LLM 传评分）需要演进：RV1 的 LLM 用途是解释多策略矛盾点（为什么 MomentumRight 高分而 ValueLeft 回避），这要求 LLM 能看到已计算的分数与归因作为事实输入。
+
+### Decision
+冻结 LLM 边界（RV1 语境重锚定 ADR-084）：1) 数据流固定为 Deterministic Engines → Decision Fact → LLM Explanation，LLM 在管线最右侧，永远不在中间；2) LLM 可接收已计算事实（策略分数/归因 drivers/场景对比/Evidence 摘要/Integrity 状态）作为解释输入——这是对 ADR-074 的演进：分数作为事实证据可传，决策权不传；3) LLM 输出仅限解释文本，禁止生成 BUY/SELL/仓位百分比，禁止修改 final_score/signal_label/portfolio_decision；4) portfolio-decision 的 action 标签由确定性代码产出（V5 Pattern Library 不变），LLM 仅解释该决策；5) 对话记忆边界：LLM 前次输出在后续对话中只能标注为 previous interpretation（前次解读），绝不能作为 evidence 输入，防止 LLM 把自己的旧结论当事实自我强化；6) prompts.toml 边界：分析人格模板只允许携带视角指令（关注什么/以什么身份说话），禁止包含阈值、打分规则、if/then 逻辑——防止 prompt 退化为第二个 DecisionPolicy。
+
+**Tags:** rv1, llm-boundary, explanation-layer, conversation-memory, prompt-governance, phase-3-gate

@@ -303,6 +303,9 @@ cargo run -p quant-cli -- llm-analyze --scope global --action market_story
 - `preclose_review` — 收盘前复核（组合操作建议解读）
 - `risk_view` — 风险视角（风控总监视角）
 - `devils_advocate` — 唱反调（质疑系统结论）
+- `portfolio_review` — 组合决策解读（解释确定性引擎的组合姿态 + 多策略矛盾点）
+
+**自定义分析人格**：`config/prompts.toml` 支持自定义 persona（已内置 `short_term_trader` 短线交易员、`long_term_allocator` 长线配置者），`--action` 直接使用 persona key 即可。LLM 每次分析会自动携带多策略评分、场景对比、数据完整性状态与前次解读（标注为非证据背景）。
 
 ---
 

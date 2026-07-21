@@ -30,8 +30,7 @@ rv1_capability_consolidation
 - [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
 - [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
 - [Todo] [TASK-030] [TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.
-- [Todo] [TASK-201] RV1 Phase 2: 策略引擎重构 — signal-engine不再合并四策略为单一分数，独立产出每套策略信号+归因；新增config/scenarios.toml场景配置(短线动量/长线价值/激进)；SignalSnapshot扩展strategy_signals/scenario_scores字段；strategy-perspectives完整实现
-- [Todo] [TASK-202] RV1 Phase 3: LLM增强 + 组合决策重构 — LLM上下文增强(多策略矛盾点+历史参照+连续性)；对话历史持久化(LlmAnalysisRecord)；config/prompts.toml可定制分析人格(短线交易员/长线配置者)；portfolio-decision用LLM替代3个硬编码Pattern
+- [InProgress] [TASK-202] RV1 Phase 3: LLM增强 + 组合决策重构 — LLM上下文增强(多策略矛盾点+历史参照+连续性)；对话历史持久化(LlmAnalysisRecord)；config/prompts.toml可定制分析人格(短线交易员/长线配置者)；portfolio-decision用LLM替代3个硬编码Pattern
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

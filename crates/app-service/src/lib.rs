@@ -39,6 +39,8 @@ pub mod core;
 pub mod dashboard;
 pub mod execution_replay;
 pub mod llm;
+pub mod llm_history;
+pub mod prompts;
 pub mod research_evidence;
 pub mod scenarios;
 pub mod strategy_perspectives;
@@ -4440,6 +4442,13 @@ impl AppContext {
     /// - "preclose_review"
     /// - "risk_view"
     /// - "devils_advocate"
+    /// RV1 Phase 3 (ADR-106): LLM Explanation Layer.
+    ///
+    /// Data flow: Deterministic Engines → Decision Fact → LLM Explanation.
+    /// The LLM receives computed facts (strategy scores, scenario contrast,
+    /// integrity status, previous interpretation) as EXPLANATION INPUT and
+    /// produces explanation text only. It never generates action labels,
+    /// position sizing, or modifies final_score / signal_label / portfolio_decision.
     pub async fn analyze_with_action(
         &self,
         action: &str,
@@ -4451,10 +4460,36 @@ impl AppContext {
             return Err(anyhow::anyhow!("No dashboard snapshot available for scope {:?}", scope));
         };
 
-        // 2. Build prompt
-        let (system_prompt, user_prompt) = research_skills::build_prompt(action, &snapshot)?;
+        // 2. Resolve persona (config/prompts.toml → built-in fallback)
+        let project_root = StorageConfig::project_root()?;
+        let prompts_file = prompts::load_prompts(&project_root);
+        let persona = prompts::resolve_persona(&prompts_file, action)?;
 
-        // 3. Call LLM
+        // 3. Compose extra context sections (computed facts as explanation input)
+        let mut extra = String::new();
+        extra.push_str(&self.build_strategy_context_section(scope));
+        extra.push_str(&self.build_integrity_context_section());
+        if action == "portfolio_review" {
+            extra.push_str(&self.build_portfolio_decision_section(scope));
+        }
+        // Previous interpretation — labeled as background, never evidence (ADR-106)
+        if let Some(previous) =
+            llm_history::latest_record(&project_root, scope.as_str(), action)
+        {
+            if previous.report_date != snapshot.report_date.to_string() {
+                extra.push_str(&llm_history::previous_interpretation_section(&previous));
+            }
+        }
+
+        // 4. Build prompt
+        let (system_prompt, user_prompt) = research_skills::build_prompt_with_persona(
+            &persona.system,
+            &persona.template,
+            &snapshot,
+            Some(&extra),
+        );
+
+        // 5. Call LLM
         let resolved = self.get_resolved_llm_config(None)?;
         let inference = research_skills::InferenceConfig {
             temperature: resolved.temperature,
@@ -4478,7 +4513,7 @@ impl AppContext {
             let response = llm::call_llm_api(
                 config.clone(),
                 key.clone(),
-                system_prompt,
+                &system_prompt,
                 user_prompt,
                 call_config.temperature as f64,
                 call_config.max_tokens,
@@ -4490,15 +4525,142 @@ impl AppContext {
             (Some("LLM 未配置，这是占位符输出。请配置 API Key 以获取真实分析。".to_string()), true)
         };
 
-        // 4. Return simple markdown result
+        let analysis_text = llm_output.unwrap_or_default();
+
+        // 6. Persist conversation record (workspace/llm-history/)
+        if !is_placeholder {
+            let record = llm_history::LlmAnalysisRecord {
+                scope: scope.as_str().to_string(),
+                action: action.to_string(),
+                persona_label: persona.label.clone(),
+                report_date: snapshot.report_date.to_string(),
+                created_at: chrono::Utc::now().to_rfc3339(),
+                summary: llm_history::make_summary(&analysis_text),
+                analysis_text: analysis_text.clone(),
+            };
+            if let Err(error) = llm_history::save_record(&project_root, &record) {
+                eprintln!("[llm-history] failed to save record: {error}");
+            }
+        }
+
+        // 7. Return markdown result
         let result = serde_json::json!({
             "action": action,
+            "persona": persona.label,
             "scope": scope.as_str(),
             "placeholder": is_placeholder,
-            "markdown": llm_output.unwrap_or_default(),
+            "markdown": analysis_text,
         });
 
         Ok(result)
+    }
+
+    /// Strategy perspectives section: top symbols with 4 independent strategy
+    /// scores and scenario contrast. Bounded to top 5 by confidence.
+    fn build_strategy_context_section(&self, scope: ReportScope) -> String {
+        let analysis_scope = match scope {
+            ReportScope::Global => core_domain::AnalysisScope::Global,
+            ReportScope::Cn => core_domain::AnalysisScope::Cn,
+            ReportScope::Hk => core_domain::AnalysisScope::Hk,
+        };
+        let Ok(project_root) = StorageConfig::project_root() else {
+            return String::new();
+        };
+        let Ok((date, entries)) = strategy_perspectives::strategy_perspectives_scoreboard(
+            &self.storage,
+            analysis_scope,
+            None,
+            &project_root,
+        ) else {
+            return String::new();
+        };
+        if entries.is_empty() {
+            return String::new();
+        }
+
+        let mut section = format!(
+            "\n## 多策略视角（{}，系统已计算的事实，非你的判断）\n\n",
+            date
+        );
+        for entry in entries.iter().take(5) {
+            section.push_str(&format!(
+                "- {}{}：ValueLeft {:.0} / TrendPullback {:.0} / TrendBreakout {:.0} / MomentumRight {:.0}（最佳：{:?}）\n",
+                entry.symbol,
+                entry
+                    .name
+                    .as_ref()
+                    .map(|name| format!("({})", name))
+                    .unwrap_or_default(),
+                entry.value_left_score,
+                entry.trend_pullback_score,
+                entry.trend_breakout_score,
+                entry.momentum_right_score,
+                entry.best_strategy,
+            ));
+            let scenario_text: Vec<String> = entry
+                .scenario_scores
+                .iter()
+                .map(|(_, label, score)| format!("{} {:.0}", label, score))
+                .collect();
+            if !scenario_text.is_empty() {
+                section.push_str(&format!("  场景对比：{}\n", scenario_text.join(" | ")));
+            }
+        }
+        section
+    }
+
+    /// Integrity section: data freshness status for the current analysis.
+    fn build_integrity_context_section(&self) -> String {
+        let Ok(health) = self.check_data_health() else {
+            return String::new();
+        };
+        let status = if health.freshest_market_date_complete {
+            "PASS"
+        } else {
+            "DEGRADED"
+        };
+        format!(
+            "\n## 数据完整性（Integrity）\n\n- 状态：{}\n- 最新市场日期：{:?}（标的覆盖 {}/{}）\n- 健康标的 {}，待复核 {}，异常 {}\n",
+            status,
+            health.freshest_market_date,
+            health.symbols_on_freshest_market_date,
+            health.checked_symbols,
+            health.healthy_symbols,
+            health.review_symbols,
+            health.critical_symbols,
+        )
+    }
+
+    /// Deterministic portfolio decision section (portfolio_review only).
+    /// Action labels are produced by the V5 pattern engine — never by the LLM.
+    fn build_portfolio_decision_section(&self, scope: ReportScope) -> String {
+        match self.analyze_preclose(scope) {
+            Ok(decisions) if !decisions.is_empty() => {
+                let mut section = String::from(
+                    "\n## 组合姿态（由确定性引擎产出，不由你生成，不可修改）\n\n",
+                );
+                for decision in &decisions {
+                    let reasons = if decision.reasons.is_empty() {
+                        "（无 Pattern 命中）".to_string()
+                    } else {
+                        decision
+                            .reasons
+                            .iter()
+                            .map(|reason| reason.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    };
+                    section.push_str(&format!(
+                        "- {} → {}（{}）\n",
+                        decision.symbol,
+                        decision.state.as_str(),
+                        reasons
+                    ));
+                }
+                section
+            }
+            _ => "\n## 组合姿态\n\n实时行情不可用，决策引擎本次未能运行。\n".to_string(),
+        }
     }
 
     /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)

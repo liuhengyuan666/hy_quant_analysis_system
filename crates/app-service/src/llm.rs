@@ -34,7 +34,7 @@ pub(crate) fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> Stri
 pub(crate) async fn call_llm_api(
     config: LlmConfig,
     api_key: String,
-    system_prompt: &'static str,
+    system_prompt: &str,
     user_prompt: String,
     temperature: f64,
     max_tokens: usize,

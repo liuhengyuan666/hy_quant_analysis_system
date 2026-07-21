@@ -245,6 +245,8 @@
 
 - [Done] [TASK-204] RV1 Phase 1.8: Domain Model Freeze ADR-105 — 冻结MarketRegimeSnapshot/EnvironmentSnapshot/Evidence/PortfolioDecision四个现有对象；禁止新建MarketState；daily-analysis契约固定；Phase 2边界写死(允许消费已有分数/场景加权/归因输出，禁止新策略/新指标/新Evidence)
 
+- [Done] [TASK-201] RV1 Phase 2: 策略引擎重构 — signal-engine不再合并四策略为单一分数，独立产出每套策略信号+归因；新增config/scenarios.toml场景配置(短线动量/长线价值/激进)；SignalSnapshot扩展strategy_signals/scenario_scores字段；strategy-perspectives完整实现
+
 ## Superseded
 
 ### 2026-07-09
@@ -272,6 +274,7 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
 
 
 

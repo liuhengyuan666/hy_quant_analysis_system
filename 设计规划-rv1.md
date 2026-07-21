@@ -95,12 +95,14 @@ Phase 2 只恢复已有策略信息的消费能力，不新增策略、不新增
        - cargo check --workspace 零 warning
 ```
 
-### Phase 3：LLM 增强 + 组合决策重构（后续）
+### Phase 3：LLM 解释层（Portfolio Decision Explanation Layer，已完成 ✅）
 
-- LLM 上下文增强：多策略矛盾点 + 历史参照 + 连续性上下文
-- 对话历史持久化
-- Prompt 模板化（`config/prompts.toml`）：短线交易员 / 长线配置者等分析人格
-- portfolio-decision 用 LLM 替代硬编码 Pattern Library
+**边界冻结（ADR-106）**：数据流固定为 Deterministic Engines → Decision Fact → LLM Explanation，LLM 在管线最右侧，永远不在中间。
+
+- **prompts.toml 分析人格**：`config/prompts.toml` 支持自定义 persona（短线交易员 / 长线配置者）；仅视角指令，禁止阈值与决策规则；六个内置 action 可被文件覆盖
+- **上下文增强**：LLM 接收已计算事实（多策略分数 + 场景对比 + Integrity 状态 + 组合姿态）作为解释输入——ADR-074 的演进：事实可传，决策权不传
+- **对话历史持久化**：`workspace/llm-history/{scope}/{action}/{date}.json`；前次输出注入时显式标注「前次解读，非事实证据」，防止 LLM 自证循环
+- **portfolio_review**：确定性决策（V5 Pattern Engine）先行，LLM 仅解释引擎行为与多策略矛盾点，绝不生成 action 标签
 
 ---
 
