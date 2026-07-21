@@ -1360,8 +1360,8 @@ pub fn handle_research_replay(
 // RV1 New Commands
 // ─────────────────────────────────────────────────────────────
 
-/// Multi-strategy independent scoring + scenario comparison + attribution.
-/// Phase 2 will add full independent scoring per strategy; Phase 1 shows existing 4-strategy scores.
+/// Multi-strategy independent scoring + scenario comparison + attribution (RV1 Phase 2, Route B).
+/// Consumption layer only: reads persisted strategy_preference rows, never touches signal computation.
 pub fn handle_strategy_perspectives(
     context: &AppContext,
     symbol: Option<String>,
@@ -1371,69 +1371,120 @@ pub fn handle_strategy_perspectives(
     scenario: Option<String>,
 ) -> Result<()> {
     let scope: app_service::ReportScope = scope_arg.into();
-    let scope_str = scope.as_str().to_uppercase();
-
-    // Fetch strategy preferences directly from market-store
-    let all_prefs = market_store::fetch_strategy_preferences(&context.storage)?;
-    let prefs: Vec<_> = all_prefs
-        .iter()
-        .filter(|p| p.analysis_scope == scope_str)
-        .collect();
-
-    // Determine target date: latest date in prefs, or explicit date
-    let target_date = date.unwrap_or_else(|| {
-        prefs.iter().map(|p| p.date).max().unwrap_or_else(|| chrono::Local::now().date_naive())
-    });
-
-    let day_prefs: Vec<_> = prefs.iter().filter(|p| p.date == target_date).collect();
+    let analysis_scope: AnalysisScope = match scope {
+        app_service::ReportScope::Global => AnalysisScope::Global,
+        app_service::ReportScope::Cn => AnalysisScope::Cn,
+        app_service::ReportScope::Hk => AnalysisScope::Hk,
+    };
+    let project_root = market_store::StorageConfig::project_root()?;
 
     match mode.as_str() {
         "scoreboard" => {
+            let (target_date, entries) = app_service::strategy_perspectives::strategy_perspectives_scoreboard(
+                &context.storage,
+                analysis_scope,
+                date,
+                &project_root,
+            )?;
+
             println!("Strategy Scoreboard — Scope: {:?}, Date: {}", scope, target_date);
             println!();
-            println!("{:<10} {:<12} {:<12} {:<12} {:<12} {:<12}", "Symbol", "ValueLeft", "TrendPullbk", "TrendBrkout", "MomentumR", "Best");
-            println!("{}", "-".repeat(70));
+            println!(
+                "{:<10} {:<10} {:<10} {:<10} {:<10} {:<14} {}",
+                "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best", "Scenario"
+            );
+            println!("{}", "-".repeat(88));
 
-            for p in &day_prefs {
+            for entry in &entries {
+                let scenario_text = match &scenario {
+                    Some(key) => entry
+                        .scenario_scores
+                        .iter()
+                        .find(|(k, _, _)| k == key)
+                        .map(|(_, label, s)| format!("{} {:.1}", label, s))
+                        .unwrap_or_else(|| format!("(unknown scenario '{}')", key)),
+                    None => entry
+                        .scenario_scores
+                        .first()
+                        .map(|(_, label, s)| format!("{} {:.1}", label, s))
+                        .unwrap_or_default(),
+                };
                 println!(
-                    "{:<10} {:<12.1} {:<12.1} {:<12.1} {:<12.1} {:<12}",
-                    p.symbol,
-                    p.value_left_score,
-                    p.trend_pullback_score,
-                    p.trend_breakout_score,
-                    p.momentum_right_score,
-                    format!("{:?}", p.best_strategy),
+                    "{:<10} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<14} {}",
+                    entry.symbol,
+                    entry.value_left_score,
+                    entry.trend_pullback_score,
+                    entry.trend_breakout_score,
+                    entry.momentum_right_score,
+                    format!("{:?}", entry.best_strategy),
+                    scenario_text,
                 );
+            }
+
+            if scenario.is_none() && !entries.is_empty() {
+                println!();
+                println!("Scenario shown: default (first). Use --scenario <key> to select. Available:");
+                for (key, label, _) in &entries[0].scenario_scores {
+                    println!("  {} = {}", key, label);
+                }
             }
         }
         "detail" => {
             let sym = symbol.as_deref().unwrap_or("000300");
-            println!("Strategy Perspectives — Symbol: {}, Scope: {:?}, Date: {}", sym, scope, target_date);
+            let detail = app_service::strategy_perspectives::strategy_perspectives_detail(
+                &context.storage,
+                sym,
+                analysis_scope,
+                date,
+                &project_root,
+            )?;
+
+            let entry = &detail.entry;
+            println!("Strategy Perspectives — {} ({}), Scope: {:?}", sym, entry.name.clone().unwrap_or_default(), scope);
             println!();
 
-            let p = day_prefs.iter().find(|p| p.symbol == sym);
-            if let Some(p) = p {
-                println!("{:<20} {:>8}", "Strategy", "Score");
-                println!("{}", "-".repeat(30));
-                println!("{:<20} {:>8.1}", "ValueLeft", p.value_left_score);
-                println!("{:<20} {:>8.1}", "TrendPullback", p.trend_pullback_score);
-                println!("{:<20} {:>8.1}", "TrendBreakout", p.trend_breakout_score);
-                println!("{:<20} {:>8.1}", "MomentumRight", p.momentum_right_score);
+            println!("{:<16} {:>8} {:>10}", "Strategy", "Score", "State");
+            println!("{}", "-".repeat(36));
+            let rows = [
+                ("ValueLeft", entry.value_left_score),
+                ("TrendPullback", entry.trend_pullback_score),
+                ("TrendBreakout", entry.trend_breakout_score),
+                ("MomentumRight", entry.momentum_right_score),
+            ];
+            for (name, score) in rows {
+                let state = if score >= 60.0 {
+                    "Strong"
+                } else if score >= 40.0 {
+                    "Moderate"
+                } else {
+                    "Weak"
+                };
+                println!("{:<16} {:>8.1} {:>10}", name, score, state);
+            }
+            println!();
+            println!("Best Strategy: {:?} (confidence {:.1}, alignment {}/4 ≥60)",
+                entry.best_strategy, entry.confidence, entry.alignment);
+
+            println!();
+            println!("Scenario Scores:");
+            for (_, label, score) in &entry.scenario_scores {
+                println!("  {:<20} {:>6.1}", label, score);
+            }
+
+            println!();
+            println!("Attribution (recomputed on demand; drift vs stored should be ~0):");
+            for attr in &detail.attributions {
                 println!();
-                println!("Best Strategy: {:?}", p.best_strategy);
-                println!("Confidence: {:.1}", p.confidence);
-                println!("Alignment: {} strategies ≥ 60", p.alignment);
-            } else {
-                println!("Symbol {} not found in strategy preferences for {}", sym, target_date);
+                println!("  [{:?}] stored {:.1} / recomputed {:.1} (drift {:.2})",
+                    attr.kind, attr.stored_score, attr.recomputed_score, attr.drift);
+                for (factor, value, contribution, note) in &attr.drivers {
+                    println!("    {:<10} value {:>8.2}  contrib {:>7.2}  {}", factor, value, contribution, note);
+                }
             }
         }
         _ => {
             anyhow::bail!("Unknown mode '{}'. Use 'scoreboard' or 'detail'.", mode);
         }
-    }
-
-    if let Some(scn) = scenario {
-        println!("\nScenario: {} (Phase 2 — full scenario weighting not yet implemented)", scn);
     }
 
     Ok(())

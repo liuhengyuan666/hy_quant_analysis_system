@@ -40,6 +40,8 @@ pub mod dashboard;
 pub mod execution_replay;
 pub mod llm;
 pub mod research_evidence;
+pub mod scenarios;
+pub mod strategy_perspectives;
 pub mod sync;
 pub mod trust;
 pub mod workspace;

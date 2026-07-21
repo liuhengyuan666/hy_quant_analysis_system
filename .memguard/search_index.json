@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-21T06:31:41Z",
+    "rebuilt_at": "2026-07-21T07:06:06Z",
     "version": "v4"
   },
   "terms": {
@@ -580,11 +580,11 @@
         "type": "adr"
       },
       {
-        "id": "ADR-057",
+        "id": "ADR-105",
         "type": "adr"
       },
       {
-        "id": "ADR-105",
+        "id": "ADR-057",
         "type": "adr"
       },
       {
@@ -3356,11 +3356,11 @@
         "type": "adr"
       },
       {
-        "id": "ADR-057",
+        "id": "ADR-105",
         "type": "adr"
       },
       {
-        "id": "ADR-105",
+        "id": "ADR-057",
         "type": "adr"
       },
       {
@@ -8066,11 +8066,11 @@
         "type": "adr"
       },
       {
-        "id": "ADR-057",
+        "id": "ADR-105",
         "type": "adr"
       },
       {
-        "id": "ADR-105",
+        "id": "ADR-057",
         "type": "adr"
       }
     ],
@@ -20250,11 +20250,11 @@
         "type": "adr"
       },
       {
-        "id": "ADR-057",
+        "id": "ADR-104",
         "type": "adr"
       },
       {
-        "id": "ADR-104",
+        "id": "ADR-057",
         "type": "adr"
       },
       {

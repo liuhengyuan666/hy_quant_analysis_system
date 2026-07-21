@@ -164,15 +164,17 @@ cargo run -p quant-cli -- daily-report --scope global
 ### 深度分析
 
 ```bash
-# 多策略独立评分（单标的详细归因）
+# 多策略独立评分（单标的详细归因 + 场景对比）
 cargo run -p quant-cli -- strategy-perspectives --symbol 000300 --scope cn --mode detail
 
-# 多策略全市场排行
-cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard
+# 多策略全市场排行（可指定场景加权）
+cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard --scenario momentum_short
 
 # 组合操作建议
 cargo run -p quant-cli -- portfolio-decision --scope global
 ```
+
+**场景配置**：`config/scenarios.toml` 定义了 `momentum_short`（短线动量）、`value_long`（长线价值）、`aggressive`（激进博弈）、`balanced`（均衡基线）四个场景。场景分仅用于展示和 LLM 上下文，不进入最终信号计算。
 
 ### 证据与验证
 

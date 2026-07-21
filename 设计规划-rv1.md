@@ -63,12 +63,37 @@ ADR 明确写死：
   - 允许：消费已有策略分数、场景加权、输出解释
   - 禁止：新策略类型、新评分指标、新 Evidence（除非重走 Integrity + Validation + Registry 流程）
 
-### Phase 2：策略多视角消费化（门禁通过后启动）
+### Phase 2：策略多视角消费化（当前，路线 B）
 
-- signal-engine 不再合并四策略为单一分数，独立产出每套策略信号+归因
-- 新增场景配置（`config/scenarios.toml`）：短线动量博弈 / 长线价值配置 / 激进博弈
-- `strategy-perspectives` 完整实现（含场景加权）
-- `SignalSnapshot` 扩展 `strategy_signals` / `scenario_scores` 字段（`#[serde(default)]`）
+**最高约束**：Phase 2 is a strategy preference exposure layer, not a strategy expansion layer.
+Phase 2 只恢复已有策略信息的消费能力，不新增策略、不新增因子、不改变 DecisionEngine 默认行为。
+
+**路线 B（已确认）**：零 schema 变更。四策略分数已持久化于 `strategy_preference` 表，Phase 2 在消费层 join `signal_snapshot + strategy_preference` 并附加归因，**SignalSnapshot 完全不动**，Gate 1（旧决策行为不变）结构性 100% 满足。
+
+```
+201.1  strategy-engine: breakdown() 纯函数扩展
+       - trait StrategyScorer 增加 breakdown() -> ScoreBreakdown { score, drivers }
+       - score() 默认实现 = breakdown().score（防漂移，单测锁定）
+       - 每个 driver: factor / value / contribution / note（不落库，消费时现算）
+
+201.2  app-service: scenarios.rs + orchestration
+       - scenarios.rs: 加载 config/scenarios.toml（缺失时降级为等权重默认场景）
+       - strategy_perspectives orchestration:
+         scoreboard 模式：读 strategy_preference + 场景加权（纯读，不重算）
+         detail 模式：重建 AnalysisContext → breakdown() → drivers + 与库存分数一致性校验
+
+201.3  config/scenarios.toml: momentum_short / value_long / aggressive 三场景
+       - 场景分仅用于展示与 LLM 上下文，绝不进入 final_score / signal_label / portfolio-decision 计算路径
+
+201.4  CLI: strategy-perspectives 完整实现
+       - scoreboard：全标的 4 策略分 + 场景加权分
+       - detail：单标的 4 策略分 + drivers 归因 + 场景对比
+
+201.5  Gate 验证
+       - strategy-engine 单测：四个 scorer 的 score() == breakdown().score
+       - signal-engine / signal_snapshot 零改动（结构性 parity）
+       - cargo check --workspace 零 warning
+```
 
 ### Phase 3：LLM 增强 + 组合决策重构（后续）
 
