@@ -918,3 +918,15 @@ Phase 2B-2 Transition Evidence Modeling. After rejecting RecoveryFailure (ADR-10
 Transition Evidence work is blocked until ResearchContext.breadth and ResearchContext.rotation.leadership_stability are populated with real computed values. breadth_pct and leadership_stability are currently constant placeholders (50.0 and 0.50) across all ExecutionResearchRecord samples, making BreadthDeterioration and LeadershipDecay uncomputable.
 
 **Tags:** v8, execution-platform, transition-evidence, data-quality
+
+## ADR-104: RV1 Capability Consolidation: From Execution Platform to Daily Portfolio Decision Assistant
+
+**Status:** Accepted
+
+### Context
+V8 Execution Platform 在 Phase 2A 校准后暴露出与用户真实场景的错位：用户的真实交易场景是场外基金收盘决策(加仓/持有/减仓/等待)，不是订单执行。107个CLI命令中用户日常只用3-5个；25个audit命令和20个execution实验命令零使用；策略引擎四策略加权成一个平庸平均分；Shadow Production 90天观察期形成'观察→再观察'的自我延续循环而从未闭环到参数调整。与GPT复核交叉验证后确认：V8不是做错了，而是从'收盘前决策系统'演变成了'风险研究平台'，需要能力收敛。
+
+### Decision
+执行 RV1 能力收敛(V8→V8.1)：1)系统定位从Execution Platform改为Daily Portfolio Decision Assistant；2)CLI从107命令精简到~10核心+~9隐藏+~15配置，移除25个audit命令、20个execution实验命令、4个shadow形式化命令的CLI暴露(底层crate逻辑保留)；3)核心命令重命名(refresh-all→market-refresh等5个)+新增5个(daily-analysis/strategy-perspectives/evidence-status/validation-check/historical-replay)；4)ExecutionState语义从BuyNow/Wait/NoChase改为Increase/Maintain/Avoid(带serde alias向后兼容+deprecated旧变体)；5)Evidence Asset System/Context Integrity Firewall/Horizon Role Model提升为系统一级资产；6)daily-analysis集成Integrity Gate作为第一步。Phase 1已完成并验证(cargo check workspace通过)。
+
+**Tags:** rv1, architecture-consolidation, cli-reduction, decision-semantics, daily-portfolio-assistant

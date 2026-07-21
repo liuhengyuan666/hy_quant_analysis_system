@@ -475,22 +475,22 @@ mod tests {
     #[test]
     fn statistics_computes_decision_distribution() {
         let records = vec![
-            make_test_record(ExecutionState::BuyNow, ExecutionEvaluation::Hit, vec![]),
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::PolicyTooConservative, vec![]),
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::PolicyTooConservative, vec![]),
+            make_test_record(ExecutionState::Increase, ExecutionEvaluation::Hit, vec![]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::PolicyTooConservative, vec![]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::PolicyTooConservative, vec![]),
         ];
         let stats = compute_execution_statistics(&records);
-        assert_eq!(stats.decision_distribution.counts.get(&ExecutionState::BuyNow), Some(&1));
-        assert_eq!(stats.decision_distribution.counts.get(&ExecutionState::Wait), Some(&2));
+        assert_eq!(stats.decision_distribution.counts.get(&ExecutionState::Increase), Some(&1));
+        assert_eq!(stats.decision_distribution.counts.get(&ExecutionState::Maintain), Some(&2));
         assert_eq!(stats.meta.record_count, 3);
     }
 
     #[test]
     fn statistics_computes_prior_distribution_from_strategy_state_evidence() {
         let records = vec![
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("NoTrade")]),
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("DeRisk")]),
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("NoTrade")]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("NoTrade")]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("DeRisk")]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::PolicyTooConservative, vec![prior_evidence("NoTrade")]),
         ];
         let stats = compute_execution_statistics(&records);
         assert_eq!(stats.prior_distribution.counts.get("NoTrade"), Some(&2));
@@ -501,12 +501,12 @@ mod tests {
     fn statistics_computes_evidence_pair_matrix() {
         let records = vec![
             make_test_record(
-                ExecutionState::BuyNow,
+                ExecutionState::Increase,
                 ExecutionEvaluation::Hit,
                 vec![market_evidence(EvidenceKind::TrendParticipation), market_evidence(EvidenceKind::Confirmation)],
             ),
             make_test_record(
-                ExecutionState::BuyNow,
+                ExecutionState::Increase,
                 ExecutionEvaluation::Hit,
                 vec![market_evidence(EvidenceKind::TrendParticipation), market_evidence(EvidenceKind::MomentumExpansion)],
             ),
@@ -519,16 +519,16 @@ mod tests {
     #[test]
     fn statistics_outcome_matrix_classifies_evaluations() {
         let records = vec![
-            make_test_record(ExecutionState::BuyNow, ExecutionEvaluation::Hit, vec![]),
-            make_test_record(ExecutionState::BuyNow, ExecutionEvaluation::TooEarly, vec![]),
+            make_test_record(ExecutionState::Increase, ExecutionEvaluation::Hit, vec![]),
+            make_test_record(ExecutionState::Increase, ExecutionEvaluation::TooEarly, vec![]),
             make_test_record(ExecutionState::Reduce, ExecutionEvaluation::TrendLost, vec![]),
-            make_test_record(ExecutionState::Wait, ExecutionEvaluation::AwaitingOutcome, vec![]),
+            make_test_record(ExecutionState::Maintain, ExecutionEvaluation::AwaitingOutcome, vec![]),
         ];
         let stats = compute_execution_statistics(&records);
-        assert_eq!(stats.outcome_matrix.get(ExecutionState::BuyNow, OutcomeBucket::Hit), 1);
-        assert_eq!(stats.outcome_matrix.get(ExecutionState::BuyNow, OutcomeBucket::TooEarly), 1);
+        assert_eq!(stats.outcome_matrix.get(ExecutionState::Increase, OutcomeBucket::Hit), 1);
+        assert_eq!(stats.outcome_matrix.get(ExecutionState::Increase, OutcomeBucket::TooEarly), 1);
         assert_eq!(stats.outcome_matrix.get(ExecutionState::Reduce, OutcomeBucket::Miss), 1);
-        assert_eq!(stats.outcome_matrix.get(ExecutionState::Wait, OutcomeBucket::Unknown), 1);
+        assert_eq!(stats.outcome_matrix.get(ExecutionState::Maintain, OutcomeBucket::Unknown), 1);
     }
 
     #[test]

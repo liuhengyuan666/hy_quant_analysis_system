@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-21T02:34:04Z",
+    "rebuilt_at": "2026-07-21T04:59:34Z",
     "version": "v4"
   },
   "terms": {
@@ -462,6 +462,12 @@
         "type": "adr"
       }
     ],
+    "1已完成并验证(cargo": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "2": [
       {
         "id": "ADR-034",
@@ -795,6 +801,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -1694,6 +1704,12 @@
         "type": "adr"
       }
     ],
+    "90天观察期形成'观察→再观察'的自我延续循环而从未闭环到参数调整。与gpt复核交叉验证后确认：v8不是做错了，而是从'收盘前决策系统'演变成了'风险研究平台'，需要能力收敛": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "94.8": [
       {
         "id": "ADR-052",
@@ -2371,6 +2387,12 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "alias向后兼容+deprecated旧变体)；5)evidence": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -3152,6 +3174,12 @@
         "type": "adr"
       }
     ],
+    "architecture-consolidation": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "architecture-freeze": [
       {
         "id": "ADR-082",
@@ -3382,6 +3410,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -3411,6 +3443,18 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "assistant": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "assistant；2)cli从107命令精简到~10核心+~9隐藏+~15配置，移除25个audit命令、20个execution实验命令、4个shadow形式化命令的cli暴露(底层crate逻辑保留)；3)核心命令重命名(refresh-all→market-refresh等5个)+新增5个(daily-analysis/strategy-perspectives/evidence-status/validation-check/historical-replay)；4)executionstate语义从buynow/wait/nochase改为increase/maintain/avoid(带serde": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -4548,6 +4592,10 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "capping": [
@@ -4746,6 +4794,12 @@
         "type": "adr"
       }
     ],
+    "check": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "child": [
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
@@ -4863,6 +4917,12 @@
       },
       {
         "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "cli-reduction": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -5512,6 +5572,12 @@
         "type": "adr"
       }
     ],
+    "consolidation": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "constant": [
       {
         "id": "ADR-076",
@@ -6108,6 +6174,16 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "daily-portfolio-assistant": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "daily_report": [
@@ -6454,6 +6530,10 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "decision-gate": [
@@ -6471,6 +6551,12 @@
     "decision-path-review": [
       {
         "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "decision-semantics": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -8114,6 +8200,10 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "execution-platform": [
@@ -8818,6 +8908,12 @@
         "type": "adr"
       }
     ],
+    "firewall/horizon": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "first": [
       {
         "id": "ADR-041",
@@ -9442,6 +9538,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -9683,6 +9783,12 @@
     "gated": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "gate作为第一步。phase": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -10991,6 +11097,10 @@
     "integrity": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -12992,6 +13102,12 @@
         "type": "adr"
       }
     ],
+    "model提升为系统一级资产；6)daily-analysis集成integrity": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "modification": [
       {
         "id": "ADR-095",
@@ -14688,6 +14804,10 @@
       {
         "id": "ADR-103",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "phase-2a": [
@@ -14878,6 +14998,16 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "platform改为daily": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "plus": [
@@ -14905,6 +15035,10 @@
     "portfolio": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -15249,6 +15383,10 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -17098,6 +17236,12 @@
         "type": "adr"
       }
     ],
+    "role": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "root": [
       {
         "id": "ADR-051",
@@ -17279,6 +17423,12 @@
     "rust": [
       {
         "id": "ADR-044",
+        "type": "adr"
+      }
+    ],
+    "rv1": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -19048,6 +19198,12 @@
         "type": "adr"
       }
     ],
+    "system/context": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "systematic": [
       {
         "id": "ADR-078",
@@ -19899,6 +20055,10 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       },
       {
@@ -21028,6 +21188,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -21941,6 +22105,12 @@
     "workspacemanager": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "workspace通过": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -22858,6 +23028,10 @@
       {
         "id": "ADR-048",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "在所有状态变更点调用同步函数": [
@@ -23214,6 +23388,10 @@
       {
         "id": "ADR-026",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "执行详情": [
@@ -23451,6 +23629,12 @@
     "标识，前端渲染黄色警告横幅，避免误导操作者。6": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "校准后暴露出与用户真实场景的错位：用户的真实交易场景是场外基金收盘决策(加仓/持有/减仓/等待)，不是订单执行。107个cli命令中用户日常只用3-5个；25个audit命令和20个execution实验命令零使用；策略引擎四策略加权成一个平庸平均分；shadow": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -23843,6 +24027,12 @@
     "耗时": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "能力收敛(v8→v8.1)：1)系统定位从execution": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],

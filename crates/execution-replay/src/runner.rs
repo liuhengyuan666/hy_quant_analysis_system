@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn mock_resolver_returns_outcome() {
-        let event = make_event(ExecutionState::BuyNow);
+        let event = make_event(ExecutionState::Increase);
         let resolver = MockOutcomeResolver;
         let outcome = resolver.resolve(&event, chrono::NaiveDate::from_ymd_opt(2026, 1, 2).unwrap()).unwrap();
         assert!(outcome.t20_return.unwrap() > 0.0);
@@ -410,7 +410,7 @@ mod tests {
         };
 
         let runner = ValidationRunner::new(MockOutcomeResolver, RuleBasedEvaluationEngine);
-        let result = runner.run_case(&case, |_| Ok(make_event(ExecutionState::BuyNow))).unwrap();
+        let result = runner.run_case(&case, |_| Ok(make_event(ExecutionState::Increase))).unwrap();
 
         assert!(result.decision_match);
         assert_eq!(result.actual_decision, "BuyNow");
@@ -456,7 +456,7 @@ mod tests {
         };
 
         let runner = ValidationRunner::new(MockOutcomeResolver, RuleBasedEvaluationEngine);
-        let summary = runner.run_suite(&suite, |_| Ok(make_event(ExecutionState::BuyNow)));
+        let summary = runner.run_suite(&suite, |_| Ok(make_event(ExecutionState::Increase)));
 
         assert_eq!(summary.total, 2);
         assert_eq!(summary.passed, 1);
@@ -491,7 +491,7 @@ mod tests {
         };
 
         let runner = ValidationRunner::new(MockOutcomeResolver, RuleBasedEvaluationEngine);
-        let summary = runner.run_suite(&suite, |_| Ok(make_event(ExecutionState::BuyNow)));
+        let summary = runner.run_suite(&suite, |_| Ok(make_event(ExecutionState::Increase)));
         let formatter = ValidationReportFormatter;
         let text = formatter.format_summary(&summary);
 

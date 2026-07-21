@@ -36,8 +36,8 @@ impl EvidenceTraceFormatter {
         for row in &trace.rows {
             let obs_to_evd = row.observation_to_evidence_retention();
             let evd_to_asm = row.evidence_to_assessment_retention();
-            let wait = row.decision_share(ExecutionState::Wait);
-            let buy = row.decision_share(ExecutionState::BuyNow);
+            let wait = row.decision_share(ExecutionState::Maintain);
+            let buy = row.decision_share(ExecutionState::Increase);
             let reduce = row.decision_share(ExecutionState::Reduce);
             let asm = row.in_assessment_count();
 
@@ -85,8 +85,8 @@ impl EvidenceTraceFormatter {
                 lines.push(format!("- Neutral: {}", row.neutral_count));
                 lines.push(format!(
                     "- Decisions: Wait={} BuyNow={} Reduce={}",
-                    row.decision_counts.get(&ExecutionState::Wait).unwrap_or(&0),
-                    row.decision_counts.get(&ExecutionState::BuyNow).unwrap_or(&0),
+                    row.decision_counts.get(&ExecutionState::Maintain).unwrap_or(&0),
+                    row.decision_counts.get(&ExecutionState::Increase).unwrap_or(&0),
                     row.decision_counts.get(&ExecutionState::Reduce).unwrap_or(&0),
                 ));
                 lines.push("".into());

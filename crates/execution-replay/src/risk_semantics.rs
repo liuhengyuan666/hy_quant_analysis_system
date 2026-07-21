@@ -271,7 +271,7 @@ pub fn compute_risk_semantics_review(records: &[ExecutionResearchRecord]) -> Ris
         .collect();
     let high_risk_wait_refs: Vec<&ExecutionResearchRecord> = high_risk_records
         .iter()
-        .filter(|r| r.event.decision.state == ExecutionState::Wait)
+        .filter(|r| r.event.decision.state == ExecutionState::Maintain)
         .copied()
         .collect();
     let high_risk_reduce_refs: Vec<&ExecutionResearchRecord> = high_risk_records
@@ -290,7 +290,7 @@ pub fn compute_risk_semantics_review(records: &[ExecutionResearchRecord]) -> Ris
     let blocked_candidates_refs: Vec<&ExecutionResearchRecord> = high_risk_records
         .iter()
         .filter(|r| {
-            r.event.decision.state == ExecutionState::Wait
+            r.event.decision.state == ExecutionState::Maintain
                 && r.event.decision.assessment.dominant_direction < r.event.policy.reduce_threshold
         })
         .copied()
@@ -541,8 +541,8 @@ mod tests {
     #[test]
     fn risk_semantics_counts_high_risk_records() {
         let records = vec![
-            make_record(RiskLevel::High, -0.5, ExecutionState::Wait, vec![EvidenceKind::RiskExpansion]),
-            make_record(RiskLevel::Low, 0.5, ExecutionState::BuyNow, vec![]),
+            make_record(RiskLevel::High, -0.5, ExecutionState::Maintain, vec![EvidenceKind::RiskExpansion]),
+            make_record(RiskLevel::Low, 0.5, ExecutionState::Increase, vec![]),
         ];
         let review = compute_risk_semantics_review(&records);
         assert_eq!(review.risk_distribution.high, 1);
@@ -556,7 +556,7 @@ mod tests {
             make_record(
                 RiskLevel::High,
                 -0.5,
-                ExecutionState::Wait,
+                ExecutionState::Maintain,
                 vec![EvidenceKind::RiskExpansion, EvidenceKind::Distribution],
             ),
         ];

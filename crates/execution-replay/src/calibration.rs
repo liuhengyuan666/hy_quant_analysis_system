@@ -99,10 +99,10 @@ impl CalibrationPolicy {
         use execution_engine::v2::decision::DecisionReason;
 
         if assessment.risk == RiskLevel::Critical {
-            return (ExecutionState::Wait, vec![DecisionReason::CriticalRisk]);
+            return (ExecutionState::Maintain, vec![DecisionReason::CriticalRisk]);
         }
         if assessment.risk == RiskLevel::High {
-            return (ExecutionState::Wait, vec![DecisionReason::RiskTooHigh]);
+            return (ExecutionState::Maintain, vec![DecisionReason::RiskTooHigh]);
         }
 
         let direction = assessment.dominant_direction;
@@ -115,18 +115,18 @@ impl CalibrationPolicy {
         };
 
         if assessment.confidence < required_confidence {
-            return (ExecutionState::Wait, vec![DecisionReason::ConfidenceBelowThreshold]);
+            return (ExecutionState::Maintain, vec![DecisionReason::ConfidenceBelowThreshold]);
         }
         if assessment.consensus < base.consensus_threshold {
-            return (ExecutionState::Wait, vec![DecisionReason::ConsensusBelowThreshold]);
+            return (ExecutionState::Maintain, vec![DecisionReason::ConsensusBelowThreshold]);
         }
         if assessment.dominant_direction > base.buy_threshold {
-            return (ExecutionState::BuyNow, vec![DecisionReason::PositiveConsensus]);
+            return (ExecutionState::Increase, vec![DecisionReason::PositiveConsensus]);
         }
         if assessment.dominant_direction < base.reduce_threshold {
             return (ExecutionState::Reduce, vec![DecisionReason::NegativeConsensus]);
         }
-        (ExecutionState::Wait, vec![DecisionReason::WeakDirection])
+        (ExecutionState::Maintain, vec![DecisionReason::WeakDirection])
     }
 }
 
@@ -292,10 +292,10 @@ fn run_experiment(
                     }
                 }
             }
-            ExecutionState::BuyNow => {
+            ExecutionState::Increase => {
                 result.buy_now_count += 1;
             }
-            ExecutionState::Wait => {
+            ExecutionState::Maintain => {
                 result.wait_count += 1;
                 if is_reduce_candidate {
                     if let Some(ret) = t20 {
@@ -432,7 +432,7 @@ mod tests {
         };
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: ExecutionState::Wait,
+            state: ExecutionState::Maintain,
             confidence,
             risk: RiskLevel::Medium,
             evidences: vec![],

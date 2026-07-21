@@ -237,6 +237,10 @@
 
 - [Done] [TASK-158] Combine multiple medium-term holding risk signals (LeadershipDecay, BreadthDeterioration, LiquidityDeterioration) into a Holding Risk Evidence Bundle. Evaluate at T+60 natural horizon, not T+20. Output a Holding Risk Score profile as a Research Asset.
 
+
+### 2026-07-21
+- [Done] [TASK-200] RV1 Phase 1: CLI减法 + 重命名 + Integrity集成。107命令→~10核心；refresh-all→market-refresh; preclose-analysis→portfolio-decision; ExecutionState语义变更(BuyNow→Increase); 新增daily-analysis/strategy-perspectives/evidence-status/validation-check; README/操作手册重写; 设计规划-rv1.md落地
+
 ## Superseded
 
 ### 2026-07-09
@@ -264,6 +268,7 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
 
 
 

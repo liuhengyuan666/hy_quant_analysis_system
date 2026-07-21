@@ -1,3 +1,10 @@
+//! Internal audit command library.
+//!
+//! RV1: most handlers here are no longer exposed via CLI (audit-* commands removed).
+//! The code is intentionally preserved as an internal research library;
+//! `symbol-diagnostics` / `symbol-scoreboard` / `rotation-ranking` remain exposed.
+#![allow(dead_code)]
+
 use anyhow::Result;
 use app_service::{AppContext, ReportScope};
 use chrono::{Local, NaiveDate};

@@ -65,8 +65,8 @@ impl ExecutionStatisticsFormatter {
         lines.push("| State | Count | Ratio |".into());
         lines.push("|-------|------:|------:|".into());
         for state in [
-            ExecutionState::BuyNow,
-            ExecutionState::Wait,
+            ExecutionState::Increase,
+            ExecutionState::Maintain,
             ExecutionState::Reduce,
         ] {
             let count = dist.counts.get(&state).copied().unwrap_or(0);
@@ -184,8 +184,8 @@ impl ExecutionStatisticsFormatter {
         lines.push("| Decision | Hit | Miss | TooEarly | TooLate | Unknown |".into());
         lines.push("|----------|----:|-----:|---------:|--------:|--------:|".into());
         for state in [
-            ExecutionState::BuyNow,
-            ExecutionState::Wait,
+            ExecutionState::Increase,
+            ExecutionState::Maintain,
             ExecutionState::Reduce,
         ] {
             let row_total = matrix.row_total(state);

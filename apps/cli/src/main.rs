@@ -255,22 +255,27 @@ enum Command {
         action: String,
     },
 
-    // ── Hidden / Advanced ───────────────────────────────────────────
+    // ── Advanced research (visible in --help) ─────────────────────────
 
     /// Research surface commands (observation-only tools)
     #[command(subcommand)]
     Research(ResearchCommand),
+    // ── Engineering maintenance (hidden from --help, still executable) ──
+
     /// Pipeline dates diagnostic
+    #[command(hide = true)]
     PipelineDates {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
     /// Explain why latest gate hasn't advanced
+    #[command(hide = true)]
     ExplainLatestGate {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
     /// Single-symbol signal attribution breakdown
+    #[command(hide = true)]
     SymbolDiagnostics {
         #[arg(long)]
         symbol: String,
@@ -280,6 +285,7 @@ enum Command {
         scope: ReportScopeArg,
     },
     /// Full symbol scoreboard
+    #[command(hide = true)]
     SymbolScoreboard {
         #[arg(long)]
         date: Option<NaiveDate>,
@@ -287,6 +293,7 @@ enum Command {
         scope: ReportScopeArg,
     },
     /// Rotation ranking
+    #[command(hide = true)]
     RotationRanking {
         #[arg(long)]
         date: Option<NaiveDate>,
@@ -294,6 +301,7 @@ enum Command {
         scope: ReportScopeArg,
     },
     /// Dashboard snapshot
+    #[command(hide = true)]
     DashboardSnapshot {
         #[arg(long)]
         date: Option<NaiveDate>,
@@ -301,6 +309,7 @@ enum Command {
         scope: ReportScopeArg,
     },
     /// Dashboard dates
+    #[command(hide = true)]
     DashboardDates {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
@@ -323,6 +332,7 @@ enum Command {
         max_drawdown: Option<f64>,
     },
     /// Sync and export in one step
+    #[command(hide = true)]
     SyncAndExport {
         #[arg(long)]
         date: Option<NaiveDate>,
@@ -334,25 +344,33 @@ enum Command {
         run_backtests: bool,
     },
 
-    // ── Config ──────────────────────────────────────────────────────
+    // ── Config & pipeline stages (hidden from --help) ──
 
+    #[command(hide = true)]
     IngestDaily {
         #[arg(long)]
         from: NaiveDate,
         #[arg(long)]
         to: NaiveDate,
     },
+    #[command(hide = true)]
     ComputeIndicators,
+    #[command(hide = true)]
     ComputeMacro {
         #[arg(long)]
         from: NaiveDate,
         #[arg(long)]
         to: NaiveDate,
     },
+    #[command(hide = true)]
     ComputeRotation,
+    #[command(hide = true)]
     ComputeStrategyPreferences,
+    #[command(hide = true)]
     ComputeSignals,
+    #[command(hide = true)]
     ExportDataHealthReport,
+    #[command(hide = true)]
     ResearchContext {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,

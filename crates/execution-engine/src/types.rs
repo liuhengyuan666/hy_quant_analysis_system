@@ -19,20 +19,6 @@ pub enum ExecutionState {
     Reduce,
     /// Did not enter analysis (hard gate or data failure).
     Skip,
-
-    // ── Deprecated aliases (for execution-replay backward compat) ──
-    /// Deprecated: use `Increase` instead.
-    #[deprecated(note = "use Increase instead")]
-    #[serde(skip)]
-    BuyNow,
-    /// Deprecated: use `Maintain` instead.
-    #[deprecated(note = "use Maintain instead")]
-    #[serde(skip)]
-    Wait,
-    /// Deprecated: use `Avoid` instead.
-    #[deprecated(note = "use Avoid instead")]
-    #[serde(skip)]
-    NoChase,
 }
 
 impl ExecutionState {
@@ -43,12 +29,6 @@ impl ExecutionState {
             Self::Avoid => "AVOID",
             Self::Reduce => "REDUCE",
             Self::Skip => "SKIP",
-            #[allow(deprecated)]
-            Self::BuyNow => "INCREASE",
-            #[allow(deprecated)]
-            Self::Wait => "MAINTAIN",
-            #[allow(deprecated)]
-            Self::NoChase => "AVOID",
         }
     }
 }

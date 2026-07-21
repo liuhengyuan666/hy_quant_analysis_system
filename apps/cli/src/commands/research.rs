@@ -15,6 +15,8 @@ use std::collections::BTreeMap;
 use crate::ReportScopeArg;
 
 /// Render an analyze_with_action result as markdown
+/// RV1: retained for the removed `analyze` command; internal library only.
+#[allow(dead_code)]
 pub fn render_action_result_md(value: &serde_json::Value) -> String {
     let mut md = String::new();
 
@@ -42,6 +44,8 @@ pub fn render_action_result_md(value: &serde_json::Value) -> String {
     md
 }
 
+/// RV1: retained for the removed `list-skills` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_list_actions() -> Result<()> {
     println!("Available Research Actions:");
     println!("  - market_story: 市场叙事");
@@ -52,6 +56,8 @@ pub fn handle_list_actions() -> Result<()> {
     Ok(())
 }
 
+/// RV1: retained for the removed `benchmark-skill` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_benchmark_action(
     _context: &AppContext,
     action: String,
@@ -150,6 +156,8 @@ pub fn handle_research_srd(
     Ok(())
 }
 
+/// RV1: retained for the removed `analyze` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_analyze(
     context: AppContext,
     action: String,
