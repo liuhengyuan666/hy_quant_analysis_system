@@ -166,7 +166,7 @@ cargo run -p quant-cli -- research observe
 #   --scope cn|hk                 观测对应市场
 #   --date 2026-07-20             回看历史日期
 #   --condition srd-strong        分析条件（默认 srd-strong）
-#   --horizon 20|60               前向收益窗口（默认 20 交易日）
+#   --horizon 60                前向收益窗口（默认 20，可填任意交易日数）
 #   --output <path>               自定义输出（默认 reports/research-observe-{scope}-{date}.md）
 
 # 4. 多策略评分矩阵（默认：global、全标的、4 策略独立分 + 全部场景列）
@@ -200,7 +200,7 @@ cargo run -p quant-cli -- research analogues
 #   --date 2026-07-20       目标日期（默认最新）
 #   --top-n 5               返回前 N 个相似日
 #   --lookback 252          历史搜索窗口（交易日）
-#   --horizon 20|60         前向收益窗口
+#   --horizon 60            前向收益窗口（默认 20，可填任意交易日数）
 ```
 
 ### 周期命令（每周 / 双周 / 可脚本化）
