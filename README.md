@@ -148,42 +148,85 @@ cargo run -p quant-cli -- seed-universe
 
 ## 5. 核心命令（RV1）
 
-### 每日三件套
+### 每日复盘命令（按执行顺序）
 
 ```bash
-# 全链路数据刷新（默认：刷新至今天、global、含回测）
+# 1. 全链路数据刷新（默认：刷新至今天、global、含回测）
 cargo run -p quant-cli -- market-refresh
 #   --to 2026-07-21         指定刷新截止日期
 #   --scope cn|hk           latest-gate 诊断视角（不影响底层刷新范围）
 #   --run-backtests false   跳过回测阶段，加速刷新
 
-# 每日分析（默认：global；输出 Integrity + 信号 + 组合姿态）
+# 2. 每日分析（默认：global；30 秒看 Integrity + 信号 + 组合姿态）
 cargo run -p quant-cli -- daily-analysis
 #   --scope cn|hk           分析对应市场
 
-# 导出日报（默认：global、最新分析日期）
+# 3. 历史语境观测（默认：global；把今天放进历史：SRD 背离 / 市场拉伸 / 条件前向收益 / 数据健康，输出归档 markdown）
+cargo run -p quant-cli -- research observe
+#   --scope cn|hk                 观测对应市场
+#   --date 2026-07-20             回看历史日期
+#   --condition srd-strong        分析条件（默认 srd-strong）
+#   --horizon 20|60               前向收益窗口（默认 20 交易日）
+#   --output <path>               自定义输出（默认 reports/research-observe-{scope}-{date}.md）
+
+# 4. 多策略评分矩阵（默认：global、全标的、4 策略独立分 + 全部场景列）
+cargo run -p quant-cli -- strategy-perspectives
+#   --scope cn|hk                     只看对应市场
+#   --scenario momentum_short         聚焦单场景列
+#   --date 2026-07-20                 查看历史日期
+
+# 5. 导出日报（默认：global、最新分析日期；需要留档时执行）
 cargo run -p quant-cli -- daily-report
 #   --scope cn|hk           导出对应市场日报
 #   --date 2026-07-20       导出指定历史日期（跳过 gate 检查）
 #   --concise               精简版日报
 ```
 
-### 深度分析
+### 按需下钻（遇到张力 / 极端读数时）
 
 ```bash
-# 多策略评分矩阵（默认：global、全标的、4 策略独立分 + 全部场景列）
-cargo run -p quant-cli -- strategy-perspectives
-#   --scope cn|hk                     只看对应市场
-#   --mode detail --symbol 512480     单标的详细归因（4 策略 driver 分解 + 场景对比）
-#   --scenario momentum_short         聚焦单场景列
-#   --date 2026-07-20                 查看历史日期
+# 单标的四策略归因（信号 StrongBuy 但姿态 Maintain/Avoid 等撕裂场景）
+cargo run -p quant-cli -- strategy-perspectives --mode detail --symbol 512480
+#   --scope cn|hk           对应市场
+#   --date 2026-07-20       历史日期
 
-# 组合姿态（默认：global；基于实时盘中数据输出 Increase/Maintain/Reduce/Avoid）
+# 组合姿态（盘中实时：Increase/Maintain/Reduce/Avoid）
 cargo run -p quant-cli -- portfolio-decision
 #   --scope cn|hk           分析对应市场候选标的
+
+# 历史相似盘面（SRD 百分位极端或 Stretch=Extreme 时，查历史先例的后续走势）
+cargo run -p quant-cli -- research analogues
+#   --scope cn|hk           对应市场
+#   --date 2026-07-20       目标日期（默认最新）
+#   --top-n 5               返回前 N 个相似日
+#   --lookback 252          历史搜索窗口（交易日）
+#   --horizon 20|60         前向收益窗口
 ```
 
-**场景配置**：`config/scenarios.toml` 定义 `momentum_short`（短线动量）、`value_long`（长线价值）、`aggressive`（激进博弈）、`balanced`（均衡基线）四个场景。场景分仅用于展示与 LLM 上下文，不进入最终信号计算。
+### 周期命令（每周 / 双周 / 可脚本化）
+
+```bash
+# 每周：校准基线验证（默认：global、最近 60 个交易日窗口）
+cargo run -p quant-cli -- validation-check
+#   --scope cn|hk                     验证对应市场
+#   --from 2026-04-01 --to 2026-07-21 指定窗口
+
+# 双周/月度：信号回测（默认：global、初始资金 100 万、最多 3 只持仓）
+cargo run -p quant-cli -- run-backtest
+#   --scope cn|hk            回测对应市场
+#   --use-state-sizing       启用状态感知仓位调整
+#   --max-drawdown 0.15      最大回撤限制
+#   --fee-rate / --slippage-rate / --max-holdings / --initial-capital
+
+# 可脚本化：历史条件回放积累 Evidence（默认：global、最近 90 天、两种条件 × 20/60 日周期）
+cargo run -p quant-cli -- historical-replay
+#   --scope cn|hk           回放对应市场
+#   --from / --to           指定回放窗口
+#   --output-dir <path>     索引文件输出目录
+
+# 随时：查看 Evidence 资产积累状态（P3 门控进度）
+cargo run -p quant-cli -- evidence-status
+```
 
 ### LLM 分析
 
@@ -213,40 +256,17 @@ cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
 #   --timeout-secs 60        API 超时秒数
 ```
 
-### 证据与验证
-
-```bash
-# Evidence 资产状态
-cargo run -p quant-cli -- evidence-status
-
-# 校准基线验证（默认：global、最近 60 个交易日窗口）
-cargo run -p quant-cli -- validation-check
-#   --scope cn|hk                     验证对应市场
-#   --from 2026-04-01 --to 2026-07-21 指定窗口
-
-# 历史条件回放（默认：global、最近 90 天、两种条件 × 20/60 日周期）
-cargo run -p quant-cli -- historical-replay
-#   --scope cn|hk           回放对应市场
-#   --from / --to           指定回放窗口
-#   --output-dir <path>     索引文件输出目录
-```
-
-### 回测
-
-```bash
-# 信号回测（默认：global、初始资金 100 万、最多 3 只持仓）
-cargo run -p quant-cli -- run-backtest
-#   --scope cn|hk            回测对应市场
-#   --use-state-sizing       启用状态感知仓位调整
-#   --max-drawdown 0.15      最大回撤限制
-#   --fee-rate / --slippage-rate / --max-holdings / --initial-capital
-```
-
 ### 工程维护命令（help 中隐藏，仍可使用）
 
 ```bash
-cargo run -p quant-cli -- research observe --scope global    # SRD + Stretch + Analytics 聚合
-cargo run -p quant-cli -- research-srd --scope global         # SRD 单独查询
+cargo run -p quant-cli -- research-srd --scope global         # SRD 单独查询（observe 已聚合）
+cargo run -p quant-cli -- research-stretch --scope global     # Stretch 单独查询（observe 已聚合）
+cargo run -p quant-cli -- research calibration --scope global # 校准（同 validation-check）
+cargo run -p quant-cli -- research replay --scope global      # 历史回放（同 historical-replay）
+cargo run -p quant-cli -- research consensus --scope global   # V7 研究综合
+cargo run -p quant-cli -- research confirmation --scope global # V7 趋势确认
+cargo run -p quant-cli -- research recovery --scope global    # V7 恢复指数
+cargo run -p quant-cli -- research review --scope global      # 季度研究综述
 cargo run -p quant-cli -- pipeline-dates                      # 管线各阶段日期与完整度
 cargo run -p quant-cli -- explain-latest-gate                 # latest gate 未推进原因
 cargo run -p quant-cli -- data-health                         # 数据健康检查 + 报告
@@ -288,17 +308,21 @@ cargo run -p quant-desktop
 ### 每日收盘后
 
 1. `market-refresh` 拉取最新数据
-2. `daily-analysis` 查看 Integrity 状态、信号、组合姿态
-3. `daily-report` 需要留档时导出
+2. `daily-analysis` 30 秒看 Integrity 状态、信号、组合姿态
+3. `research observe` 把今天放进历史语境（SRD 背离 / 拉伸 / 条件收益，归档 markdown）
+4. `strategy-perspectives` 浏览全标的四策略 × 四场景矩阵
+5. `daily-report` 需要留档时导出
 
 **何时继续下钻：**
 
 | 遇到的情况 | 下一步 |
 |---|---|
 | 信号 StrongBuy 但姿态 Maintain/Avoid | `strategy-perspectives --mode detail --symbol <标的>` 看四策略归因 |
+| SRD 百分位极端 / Stretch=Extreme | `research analogues` 查历史相似盘面的后续走势 |
 | 想要完整的张力解读 | `llm-analyze --action portfolio_review` |
-| 想对比不同交易体系下的结论 | `strategy-perspectives`（场景矩阵） |
 | 想做连续性趋势跟踪 | `llm-analyze --action market_story`（自动携带前次解读） |
+
+**周期动作：** 每周五 `validation-check`；双周/月度 `run-backtest`；Evidence 积累进度随时 `evidence-status`。
 
 ### 桌面端工作流
 
