@@ -207,7 +207,7 @@ enum Command {
         date: Option<NaiveDate>,
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
-        #[arg(long, default_value = "detail", help = "Mode: scoreboard, detail")]
+        #[arg(long, default_value = "scoreboard", help = "Mode: scoreboard, detail")]
         mode: String,
         #[arg(long, help = "Scenario name (from config/scenarios.toml)")]
         scenario: Option<String>,

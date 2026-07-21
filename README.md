@@ -151,80 +151,114 @@ cargo run -p quant-cli -- seed-universe
 ### 每日三件套
 
 ```bash
-# 1. 全链路数据刷新（拉取最新数据 + 计算所有指标）
-cargo run -p quant-cli -- market-refresh --to <today>
+# 全链路数据刷新（默认：刷新至今天、global、含回测）
+cargo run -p quant-cli -- market-refresh
+#   --to 2026-07-21         指定刷新截止日期
+#   --scope cn|hk           latest-gate 诊断视角（不影响底层刷新范围）
+#   --run-backtests false   跳过回测阶段，加速刷新
 
-# 2. 每日分析（Integrity Gate → 信号 → 组合建议）
-cargo run -p quant-cli -- daily-analysis --scope global
+# 每日分析（默认：global；输出 Integrity + 信号 + 组合姿态）
+cargo run -p quant-cli -- daily-analysis
+#   --scope cn|hk           分析对应市场
 
-# 3. 导出日报
-cargo run -p quant-cli -- daily-report --scope global
+# 导出日报（默认：global、最新分析日期）
+cargo run -p quant-cli -- daily-report
+#   --scope cn|hk           导出对应市场日报
+#   --date 2026-07-20       导出指定历史日期（跳过 gate 检查）
+#   --concise               精简版日报
 ```
 
 ### 深度分析
 
 ```bash
-# 多策略独立评分（单标的详细归因 + 场景对比）
-cargo run -p quant-cli -- strategy-perspectives --symbol 000300 --scope cn --mode detail
+# 多策略评分矩阵（默认：global、全标的、4 策略独立分 + 全部场景列）
+cargo run -p quant-cli -- strategy-perspectives
+#   --scope cn|hk                     只看对应市场
+#   --mode detail --symbol 512480     单标的详细归因（4 策略 driver 分解 + 场景对比）
+#   --scenario momentum_short         聚焦单场景列
+#   --date 2026-07-20                 查看历史日期
 
-# 多策略全市场排行（默认展示全部场景列的矩阵视图）
-cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard
-
-# 聚焦单个场景
-cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard --scenario momentum_short
-
-# 组合操作建议
-cargo run -p quant-cli -- portfolio-decision --scope global
+# 组合姿态（默认：global；基于实时盘中数据输出 Increase/Maintain/Reduce/Avoid）
+cargo run -p quant-cli -- portfolio-decision
+#   --scope cn|hk           分析对应市场候选标的
 ```
 
-**场景配置**：`config/scenarios.toml` 定义了 `momentum_short`（短线动量）、`value_long`（长线价值）、`aggressive`（激进博弈）、`balanced`（均衡基线）四个场景。场景分仅用于展示和 LLM 上下文，不进入最终信号计算。
-
-### 证据与验证
-
-```bash
-# 查看 Evidence 资产状态
-cargo run -p quant-cli -- evidence-status
-
-# 校准基线验证
-cargo run -p quant-cli -- validation-check --scope cn
-
-# 历史条件回放
-cargo run -p quant-cli -- historical-replay --scope global
-```
+**场景配置**：`config/scenarios.toml` 定义 `momentum_short`（短线动量）、`value_long`（长线价值）、`aggressive`（激进博弈）、`balanced`（均衡基线）四个场景。场景分仅用于展示与 LLM 上下文，不进入最终信号计算。
 
 ### LLM 分析
+
+```bash
+# LLM 解读（默认：global、market_story；自动携带多策略评分 + 场景对比 + Integrity + 前次解读）
+cargo run -p quant-cli -- llm-analyze
+#   --scope cn|hk              分析对应市场
+#   --action portfolio_review  组合决策解读（信号与姿态出现张力时推荐）
+#   --action short_term_trader 短线交易员人格
+#   --action long_term_allocator 长线配置者人格
+#   --action risk_view         风险视角（风控总监）
+#   --action explain_decision  解释决策（为什么系统这样决定）
+#   --action devils_advocate   唱反调（质疑系统结论）
+#   --action preclose_review   收盘前复核
+```
+
+说明：
+
+- `portfolio_review` 解读的是**确定性引擎**产出的组合姿态，LLM 只解释不决策（ADR-106）
+- 自定义人格：在 `config/prompts.toml` 中添加 persona（仅视角指令，禁含阈值规则），`--action` 用 persona key 即可
+- 每次分析自动保存到 `workspace/llm-history/`，下次分析自动携带前次解读（标注为非证据背景）
 
 ```bash
 # 配置 LLM（只需执行一次）
 cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
 cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
-
-# 组合决策解读（解释引擎姿态 + 多策略矛盾点，日常推荐）
-cargo run -p quant-cli -- llm-analyze --scope global --action portfolio_review
-
-# 市场叙事 / 短线人格 / 长线人格
-cargo run -p quant-cli -- llm-analyze --scope global --action market_story
-cargo run -p quant-cli -- llm-analyze --scope cn --action short_term_trader
-cargo run -p quant-cli -- llm-analyze --scope cn --action long_term_allocator
+#   --timeout-secs 60        API 超时秒数
 ```
 
-### 隐藏命令（`--help` 可发现）
+### 证据与验证
 
-以下命令保持可用但不进入日常推荐路径，用于需要下钻时手动查找：
+```bash
+# Evidence 资产状态
+cargo run -p quant-cli -- evidence-status
+
+# 校准基线验证（默认：global、最近 60 个交易日窗口）
+cargo run -p quant-cli -- validation-check
+#   --scope cn|hk                     验证对应市场
+#   --from 2026-04-01 --to 2026-07-21 指定窗口
+
+# 历史条件回放（默认：global、最近 90 天、两种条件 × 20/60 日周期）
+cargo run -p quant-cli -- historical-replay
+#   --scope cn|hk           回放对应市场
+#   --from / --to           指定回放窗口
+#   --output-dir <path>     索引文件输出目录
+```
+
+### 回测
+
+```bash
+# 信号回测（默认：global、初始资金 100 万、最多 3 只持仓）
+cargo run -p quant-cli -- run-backtest
+#   --scope cn|hk            回测对应市场
+#   --use-state-sizing       启用状态感知仓位调整
+#   --max-drawdown 0.15      最大回撤限制
+#   --fee-rate / --slippage-rate / --max-holdings / --initial-capital
+```
+
+### 工程维护命令（help 中隐藏，仍可使用）
 
 ```bash
 cargo run -p quant-cli -- research observe --scope global    # SRD + Stretch + Analytics 聚合
 cargo run -p quant-cli -- research-srd --scope global         # SRD 单独查询
-cargo run -p quant-cli -- pipeline-dates                      # 管线状态诊断
-cargo run -p quant-cli -- explain-latest-gate                 # gate 诊断
-cargo run -p quant-cli -- data-health                         # 数据健康检查
-cargo run -p quant-cli -- symbol-diagnostics --symbol 000300  # 单标的诊断
-cargo run -p quant-cli -- symbol-scoreboard --scope cn        # 全市场排行榜
+cargo run -p quant-cli -- pipeline-dates                      # 管线各阶段日期与完整度
+cargo run -p quant-cli -- explain-latest-gate                 # latest gate 未推进原因
+cargo run -p quant-cli -- data-health                         # 数据健康检查 + 报告
+cargo run -p quant-cli -- symbol-diagnostics --symbol 000300  # 单标的信号归因分解
+cargo run -p quant-cli -- symbol-scoreboard --scope cn        # 全市场信号排行榜
 cargo run -p quant-cli -- rotation-ranking --scope cn         # 轮动排名
-cargo run -p quant-cli -- dashboard-snapshot --scope cn       # 历史快照
-cargo run -p quant-cli -- sync-and-export --scope global      # 一键同步导出
-cargo run -p quant-cli -- run-backtest --scope global         # 回测
+cargo run -p quant-cli -- dashboard-snapshot --scope cn       # 历史 dashboard 快照
+cargo run -p quant-cli -- dashboard-dates                     # 可选历史日期列表
+cargo run -p quant-cli -- sync-and-export --scope global      # 旧版一键同步导出
 ```
+
+分步管线命令（`ingest-daily` / `compute-macro` / `compute-indicators` / `compute-rotation` / `compute-strategy-preferences` / `compute-signals`）通常由 `market-refresh` 自动覆盖，仅在单阶段落后时精准修复使用；**必须按顺序执行**，否则 `daily-report` 会因 gate 落后被拒绝。
 
 ---
 
@@ -251,28 +285,20 @@ cargo run -p quant-desktop
 
 ## 7. 推荐使用流程
 
-### 每日推荐 CLI 工作流（收盘后）
+### 每日收盘后
 
-```bash
-# 1. 全链路刷新（拉取最新数据）
-cargo run -p quant-cli -- market-refresh --to <today>
+1. `market-refresh` 拉取最新数据
+2. `daily-analysis` 查看 Integrity 状态、信号、组合姿态
+3. `daily-report` 需要留档时导出
 
-# 2. 每日分析（Integrity Gate + 信号 + 组合姿态）
-cargo run -p quant-cli -- daily-analysis --scope global
+**何时继续下钻：**
 
-# 3. 导出日报
-cargo run -p quant-cli -- daily-report --scope global
-```
-
-**当 daily-analysis 出现"信号强但姿态 Maintain/Avoid"的张力时，继续下钻：**
-
-```bash
-# 4a. 看该标的四套策略各自给多少分、为什么
-cargo run -p quant-cli -- strategy-perspectives --symbol 512480 --scope cn --mode detail
-
-# 4b. 或直接让 LLM 结合多策略视角解读引擎姿态（自动携带全部上下文）
-cargo run -p quant-cli -- llm-analyze --scope global --action portfolio_review
-```
+| 遇到的情况 | 下一步 |
+|---|---|
+| 信号 StrongBuy 但姿态 Maintain/Avoid | `strategy-perspectives --mode detail --symbol <标的>` 看四策略归因 |
+| 想要完整的张力解读 | `llm-analyze --action portfolio_review` |
+| 想对比不同交易体系下的结论 | `strategy-perspectives`（场景矩阵） |
+| 想做连续性趋势跟踪 | `llm-analyze --action market_story`（自动携带前次解读） |
 
 ### 桌面端工作流
 
@@ -281,57 +307,6 @@ cargo run -p quant-cli -- llm-analyze --scope global --action portfolio_review
 3. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
 4. 需要 LLM 解读时切换到 LLM 分析面板
 5. 需要留档时再导出 report
-
----
-
-## 8. 高级参考：分步执行
-
-> **这组命令必须按顺序执行**，不能倒序或跳过中间阶段，否则 `daily-report` 会因 latest gate 落后而被拒绝。
-
-```bash
-# 1. 拉取日线数据
-cargo run -p quant-cli -- ingest-daily --from 2026-05-19 --to 2026-05-20
-
-# 2. 计算宏观与市场环境
-cargo run -p quant-cli -- compute-macro --from 2024-01-01 --to 2026-03-16
-
-# 3. 计算指标 / 轮动 / 策略 / 信号（通常由 market-refresh 自动覆盖）
-cargo run -p quant-cli -- compute-indicators
-cargo run -p quant-cli -- compute-rotation
-cargo run -p quant-cli -- compute-strategy-preferences
-cargo run -p quant-cli -- compute-signals
-```
-
----
-
-## 9. LLM 智能分析
-
-```bash
-# 配置 LLM
-cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
-cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
-
-# LLM 分析
-cargo run -p quant-cli -- llm-analyze --scope global --action market_story
-```
-
-可用的 `action` 参数：
-- `market_story` — 市场叙事（今天发生了什么）
-- `explain_decision` — 解释决策（为什么系统这样决定）
-- `preclose_review` — 收盘前复核（组合操作建议解读）
-- `risk_view` — 风险视角（风控总监视角）
-- `devils_advocate` — 唱反调（质疑系统结论）
-- `portfolio_review` — 组合决策解读（解释确定性引擎的组合姿态 + 多策略矛盾点）
-
-**自定义分析人格**：`config/prompts.toml` 支持自定义 persona（已内置 `short_term_trader` 短线交易员、`long_term_allocator` 长线配置者），`--action` 直接使用 persona key 即可。LLM 每次分析会自动携带多策略评分、场景对比、数据完整性状态与前次解读（标注为非证据背景）。
-
----
-
-## 10. 回测（Backtest）
-
-```bash
-cargo run -p quant-cli -- run-backtest --scope global --use-state-sizing --max-drawdown 0.15
-```
 
 ---
 
