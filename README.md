@@ -196,8 +196,13 @@ cargo run -p quant-cli -- historical-replay --scope global
 cargo run -p quant-cli -- set-llm-config --base-url https://api.openai.com/v1 --model gpt-4o
 cargo run -p quant-cli -- set-llm-api-key --key sk-xxxxxxxxxxxxxxxx
 
-# LLM 多视角市场分析
-cargo run -p quant-cli -- llm-analyze --scope global
+# 组合决策解读（解释引擎姿态 + 多策略矛盾点，日常推荐）
+cargo run -p quant-cli -- llm-analyze --scope global --action portfolio_review
+
+# 市场叙事 / 短线人格 / 长线人格
+cargo run -p quant-cli -- llm-analyze --scope global --action market_story
+cargo run -p quant-cli -- llm-analyze --scope cn --action short_term_trader
+cargo run -p quant-cli -- llm-analyze --scope cn --action long_term_allocator
 ```
 
 ### 隐藏命令（`--help` 可发现）
@@ -249,11 +254,21 @@ cargo run -p quant-desktop
 # 1. 全链路刷新（拉取最新数据）
 cargo run -p quant-cli -- market-refresh --to <today>
 
-# 2. 每日分析（Integrity Gate + 信号 + 组合建议）
+# 2. 每日分析（Integrity Gate + 信号 + 组合姿态）
 cargo run -p quant-cli -- daily-analysis --scope global
 
 # 3. 导出日报
 cargo run -p quant-cli -- daily-report --scope global
+```
+
+**当 daily-analysis 出现"信号强但姿态 Maintain/Avoid"的张力时，继续下钻：**
+
+```bash
+# 4a. 看该标的四套策略各自给多少分、为什么
+cargo run -p quant-cli -- strategy-perspectives --symbol 512480 --scope cn --mode detail
+
+# 4b. 或直接让 LLM 结合多策略视角解读引擎姿态（自动携带全部上下文）
+cargo run -p quant-cli -- llm-analyze --scope global --action portfolio_review
 ```
 
 ### 桌面端工作流
@@ -321,5 +336,5 @@ cargo run -p quant-cli -- run-backtest --scope global --use-state-sizing --max-d
 
 - 没有正式测试套件 / CI
 - 桌面端 LLM 仅支持 OpenAI-compatible API，不支持流式输出
-- 策略场景化加权（Phase 2）尚未实现，当前策略输出为独立评分但无场景配置
+- 前端面板仍为单信号视图，多策略视角目前仅在 CLI（`strategy-perspectives`）与 LLM 上下文中呈现，前端适配待后续
 - Evidence 权重设计（P3）延迟，直到积累 1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定
