@@ -1389,43 +1389,81 @@ pub fn handle_strategy_perspectives(
 
             println!("Strategy Scoreboard — Scope: {:?}, Date: {}", scope, target_date);
             println!();
-            println!(
-                "{:<10} {:<10} {:<10} {:<10} {:<10} {:<14} {}",
-                "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best", "Scenario"
-            );
-            println!("{}", "-".repeat(88));
 
-            for entry in &entries {
-                let scenario_text = match &scenario {
-                    Some(key) => entry
-                        .scenario_scores
-                        .iter()
-                        .find(|(k, _, _)| k == key)
-                        .map(|(_, label, s)| format!("{} {:.1}", label, s))
-                        .unwrap_or_else(|| format!("(unknown scenario '{}')", key)),
-                    None => entry
-                        .scenario_scores
+            match &scenario {
+                // Focused view: single scenario column
+                Some(key) => {
+                    println!(
+                        "{:<10} {:<10} {:<10} {:<10} {:<10} {:<14} {}",
+                        "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best", "Scenario"
+                    );
+                    println!("{}", "-".repeat(88));
+
+                    for entry in &entries {
+                        let scenario_text = entry
+                            .scenario_scores
+                            .iter()
+                            .find(|(k, _, _)| k == key)
+                            .map(|(_, label, s)| format!("{} {:.1}", label, s))
+                            .unwrap_or_else(|| format!("(unknown scenario '{}')", key));
+                        println!(
+                            "{:<10} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<14} {}",
+                            entry.symbol,
+                            entry.value_left_score,
+                            entry.trend_pullback_score,
+                            entry.trend_breakout_score,
+                            entry.momentum_right_score,
+                            format!("{:?}", entry.best_strategy),
+                            scenario_text,
+                        );
+                    }
+                }
+                // Default view: all scenario columns as a matrix
+                None => {
+                    let scenario_headers: Vec<String> = entries
                         .first()
-                        .map(|(_, label, s)| format!("{} {:.1}", label, s))
-                        .unwrap_or_default(),
-                };
-                println!(
-                    "{:<10} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<14} {}",
-                    entry.symbol,
-                    entry.value_left_score,
-                    entry.trend_pullback_score,
-                    entry.trend_breakout_score,
-                    entry.momentum_right_score,
-                    format!("{:?}", entry.best_strategy),
-                    scenario_text,
-                );
-            }
+                        .map(|entry| {
+                            entry
+                                .scenario_scores
+                                .iter()
+                                .map(|(_, label, _)| label.chars().take(4).collect::<String>())
+                                .collect()
+                        })
+                        .unwrap_or_default();
 
-            if scenario.is_none() && !entries.is_empty() {
-                println!();
-                println!("Scenario shown: default (first). Use --scenario <key> to select. Available:");
-                for (key, label, _) in &entries[0].scenario_scores {
-                    println!("  {} = {}", key, label);
+                    print!(
+                        "{:<10} {:<8} {:<8} {:<8} {:<8} {:<14}",
+                        "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best"
+                    );
+                    for header in &scenario_headers {
+                        print!(" {:<9}", header);
+                    }
+                    println!();
+                    println!("{}", "-".repeat(64 + scenario_headers.len() * 10));
+
+                    for entry in &entries {
+                        print!(
+                            "{:<10} {:<8.1} {:<8.1} {:<8.1} {:<8.1} {:<14}",
+                            entry.symbol,
+                            entry.value_left_score,
+                            entry.trend_pullback_score,
+                            entry.trend_breakout_score,
+                            entry.momentum_right_score,
+                            format!("{:?}", entry.best_strategy),
+                        );
+                        for (_, _, score) in &entry.scenario_scores {
+                            print!(" {:<9.1}", score);
+                        }
+                        println!();
+                    }
+
+                    if !entries.is_empty() {
+                        println!();
+                        println!("All scenario columns shown. Use --scenario <key> to focus on one:");
+                        for (key, label, _) in &entries[0].scenario_scores {
+                            println!("  {} = {}", key, label);
+                        }
+                    }
                 }
             }
         }

@@ -167,7 +167,10 @@ cargo run -p quant-cli -- daily-report --scope global
 # 多策略独立评分（单标的详细归因 + 场景对比）
 cargo run -p quant-cli -- strategy-perspectives --symbol 000300 --scope cn --mode detail
 
-# 多策略全市场排行（可指定场景加权）
+# 多策略全市场排行（默认展示全部场景列的矩阵视图）
+cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard
+
+# 聚焦单个场景
 cargo run -p quant-cli -- strategy-perspectives --scope cn --mode scoreboard --scenario momentum_short
 
 # 组合操作建议
