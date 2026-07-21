@@ -277,17 +277,6 @@
       "enabled": true
     },
     {
-      "symbol": "159995",
-      "name": "芯片ETF",
-      "display_symbol": "E159995",
-      "instrument_type": "ETF",
-      "market": "CN",
-      "category": "INDUSTRY",
-      "eastmoney_secid": "0.159995",
-      "tencent_symbol": "sz159995",
-      "enabled": true
-    },
-    {
       "symbol": "513050",
       "name": "中概互联网ETF",
       "display_symbol": "E513050",
@@ -329,6 +318,83 @@
       "category": "INDUSTRY",
       "eastmoney_secid": "1.516150",
       "tencent_symbol": "sh516150",
+      "enabled": true
+    },
+    {
+      "symbol": "512010",
+      "name": "医药ETF",
+      "display_symbol": "E512010",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.512010",
+      "tencent_symbol": "sh512010",
+      "enabled": true
+    },
+    {
+      "symbol": "515170",
+      "name": "食品饮料ETF",
+      "display_symbol": "E515170",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.515170",
+      "tencent_symbol": "sh515170",
+      "enabled": true
+    },
+    {
+      "symbol": "515230",
+      "name": "软件ETF",
+      "display_symbol": "E515230",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.515230",
+      "tencent_symbol": "sh515230",
+      "enabled": true
+    },
+    {
+      "symbol": "515220",
+      "name": "煤炭ETF",
+      "display_symbol": "E515220",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.515220",
+      "tencent_symbol": "sh515220",
+      "enabled": true
+    },
+    {
+      "symbol": "518880",
+      "name": "黄金ETF",
+      "display_symbol": "E518880",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "THEME",
+      "eastmoney_secid": "1.518880",
+      "tencent_symbol": "sh518880",
+      "enabled": false
+    },
+    {
+      "symbol": "512660",
+      "name": "军工ETF",
+      "display_symbol": "E512660",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "INDUSTRY",
+      "eastmoney_secid": "1.512660",
+      "tencent_symbol": "sh512660",
+      "enabled": true
+    },
+    {
+      "symbol": "513120",
+      "name": "港股创新药ETF",
+      "display_symbol": "E513120",
+      "instrument_type": "ETF",
+      "market": "CN",
+      "category": "OVERSEAS_LINK",
+      "eastmoney_secid": "1.513120",
+      "tencent_symbol": "sh513120",
       "enabled": true
     }
   ]

@@ -1,5 +1,5 @@
 # Current Phase
-shadow_production_observation
+shadow_validation
 
 # Active Tasks
 - [Todo] [TASK-000] [FROZEN] [TASK-004] P0: Regime Threshold Calibration — FROZEN. Will re-evaluate after Wave 9.
@@ -18,6 +18,18 @@ shadow_production_observation
 - [Todo] [TASK-103] Expand Historical Replay Coverage: Run Historical Replay across more scopes, windows, and conditions after Failure Attribution framework is established. Gated by TASK-100/TASK-101. Goal is to transform additional samples into knowledge, not just increase sample count.
 - [Todo] [TASK-111] V8 Research Asset Workspace foundation: implement WorkspaceManager, unified RA-XXXXXX identity (ADR-081), unified lifecycle (ADR-080), Evidence/Snapshot writers, and registry indexes (evidence-index.json, snapshot-index.json). P0 (real Evidence from research explain/analytics/review), P1 (workspace), P2 (Snapshot referencing Evidence) are complete. P3 (Evidence Score/Weight) is gated until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
 - [Todo] [TASK-114] 4-week Research Asset accumulation sprint: run Historical Replay daily for GLOBAL/CN/HK with a 90-day window, writing Evidence Assets to workspace/evidence/replay/. Target is 1000+ Research Assets before re-evaluating P3 (Evidence Score/Weight).
+- [InProgress] [TASK-119] Feature Layer: implement QuoteSnapshot, IntradayFeatures, and FeatureExtractor
+- [Todo] [TASK-120] Observation Layer: implement IntradayObservation and ObservationEngine
+- [Todo] [TASK-121] Evidence Layer: implement Evidence, EvidenceKind, EvidencePayload, and EvidenceBuilder
+- [Todo] [TASK-122] Assessment Layer: implement ExecutionAssessment and AssessmentEngine
+- [Todo] [TASK-124] Execution Replay: record ExecutionRequest→Decision→Outcome and feed Research Assets
+- [Todo] [TASK-125] Explanation Layer: implement ExecutionExplanation in report-engine for CLI/Desktop/PDF/LLM consumers
+- [Todo] [TASK-130] Replay Engine: consume ExecutionEvent and record outcomes (T+20/T+60/MFE/MAE) for Research Asset calibration
+- [Todo] [TASK-131] Research Asset Integration: write ExecutionEvent to V8 workspace as durable Research Asset
+- [Todo] [TASK-132] Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)
+- [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
+- [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
+- [Todo] [TASK-030] [TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。

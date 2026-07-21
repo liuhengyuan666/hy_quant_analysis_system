@@ -11,8 +11,9 @@ async-openai.workspace = true
 async-trait = "0.1"
 backtest-engine = { path = "../backtest-engine" }
 chrono.workspace = true
-data-ingestion = { path = "../data-ingestion" }
+  data-ingestion = { path = "../data-ingestion" }
   execution-engine = { path = "../execution-engine" }
+  execution-replay = { path = "../execution-replay" }
   core-domain = { path = "../core-domain" }
 indicator-engine = { path = "../indicator-engine" }
 keyring.workspace = true

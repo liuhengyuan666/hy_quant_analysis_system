@@ -37,6 +37,7 @@ pub mod config_loader;
 pub mod breadth;
 pub mod core;
 pub mod dashboard;
+pub mod execution_replay;
 pub mod llm;
 pub mod research_evidence;
 pub mod sync;

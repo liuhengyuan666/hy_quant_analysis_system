@@ -1,5 +1,5 @@
 {
-  "current_phase": "shadow_production_observation",
+  "current_phase": "shadow_validation",
   "active_tasks": [
     {
       "id": "TASK-000",
@@ -94,6 +94,78 @@
     {
       "id": "TASK-114",
       "description": "4-week Research Asset accumulation sprint: run Historical Replay daily for GLOBAL/CN/HK with a 90-day window, writing Evidence Assets to workspace/evidence/replay/. Target is 1000+ Research Assets before re-evaluating P3 (Evidence Score/Weight).",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-119",
+      "description": "Feature Layer: implement QuoteSnapshot, IntradayFeatures, and FeatureExtractor",
+      "status": "InProgress",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-120",
+      "description": "Observation Layer: implement IntradayObservation and ObservationEngine",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-121",
+      "description": "Evidence Layer: implement Evidence, EvidenceKind, EvidencePayload, and EvidenceBuilder",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-122",
+      "description": "Assessment Layer: implement ExecutionAssessment and AssessmentEngine",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-124",
+      "description": "Execution Replay: record ExecutionRequest→Decision→Outcome and feed Research Assets",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-125",
+      "description": "Explanation Layer: implement ExecutionExplanation in report-engine for CLI/Desktop/PDF/LLM consumers",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-130",
+      "description": "Replay Engine: consume ExecutionEvent and record outcomes (T+20/T+60/MFE/MAE) for Research Asset calibration",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-131",
+      "description": "Research Asset Integration: write ExecutionEvent to V8 workspace as durable Research Asset",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-132",
+      "description": "Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-133",
+      "description": "LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-140",
+      "description": "Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions",
+      "status": "InProgress",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-030",
+      "description": "[TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.",
       "status": "Todo",
       "superseded_by": null
     }

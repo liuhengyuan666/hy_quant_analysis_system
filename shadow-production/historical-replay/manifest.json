@@ -1,33 +1,25 @@
-﻿{
-    "analytics_version":  "v1",
-    "schema_version":  "v1",
-    "indices":  [
-                    "manifest.json",
-                    "summary.json",
-                    "evidence-index.json",
-                    "candidate-index.json"
-                ],
-    "reports":  [
-                    "review-global-2026-07-09.txt",
-                    "review-global-2026-07-09.md",
-                    "analytics-srd-strong-global-h20.txt",
-                    "analytics-srd-strong-global-h60.txt",
-                    "analytics-stretch-extreme-crowding-momentum-global-h20.txt",
-                    "analytics-stretch-extreme-crowding-momentum-global-h60.txt",
-                    "scoreboard-global-2026-07-09.txt"
-                ],
-    "horizons":  [
-                     20,
-                     60
-                 ],
-    "generated_at":  "2026-07-09T22:25:11",
-    "from":  "2026-04-01",
-    "scopes":  [
-                   "global"
-               ],
-    "conditions":  [
-                       "srd-strong",
-                       "stretch-extreme-crowding-momentum"
-                   ],
-    "to":  "2026-07-09"
+{
+  "analytics_version": "v1",
+  "conditions": [
+    "srd-strong",
+    "stretch-extreme-crowding-momentum"
+  ],
+  "from": "2026-05-01",
+  "generated_at": "2026-07-20T16:44:46.365580200+00:00",
+  "horizons": [
+    20,
+    60
+  ],
+  "indices": [
+    "manifest.json",
+    "summary.json",
+    "evidence-index.json",
+    "candidate-index.json"
+  ],
+  "reports": [],
+  "schema_version": "v1",
+  "scopes": [
+    "HK"
+  ],
+  "to": "2026-07-20"
 }

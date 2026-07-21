@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-13T16:15:03Z",
+    "rebuilt_at": "2026-07-21T02:34:04Z",
     "version": "v4"
   },
   "terms": {
@@ -15,6 +15,10 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -63,6 +67,46 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "0.3": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "0.45": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "0.45-0.55": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "0.50": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "0.55": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "0.6": [
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -206,6 +250,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -216,6 +272,12 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "1,000-record": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "1-2": [
@@ -237,6 +299,16 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "1.38": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -278,7 +350,29 @@
         "type": "adr"
       }
     ],
+    "100": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "100-300": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "100-record": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
     "1000": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
       {
         "id": "",
         "type": "trap"
@@ -327,6 +421,12 @@
     "15.2d": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "152": [
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -460,6 +560,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -490,6 +598,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "20-day": [
@@ -499,6 +611,10 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -668,9 +784,161 @@
         "type": "adr"
       }
     ],
+    "2a": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "2a-1": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "2a-2": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "2a-3": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "2a-3/4": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "2a-4": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "2a-4.5": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "2a-4a": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "2a-4b": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "2a-4c": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "2a-5": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "2a-6": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "2b": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "2b-2": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "2c": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
     "2d": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "2e": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -798,6 +1066,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -840,6 +1116,12 @@
         "type": "adr"
       }
     ],
+    "300": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "312天": [
       {
         "id": "ADR-065",
@@ -861,6 +1143,12 @@
     "35": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "36.9": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -961,6 +1249,14 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -1068,6 +1364,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
       }
     ],
     "5.1": [
@@ -1079,6 +1379,10 @@
     "50.0": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       },
       {
@@ -1107,6 +1411,12 @@
     "53": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "54": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -1161,6 +1471,16 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "6-step": [
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -1280,6 +1600,12 @@
         "type": "adr"
       }
     ],
+    "80": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
     "814": [
       {
         "id": "ADR-030",
@@ -1334,6 +1660,18 @@
         "type": "adr"
       }
     ],
+    "9,000": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "9,083": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
     "90": [
       {
         "id": "ADR-027",
@@ -1350,9 +1688,31 @@
         "type": "adr"
       }
     ],
+    "9000": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "94.8": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "98": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "98.62": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -1418,6 +1778,30 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -1429,6 +1813,24 @@
     "abandoned": [
       {
         "id": "ADR-062",
+        "type": "adr"
+      }
+    ],
+    "about": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "absent": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "absolute": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -1456,11 +1858,27 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "accidentally": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "accumulate": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "accumulation": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -1500,6 +1918,18 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "action": [
@@ -1511,6 +1941,10 @@
     "actions": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -1556,6 +1990,14 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "added": [
@@ -1577,6 +2019,10 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -1623,6 +2069,14 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -1752,6 +2206,30 @@
         "type": "trap"
       }
     ],
+    "adr-090": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "adr-091": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "adr-097": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "adr-102": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
     "adr/task": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -1762,6 +2240,12 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "advice": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "affects": [
@@ -1793,6 +2277,30 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       },
       {
@@ -1980,6 +2488,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -2019,6 +2539,10 @@
     "alternative": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -2060,6 +2584,18 @@
       {
         "id": "ADR-080",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "analogues": [
@@ -2072,6 +2608,38 @@
         "type": "adr"
       }
     ],
+    "analysis": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "analytics": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
     "analyze": [
       {
         "id": "ADR-048",
@@ -2079,6 +2647,14 @@
       },
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -2220,6 +2796,54 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -2251,6 +2875,18 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -2404,9 +3040,21 @@
         "type": "adr"
       }
     ],
+    "applies": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "apply_persistence": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "approach": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -2429,6 +3077,12 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      }
+    ],
+    "architectural": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -2479,6 +3133,34 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "architecture-freeze": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "architecture/engineering": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -2536,8 +3218,38 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "argues": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "argument": [
@@ -2588,12 +3300,64 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "assessment": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "assessmenthistograms": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "assessments": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "assessment→decision": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "asset": [
@@ -2607,6 +3371,14 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       },
       {
@@ -2648,6 +3420,12 @@
         "type": "adr"
       }
     ],
+    "asymmetric": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
     "at": [
       {
         "id": "ADR-058",
@@ -2655,6 +3433,10 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       },
       {
@@ -2668,6 +3450,12 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "attempts": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "attribution": [
@@ -2743,6 +3531,12 @@
     "availabledatescache": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "average": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -2852,6 +3646,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -2866,6 +3664,10 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
       }
     ],
     "baseline=0.073": [
@@ -2877,6 +3679,12 @@
     "baseline=0.353": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      }
+    ],
+    "bayesian": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -2928,6 +3736,28 @@
       {
         "id": "ADR-079",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "bearish": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "because": [
@@ -2944,6 +3774,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -2951,6 +3785,16 @@
     "become": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "becomes": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -2988,6 +3832,30 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "begins": [
@@ -3000,6 +3868,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "being": [
@@ -3009,6 +3881,14 @@
       },
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -3032,11 +3912,19 @@
       {
         "id": "ADR-055",
         "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "between": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -3054,6 +3942,28 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "block": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "blocked": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
       }
     ],
     "body": [
@@ -3082,7 +3992,21 @@
         "type": "adr"
       },
       {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "bottleneck": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -3109,6 +4033,10 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -3139,6 +4067,18 @@
     "breadth-ma30": [
       {
         "id": "ADR-034",
+        "type": "adr"
+      }
+    ],
+    "breadth_pct": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "breadthdeterioration": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -3238,6 +4178,10 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "builder": [
@@ -3304,6 +4248,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -3325,6 +4285,18 @@
     "buy/sale": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "buy=0.6": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "buynow": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -3355,6 +4327,30 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       },
       {
@@ -3414,6 +4410,44 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "calibration-v2": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "calls": [
@@ -3444,6 +4478,20 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "candidates": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "cannot": [
@@ -3453,6 +4501,10 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -3486,6 +4538,10 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "capability": [
@@ -3510,6 +4566,12 @@
         "type": "adr"
       }
     ],
+    "capturing": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "cargo": [
       {
         "id": "ADR-030",
@@ -3526,11 +4588,21 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "carrying": [
       {
         "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "cases": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -3552,6 +4624,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -3561,6 +4645,14 @@
       }
     ],
     "caused": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
       {
         "id": "ADR-057",
         "type": "adr"
@@ -3591,6 +4683,10 @@
     "chain": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -3627,6 +4723,14 @@
       },
       {
         "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -3671,6 +4775,12 @@
     "churn": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "clarifies": [
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -3750,6 +4860,10 @@
       {
         "id": "ADR-071",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
       }
     ],
     "cli/gpt/desktop/future": [
@@ -3782,6 +4896,12 @@
         "type": "adr"
       }
     ],
+    "closed-loop": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "cn": [
       {
         "id": "ADR-055",
@@ -3797,6 +4917,14 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -3833,6 +4961,14 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -3902,6 +5038,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "compares": [
@@ -3931,6 +5071,18 @@
       },
       {
         "id": "ADR-044",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -3968,6 +5120,12 @@
         "type": "adr"
       }
     ],
+    "completing": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
     "component": [
       {
         "id": "ADR-042",
@@ -3981,6 +5139,12 @@
     "components": [
       {
         "id": "ADR-042",
+        "type": "adr"
+      }
+    ],
+    "compose": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -4011,6 +5175,10 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -4044,6 +5212,16 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "computing": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "concept": [
@@ -4055,6 +5233,12 @@
     "conceptual": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "conclude": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -4074,11 +5258,21 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "concrete": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "condition": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -4091,6 +5285,32 @@
     "confidence": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "confidencetoolow": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -4206,6 +5426,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "confirmer": [
@@ -4221,6 +5445,10 @@
       },
       {
         "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -4240,6 +5468,12 @@
         "type": "adr"
       }
     ],
+    "consensustoolow": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
     "consequence": [
       {
         "id": "ADR-058",
@@ -4249,6 +5483,12 @@
     "consequences": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "conservative": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -4276,6 +5516,10 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "constantly": [
@@ -4302,9 +5546,23 @@
         "type": "adr"
       }
     ],
+    "consume": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "consumer": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -4335,6 +5593,20 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "consumes": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -4396,6 +5668,28 @@
       {
         "id": "ADR-079",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "contexts": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "contract": [
@@ -4413,6 +5707,22 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "contract-freeze": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "contributor": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -4437,6 +5747,12 @@
     "convert": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "converted": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -4480,6 +5796,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "corrected": [
@@ -4494,7 +5814,17 @@
         "type": "adr"
       },
       {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "correlation": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -4516,6 +5846,12 @@
         "type": "adr"
       }
     ],
+    "cost": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
     "count=400": [
       {
         "id": "",
@@ -4525,6 +5861,10 @@
     "counts": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -4549,6 +5889,14 @@
       },
       {
         "id": "ADR-062",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -4595,6 +5943,14 @@
     "criteria": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -4713,6 +6069,18 @@
     "currently": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -4868,6 +6236,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -4895,6 +6275,10 @@
       },
       {
         "id": "ADR-030",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -4929,6 +6313,16 @@
     "datahealthpanel.vue": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      }
+    ],
+    "dataset": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -4967,6 +6361,14 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -5020,11 +6422,89 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "decision-gate": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "decision-margin": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "decision-path-review": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "decisiondistribution": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "decisionengine": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "decisions": [
       {
         "id": "ADR-026",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -5060,6 +6540,12 @@
         "type": "trap"
       }
     ],
+    "defaults": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
     "defense": [
       {
         "id": "ADR-049",
@@ -5072,9 +6558,29 @@
         "type": "adr"
       }
     ],
+    "defer": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "deferred": [
       {
         "id": "ADR-042",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "deficiencies": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -5092,6 +6598,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "definition": [
@@ -5107,6 +6617,12 @@
     "definitions": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "degenerating": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -5131,6 +6647,12 @@
     "deliverables": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "delivered": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -5161,6 +6683,12 @@
     "derisk": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "derive": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -5228,6 +6756,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "destroying": [
@@ -5239,6 +6771,12 @@
     "destructive": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "detail": [
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -5266,6 +6804,34 @@
         "type": "adr"
       }
     ],
+    "determination": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "determine": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "deterministic": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "dies": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
     "different": [
       {
         "id": "ADR-055",
@@ -5277,6 +6843,10 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -5295,6 +6865,24 @@
     "direct": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "direction": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "direction/confidence/consensus": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "directional": [
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -5323,6 +6911,14 @@
       },
       {
         "id": "ADR-063",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -5384,6 +6980,30 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "distribution-coverage": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "distributionrisk": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "distributions": [
@@ -5415,6 +7035,24 @@
     "divergence-sample": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "do": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -5480,6 +7118,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -5497,6 +7139,20 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "domain-modeling": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -5518,6 +7174,22 @@
         "type": "adr"
       }
     ],
+    "dominant_direction": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "done": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "downstream": [
       {
         "id": "ADR-051",
@@ -5525,6 +7197,10 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -5573,6 +7249,10 @@
     "dtos": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -5646,6 +7326,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -5665,6 +7349,10 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       },
       {
@@ -5820,6 +7508,10 @@
     ],
     "end": [
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -5844,6 +7536,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "english": [
@@ -5864,9 +7560,35 @@
         "type": "adr"
       }
     ],
+    "enough": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "enter": [
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "entered": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "entire": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -5893,6 +7615,44 @@
     "entry": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "entry-risk": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "entry/exit": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "entryrisk": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "enum": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "enumerate": [
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -5944,6 +7704,12 @@
         "type": "adr"
       }
     ],
+    "equal": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "error": [
       {
         "id": "ADR-036",
@@ -5985,6 +7751,10 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -6028,11 +7798,19 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "evaluation": [
       {
         "id": "ADR-062",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -6062,6 +7840,12 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "every": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
       }
     ],
     "everything": [
@@ -6104,7 +7888,53 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "evidence-quality": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -6120,9 +7950,61 @@
         "type": "adr"
       }
     ],
+    "evidence-trace": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "evidencebuilder": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "evidencefrequency": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "evidencekind": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "evidencepairmatrix": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "evidencepayload": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "evidenceref": [
       {
         "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "evidences": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "evidencetrace/evidencefunnel": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -6152,6 +8034,12 @@
         "type": "adr"
       }
     ],
+    "exact": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
     "exactly": [
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
@@ -6171,6 +8059,128 @@
     "exclusively": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "execution": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "execution-platform": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "executiondecision": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "executionevent": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "executionexplanation": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "executionmarketview": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "executionpolicy": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "executionresearchrecord": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "executionstatistics": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -6202,13 +8212,51 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "exit": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "exit-criteria": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "expand": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "expanded": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -6220,11 +8268,25 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "expected-behavior": [
       {
         "id": "ADR-028",
+        "type": "adr"
+      }
+    ],
+    "experiment": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -6244,6 +8306,10 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "explainability": [
@@ -6255,6 +8321,14 @@
     "explanation": [
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -6271,6 +8345,16 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "explicitly": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -6416,10 +8500,22 @@
         "type": "adr"
       }
     ],
+    "facts": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "failed": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "failing": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "fails": [
@@ -6544,6 +8640,18 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "features/*.js": [
@@ -6573,6 +8681,12 @@
     "fed": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      }
+    ],
+    "feedback": [
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -6616,11 +8730,21 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "field": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "fields": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -6712,6 +8836,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -6729,6 +8857,14 @@
       },
       {
         "id": "ADR-063",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       },
       {
@@ -6813,6 +8949,12 @@
     "focus": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "focused": [
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -6907,6 +9049,22 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       },
       {
@@ -7022,6 +9180,10 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "formatters": [
@@ -7032,6 +9194,10 @@
       {
         "id": "ADR-043",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "formatting": [
@@ -7041,6 +9207,12 @@
       },
       {
         "id": "ADR-043",
+        "type": "adr"
+      }
+    ],
+    "formed": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -7068,6 +9240,10 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "forward-return": [
@@ -7079,6 +9255,18 @@
     "found": [
       {
         "id": "ADR-045",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -7101,6 +9289,12 @@
       },
       {
         "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "fragments": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -7133,6 +9327,28 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "frequency": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -7203,6 +9419,26 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       },
       {
@@ -7292,6 +9528,14 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "full": [
@@ -7301,6 +9545,18 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -7319,6 +9575,12 @@
     "funds": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      }
+    ],
+    "funnel": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -7349,6 +9611,14 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -7392,11 +9662,33 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "gated": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "general": [
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -7406,9 +9698,19 @@
         "type": "adr"
       }
     ],
+    "generation": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "generator": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -7445,6 +9747,20 @@
     "goal": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "golden": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -7596,6 +9912,12 @@
         "type": "adr"
       }
     ],
+    "handles": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "handling": [
       {
         "id": "ADR-049",
@@ -7609,6 +9931,10 @@
     "hard": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -7638,8 +9964,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "harmful": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "has": [
@@ -7672,6 +10012,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -7691,6 +10035,10 @@
     "have": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -7810,6 +10158,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "high/high/moderate/weak": [
@@ -7821,6 +10173,18 @@
     "higher": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "highlight": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "histogram": [
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -7902,6 +10266,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -7930,9 +10302,33 @@
         "type": "adr"
       }
     ],
+    "holding": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "holding-risk": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "holdingrisk": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
     "hotfix": [
       {
         "id": "ADR-076",
+        "type": "adr"
+      }
+    ],
+    "how": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -7981,6 +10377,12 @@
     "html": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "human-readable": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -8068,6 +10470,18 @@
         "type": "adr"
       }
     ],
+    "identifies": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "identify": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
     "identity": [
       {
         "id": "ADR-079",
@@ -8088,8 +10502,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "if-else": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "imbalance": [
@@ -8101,6 +10529,16 @@
     "imbalance_ratio": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "immediate": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -8117,6 +10555,14 @@
     "implement": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       },
       {
@@ -8144,6 +10590,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "implemented": [
@@ -8164,6 +10614,12 @@
         "type": "adr"
       }
     ],
+    "importance": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "imports": [
       {
         "id": "ADR-049",
@@ -8173,6 +10629,12 @@
     "improve": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "improves": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -8254,6 +10716,26 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -8268,6 +10750,12 @@
         "type": "trap"
       }
     ],
+    "included": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
     "includes": [
       {
         "id": "ADR-072",
@@ -8278,6 +10766,16 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "incremental": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "independent": [
@@ -8323,6 +10821,12 @@
     "indexes": [
       {
         "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "indicates": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -8416,6 +10920,16 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "insists": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "instance": [
@@ -8441,6 +10955,22 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "intact": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "integrated": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -8470,6 +11000,12 @@
         "type": "trap"
       }
     ],
+    "interface": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "intermediate": [
       {
         "id": "ADR-053",
@@ -8484,6 +11020,12 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "internals": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "interpolation": [
@@ -8538,6 +11080,24 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "intraday": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "introduce": [
@@ -8547,6 +11107,10 @@
       },
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -8587,6 +11151,12 @@
     "investigation": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "investment": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -8664,12 +11234,84 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "isolated": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "issue": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "issues": [
@@ -8710,6 +11352,22 @@
       {
         "id": "ADR-079",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "iterate": [
@@ -8731,6 +11389,14 @@
     "itself": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       },
       {
@@ -8799,6 +11465,12 @@
       },
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "json/markdown": [
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -8878,6 +11550,12 @@
         "type": "adr"
       }
     ],
+    "kind": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "kinds": [
       {
         "id": "ADR-081",
@@ -8951,6 +11629,10 @@
       },
       {
         "id": "ADR-042",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -9034,11 +11716,23 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "layered": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -9053,6 +11747,10 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -9074,9 +11772,21 @@
         "type": "adr"
       }
     ],
+    "leadership_stability": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
     "leadership_transition": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "leadershipdecay": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -9128,6 +11838,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "lifecycle": [
@@ -9173,6 +11887,12 @@
     "limitation": [
       {
         "id": "ADR-044",
+        "type": "adr"
+      }
+    ],
+    "limited": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -9284,6 +12004,26 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "llm-assisted": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "llm-boundary": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "llm-context": [
@@ -9388,6 +12128,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "long-history": [
@@ -9434,8 +12178,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "lowering": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "ma20": [
@@ -9518,6 +12272,12 @@
         "type": "adr"
       }
     ],
+    "made": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "mahalanobis": [
       {
         "id": "ADR-071",
@@ -9590,6 +12350,12 @@
         "type": "adr"
       }
     ],
+    "maker": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "makes": [
       {
         "id": "ADR-060",
@@ -9599,6 +12365,22 @@
     "making": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -9614,7 +12396,31 @@
         "type": "adr"
       }
     ],
+    "many": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "mapping": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
     "margin": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
@@ -9680,6 +12486,14 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "market-evolution": [
@@ -9704,9 +12518,29 @@
         "type": "adr"
       }
     ],
+    "market-store": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "market-store/agents.md": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "market_regime_label": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -9818,6 +12652,12 @@
         "type": "adr"
       }
     ],
+    "mean": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
     "meaningful": [
       {
         "id": "ADR-060",
@@ -9832,6 +12672,10 @@
       {
         "id": "ADR-080",
         "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "measure": [
@@ -9843,6 +12687,12 @@
     "measures": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "measuring": [
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -9908,6 +12758,12 @@
         "type": "adr"
       }
     ],
+    "met": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "metadata": [
       {
         "id": "ADR-069",
@@ -9919,6 +12775,10 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -10068,6 +12928,14 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "mode": [
@@ -10108,6 +12976,26 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "modeling": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "modification": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "modify": [
@@ -10122,11 +13010,43 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "modifying": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "module": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "momentumexpansion": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -10142,9 +13062,21 @@
         "type": "adr"
       }
     ],
+    "most": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "move": [
       {
         "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "moving": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -10211,6 +13143,10 @@
       },
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       },
       {
@@ -10282,6 +13218,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -10298,6 +13246,10 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "needs": [
@@ -10311,6 +13263,10 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -10370,6 +13326,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -10413,6 +13373,10 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       },
       {
@@ -10467,6 +13431,22 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -10554,6 +13534,50 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -10574,6 +13598,10 @@
       {
         "id": "ADR-044",
         "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
       }
     ],
     "null": [
@@ -10582,15 +13610,29 @@
         "type": "trap"
       }
     ],
+    "numbers": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "object": [
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
     "objective": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -10614,11 +13656,53 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "observation/evolution/evidence/synthesis": [
       {
         "id": "ADR-079",
+        "type": "adr"
+      }
+    ],
+    "observation=0": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "observationengine": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "observations": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -10694,6 +13778,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -10740,6 +13840,14 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "on/off": [
@@ -10778,6 +13886,18 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "open": [
@@ -10798,6 +13918,12 @@
         "type": "adr"
       }
     ],
+    "opportunity": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
     "optimal": [
       {
         "id": "ADR-055",
@@ -10811,6 +13937,10 @@
     "optimization": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -10869,6 +13999,34 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       },
       {
@@ -10952,6 +14110,12 @@
         "type": "adr"
       }
     ],
+    "originate": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "orthogonal": [
       {
         "id": "ADR-060",
@@ -10992,6 +14156,20 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "outcomematrix": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
       }
     ],
     "outcomeprofile": [
@@ -11010,6 +14188,12 @@
         "type": "adr"
       }
     ],
+    "outcomes": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
     "outperforms": [
       {
         "id": "ADR-059",
@@ -11017,6 +14201,22 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "output": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -11049,6 +14249,18 @@
     "overlap": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "overweight": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
+    "owning": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -11176,10 +14388,22 @@
         "type": "adr"
       }
     ],
+    "participates": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "partition": [
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "pass": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
       }
     ],
     "passes": [
@@ -11196,17 +14420,33 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "paths": [
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "pattern": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -11238,6 +14478,10 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "payload-only": [
@@ -11248,8 +14492,22 @@
     ],
     "per": [
       {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "per-record": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
       }
     ],
     "perceived": [
@@ -11271,6 +14529,22 @@
     "percentile": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "percentiles": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "perform": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -11370,6 +14644,64 @@
       {
         "id": "ADR-071",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "phase-2a": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "phase2": [
@@ -11396,6 +14728,12 @@
         "type": "adr"
       }
     ],
+    "philosophy": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "pill": [
       {
         "id": "ADR-046",
@@ -11416,6 +14754,18 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "pivot": [
@@ -11432,6 +14782,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
       }
     ],
     "placeholderprovider": [
@@ -11441,6 +14795,12 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "placeholders": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -11466,6 +14826,12 @@
         "type": "adr"
       }
     ],
+    "plan": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
     "planned": [
       {
         "id": "ADR-071",
@@ -11483,6 +14849,34 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
         "type": "adr"
       }
     ],
@@ -11502,11 +14896,21 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "portfolio": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "position": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -11546,6 +14950,12 @@
         "type": "adr"
       }
     ],
+    "pre-computed": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "pre-filled": [
       {
         "id": "ADR-049",
@@ -11561,6 +14971,16 @@
     "precede": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "precision": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -11716,6 +15136,12 @@
         "type": "adr"
       }
     ],
+    "previous": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "price": [
       {
         "id": "ADR-060",
@@ -11731,6 +15157,18 @@
     "principle": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "priordistribution": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "priorities": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -11750,11 +15188,23 @@
       {
         "id": "ADR-052",
         "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "produced": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -11840,7 +15290,21 @@
         "type": "adr"
       }
     ],
+    "projection": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "proposal": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
       {
         "id": "ADR-057",
         "type": "adr"
@@ -11853,6 +15317,10 @@
       }
     ],
     "proposed": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
       {
         "id": "ADR-057",
         "type": "adr"
@@ -11948,6 +15416,16 @@
         "type": "adr"
       }
     ],
+    "quality": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
     "quant-cli": [
       {
         "id": "ADR-030",
@@ -11958,6 +15436,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "quote": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "ra-xxxxxx": [
@@ -11987,6 +15471,12 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "ranking": [
+      {
+        "id": "ADR-090",
         "type": "adr"
       }
     ],
@@ -12027,6 +15517,10 @@
       },
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       },
       {
@@ -12078,6 +15572,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "raw。3": [
@@ -12098,9 +15596,21 @@
         "type": "trap"
       }
     ],
+    "re-enter": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "re-evaluated": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "re-run": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -12113,6 +15623,12 @@
     "reached": [
       {
         "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "reaching": [
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -12142,6 +15658,12 @@
         "type": "adr"
       }
     ],
+    "reading": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "ready": [
       {
         "id": "ADR-063",
@@ -12151,6 +15673,32 @@
     "real": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "reason": [
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -12188,15 +15736,53 @@
         "type": "adr"
       }
     ],
+    "recommend": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "record": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
     ],
+    "records": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
     "recovery": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      }
+    ],
+    "recoveryfailure": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -12213,6 +15799,64 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "reduce": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "reduce=0": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "reduce=0.00": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "reduce=0.5": [
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "reduce_threshold": [
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -12244,6 +15888,16 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "refinement": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "reflect": [
@@ -12400,6 +16054,10 @@
     ],
     "rejected": [
       {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -12408,11 +16066,21 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "relative": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "releases": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -12423,6 +16091,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "remaining": [
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -12445,6 +16119,14 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -12482,6 +16164,12 @@
         "type": "adr"
       }
     ],
+    "renamed": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
     "renderers/environment-breadth.js": [
       {
         "id": "ADR-044",
@@ -12495,6 +16183,14 @@
       }
     ],
     "repair": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
@@ -12534,6 +16230,18 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "report": [
@@ -12548,11 +16256,25 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
       }
     ],
     "report-builder": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "report-engine": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -12579,6 +16301,10 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -12636,6 +16362,12 @@
         "type": "adr"
       }
     ],
+    "representative": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "reproducibility": [
       {
         "id": "ADR-079",
@@ -12681,6 +16413,10 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -12740,6 +16476,26 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -12755,6 +16511,14 @@
       },
       {
         "id": "ADR-081",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -12854,6 +16618,32 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "researchcontext-derived": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "researchcontext.breadth": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "researchcontext.rotation.leadership_stability": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "researchdataset": [
@@ -12884,6 +16674,12 @@
         "type": "adr"
       }
     ],
+    "responsibilities": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "responsive": [
       {
         "id": "ADR-037",
@@ -12898,9 +16694,33 @@
         "type": "adr"
       }
     ],
+    "restore": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "result": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
     "results": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -13038,6 +16858,40 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "reviews": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "risk": [
@@ -13051,6 +16905,22 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       },
       {
@@ -13073,6 +16943,12 @@
     "risk-only": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      }
+    ],
+    "risk-semantics": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -13101,6 +16977,56 @@
     "risk_on": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "riskcritical": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      }
+    ],
+    "riskexpansion": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "riskexpansion=0.74": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "riskhigh": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "riskhigh+wait": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "risklevel": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "risklevel::high": [
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -13182,12 +17108,30 @@
         "type": "adr"
       },
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "root-cause": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "root-cause-analysis": [
@@ -13246,6 +17190,12 @@
         "type": "adr"
       }
     ],
+    "rounds": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "row": [
       {
         "id": "",
@@ -13270,6 +17220,12 @@
         "type": "adr"
       }
     ],
+    "rule-based": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "rules": [
       {
         "id": "ADR-051",
@@ -13281,6 +17237,10 @@
       },
       {
         "id": "ADR-069",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -13295,6 +17255,14 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -13338,6 +17306,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -13345,6 +17317,16 @@
     "sample": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "samples": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -13516,6 +17498,12 @@
         "type": "adr"
       }
     ],
+    "see": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "select": [
       {
         "id": "ADR-046",
@@ -13586,6 +17574,14 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "semantic-architecture": [
@@ -13606,9 +17602,23 @@
         "type": "adr"
       }
     ],
+    "semantic-model": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "semantics": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -13669,6 +17679,10 @@
     "serde_json::value": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -13756,6 +17770,12 @@
         "type": "adr"
       }
     ],
+    "shap": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "share": [
       {
         "id": "ADR-080",
@@ -13832,6 +17852,24 @@
         "type": "adr"
       }
     ],
+    "shifted": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "shifts": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "short-circuit": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
     "shorter": [
       {
         "id": "ADR-058",
@@ -13854,6 +17892,18 @@
       {
         "id": "ADR-071",
         "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "show": [
@@ -13868,12 +17918,22 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
       }
     ],
     "showed": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "showing": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
       }
     ],
     "shows": [
@@ -13891,6 +17951,14 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       },
       {
@@ -13915,6 +17983,10 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -14054,6 +18126,12 @@
         "type": "adr"
       }
     ],
+    "six": [
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
     "skewed": [
       {
         "id": "ADR-060",
@@ -14176,6 +18254,10 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "sources": [
@@ -14199,6 +18281,10 @@
     "split": [
       {
         "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -14304,6 +18390,26 @@
         "type": "adr"
       }
     ],
+    "stage": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "stage-transition": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
     "standalone": [
       {
         "id": "ADR-070",
@@ -14319,6 +18425,10 @@
     "starts": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -14361,6 +18471,14 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       },
       {
@@ -14414,6 +18532,12 @@
         "type": "adr"
       }
     ],
+    "state/prior": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      }
+    ],
     "state/signal/execution": [
       {
         "id": "ADR-078",
@@ -14431,6 +18555,28 @@
       },
       {
         "id": "ADR-063",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
+    "statistics": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -14546,6 +18692,24 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "strategystate": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "streak": [
@@ -14566,9 +18730,19 @@
         "type": "adr"
       }
     ],
+    "strictly": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      }
+    ],
     "string": [
       {
         "id": "ADR-064",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -14630,9 +18804,33 @@
         "type": "adr"
       }
     ],
+    "structured": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "styles.css": [
       {
         "id": "ADR-035",
+        "type": "adr"
+      }
+    ],
+    "sub-phase": [
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "sub-reviews": [
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "sub-steps": [
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -14655,6 +18853,26 @@
     "suggested": [
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "suite": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "summarize": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -14708,11 +18926,21 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "survival": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "survive": [
+      {
+        "id": "ADR-094",
         "type": "adr"
       }
     ],
@@ -14813,6 +19041,10 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -15080,6 +19312,12 @@
         "type": "trap"
       }
     ],
+    "terms": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "test": [
       {
         "id": "ADR-051",
@@ -15102,6 +19340,10 @@
       {
         "id": "ADR-045",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
       }
     ],
     "than": [
@@ -15115,6 +19357,10 @@
       },
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       },
       {
@@ -15145,6 +19391,26 @@
       },
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
         "type": "adr"
       },
       {
@@ -15226,6 +19492,42 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -15241,6 +19543,10 @@
     "them": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       },
       {
@@ -15271,6 +19577,10 @@
       }
     ],
     "there": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
@@ -15325,6 +19635,10 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -15386,7 +19700,25 @@
         "type": "adr"
       },
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "threshold-only": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -15405,6 +19737,14 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -15514,6 +19854,50 @@
         "type": "adr"
       },
       {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -15586,6 +19970,14 @@
     ],
     "too": [
       {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       }
@@ -15652,9 +20044,37 @@
         "type": "trap"
       }
     ],
+    "trace": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "trace/funnel": [
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
     "track": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "trade": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "trading": [
+      {
+        "id": "ADR-099",
         "type": "adr"
       }
     ],
@@ -15671,6 +20091,20 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "transition-evidence": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -15711,6 +20145,12 @@
     "traps": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "treated": [
+      {
+        "id": "ADR-084",
         "type": "adr"
       }
     ],
@@ -15770,9 +20210,19 @@
         "type": "adr"
       }
     ],
+    "trendparticipation": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "trigger": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
         "type": "adr"
       }
     ],
@@ -15898,6 +20348,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "two-phase": [
@@ -15919,6 +20373,10 @@
     "typed": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -15988,6 +20446,12 @@
         "type": "adr"
       }
     ],
+    "uncomputable": [
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
     "under": [
       {
         "id": "ADR-060",
@@ -15998,17 +20462,31 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
       }
     ],
     "understand": [
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "unfavorable": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      }
+    ],
+    "unfixed": [
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -16025,6 +20503,16 @@
       },
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "unifies": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -16050,9 +20538,21 @@
         "type": "adr"
       }
     ],
+    "unit": [
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
     "universe": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "unless": [
+      {
+        "id": "ADR-091",
         "type": "adr"
       }
     ],
@@ -16067,6 +20567,30 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -16103,6 +20627,12 @@
     "uppercase": [
       {
         "id": "ADR-081",
+        "type": "adr"
+      }
+    ],
+    "upstream": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -16150,6 +20680,16 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "used": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "usei18n/t": [
@@ -16169,6 +20709,30 @@
       },
       {
         "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -16197,6 +20761,10 @@
       },
       {
         "id": "ADR-063",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
         "type": "adr"
       }
     ],
@@ -16248,6 +20816,12 @@
         "type": "adr"
       }
     ],
+    "v2.1": [
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "v4": [
       {
         "id": "ADR-050",
@@ -16266,6 +20840,16 @@
         "type": "adr"
       }
     ],
+    "v5": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
     "v6": [
       {
         "id": "ADR-068",
@@ -16281,6 +20865,12 @@
       },
       {
         "id": "ADR-077",
+        "type": "adr"
+      }
+    ],
+    "v6/v7": [
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -16382,6 +20972,62 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -16395,6 +21041,18 @@
     "validate": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -16420,11 +21078,29 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
       }
     ],
     "valuable": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "values": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],
@@ -16453,6 +21129,10 @@
     "verifiable": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-082",
         "type": "adr"
       }
     ],
@@ -16520,6 +21200,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -16568,6 +21256,38 @@
         "type": "adr"
       }
     ],
+    "volume": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "volume-ma20": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "volume_ma20": [
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "volume_ratio": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
     "vs": [
       {
         "id": "ADR-051",
@@ -16591,6 +21311,10 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -16712,13 +21436,43 @@
     ],
     "wait": [
       {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "waiting": [
+      {
+        "id": "ADR-097",
+        "type": "adr"
       }
     ],
     "wants": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
         "type": "adr"
       }
     ],
@@ -16743,6 +21497,10 @@
       },
       {
         "id": "ADR-071",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       },
       {
@@ -16814,6 +21572,22 @@
       {
         "id": "ADR-051",
         "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "weak": [
+      {
+        "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "weighted": [
+      {
+        "id": "ADR-082",
+        "type": "adr"
       }
     ],
     "weights": [
@@ -16882,11 +21656,19 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
       }
     ],
     "whether": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -16897,6 +21679,22 @@
       },
       {
         "id": "ADR-052",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
         "type": "adr"
       }
     ],
@@ -16909,6 +21707,14 @@
     "why": [
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-096",
         "type": "adr"
       }
     ],
@@ -16932,11 +21738,37 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-096",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
       }
     ],
     "windows": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "wire": [
+      {
+        "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-092",
         "type": "adr"
       }
     ],
@@ -17000,8 +21832,34 @@
         "type": "adr"
       },
       {
+        "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "within": [
+      {
+        "id": "ADR-084",
+        "type": "adr"
       }
     ],
     "without": [
@@ -17033,6 +21891,14 @@
       },
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-103",
         "type": "adr"
       },
       {
@@ -17126,11 +21992,25 @@
       {
         "id": "ADR-042",
         "type": "adr"
+      },
+      {
+        "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-095",
+        "type": "adr"
       }
     ],
     "z-score": [
       {
         "id": "ADR-063",
+        "type": "adr"
+      }
+    ],
+    "zero": [
+      {
+        "id": "ADR-103",
         "type": "adr"
       }
     ],

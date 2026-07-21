@@ -119,3 +119,15 @@
 | **Model Bias** | Model Bias | 模型对特定市场结构、主题或 Regime 的系统性偏好或压制，不是随机误差，而是可识别的结构性偏差 | 研究域 |
 | **Systematic Bias** | Systematic Bias | 模型在特定条件下对多个标的或整个主题产生的系统性错误，例如 State Layer 在高动量/低波动/成长扩散环境下全面压制 Growth 主题 | 研究域 |
 | **Failure Attribution** | Failure Attribution | 研究层能力：不仅判断模型何时失效，还要解释失效时的市场环境（Breadth / Liquidity / Volatility / Macro / Economic / Crowding） | 研究域 |
+| **Research Asset** | Research Asset | V8 持久化研究产物（Evidence / Snapshot，未来扩展 Knowledge / Validation / Hypothesis），可复现、可审计、可版本化，存放于本地 `workspace/` | 研究资产域 |
+| **RA-XXXXXX** | Research Asset Identity | V8 统一资产身份：6 位大写数字字母 ID，metadata 中的 `AssetKind` 区分类型（ADR-081） | 研究资产域 |
+| **Asset Lifecycle** | Research Asset Lifecycle | V8 统一生命周期状态机：`Draft → Verified → Published → Superseded → Archived`（ADR-080） | 研究资产域 |
+| **EvidenceRef** | Evidence Reference | Snapshot 对 Evidence 的引用结构 `{ id, version }`，引用而非嵌入（ADR-079） | 研究资产域 |
+| **Workspace** | Research Asset Workspace | V8 本地研究资产目录（gitignored），含 `evidence/`、`snapshots/`、`registry/*-index.json`，由 `app-service::workspace` 管理 | 研究资产域 |
+| **Shadow Validation** | Shadow Validation | V8 Execution Platform Phase 2C：在真实市场环境验证 Evidence → Risk State → Shadow Assessment 链路稳定性的只读工作流 | 执行域 |
+| **ShadowRiskAssessment** | Shadow Risk Assessment | Shadow Validation 每日产出的风险评估结果；只读观察，禁止 DecisionEngine 消费 | 执行域 |
+| **Context Integrity Gate** | Execution Context Integrity Gate | 执行上下文完整性关卡，校验历史/当日数据上下文是否满足 Shadow Assessment 前置条件（`execution-context-integrity-gate`） | 执行域 |
+| **Evidence Registry** | Evidence Registry | V8 Execution Platform 的证据登记表（`evidence-registry`），登记 execution-replay 计算的各类证据及其依赖 | 执行域 |
+| **Execution Replay** | Execution Replay | V8 证据重放能力（`crates/execution-replay`），基于 ExecutionEvent 重放计算 Holding Risk / Risk Lifecycle / Decision Gate 等证据 | 执行域 |
+| **Holding Risk** | Holding Risk Bundle | 持仓风险证据族（Bundle / Calibration / Persistence），execution-replay 的核心证据之一 | 执行域 |
+| **Risk Lifecycle** | Risk Lifecycle | 风险状态生命周期状态机分析（`risk-lifecycle`），观察 HIGH_RISK 等状态的持续与切换 | 执行域 |

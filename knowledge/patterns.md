@@ -95,3 +95,12 @@
 - **可配置化权重**：`ConsensusConfig` 将证据权重和阈值集中配置，默认值保持 V7.3 行为；权重/阈值变更需经 Calibration 验证并可能触发 Baseline Version 递增
 - **Calibration 语义不变量**：`CURRENT_CALIBRATION_BASELINE_VERSION` 仅在 Evidence 语义变化时递增（距离度量、归一化、特征权重、阈值、报告统计语义），实现优化不触发递增
 - **Historical Analogues 不暴露原始相似度**：对外使用 rank 或定性等级（Very High / High / Moderate / Low），避免用户误读原始距离值
+
+## 11. V8 Research Asset & Execution Platform 范式
+
+- **引用而非嵌入**：Snapshot 通过 `EvidenceRef { id, version }` 引用 Evidence，禁止把 Evidence 数据复制进 Snapshot
+- **统一身份与生命周期**：所有 Research Asset 使用 `RA-XXXXXX` 身份与 `Draft → Verified → Published → Superseded → Archived` 状态机；新增资产类型必须复用该身份/生命周期，不得另起体系
+- **可复现性**：每个 Asset 携带 `dataset_hash` 和 `config_hash`，同一输入重算应得到可对比的 hash
+- **门控式演进（P3 Gate）**：Evidence Score/Weight 等数值化权重必须等真实资产积累达标（1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定）后才设计；权重基于真实资产分布而非假设
+- **计算+格式化成对模块**：`execution-replay` 内每个证据域由 `<domain>.rs`（计算）+ `<domain>_formatter.rs`（输出）成对组成，新证据沿用该结构
+- **Shadow 只读约束**：Shadow Validation 产物（ShadowRiskAssessment 等）只读观察，不进交易链路；禁止 DecisionEngine 消费、禁止修改 ExecutionPolicy、禁止自动交易

@@ -21,7 +21,7 @@ Tauri-native desktop bridge. Owns command registration, refresh-job coordination
 - Scope parsing only accepts `global`, `cn`, and `hk`.
 - Refresh stage names, labels, and ordering must stay aligned with the frontend selector.
 - Artifact opening must remain restricted to canonical files under `reports/`.
-- New V6 Research Surface commands are currently CLI-only; if exposed in desktop, register them here and delegate to `app-service`.
+- New V6/V7 Research Surface commands are currently CLI-only; if exposed in desktop, register them here and delegate to `app-service`.
 
 ## ANTI-PATTERNS
 - Do **not** put quant logic, report shaping, or SQL in this crate.

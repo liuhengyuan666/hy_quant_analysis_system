@@ -418,26 +418,35 @@ cargo run -p quant-desktop
 如果你选择 CLI，每天收盘后按这个顺序跑即可：
 
 ```bash
-# 1. 检查 gate → 刷新全链路（如需）→ 导出市场日报
-cargo run -p quant-cli -- sync-and-export --scope global
+# 1. 强制刷新全链路（包含 ingest-daily），确保拉取最新数据
+cargo run -p quant-cli -- refresh-all --to <today>
 
-# 2. 数据健康检查 + 报告留档（V7 工作流）
+# 2. 导出市场日报
+cargo run -p quant-cli -- export-report --scope global
+
+# 3. 数据健康检查 + 报告留档（V7 工作流）
 cargo run -p quant-cli -- data-health
 
-# 3. 每日研究观测（聚合 SRD / Stretch / Analytics / Health，V7 工作流）
+# 4. 每日研究观测（聚合 SRD / Stretch / Analytics / Health，V7 工作流）
 cargo run -p quant-cli -- research observe --scope global
 
-# 4. 收盘前执行过滤（V5 Execution Layer / Pattern Library）
+# 5. 收盘前执行过滤（V5 Execution Layer / Pattern Library）
 cargo run -p quant-cli -- preclose-analysis --scope global
+
+# 6. Shadow Validation（V8 Execution Platform / Phase 2C）
+# 只读观察，不影响交易
+cargo run -p quant-cli -- shadow-deployment --scope cn --from <30天前> --to <今天> --output markdown
 ```
 
 说明：
 
-- `sync-and-export` 是 V3 推荐默认路径：一键完成 gate 检查、全链路刷新、导出日报。
-- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要和 Markdown 报告。
+- `refresh-all` 会按正确顺序执行 `ingest → indicators → macro → rotation → strategy → signals → backtests`，并尝试拉取 `<today>` 的最新数据。只要数据源已更新，就能把最新日历日数据刷入库。
+- `export-report` 导出 `reports/daily-report-global-{date}.md`。若前面某个 stage lagging，会 fail-loud，需要先跑 `explain-latest-gate` 排查。
+- `data-health` 合并 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要和 Markdown 报告。
 - `research observe` 聚合 `research-srd` + `research-stretch` + `research analytics` + `check-data-health`，输出到 `reports/research-observe-global-{date}.md`。
 - `preclose-analysis` 只回答「今天买不买」，不回答「买什么」；在 `signal ≥ Buy` 且 `state ≠ NO_TRADE` 的候选上运行 Pattern Library 过滤。
-- 所有底层命令（`check-data-health`、`export-data-health-report`、`research-srd`、`research-stretch` 等）均保留不变。
+- `shadow-deployment` 是 V8 Execution Platform Phase 2C 的核心命令，生成每日 ShadowRiskAssessment（只读观察，不影响交易）。
+- 如果某天只是想基于「已有数据」快速导出报告，可以临时用 `cargo run -p quant-cli -- sync-and-export --scope global` 代替第 1、2 步；但它不会主动拉取新数据。
 
 如果你日常主要使用桌面端，更推荐的实际顺序是：
 
@@ -448,55 +457,96 @@ cargo run -p quant-cli -- preclose-analysis --scope global
 5. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
 6. 需要留档时再导出 report
 
+### V8 冻结测试期命令频率（Shadow Validation + Research Asset 积累）
+
+> 观测窗口：**2026-07-20 → 2026-08-15**（2-4 周），详见 `docs/v8/shadow-validation-plan.md`。
+> 口径基线：universe 于 2026-07-20 变更（31 只启用：新增 6 只行业 ETF、移除芯片ETF、暂禁黄金ETF），所有 Shadow Validation 观测与 Evidence 积累以此为统一基线；`research replay` 回放窗口不要早于 2024-01-02（新标的无更早数据）。
+
+**每日（交易日，收盘后，必须先完成 `refresh-all`）：**
+
+```bash
+# 1. 全链路刷新（前提）
+cargo run -p quant-cli -- refresh-all --to <today>
+
+# 2. Shadow Validation 每日运行（推荐脚本，等价于下面两条 CLI）
+.\shadow-production\shadow-validation-daily.ps1 -Scope cn
+# 等价 CLI：
+cargo run -p quant-cli -- execution-context-integrity-gate --live --scope cn --output markdown
+cargo run -p quant-cli -- shadow-deployment --scope cn --from <30天前> --to <today> --output markdown
+
+# 3. Evidence 资产积累（P3 门控：1000+ 资产）
+cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
+
+# 4. Historical Replay（P3 门控：30 天 Replay 稳定）
+cargo run -p quant-cli -- research replay --scope cn --from <90天前> --to <today>
+```
+
+**每周（周五）：**
+
+```powershell
+# Shadow Validation 周回顾（HIGH_RISK 占比 / Transition 事件 / False Alarm）
+.\shadow-production\shadow-validation-weekly.ps1 -Scope cn
+
+# Calibration 基线稳定性（P3 门控：2 个周期稳定，建议每周或每两周一次）
+cargo run -p quant-cli -- research calibration --scope cn --from <90天前> --to <today>
+```
+
+**按需（仅在日报出现 HIGH_RISK 持续 / Gate 失败 / 事件异常时下钻，不需每日运行）：**
+
+```bash
+cargo run -p quant-cli -- evidence-registry --output markdown
+cargo run -p quant-cli -- risk-lifecycle --scope cn --from <90天前> --to <today> --output markdown
+cargo run -p quant-cli -- holding-risk-calibration --scope cn --from <90天前> --to <today> --output markdown
+cargo run -p quant-cli -- shadow-mode --scope cn --from <30天前> --to <today> --output markdown
+cargo run -p quant-cli -- evidence-validate-bundle --evidence-ids leadership_decay,liquidity_pressure,confirmation_decay
+```
+
+**定点评估（计划书规定）：**
+
+| 日期 | 动作 |
+|---|---|
+| 2026-08-03 | 两周 Checkpoint：评估 Event frequency / Regime distribution |
+| 2026-08-10 | T+20 回填：用 `risk-lifecycle` / `execution-statistics` 重分析 07-20 样本 |
+| 2026-09-20 | T+60 回填：同上 |
+
+**验收标准（全部达标才进入 TASK-165 Decision Integration Proposal）：**
+
+| 指标 | 要求 |
+|---|---|
+| HIGH_RISK 天数比例 | < 30% |
+| False Alarm 率 | < 30% |
+| Recovery 平均时间 | < 10 天 |
+| Transition 提前量 | > 3 天 |
+| Integrity Gate 通过率 | 100% |
+| Simulated Action 震荡 | < 20% |
+
+**冻结期禁止事项：** 不允许 DecisionEngine 消费 ShadowRiskAssessment；不允许修改 ExecutionPolicy / HoldingRiskScore 权重；不允许新增 Evidence 类型；不允许自动交易；P3（Evidence Score/Weight）在 1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定前不得启动。
+
 ### 高级参考：CLI 手动分步执行（工程路径）
 
 > **这组命令必须按顺序执行**，不能倒序或跳过中间阶段，否则 `export-report` 会因 latest gate 落后而被拒绝。
 
 ```bash
-# 1. 拉取行情
-cargo run -p quant-cli -- ingest-daily --from 2026-06-01 --to 2026-06-05
+# 1. 强制刷新全链路（包含 ingest-daily），确保拉取最新数据
+cargo run -p quant-cli -- refresh-all --to <today>
 
-# 2. 计算技术指标
-cargo run -p quant-cli -- compute-indicators
+# 2. 导出市场日报
+cargo run -p quant-cli -- export-report --scope global
 
-# 3. 计算宏观与市场环境（同时重建 macro / regime / environment / strategy_state）
-cargo run -p quant-cli -- compute-macro --from 2026-06-01 --to 2026-06-05
-
-# 4. 计算轮动强弱
-cargo run -p quant-cli -- compute-rotation
-
-# 5. 计算策略偏好
-cargo run -p quant-cli -- compute-strategy-preferences
-
-# 6. 生成最终信号
-cargo run -p quant-cli -- compute-signals
-
-# 7. 检查各阶段日期是否推进
-cargo run -p quant-cli -- pipeline-dates
-
-# 8. 数据健康检查（检查 + 导出报告，V7 工作流）
+# 3. 数据健康检查 + 报告（V7 工作流）
 cargo run -p quant-cli -- data-health
 
-# 9. 查看 dashboard
-cargo run -p quant-cli -- dashboard-snapshot
-
-# 10. 导出日报（若前面有阶段 lagging，会 fail-loud）
-cargo run -p quant-cli -- export-report
-
-# 11. 每日研究速览（V7 工作流）
+# 4. 每日研究速览（V7 工作流）
 cargo run -p quant-cli -- research observe --scope global
 ```
 
 补充说明：
 
-- `pipeline-dates` 用来检查每个 stage 的**最新日期**和**最新日是否全量完整**
-- 如果 `strategy_preference` 已到最新，但 `signal_snapshot` 仍落后，优先单独重跑一次 `compute-signals`
-- `data-health` 合并了 `check-data-health` 与 `export-data-health-report`，一次调用同时输出终端 JSON 摘要与 Markdown 报告
-- 如需单独检查（不导出报告），仍可运行 `check-data-health`；如需单独导出报告，仍可运行 `export-data-health-report`
-- 如果 `pipeline-dates` 显示某个 stage `is_latest=true` 但 `is_complete=false`，说明这一天**日期到了，但最新日样本不完整**
-- 如果 `report_date` 是最新日期，但 `regime_as_of_date` 更早，这通常表示**宏观因子按最近可用值 forward-fill**，不代表 dashboard 出错
-- `GLOBAL / CN / HK` 的 dashboard/report/strategy/signal/backtest 现在各自读取对应 scope 的 regime 与 environment，不再复用 global regime 假装本地化；signal 和 backtest 均携带显式 provenance 字段（`analysis_scope`、`regime_basis_scope`、`matches current snapshot`）
-- **默认 `export-report` 现在会在 latest gate 落后时直接失败，不再静默导出旧日期日报；如果确实要导出历史日报，请显式传 `--date YYYY-MM-DD`**
+- `refresh-all` 会按正确顺序执行 `ingest → indicators → macro → rotation → strategy → signals → backtests`，并尝试拉取 `<today>` 的最新数据。只要数据源已更新，就能把最新日历日数据刷入库。
+- `export-report` 导出 `reports/daily-report-global-{date}.md`。若前面某个 stage lagging，会 fail-loud。
+- `data-health` 合并 `check-data-health` 与 `export-data-health-report`，同时输出终端 JSON 摘要与 Markdown 报告。
+- `research observe` 聚合 SRD / Stretch / Analytics / Health 输出 Markdown 报告。
+- 如果只是想基于已有数据快速导出，可临时用 `sync-and-export` 代替第 1、2 步，但它不会主动拉取新数据。
 
 ---
 
@@ -943,6 +993,84 @@ cargo run -p quant-cli -- research analytics --condition srd-strong --scope glob
 - 连续 4 周运行 Historical Replay（GLOBAL / CN / HK，90 日窗口），每日把结果写入 workspace。
 - 不要在没有真实资产积累的情况下设计 Evidence 权重；权重应基于真实资产分布，而不是假设。
 - 相关 ADR：`docs/v6/adr-079-research-snapshot.md`、`docs/v6/adr-080-research-asset-lifecycle.md`、`docs/v6/adr-081-research-asset-identity.md`。
+
+### 15.11 V8 Execution Platform：Shadow Validation（Phase 2C）
+
+> **V8 新增**：Shadow Validation 是 Phase 2C 的核心工作流，用于在真实市场环境中验证 Evidence → Risk State → Shadow Assessment 链路的长期稳定性。
+>
+> 当前阶段：**只读观察，不影响交易，禁止 DecisionEngine 消费**。
+
+#### Shadow Validation 每日运行
+
+```powershell
+# 每日运行（推荐）
+.\shadow-production\shadow-validation-daily.ps1 -Scope cn
+
+# 或手动执行
+cargo run -p quant-cli -- execution-context-integrity-gate --live --scope cn
+cargo run -p quant-cli -- shadow-deployment --scope cn --from <30天前> --to <今天> --output markdown
+```
+
+#### Shadow Validation 每周回顾
+
+```powershell
+# 每周运行
+.\shadow-production\shadow-validation-weekly.ps1 -Scope cn
+```
+
+#### Evidence Research 命令
+
+```bash
+# Context Integrity Gate（历史数据）
+cargo run -p quant-cli -- execution-context-integrity-gate --scope cn --from 2024-01-01 --to 2025-06-30 --output markdown
+
+# Context Integrity Gate（当日 live）
+cargo run -p quant-cli -- execution-context-integrity-gate --live --scope cn --output markdown
+
+# Evidence Registry 查看
+cargo run -p quant-cli -- evidence-registry --output markdown
+
+# Evidence Bundle 依赖验证
+cargo run -p quant-cli -- evidence-validate-bundle --evidence-ids leadership_decay,liquidity_pressure,confirmation_decay
+
+# Holding Risk Calibration
+cargo run -p quant-cli -- holding-risk-calibration --scope cn --from 2024-01-01 --to 2025-06-30 --output markdown
+
+# Risk Lifecycle 状态机分析
+cargo run -p quant-cli -- risk-lifecycle --scope cn --from 2024-01-01 --to 2025-06-30 --output markdown
+
+# Holding Risk Bundle V4
+cargo run -p quant-cli -- execution-holding-risk-bundle-v4 --scope cn --from 2024-01-01 --to 2025-06-30 --output markdown
+
+# Shadow Mode Runtime Wiring
+cargo run -p quant-cli -- shadow-mode --scope cn --from 2026-07-01 --to 2026-07-17 --output markdown
+
+# Shadow Deployment Contract
+cargo run -p quant-cli -- shadow-deployment --scope cn --from 2026-07-01 --to 2026-07-17 --output markdown
+```
+
+#### 观察指标（Phase 2C 验收标准）
+
+| 指标 | 要求 |
+|---|---|
+| Transition Lead Time | > 3 天 |
+| False Alarm Rate | < 30% |
+| State Stability | HIGH_RISK < 30% |
+| Integrity Gate 通过率 | 100% |
+
+#### 相关文件
+
+- `docs/v8/shadow-validation-plan.md`
+- `shadow-production/shadow-validation-daily.ps1`
+- `shadow-production/shadow-validation-weekly.ps1`
+- `reports/shadow-validation/`（运行产物，gitignored）
+
+#### 禁止事项
+
+- ❌ 不允许 DecisionEngine 消费 ShadowRiskAssessment
+- ❌ 不允许修改 ExecutionPolicy
+- ❌ 不允许自动交易
+- ❌ 不允许新增 Evidence（当前 Evidence 已足够，避免过拟合）
 
 ---
 

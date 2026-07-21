@@ -14,8 +14,8 @@ apps/desktop/
 | Task | Location | Notes |
 |------|----------|-------|
 | UI composition | `frontend/src/main.js` | root state, scope/date flow, refresh CTA, top-level render |
-| Shared reactive state | `frontend/src/store.js` | Vue reactive store with 10 synced properties |
-| Vue components | `frontend/src/components/*.vue` | 20+ Vue panels (BreadthPanel, MetricCard, DateSelector, etc.) |
+| Shared reactive state | `frontend/src/store.js` | Vue reactive store with ~20 properties: snapshot, insight, status, selectedScope, selectedReportDate, availableDates, loading, error, exporting, exportResult, refreshStatus, recentReports, llmAnalysis, llmConfig, precloseAnalyzing, executionResults, ... |
+| Vue components | `frontend/src/components/*.vue` | 25+ Vue panels (BreadthPanel, MetricCard, DateSelector, DataHealthPanel, SignalDetailModal, UsageGuidesPanel, etc.) |
 | Vue root | `frontend/src/App.vue` | Composes all panels, wires events |
 | Feature-specific UI | `frontend/src/components/*.vue` | Vue components (DataHealth, RecentReports, UsageGuides, etc.) |
 | Frontend-only rules | `frontend/AGENTS.md` | nearest guidance for slice work |
@@ -24,7 +24,7 @@ apps/desktop/
 
 ## CONVENTIONS
 - Frontend uses `invoke()` only; it does not talk to DB or arbitrary files directly.
-- Plain JS and Vue coexist during progressive migration; shared state via `src/store.js` (10 properties).
+- Plain JS and Vue coexist during progressive migration; shared state via `src/store.js` (~20 properties).
 - main.js calls sync*ToStore() at all state mutation points.
 - `src-tauri` stays thin over `app-service`, except for desktop-local coordination and safety such as `RefreshCoordinator` and report-artifact path validation.
 - Default CTA is full `Refresh data`; `Run from stage` and `Retry failed stage` are advanced recovery branches.
@@ -32,7 +32,7 @@ apps/desktop/
 - Startup and scope reloads use `dashboard_bundle`; historical date changes use `dashboard_snapshot`.
 - `Trust summary` is the primary top-level verdict; `Recent reports` is a research-results action surface, not just a file-path list.
 - Safe artifact opening stays restricted to managed files under `reports/`.
-- V6 Research Surface commands are currently CLI-only; desktop UI may add them later via Tauri commands.
+- V6/V7 Research Surface commands are currently CLI-only; desktop UI may add them later via Tauri commands.
 
 ## ANTI-PATTERNS
 - Do **not** move analytics/business logic into frontend.

@@ -750,3 +750,171 @@ V8 produces durable assets of different kinds (Evidence, Snapshot, etc.). They n
 All Research Assets use a single identity format RA-XXXXXX (6 uppercase alphanumeric characters). Asset type is encoded in metadata via AssetKind (Evidence, Snapshot, etc.). Existing EV- and SN- prefixed assets are grandfathered but new assets no longer use those prefixes.
 
 **Tags:** v8, research-asset, identity, registry, ra-xxxxxx, asset-kind
+
+## ADR-082: Execution Platform Architecture
+
+**Status:** Accepted
+
+### Context
+V5 Execution Layer remains a rule-based Pattern Library that does not consume the V6/V7 Research Context. Execution decisions are made via short-circuit if-else rules, StrategyState is used as a hard gate, and the layer is isolated from the Research Platform. A new Execution Platform is needed as a V8 downstream consumer that unifies with the existing Research Pipeline philosophy.
+
+### Decision
+Introduce an Execution Platform as a V8 downstream consumer with a layered pipeline: Quote → Feature → Observation → Evidence → Assessment → Decision → Replay. Execution consumes ResearchContext via an ExecutionMarketView projection, not by owning it. StrategyState becomes a weighted evidence contributor rather than a hard gate. LLM participates only in the Explanation layer after Decision, never in Decision itself. The platform outputs verifiable facts, not investment advice.
+
+**Tags:** v8, execution-platform, architecture-freeze, pipeline, evidence, llm-boundary
+
+## ADR-083: Execution Evidence Model
+
+**Status:** Accepted
+
+### Context
+Execution Platform needs a unified semantic language to reason about intraday market behavior, research context, and strategy state. The system currently uses different terms across layers (Observation, Reason, Insight) which fragments the consumer interface.
+
+### Decision
+Use Evidence as the unified unit across Research, Execution, and Review layers. An Evidence carries kind, confidence, direction, source, and a typed payload (not serde_json::Value). Intraday Observations are converted into Evidence before assessment. EvidenceKind is semantic (e.g., TrendParticipation, MomentumExpansion, DistributionRisk). EvidencePayload is a typed enum capturing structured metadata per kind. Formatters derive human-readable text from Evidence kind + payload, not from a pre-computed reason string.
+
+**Tags:** v8, execution-platform, evidence, semantic-model
+
+## ADR-084: LLM Boundary in Execution Platform
+
+**Status:** Accepted
+
+### Context
+As LLM capabilities are integrated into the desktop and reporting surfaces, there is a risk that LLM starts to be treated as a decision maker or signal generator. The boundary between deterministic execution and LLM-assisted explanation must be explicitly defined.
+
+### Decision
+Within the Execution Platform, LLM responsibilities are strictly limited to: Explain, Summarize, Compare, Highlight, and Recommend Reading. LLM MUST NOT perform signal generation, strategy decision making, risk evaluation, or execution state determination. All execution states must originate from ExecutionDecision. LLM consumes ExecutionExplanation produced by report-engine, not raw engine internals. This boundary applies across Research, Reporting, and Execution consumers.
+
+**Tags:** v8, execution-platform, llm, boundary
+
+## ADR-090: V8 Execution Platform Phase 1 Complete: Enter Research Calibration
+
+**Status:** Accepted
+
+### Context
+V8 Execution Platform validation results: Golden Suite 80% pass, 9,083 candidate discovery records showing 98.62% Wait, 1.38% BuyNow, 0% Reduce. Root cause is State/Prior evidence overweight, not threshold.
+
+### Decision
+Phase 1 (Architecture/Engineering) is complete. Enter Research Calibration phase. 2A: Execution Analytics, 2B: Research Asset Accumulation, 2C: Calibration, 2D: Bayesian Assessment, 2E: ML Ranking. Immediate priorities: wire real market_regime_label, add Execution Analytics, expand Golden Suite Reduce cases, accumulate ≥100-300 records, defer HK repair.
+
+**Tags:** v8, execution, calibration, research-asset, analytics
+
+## ADR-091: V8 Execution Platform: Architecture Frozen, Enter Research Calibration Phase 2A (with Exit Criteria)
+
+**Status:** Accepted
+
+### Context
+Refinement of ADR-090. V8 Execution Platform validation results show bottleneck shifted from Architecture to Data. Architecture is frozen. Need a Stage Transition ADR with Entry/Exit Criteria.
+
+### Decision
+V8 Execution Platform Architecture is frozen. Future work shifts from architecture optimization to research calibration unless objective evidence indicates architectural deficiencies. Phase 2A: (1) wire real market_regime_label and freeze ExecutionEvent, (2) implement Execution Statistics module, (3) incremental validation 100 -> 1000 -> 9000+, (4) expand Golden Suite only after Evidence Frequency analysis, (5) defer HK repair until CN Calibration done. Entry Criteria (met): Execution Pipeline closed-loop, Replay closed-loop, ExecutionEvent v2.1 frozen, DTOs frozen, Validation CLI complete, Golden Suite established, Discovery Dataset > 9000 records, V5 intact. Exit Criteria (to end Phase 2A): Research Asset >= 300, Execution Statistics Report delivered for 3 rounds, First Calibration Proposal formed, Evidence Frequency Baseline established.
+
+**Tags:** v8, execution, stage-transition, calibration, research-asset, statistics
+
+## ADR-092: Phase 2A Execution Plan: Exit Criteria and Incremental Statistics
+
+**Status:** Accepted
+
+### Context
+Refinement of ADR-091 (Accepted). V8 Execution Platform has entered Phase 2A. User feedback clarifies: Phase 2A is a stage-transition ADR, not a general architecture decision, and requires explicit Exit Criteria and a 6-step sub-phase plan.
+
+### Decision
+Phase 2A is split into 6 sub-steps: 2A-1 wire real market_regime_label and freeze ExecutionEvent; 2A-2 build Execution Statistics module (not 'Analytics'); 2A-3 run 100-record validation; 2A-4 run 1,000-record validation; 2A-5 run 9,000+ full validation; 2A-6 produce Calibration Proposal. Golden Suite expansion should wait until Evidence Frequency analysis shows why Reduce decisions are absent.
+
+**Tags:** v8, execution, phase-2a, calibration, statistics, exit-criteria
+
+## ADR-093: Execution Statistics Contract Freeze (Phase 2A-2)
+
+**Status:** Accepted
+
+### Context
+V8 Execution Platform Phase 2A-2. Architecture Gate added before implementation.
+
+### Decision
+Execution Statistics contract is frozen to six outputs: EvidenceFrequency, EvidencePairMatrix, DecisionDistribution, PriorDistribution, AssessmentHistograms, OutcomeMatrix. Output is ExecutionStatistics domain object; Formatter handles JSON/Markdown. Sample strategy is Representative -> Expanded -> Full (no hardcoded numbers). No correlation, feature importance, SHAP, ML, or calibration conclusions in Phase 2A-2.
+
+**Tags:** v8, execution, statistics, phase-2a, contract-freeze
+
+## ADR-094: Phase 2A-3/4: Evidence Trace and Root Cause Review Before Calibration
+
+**Status:** Accepted
+
+### Context
+After completing 2A-2 Execution Statistics, full CN dataset shows Reduce=0.00% and RiskExpansion=0.74%. User correctly argues we cannot yet conclude ObservationEngine is too conservative; we need an Evidence Trace/Funnel to determine where each EvidenceKind dies (Observation → Evidence → Assessment → Decision).
+
+### Decision
+Add Phase 2A-3 Evidence Trace Analysis and 2A-4 Root Cause Review before any Calibration. Implement an EvidenceTrace/EvidenceFunnel module that counts, per EvidenceKind, how many observations survive each pipeline stage. Do NOT modify ObservationEngine, EvidenceBuilder, Assessment, or Decision until the funnel identifies the failing layer.
+
+**Tags:** v8, execution, evidence-trace, phase-2a, root-cause, calibration
+
+## ADR-095: Phase 2A-4 Decision Path Review: Distribution Coverage + Decision Margin
+
+**Status:** Accepted
+
+### Context
+After 2A-3 Evidence Trace found that Reduce=0 is caused by two paths: Distribution Observation=0 and RiskExpansion reaching Assessment but not Reduce. User insists on not modifying code yet; instead perform two focused reviews before any Calibration.
+
+### Decision
+Phase 2A-4 is renamed to Decision Path Review with two sub-reviews: 2A-4A Distribution Coverage Review (analyze feature percentiles and which days should trigger Distribution observation) and 2A-4B Decision Margin Review (analyze dominant_direction histogram and Assessment→Decision mapping for RiskExpansion records). No code modification until both reviews complete.
+
+**Tags:** v8, execution, decision-path-review, distribution-coverage, decision-margin, calibration
+
+## ADR-096: Decision Gate Analysis: Why Bearish Assessments Do Not Become Reduce
+
+**Status:** Accepted
+
+### Context
+2A-4 Decision Margin Review found that 152 records have dominant_direction < -0.3 but all result in Wait. User wants to identify the exact gate in DecisionEngine that blocks Reduce: risk, confidence, or consensus. volume_ma20 fix is deferred.
+
+### Decision
+Phase 2A-4.5 (or 2A-4B) is Decision Gate Analysis. It will enumerate every Reduce candidate (dominant_direction < reduce_threshold) and report which DecisionEngine gate blocks it: RiskCritical, RiskHigh, ConfidenceTooLow, or ConsensusTooLow. Per-record detail included. volume_ma20 remains unfixed for now.
+
+**Tags:** v8, execution, decision-gate, confidence, consensus, risk, reduce
+
+## ADR-097: Risk Semantics Review: Entry Risk vs Holding Risk
+
+**Status:** Accepted
+
+### Context
+Decision Gate Analysis found 54 RiskHigh records block Reduce and 98 ConfidenceTooLow records block Reduce. User wants to understand if RiskLevel::High is a Domain Modeling issue: it currently means 'do not trade' but in bearish contexts it should mean 'exit position'. Need to analyze evidence composition, decision context, and future outcomes of RiskHigh records.
+
+### Decision
+Phase 2A-4C is Risk Semantics Review. It will analyze RiskLevel::High records to determine: (1) which evidences compose High risk, (2) the distribution of direction/confidence/consensus for High risk records, (3) the forward outcome of RiskHigh+Wait records to validate whether waiting was harmful, and (4) a proposed semantic mapping of EntryRisk vs HoldingRisk. No code changes to RiskLevel or DecisionEngine.
+
+**Tags:** v8, execution, risk-semantics, domain-modeling, entry-risk, holding-risk, reduce
+
+## ADR-098: Directional Confidence Calibration Experiment
+
+**Status:** Accepted
+
+### Context
+Risk Semantics Review (ADR-097) confirmed RiskHigh semantics are correct and the only remaining bottleneck is confidence threshold. Reduce=0 is caused by 98 bearish candidates with confidence 0.45-0.55 being blocked by the 0.6 threshold. User wants to validate threshold changes via replay outcome before making them defaults.
+
+### Decision
+Phase 2A-5 is Directional Confidence Calibration Experiment. It will run DecisionEngine with alternative confidence thresholds (0.55, 0.50, 0.45) and with asymmetric thresholds (buy=0.6, reduce=0.5) on the same records, measuring coverage, precision, and opportunity cost. No changes to DecisionEngine, ExecutionPolicy defaults, or volume_ma20 until experiment results are evaluated.
+
+**Tags:** v8, execution, calibration, confidence, reduce, experiment, replay
+
+## ADR-099: Restore Real Volume Context Before Evidence Calibration
+
+**Status:** Accepted
+
+### Context
+2A-5 Calibration Experiment rejected the threshold-only approach. Lowering confidence threshold releases Reduce actions but precision is too low (36.9% at best). The root cause is weak bearish evidence quality, not the threshold itself. The most immediate data quality issue is volume_ma20 being hardcoded to 1.0, making volume_ratio equal to absolute volume and degenerating the Distribution condition.
+
+### Decision
+Phase 2A-6 is Restore Real Volume Context. Fix the volume_ma20 placeholder by fetching the previous 20 trading days of bars from market-store and computing the real 20-day volume moving average. Do not modify any Observation thresholds or Decision logic. After the fix, re-run the entire Decision Path Review chain to see if evidence quality improves enough to re-enter calibration.
+
+**Tags:** v8, execution, evidence-quality, volume-ma20, distribution, calibration-v2
+
+## ADR-103: Transition Evidence Blocked by Upstream ResearchContext Data Quality
+
+**Status:** Accepted
+
+### Context
+Phase 2B-2 Transition Evidence Modeling. After rejecting RecoveryFailure (ADR-102), attempts to validate BreadthDeterioration and LeadershipDecay produced zero samples because the underlying ResearchContext-derived ExecutionMarketView fields are placeholders, not real market data.
+
+### Decision
+Transition Evidence work is blocked until ResearchContext.breadth and ResearchContext.rotation.leadership_stability are populated with real computed values. breadth_pct and leadership_stability are currently constant placeholders (50.0 and 0.50) across all ExecutionResearchRecord samples, making BreadthDeterioration and LeadershipDecay uncomputable.
+
+**Tags:** v8, execution-platform, transition-evidence, data-quality

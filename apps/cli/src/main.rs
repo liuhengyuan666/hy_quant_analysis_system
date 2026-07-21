@@ -763,6 +763,452 @@ enum Command {
         #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
         scope: ReportScopeArg,
     },
+    /// V8 Execution Platform Validation — single historical case replay and trace
+    ValidateExecutionReplay {
+        #[arg(long, help = "Symbol to validate")]
+        symbol: String,
+        #[arg(long, help = "Historical date to validate")]
+        date: NaiveDate,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, default_value = "explain", help = "Output format: json, explain, trace, markdown")]
+        output: String,
+    },
+    /// V8 Execution Platform Validation — run a golden suite and produce a pass/fail summary
+    ValidateExecutionSuite {
+        #[arg(long, help = "Path to the validation suite YAML")]
+        suite: std::path::PathBuf,
+        #[arg(long, default_value = "summary", help = "Output format: summary, detail, json")]
+        output: String,
+    },
+    /// V8 Execution Platform Validation — discover historical candidates with complete data
+    FindValidationCandidates {
+        #[arg(long)]
+        from: NaiveDate,
+        #[arg(long)]
+        to: NaiveDate,
+        #[arg(long, value_enum, default_value_t = ReportScopeArg::Global)]
+        scope: ReportScopeArg,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// V8 Execution Platform Research — compute Execution Statistics over records
+    ExecutionStatistics {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// V8 Execution Platform Research — trace EvidenceKind survival through pipeline layers
+    ExecutionEvidenceTrace {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-4A: Distribution Coverage Review — analyze Distribution observation condition coverage
+    ExecutionDistributionCoverage {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-4B: Decision Margin Review — analyze Assessment direction → Decision mapping
+    ExecutionDecisionMargin {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-4C/2A-4.5: Decision Gate Analysis — why bearish assessments don't become Reduce
+    ExecutionDecisionGate {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-4C: Risk Semantics Review — analyze whether RiskLevel::High means Entry Risk or Holding Risk
+    ExecutionRiskSemantics {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2A-5: Directional Confidence Calibration Experiment — validate confidence thresholds via replay outcome
+    ExecutionCalibration {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2B-0: ResearchContext Fact Integrity Audit — verify all ResearchContext-derived fields before Evidence Modeling
+    ExecutionContextIntegrityAudit {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-159: Context Integrity Gate — strict pass/fail firewall for the
+    /// ResearchContext → ExecutionEvent fact lineage. Fails with non-zero exit code
+    /// when the gate does not pass, so it can be used as a CI step.
+    ExecutionContextIntegrityGate {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+        #[arg(long, default_value = "true", help = "Exit with non-zero status when gate fails")]
+        strict: bool,
+        #[arg(long, help = "Validate current day's ResearchContext instead of historical range")]
+        live: bool,
+    },
+    /// 2B-1: Bearish Evidence Analysis — discover Exit-specific patterns from existing evidence and outcomes
+    ExecutionBearishAnalysis {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2B-2: Transition Evidence Modeling — discover change/deterioration signals from existing records and outcomes
+    ExecutionTransitionAnalysis {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "recovery_failure", help = "Transition candidate: recovery_failure, breadth_deterioration, leadership_decay")]
+        candidate: String,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2B-3: Holding Risk Evidence Bundle — combine LeadershipDecay, BreadthDeterioration, and LiquidityDeterioration into a medium-term (T+60) holding risk score
+    ExecutionHoldingRiskBundle {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.1: Holding Risk Persistence Analysis — test whether sustained LeadershipDecay is a stronger T+60 Holding Risk signal than a single-day snapshot
+    HoldingRiskPersistence {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.1: Holding Risk Bundle V2 — persistence-aware medium-term (T+60) holding risk score
+    ExecutionHoldingRiskBundleV2 {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "2", help = "Minimum consecutive LeadershipDecay days to count as persistence")]
+        min_persistence_days: usize,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.2A: LiquidityPressure Research Asset — sustained capital pressure (turnover decay + price weakness + breadth not recovering + persistence)
+    LiquidityPressure {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "3", help = "Minimum consecutive pressure days")]
+        consecutive_days: usize,
+        #[arg(long, default_value = "-0.20", help = "Volume ratio delta 5-day threshold")]
+        volume_delta_threshold: f64,
+        #[arg(long, action = clap::ArgAction::SetFalse, help = "Disable today_return < 0 requirement")]
+        price_weakness: bool,
+        #[arg(long, action = clap::ArgAction::SetFalse, help = "Disable breadth_delta_5d < 0 requirement")]
+        breadth_weakness: bool,
+        #[arg(long, help = "Use volume_ratio level threshold instead of delta")]
+        volume_level_threshold: Option<f64>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.2A: Holding Risk Bundle V3 — combine LeadershipDecay persistence, LiquidityPressure, and BreadthDeterioration into a medium-term (T+60) holding risk score
+    ExecutionHoldingRiskBundleV3 {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.2B: ConfirmationDecay Research Asset — change-based confirmation analysis (delta/velocity/persistence + optional price weakness)
+    ConfirmationDecay {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "-10.0", help = "Confirmation delta 5-day threshold")]
+        delta_5d_threshold: f64,
+        #[arg(long, default_value = "-2.0", help = "Confirmation slope 10-day threshold")]
+        slope_10d_threshold: f64,
+        #[arg(long, default_value = "3", help = "Minimum consecutive decline days")]
+        min_consecutive_days: usize,
+        #[arg(long, action = clap::ArgAction::SetFalse, help = "Disable today_return < 0 requirement")]
+        price_weakness: bool,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.2B: Holding Risk Bundle V4 — add ConfirmationDecay as Confirmatory Dimension to the V3 bundle
+    ExecutionHoldingRiskBundleV4 {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.3: Evidence Horizon Registry — view canonical Evidence Asset registry
+    EvidenceRegistry {
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-160.3: Validate an evidence bundle against the Evidence Horizon Registry
+    EvidenceValidateBundle {
+        #[arg(long, help = "Comma-separated evidence ids")]
+        evidence_ids: String,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-161: Holding Risk Calibration v2 — compute HoldingRiskScore and validate with score buckets, regime split, and walk-forward
+    HoldingRiskCalibration {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-163: Holding Risk Lifecycle Analysis — build a risk state machine around HoldingRiskScore
+    RiskLifecycle {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-166: Regime-Aware State Risk Model — identify when the market is ALREADY in a dangerous state
+    RegimeRisk {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-168: State Risk Acceleration Model — identify accelerating-decline conditions
+    StateRiskAcceleration {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-167: Shadow Mode Runtime Wiring — generate daily shadow-mode output
+    ShadowMode {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// TASK-169: Shadow Deployment Contract — generate daily ShadowRiskAssessment
+    ShadowDeployment {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
+    /// 2B-2.4: LeadershipDecay Horizon Analysis — multi-horizon profile of LeadershipDecay signal
+    ExecutionLeadershipDecayHorizon {
+        #[arg(long, help = "Path to a validation suite YAML (representative sample)")]
+        suite: Option<std::path::PathBuf>,
+        #[arg(long, help = "Start date for full-population scan")]
+        from: Option<NaiveDate>,
+        #[arg(long, help = "End date for full-population scan")]
+        to: Option<NaiveDate>,
+        #[arg(long, value_enum, help = "Scope for full-population scan")]
+        scope: Option<ReportScopeArg>,
+        #[arg(long, help = "Filter by decision state (BuyNow, Wait, Reduce, etc.)")]
+        decision: Option<String>,
+        #[arg(long, default_value = "markdown", help = "Output format: json, markdown")]
+        output: String,
+    },
     /// TASK-071B: State lead/lag analysis (before/during/after episode returns)
     AuditLeadLag {
         #[arg(long)]
@@ -902,6 +1348,97 @@ Command::BenchmarkSkill { action, provider_config, runs, format, scope } => {
         Command::SymbolDiagnostics { symbol, date, scope } => commands::audit::handle_symbol_diagnostics(&context, symbol, date, scope)?,
         Command::SymbolScoreboard { date, scope } => commands::audit::handle_symbol_scoreboard(&context, date, scope)?,
         Command::PrecloseAnalysis { scope } => commands::execution::handle_preclose_analysis(&context, scope.into())?,
+        Command::ValidateExecutionReplay { symbol, date, scope, output } => {
+            commands::execution_replay::handle_validate_execution_replay(&context, symbol, date, scope.into(), output)?
+        }
+        Command::ValidateExecutionSuite { suite, output } => {
+            commands::execution_replay::handle_validate_execution_suite(&context, suite, output)?
+        }
+        Command::FindValidationCandidates { from, to, scope, decision, output } => {
+            commands::execution_replay::handle_find_validation_candidates(&context, from, to, scope.into(), decision, output)?
+        }
+        Command::ExecutionStatistics { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_statistics(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionEvidenceTrace { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_evidence_trace(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDistributionCoverage { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_distribution_coverage(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDecisionMargin { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_decision_margin(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionDecisionGate { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_decision_gate(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionRiskSemantics { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_risk_semantics(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionCalibration { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_calibration(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionContextIntegrityAudit { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_context_integrity_audit(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionContextIntegrityGate { suite, from, to, scope, decision, output, strict, live } => {
+            commands::execution_replay::handle_execution_context_integrity_gate(&context, suite, from, to, scope.map(Into::into), decision, output, strict, live)?
+        }
+        Command::ExecutionBearishAnalysis { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_bearish_analysis(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionTransitionAnalysis { suite, from, to, scope, decision, candidate, output } => {
+            commands::execution_replay::handle_execution_transition_analysis(&context, suite, from, to, scope.map(Into::into), decision, candidate, output)?
+        }
+        Command::ExecutionLeadershipDecayHorizon { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_leadership_decay_horizon(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionHoldingRiskBundle { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_holding_risk_bundle(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::HoldingRiskPersistence { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_holding_risk_persistence(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ExecutionHoldingRiskBundleV2 { suite, from, to, scope, decision, min_persistence_days, output } => {
+            commands::execution_replay::handle_execution_holding_risk_bundle_v2(&context, suite, from, to, scope.map(Into::into), decision, output, min_persistence_days)?
+        }
+        Command::LiquidityPressure { suite, from, to, scope, decision, consecutive_days, volume_delta_threshold, price_weakness, breadth_weakness, volume_level_threshold, output } => {
+            commands::execution_replay::handle_liquidity_pressure(&context, suite, from, to, scope.map(Into::into), decision, output, consecutive_days, volume_delta_threshold, price_weakness, breadth_weakness, volume_level_threshold)?
+        }
+        Command::ExecutionHoldingRiskBundleV3 { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_holding_risk_bundle_v3(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ConfirmationDecay { suite, from, to, scope, decision, delta_5d_threshold, slope_10d_threshold, min_consecutive_days, price_weakness, output } => {
+            commands::execution_replay::handle_confirmation_decay(&context, suite, from, to, scope.map(Into::into), decision, output, delta_5d_threshold, slope_10d_threshold, min_consecutive_days, price_weakness)?
+        }
+        Command::ExecutionHoldingRiskBundleV4 { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_execution_holding_risk_bundle_v4(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::EvidenceRegistry { output } => {
+            commands::execution_replay::handle_evidence_registry(output)?
+        }
+        Command::EvidenceValidateBundle { evidence_ids, output } => {
+            let ids: Vec<String> = evidence_ids.split(',').map(|s| s.trim().to_string()).collect();
+            commands::execution_replay::handle_evidence_validate_bundle(ids, output)?
+        }
+        Command::HoldingRiskCalibration { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_holding_risk_calibration(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::RiskLifecycle { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_risk_lifecycle(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::RegimeRisk { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_regime_risk(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::StateRiskAcceleration { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_state_risk_acceleration(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ShadowMode { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_shadow_mode(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
+        Command::ShadowDeployment { suite, from, to, scope, decision, output } => {
+            commands::execution_replay::handle_shadow_deployment(&context, suite, from, to, scope.map(Into::into), decision, output)?
+        }
         Command::AuditLeadLag { from, to } => commands::audit::handle_audit_lead_lag(&context, from, to)?,
     }
     Ok(())

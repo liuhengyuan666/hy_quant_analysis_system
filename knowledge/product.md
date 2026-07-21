@@ -4,7 +4,7 @@
 
 ## 1. 系统核心定位
 
-本地桌面量化研究系统 V1，面向低频、趋势、长线的指数/ETF研究场景。
+本地桌面量化研究系统 V8，面向低频、趋势、长线的指数/ETF研究场景。
 
 核心目标：
 - 用 Rust 构建完整研究链路
@@ -38,6 +38,8 @@
     * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台
     * 核心规则 7: **V6 Research Surface** — 只读研究观测工具（`research-srd`、`research-stretch`、`research-analytics`、`research review`），输出 Markdown 观测报告，不进入主决策链路
     * 核心规则 8: **V7 Research Platform 1.0** — 已冻结。四层研究语义：Observation (V6) + Market Evolution (V7.1: Confirmation / Recovery) + Historical Evidence (V7.2: Market Fingerprint / Historical Analogues / Outcome Profile / Calibration) + Research Synthesis (V7.3: Consensus / Evidence Aggregation)。只输出研究语言（Bias / Confidence / Evidence），不进入决策链路；新增市场内容属于 Research Content Evolution，不修改语义架构
+    * 核心规则 9: **V8 Research Asset** — 研究产物（Evidence / Snapshot）以统一身份 `RA-XXXXXX` 和统一生命周期（Draft → Verified → Published → Superseded → Archived）持久化到本地 `workspace/`；Snapshot 通过 `EvidenceRef` 引用而非嵌入 Evidence；P3（Evidence Score/Weight）门控未达成前不得引入数值化权重
+    * 核心规则 10: **V8 Execution Platform（Phase 2C Shadow Validation）** — 由 `execution-replay` crate 支撑的 Evidence → Risk State → Shadow Assessment 只读验证链路（`shadow-deployment`、`shadow-mode`、`execution-context-integrity-gate`、`evidence-registry`、`holding-risk-calibration`、`risk-lifecycle` 等 CLI）；只读观察不影响交易，禁止 DecisionEngine 消费、禁止新增 Evidence
 
 ## 3. V7 Research Platform 1.0 业务能力
 

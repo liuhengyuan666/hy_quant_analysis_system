@@ -121,6 +121,7 @@ dependencies = [
  "core-domain",
  "data-ingestion",
  "execution-engine",
+ "execution-replay",
  "indicator-engine",
  "keyring",
  "llm-context",
@@ -1127,9 +1128,27 @@ dependencies = [
  "chrono",
  "core-domain",
  "encoding_rs",
+ "research-context",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "execution-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "core-domain",
+ "execution-engine",
+ "market-store",
+ "research-context",
+ "serde",
+ "serde_json",
+ "serde_yaml",
  "tracing",
 ]
 
@@ -3235,6 +3254,7 @@ dependencies = [
  "clap",
  "core-domain",
  "execution-engine",
+ "execution-replay",
  "gt-regime-generator",
  "indicator-engine",
  "macro-engine",
