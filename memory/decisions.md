@@ -930,3 +930,15 @@ V8 Execution Platform 在 Phase 2A 校准后暴露出与用户真实场景的错
 执行 RV1 能力收敛(V8→V8.1)：1)系统定位从Execution Platform改为Daily Portfolio Decision Assistant；2)CLI从107命令精简到~10核心+~9隐藏+~15配置，移除25个audit命令、20个execution实验命令、4个shadow形式化命令的CLI暴露(底层crate逻辑保留)；3)核心命令重命名(refresh-all→market-refresh等5个)+新增5个(daily-analysis/strategy-perspectives/evidence-status/validation-check/historical-replay)；4)ExecutionState语义从BuyNow/Wait/NoChase改为Increase/Maintain/Avoid(带serde alias向后兼容+deprecated旧变体)；5)Evidence Asset System/Context Integrity Firewall/Horizon Role Model提升为系统一级资产；6)daily-analysis集成Integrity Gate作为第一步。Phase 1已完成并验证(cargo check workspace通过)。
 
 **Tags:** rv1, architecture-consolidation, cli-reduction, decision-semantics, daily-portfolio-assistant
+
+## ADR-105: RV1 Domain Model Freeze: Four Existing Objects as Core Domain
+
+**Status:** Accepted
+
+### Context
+RV1 Phase 1/1.5 完成后，系统处于最适合冻结领域模型的位置。GPT 复核曾建议新建 MarketState{trend,breadth,risk,liquidity} 抽象，但经二次审计确认这违背减法原则——MarketRegimeSnapshot+EnvironmentSnapshot 已覆盖同维度，新建抽象是 V6→V8 膨胀病理的重演（一个概念不消失而是被包装成另一个概念）。同时 Phase 2（策略多视角）若不设边界，极易重新长回 V8。因此需要在 Phase 2 动工前冻结领域模型。
+
+### Decision
+冻结四个现有对象为 RV1 核心领域模型（冻结≠新建）：1) MarketRegimeSnapshot（Market Understanding 层）；2) EnvironmentSnapshot（环境分解层）；3) Evidence（证据单元，含 Horizon/Role 语义）；4) PortfolioDecision（组合姿态：Increase/Maintain/Reduce/Avoid）。明确禁令：(a) 禁止新建 MarketState 或任何与 regime+environment 同构的市场状态抽象；(b) daily-analysis 输出契约永久固定为 Integrity+Signals+Portfolio Posture，LLM 为独立后续步骤（daily-analysis → llm-analyze，不嵌入）；(c) Phase 2 本质为 Strategy Preference Exposure（暴露 strategy-engine 已计算但被 signal-engine 丢弃的分数），允许消费已有策略分数/场景加权(config/scenarios.toml)/输出解释归因，禁止新策略类型、新评分指标、新 Evidence 类型（除非重走 Integrity+Validation+Registry 完整流程）。
+
+**Tags:** rv1, domain-freeze, market-regime, environment, evidence, portfolio-decision, phase-2-gate

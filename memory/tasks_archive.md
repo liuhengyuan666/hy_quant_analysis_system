@@ -241,6 +241,10 @@
 ### 2026-07-21
 - [Done] [TASK-200] RV1 Phase 1: CLI减法 + 重命名 + Integrity集成。107命令→~10核心；refresh-all→market-refresh; preclose-analysis→portfolio-decision; ExecutionState语义变更(BuyNow→Increase); 新增daily-analysis/strategy-perspectives/evidence-status/validation-check; README/操作手册重写; 设计规划-rv1.md落地
 
+- [Done] [TASK-203] RV1 Phase 1.5: 工程卫生 — execution-replay 19文件变体引用更新；删除deprecated枚举变体；audit.rs/research.rs/diagnostics.rs dead_code处理；CLI三级分类(15个工程命令hide=true)；cargo check workspace零warning
+
+- [Done] [TASK-204] RV1 Phase 1.8: Domain Model Freeze ADR-105 — 冻结MarketRegimeSnapshot/EnvironmentSnapshot/Evidence/PortfolioDecision四个现有对象；禁止新建MarketState；daily-analysis契约固定；Phase 2边界写死(允许消费已有分数/场景加权/归因输出，禁止新策略/新指标/新Evidence)
+
 ## Superseded
 
 ### 2026-07-09
@@ -268,6 +272,8 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
+
 
 
 
