@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-24T10:54:02Z",
+    "rebuilt_at": "2026-07-24T16:44:56Z",
     "version": "v4"
   },
   "terms": {
@@ -147,6 +147,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "0/1": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -2308,6 +2314,24 @@
         "type": "adr"
       }
     ],
+    "adr-107": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "adr-107-extension": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "adr-107（补充而非替代）：1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "adr/task": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -3713,6 +3737,10 @@
       },
       {
         "id": "ADR-047",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -5884,6 +5912,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "contract-freeze": [
@@ -6310,6 +6342,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "daily-portfolio-assistant": [
@@ -6341,6 +6377,10 @@
       },
       {
         "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -6674,6 +6714,10 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "decision-gate": [
@@ -6721,6 +6765,12 @@
       },
       {
         "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "decisionengine（项目历史已证明该风险存在）；2": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -7808,6 +7858,12 @@
         "type": "adr"
       }
     ],
+    "engine，禁止前端出现任何分数到买卖语义的映射判断；2": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "english": [
       {
         "id": "ADR-041",
@@ -8418,6 +8474,10 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "execution-platform": [
@@ -8479,6 +8539,12 @@
     "executionresearchrecord": [
       {
         "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "executionresultspanel": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -9870,6 +9936,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "frozen": [
@@ -10061,6 +10131,10 @@
       },
       {
         "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -10920,6 +10994,12 @@
         "type": "trap"
       }
     ],
+    "if(score>70": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "if-else": [
       {
         "id": "ADR-082",
@@ -11466,6 +11546,10 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "interpretation": [
@@ -11591,6 +11675,10 @@
     "investment": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -12460,6 +12548,10 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "llm-analyze，不嵌入）；(c": [
@@ -12973,6 +13065,12 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "market-refresh": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -13960,6 +14058,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "no-domain-computation": [
@@ -14193,6 +14295,16 @@
       },
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "observation-window": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -14788,6 +14900,12 @@
         "type": "adr"
       }
     ],
+    "owns": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "p": [
       {
         "id": "ADR-030",
@@ -14884,6 +15002,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "panel": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "panel-border": [
@@ -15234,6 +15358,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "phase-2-gate": [
@@ -15504,11 +15632,19 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "portfolio_review": [
       {
         "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -15934,6 +16070,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "prompt": [
@@ -16351,6 +16491,10 @@
       },
       {
         "id": "ADR-103",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -16834,6 +16978,12 @@
         "type": "adr"
       }
     ],
+    "render": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "renderers/environment-breadth.js": [
       {
         "id": "ADR-044",
@@ -17160,6 +17310,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -17245,6 +17399,12 @@
     "research-validation": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "research/decision": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -17549,6 +17709,10 @@
       },
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -17974,6 +18138,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "safety": [
@@ -18085,6 +18253,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "scoreboard": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -18319,6 +18493,10 @@
       },
       {
         "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -18729,6 +18907,10 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -19420,6 +19602,24 @@
         "type": "adr"
       }
     ],
+    "strategy-perspectives": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectives": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "strategyperspectivespanel（人格卡片": [
       {
         "id": "ADR-107",
@@ -19808,9 +20008,21 @@
         "type": "adr"
       }
     ],
+    "tab": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "tab：分析结论": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "tab；4": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -19977,6 +20189,12 @@
     "task-202": [
       {
         "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "task-208": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -21164,6 +21382,10 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "ui-ux": [
@@ -21403,6 +21625,12 @@
     "uptrend": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "usage": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -21799,6 +22027,10 @@
       },
       {
         "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       },
       {
@@ -22538,9 +22770,21 @@
         "type": "adr"
       }
     ],
+    "window": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "windows": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "window（5-10": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -22860,6 +23104,18 @@
         "type": "adr"
       }
     ],
+    "不拥有投资语义，只展示": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "不进入": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "与": [
       {
         "id": "ADR-046",
@@ -22901,6 +23157,12 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "个交易日）：记录": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23040,6 +23302,12 @@
         "type": "adr"
       }
     ],
+    "之类的展示判断偷偷演变为第二": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "事件不回调": [
       {
         "id": "ADR-039",
@@ -23055,6 +23323,12 @@
     "交互入口。需要在": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "人格卡片（投资者视角）而非": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23260,6 +23534,12 @@
         "type": "adr"
       }
     ],
+    "内": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "内两个": [
       {
         "id": "ADR-046",
@@ -23291,6 +23571,12 @@
       },
       {
         "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "冻结了桌面前端投影边界（零计算）。rv1": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23364,6 +23650,12 @@
         "type": "adr"
       }
     ],
+    "刚形成": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "创建": [
       {
         "id": "ADR-035",
@@ -23397,6 +23689,12 @@
     "前端": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "前端仍可能通过": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23976,6 +24274,12 @@
         "type": "adr"
       }
     ],
+    "实际操作的完整日常闭环，验证闭环价值优先于继续增加": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "审计数据：620个交易日": [
       {
         "id": "ADR-065",
@@ -24208,6 +24512,18 @@
         "type": "adr"
       }
     ],
+    "懒加载、不批量预取": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "或": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "或任何与": [
       {
         "id": "ADR-105",
@@ -24239,6 +24555,10 @@
     "扩展": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -24323,6 +24643,12 @@
     "政策**：所有从": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "数字表是确认的设计方向；attribution": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -24417,6 +24743,12 @@
     "映射为": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "是独立": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -24778,6 +25110,12 @@
         "type": "adr"
       }
     ],
+    "的复杂度老路；3": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "的教训表明：llm": [
       {
         "id": "ADR-106",
@@ -24793,6 +25131,12 @@
     "的演进：分数作为事实证据可传，决策权不传；3": [
       {
         "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "的真实使用频率与是否改变操作，观察结果决定": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -24918,6 +25262,12 @@
         "type": "adr"
       }
     ],
+    "级页面），首页保持单一决策动线；3": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "线数据。当前": [
       {
         "id": "ADR-029",
@@ -25026,6 +25376,18 @@
         "type": "adr"
       }
     ],
+    "若放入": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "落地后复盘发现两个需要补强的风险：1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "行": [
       {
         "id": "ADR-034",
@@ -25071,6 +25433,12 @@
     "让": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "设立": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -25140,6 +25508,12 @@
         "type": "adr"
       }
     ],
+    "输出——职责划分为": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "输出仅限解释文本，禁止生成": [
       {
         "id": "ADR-106",
@@ -25195,6 +25569,12 @@
     "返回的占位数据添加": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "还是降级为": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -25389,6 +25769,18 @@
     "风险提示。3": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "首页，会让首页重新堆叠市场状态/信号/策略人格/风险/llm/组合，回到": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "首页，只作为二级入口存在（signaldetailmodal": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],

@@ -966,3 +966,15 @@ RV1 后端三阶段完成后进行桌面前端适配。Oracle 审计确认 Execu
 冻结桌面前端投影边界：Desktop UI 仅允许消费三类后端事实——PortfolioDecision（ExecutionState Increase/Maintain/Reduce/Avoid/Skip）、StrategyPerspective（四策略分数+场景对比+归因）、LLM Explanation（markdown 解读）。禁止前端自行计算 score、组合策略权重、解释 Evidence。后端不打包超级 Dashboard API；Execution 修旧 UI、LLM 加解释入口、StrategyPerspective 独立展示层，三个语义层不合并；SignalsPanel（信号归因）与 StrategyPerspectivesPanel（人格视角）保持分离。Markdown 渲染采用 marked 库并启用安全配置。实施路线：Phase 0 ExecutionState contract 同步 → Phase 1 portfolio_review 入口 + marked → 实跑观察 → Phase 2 StrategyPerspectivesPanel（人格卡片 UI）→ P3 daily-analysis Hero 入口暂缓。
 
 **Tags:** rv1, frontend, projection-boundary, desktop
+
+## ADR-108: RV1 Frontend: UI Owns No Investment Semantics + Observation Window Gate
+
+**Status:** Accepted
+
+### Context
+ADR-107 冻结了桌面前端投影边界（零计算）。RV1 Phase 0/1 落地后复盘发现两个需要补强的风险：1) 前端仍可能通过 if(score>70) 之类的展示判断偷偷演变为第二 DecisionEngine（项目历史已证明该风险存在）；2) StrategyPerspectivesPanel 若放入 Dashboard 首页，会让首页重新堆叠市场状态/信号/策略人格/风险/LLM/组合，回到 V8 的复杂度老路；3) RV1 刚形成 market-refresh → daily-analysis → portfolio-decision → LLM review → 实际操作的完整日常闭环，验证闭环价值优先于继续增加 UI。
+
+### Decision
+扩展 ADR-107（补充而非替代）：1) UI 不拥有投资语义，只展示 Research/Decision Contract 输出——职责划分为 Frontend: Render / Backend: Interpret / Decision: Execution Engine，禁止前端出现任何分数到买卖语义的映射判断；2) StrategyPerspectives 不进入 Dashboard 首页，只作为二级入口存在（SignalDetailModal 内 Tab 或 Research 级页面），首页保持单一决策动线；3) 设立 RV1 Real Usage Observation Window（5-10 个交易日）：记录 ExecutionResultsPanel / portfolio_review / strategy-perspectives / daily-analysis 的真实使用频率与是否改变操作，观察结果决定 TASK-208 是独立 Panel 还是降级为 SignalDetailModal Tab；4) 人格卡片（投资者视角）而非 scoreboard 数字表是确认的设计方向；attribution 懒加载、不批量预取。
+
+**Tags:** rv1, frontend, projection-boundary, observation-window, adr-107-extension

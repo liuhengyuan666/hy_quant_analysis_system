@@ -255,6 +255,7 @@
 
 - [Done] [TASK-206] Frontend Phase 1: LLM portfolio_review entry + markdown renderer upgrade. Add portfolio_review as 6th action in LlmAnalysisPanel.vue actions array + zh/en i18n keys. Replace hand-rolled renderMarkdown() with marked library (secure config: no raw HTML / sanitize). Zero backend change — analyze_with_llm already dispatches portfolio_review.
 
+
 ## Superseded
 
 ### 2026-07-09
@@ -336,4 +337,10 @@
 
 
 
+
+
+### 2026-07-24
+- [Superseded] [TASK-207] Frontend Phase 2 (GATED until Phase 0+1 real-usage observation): StrategyPerspectivesPanel. Backend: add Serialize derives to StrategyPerspectiveEntry/StrategyAttributionView/StrategyPerspectiveDetail + AppContext thin wrappers (strategy_scoreboard, strategy_attribution). Tauri: 2 thin commands. Frontend: persona-card UI (per-strategy cards with score + drivers, not scoreboard table), scoreboard list loads first, attribution fetched lazily on click (recomputation cost). Keep SignalsPanel unchanged.
+  Superseded by: Task TASK-208
+  Reason: 范围按 ADR-108 修订：增加观察窗门控、禁止 Dashboard 首页入口、允许降级为 SignalDetailModal Tab
 
