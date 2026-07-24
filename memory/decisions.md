@@ -954,3 +954,15 @@ GPT 复核 TASK-201 时发现 TASK-202 原始描述（portfolio-decision 用 LLM
 冻结 LLM 边界（RV1 语境重锚定 ADR-084）：1) 数据流固定为 Deterministic Engines → Decision Fact → LLM Explanation，LLM 在管线最右侧，永远不在中间；2) LLM 可接收已计算事实（策略分数/归因 drivers/场景对比/Evidence 摘要/Integrity 状态）作为解释输入——这是对 ADR-074 的演进：分数作为事实证据可传，决策权不传；3) LLM 输出仅限解释文本，禁止生成 BUY/SELL/仓位百分比，禁止修改 final_score/signal_label/portfolio_decision；4) portfolio-decision 的 action 标签由确定性代码产出（V5 Pattern Library 不变），LLM 仅解释该决策；5) 对话记忆边界：LLM 前次输出在后续对话中只能标注为 previous interpretation（前次解读），绝不能作为 evidence 输入，防止 LLM 把自己的旧结论当事实自我强化；6) prompts.toml 边界：分析人格模板只允许携带视角指令（关注什么/以什么身份说话），禁止包含阈值、打分规则、if/then 逻辑——防止 prompt 退化为第二个 DecisionPolicy。
 
 **Tags:** rv1, llm-boundary, explanation-layer, conversation-memory, prompt-governance, phase-3-gate
+
+## ADR-107: Desktop Projection Boundary: Frontend Consumes Facts, Never Computes
+
+**Status:** Accepted
+
+### Context
+RV1 后端三阶段完成后进行桌面前端适配。Oracle 审计确认 ExecutionState 序列化变更导致前端分组静默失效，且需防止前端把多个认知层揉成单一大盘页面或演变为第二套 DecisionEngine。
+
+### Decision
+冻结桌面前端投影边界：Desktop UI 仅允许消费三类后端事实——PortfolioDecision（ExecutionState Increase/Maintain/Reduce/Avoid/Skip）、StrategyPerspective（四策略分数+场景对比+归因）、LLM Explanation（markdown 解读）。禁止前端自行计算 score、组合策略权重、解释 Evidence。后端不打包超级 Dashboard API；Execution 修旧 UI、LLM 加解释入口、StrategyPerspective 独立展示层，三个语义层不合并；SignalsPanel（信号归因）与 StrategyPerspectivesPanel（人格视角）保持分离。Markdown 渲染采用 marked 库并启用安全配置。实施路线：Phase 0 ExecutionState contract 同步 → Phase 1 portfolio_review 入口 + marked → 实跑观察 → Phase 2 StrategyPerspectivesPanel（人格卡片 UI）→ P3 daily-analysis Hero 入口暂缓。
+
+**Tags:** rv1, frontend, projection-boundary, desktop

@@ -168,6 +168,12 @@
       "description": "[TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.",
       "status": "Todo",
       "superseded_by": null
+    },
+    {
+      "id": "TASK-207",
+      "description": "Frontend Phase 2 (GATED until Phase 0+1 real-usage observation): StrategyPerspectivesPanel. Backend: add Serialize derives to StrategyPerspectiveEntry/StrategyAttributionView/StrategyPerspectiveDetail + AppContext thin wrappers (strategy_scoreboard, strategy_attribution). Tauri: 2 thin commands. Frontend: persona-card UI (per-strategy cards with score + drivers, not scoreboard table), scoreboard list loads first, attribution fetched lazily on click (recomputation cost). Keep SignalsPanel unchanged.",
+      "status": "Todo",
+      "superseded_by": null
     }
   ],
   "done_tasks": [],

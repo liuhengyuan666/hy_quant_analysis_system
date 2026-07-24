@@ -249,6 +249,12 @@
 
 - [Done] [TASK-202] RV1 Phase 3: LLM增强 + 组合决策重构 — LLM上下文增强(多策略矛盾点+历史参照+连续性)；对话历史持久化(LlmAnalysisRecord)；config/prompts.toml可定制分析人格(短线交易员/长线配置者)；portfolio-decision用LLM替代3个硬编码Pattern
 
+
+### 2026-07-24
+- [Done] [TASK-205] Frontend Phase 0: ExecutionState contract sync. Fix ExecutionResultsPanel.vue (STATE_ORDER/STATE_META/i18n for INCREASE/MAINTAIN/AVOID/REDUCE/SKIP), main.js preclose notification counts (~L395), zh.json/en.json state labels + notification strings. Root cause: serde rename_all SCREAMING_SNAKE_CASE serializes new variant names; alias is deserialize-only.
+
+- [Done] [TASK-206] Frontend Phase 1: LLM portfolio_review entry + markdown renderer upgrade. Add portfolio_review as 6th action in LlmAnalysisPanel.vue actions array + zh/en i18n keys. Replace hand-rolled renderMarkdown() with marked library (secure config: no raw HTML / sanitize). Zero backend change — analyze_with_llm already dispatches portfolio_review.
+
 ## Superseded
 
 ### 2026-07-09
@@ -276,6 +282,8 @@
 - [Superseded] [TASK-108] Research Snapshot Replay (P3, long-term): Design and implement saving/replaying full Research Snapshots (Observation + Evolution + Evidence + Consensus) per date. Historical Replay becomes a producer of Research Snapshots, not just condition analytics. Output design doc or ADR-079.
   Superseded by: ADR ADR-079
   Reason: Snapshot structure is now P2 (ADR-079). Research Snapshot Replay as P3 is delayed until 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+
+
 
 
 

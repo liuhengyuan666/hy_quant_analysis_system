@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-21T08:51:01Z",
+    "rebuilt_at": "2026-07-24T10:54:02Z",
     "version": "v4"
   },
   "terms": {
@@ -19,6 +19,10 @@
       },
       {
         "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -263,6 +267,10 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       },
       {
@@ -585,6 +593,10 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       },
       {
@@ -3024,6 +3036,12 @@
         "type": "adr"
       }
     ],
+    "api；execution": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "app": [
       {
         "id": "ADR-041",
@@ -4145,6 +4163,10 @@
       },
       {
         "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -5348,6 +5370,12 @@
         "type": "adr"
       }
     ],
+    "computes": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "computing": [
       {
         "id": "ADR-099",
@@ -5744,6 +5772,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "consumption": [
@@ -5847,6 +5879,10 @@
       },
       {
         "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -6270,6 +6306,10 @@
       {
         "id": "ADR-105",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "daily-portfolio-assistant": [
@@ -6297,6 +6337,10 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -6674,6 +6718,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "decisionpolicy": [
@@ -6947,6 +6995,10 @@
       },
       {
         "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -8240,6 +8292,12 @@
         "type": "adr"
       }
     ],
+    "evidence。后端不打包超级": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "evidence（证据单元，含": [
       {
         "id": "ADR-105",
@@ -8424,6 +8482,12 @@
         "type": "adr"
       }
     ],
+    "executionstate": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "executionstatistics": [
       {
         "id": "ADR-093",
@@ -8595,6 +8659,12 @@
     "explanations": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "explanation（markdown": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -8781,6 +8851,10 @@
     "facts": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -9792,6 +9866,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "frozen": [
@@ -10458,6 +10536,10 @@
       {
         "id": "ADR-048",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "hero__actions": [
@@ -11090,6 +11172,12 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "increase/maintain/reduce/avoid/skip）、strategyperspective（四策略分数+场景对比+归因）、llm": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "incremental": [
@@ -12824,6 +12912,12 @@
         "type": "adr"
       }
     ],
+    "marked": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "market": [
       {
         "id": "ADR-052",
@@ -13741,6 +13835,10 @@
       },
       {
         "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       },
       {
@@ -14732,6 +14830,12 @@
         "type": "adr"
       }
     ],
+    "p3": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "p95": [
       {
         "id": "ADR-058",
@@ -15126,6 +15230,10 @@
       {
         "id": "ADR-105",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "phase-2-gate": [
@@ -15395,6 +15503,12 @@
       },
       {
         "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "portfolio_review": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -15809,6 +15923,16 @@
     "projection": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "projection-boundary": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -17846,6 +17970,10 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "safety": [
@@ -17971,6 +18099,12 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "score、组合策略权重、解释": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -19283,6 +19417,18 @@
     "strategy-engine": [
       {
         "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel（人格卡片": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel（人格视角）保持分离。markdown": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -21014,6 +21160,10 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "ui-ux": [
@@ -21033,6 +21183,12 @@
     "ui/ux": [
       {
         "id": "ADR-034",
+        "type": "adr"
+      }
+    ],
+    "ui、llm": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -22902,6 +23058,12 @@
         "type": "adr"
       }
     ],
+    "仅允许消费三类后端事实——portfoliodecision（executionstate": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "仅占": [
       {
         "id": "ADR-065",
@@ -23062,6 +23224,24 @@
         "type": "adr"
       }
     ],
+    "修旧": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "入口": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "入口暂缓": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "全宽展示": [
       {
         "id": "ADR-046",
@@ -23117,6 +23297,12 @@
     "冻结四个现有对象为": [
       {
         "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "冻结桌面前端投影边界：desktop": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23241,6 +23427,12 @@
     "加宽至": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "加解释入口、strategyperspective": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23426,6 +23618,12 @@
         "type": "adr"
       }
     ],
+    "同步": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "同步缺失（syncloadingtostore": [
       {
         "id": "ADR-039",
@@ -23447,6 +23645,12 @@
     "后执行。回填后": [
       {
         "id": "ADR-030",
+        "type": "adr"
+      }
+    ],
+    "后端三阶段完成后进行桌面前端适配。oracle": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23766,9 +23970,21 @@
         "type": "adr"
       }
     ],
+    "实跑观察": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "审计数据：620个交易日": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "审计确认": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23937,6 +24153,18 @@
     "并排显示": [
       {
         "id": "ADR-040",
+        "type": "adr"
+      }
+    ],
+    "序列化变更导致前端分组静默失效，且需防止前端把多个认知层揉成单一大盘页面或演变为第二套": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "库并启用安全配置。实施路线：phase": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -24398,6 +24626,12 @@
         "type": "adr"
       }
     ],
+    "渲染采用": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "滚动锁定统一管理：app.vue": [
       {
         "id": "ADR-038",
@@ -24449,6 +24683,12 @@
     "独占整行宽度": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "独立展示层，三个语义层不合并；signalspanel（信号归因）与": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -24813,6 +25053,12 @@
     "视觉重复（plain": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "解读）。禁止前端自行计算": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
