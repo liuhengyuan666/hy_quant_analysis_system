@@ -392,7 +392,7 @@ async function runPrecloseAnalysis() {
     syncExecutionResultsToStore(decisions || []);
 
     // Count by state
-    const counts = { BUY_NOW: 0, WAIT: 0, NO_CHASE: 0, REDUCE: 0, SKIP: 0 };
+    const counts = { INCREASE: 0, MAINTAIN: 0, AVOID: 0, REDUCE: 0, SKIP: 0 };
     for (const d of decisions) {
       const state = d.state || 'SKIP';
       counts[state] = (counts[state] || 0) + 1;
@@ -400,9 +400,9 @@ async function runPrecloseAnalysis() {
 
     const summary = t('preclose.analysisComplete', {
       total: decisions.length,
-      buyNow: counts.BUY_NOW || 0,
-      wait: counts.WAIT || 0,
-      noChase: counts.NO_CHASE || 0,
+      increase: counts.INCREASE || 0,
+      maintain: counts.MAINTAIN || 0,
+      avoid: counts.AVOID || 0,
     });
 
     syncStartupNoticeToStore({

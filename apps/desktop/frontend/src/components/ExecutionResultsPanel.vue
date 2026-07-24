@@ -5,20 +5,20 @@ import { dashboardStore } from '../store.js';
 
 const { t } = useI18n();
 
-const STATE_ORDER = ['BUY_NOW', 'NO_CHASE', 'WAIT', 'REDUCE', 'SKIP'];
+const STATE_ORDER = ['INCREASE', 'MAINTAIN', 'AVOID', 'REDUCE', 'SKIP'];
 
 const STATE_META = {
-  BUY_NOW: { tone: 'positive', icon: '\u25B6' },
-  NO_CHASE: { tone: 'warning', icon: '\u25B2' },
-  WAIT: { tone: 'neutral', icon: '\u25CB' },
+  INCREASE: { tone: 'positive', icon: '\u25B6' },
+  MAINTAIN: { tone: 'neutral', icon: '\u25CB' },
+  AVOID: { tone: 'warning', icon: '\u25B2' },
   REDUCE: { tone: 'negative', icon: '\u25BC' },
   SKIP: { tone: 'outline', icon: '\u2715' },
 };
 
 const STATE_I18N = {
-  BUY_NOW: 'execution.stateBuyNow',
-  NO_CHASE: 'execution.stateNoChase',
-  WAIT: 'execution.stateWait',
+  INCREASE: 'execution.stateIncrease',
+  MAINTAIN: 'execution.stateMaintain',
+  AVOID: 'execution.stateAvoid',
   REDUCE: 'execution.stateReduce',
   SKIP: 'execution.stateSkip',
 };

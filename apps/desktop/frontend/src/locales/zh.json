@@ -20,7 +20,7 @@
   },
   "preclose": {
     "analysisRunning": "正在执行收盘前分析...",
-    "analysisComplete": "收盘前分析完成：共 {total} 个候选，{buyNow} 个 BUY_NOW，{wait} 个 WAIT，{noChase} 个 NO_CHASE。",
+    "analysisComplete": "收盘前分析完成：共 {total} 个候选，{increase} 个加仓，{maintain} 个持有，{avoid} 个回避。",
     "analysisFailed": "收盘前分析失败：{error}"
   },
   "execution": {
@@ -32,9 +32,9 @@
     "noResultsHint": "点击顶栏的\"收盘前分析\"按钮运行执行过滤。",
     "symbolsCount": "{count} 个标的",
     "noReasons": "无模式匹配",
-    "stateBuyNow": "立即买入",
-    "stateNoChase": "不追高",
-    "stateWait": "等待",
+    "stateIncrease": "加仓",
+    "stateMaintain": "持有",
+    "stateAvoid": "回避",
     "stateReduce": "减仓",
     "stateSkip": "跳过"
   },

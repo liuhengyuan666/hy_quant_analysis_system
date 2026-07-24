@@ -20,7 +20,7 @@
   },
   "preclose": {
     "analysisRunning": "Running preclose analysis...",
-    "analysisComplete": "Preclose analysis complete: {total} candidates, {buyNow} BUY_NOW, {wait} WAIT, {noChase} NO_CHASE.",
+    "analysisComplete": "Preclose analysis complete: {total} candidates, {increase} Increase, {maintain} Maintain, {avoid} Avoid.",
     "analysisFailed": "Preclose analysis failed: {error}"
   },
   "execution": {
@@ -32,9 +32,9 @@
     "noResultsHint": "Click \"Preclose Analysis\" in the top bar to run execution filtering.",
     "symbolsCount": "{count} symbols",
     "noReasons": "no pattern match",
-    "stateBuyNow": "Buy Now",
-    "stateNoChase": "No Chase",
-    "stateWait": "Wait",
+    "stateIncrease": "Increase",
+    "stateMaintain": "Maintain",
+    "stateAvoid": "Avoid",
     "stateReduce": "Reduce",
     "stateSkip": "Skip"
   },
