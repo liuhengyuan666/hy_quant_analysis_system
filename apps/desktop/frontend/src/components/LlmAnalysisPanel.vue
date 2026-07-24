@@ -7,6 +7,7 @@ import {
   updateLlmLoading,
   updateLlmError,
 } from '../store.js';
+import { marked } from 'marked';
 import { llmApi } from '../api/tauri.js';
 
 const { t } = useI18n();
@@ -22,6 +23,7 @@ const actions = [
   { key: 'preclose_review', label: t('research.precloseReview') },
   { key: 'risk_view', label: t('research.riskView') },
   { key: 'devils_advocate', label: t('research.devilsAdvocate') },
+  { key: 'portfolio_review', label: t('research.portfolioReview') },
 ];
 
 async function handleGenerate(action) {
@@ -44,36 +46,16 @@ async function handleGenerate(action) {
 
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = String(text)
+  // Escape raw HTML in LLM output BEFORE parsing, so injected markup renders
+  // as text while marked's own generated tags survive.
+  const escaped = String(text)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-  html = html
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>');
-
-  const unsafePatterns = [
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
-    /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
-    /<object[^>]*>[\s\S]*?<\/object>/gi,
-    /<embed[^>]*>/gi,
-    /<form[^>]*>[\s\S]*?<\/form>/gi,
-    /on\w+\s*=\s*["']?[^"'>]*["']?/gi,
-    /javascript:/gi,
-  ];
-  unsafePatterns.forEach((pattern) => {
-    html = html.replace(pattern, '');
-  });
-
-  return html;
+  return marked.parse(escaped);
 }
 </script>
 
@@ -227,6 +209,86 @@ function renderMarkdown(text) {
 
 .llm-panel__markdown :deep(strong) {
   color: var(--color-accent);
+}
+
+.llm-panel__markdown :deep(p) {
+  margin: var(--space-2) 0;
+}
+
+.llm-panel__markdown :deep(ul),
+.llm-panel__markdown :deep(ol) {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  color: var(--text-primary);
+}
+
+.llm-panel__markdown :deep(li) {
+  margin: var(--space-1) 0;
+}
+
+.llm-panel__markdown :deep(li)::marker {
+  color: var(--color-accent);
+}
+
+.llm-panel__markdown :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+  font-size: var(--font-size-label);
+}
+
+.llm-panel__markdown :deep(th),
+.llm-panel__markdown :deep(td) {
+  border: 1px solid var(--panel-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.llm-panel__markdown :deep(th) {
+  background: var(--panel-bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.llm-panel__markdown :deep(td) {
+  color: var(--text-secondary);
+}
+
+.llm-panel__markdown :deep(tbody tr:hover td) {
+  background: var(--color-surface-raised);
+}
+
+.llm-panel__markdown :deep(blockquote) {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--text-secondary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.llm-panel__markdown :deep(blockquote p) {
+  margin: 0;
+}
+
+.llm-panel__markdown :deep(pre) {
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+  overflow-x: auto;
+}
+
+.llm-panel__markdown :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  color: var(--text-primary);
 }
 
 .llm-panel__loading,
