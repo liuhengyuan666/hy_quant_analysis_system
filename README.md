@@ -1,6 +1,7 @@
 # Rust Quant Analysis System
 
 ![Dashboard Screenshot](screen_pic/main.png)
+![Dashboard Screenshot](screen_pic/main1.png)
 
 ## 使用手册
 
