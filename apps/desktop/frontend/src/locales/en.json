@@ -604,7 +604,21 @@
     "adversarialFull": "Full",
     "adversarialStandard": "Standard",
     "adversarialCompact": "Compact",
-    "adversarialNone": "Off"
+    "adversarialNone": "Off",
+    "diagInjected": "Adversarial background: injected · {level} · {fresh} · source {source} · {generatedAt}",
+    "diagNotInjected": "Adversarial background: not injected ({reason})",
+    "diagFresh": "fresh",
+    "diagStale": "stale",
+    "diagUnknownSource": "unknown source",
+    "diagReasonDisabled": "auto-inject is disabled",
+    "diagReasonPersonaExcluded": "this persona excludes adversarial background",
+    "diagReasonNoApiKey": "no API key configured",
+    "diagReasonPersonaMissing": "adversarial persona config missing",
+    "diagReasonLlmError": "adversarial pre-call failed",
+    "diagReasonSnapshotMissing": "no market snapshot available",
+    "diagReasonStale": "existing background is stale and regeneration failed",
+    "diagReasonConfigError": "LLM config resolution failed",
+    "diagReasonUnknown": "unknown reason ({reason})"
   },
   "perspectives": {
     "eyebrow": "Multi-Strategy Research",

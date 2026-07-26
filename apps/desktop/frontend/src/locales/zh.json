@@ -604,7 +604,21 @@
     "adversarialFull": "完整",
     "adversarialStandard": "标准",
     "adversarialCompact": "精简",
-    "adversarialNone": "关闭"
+    "adversarialNone": "关闭",
+    "diagInjected": "博弈背景：已注入 · {level} · {fresh} · 来源 {source} · {generatedAt}",
+    "diagNotInjected": "博弈背景：未注入（{reason}）",
+    "diagFresh": "fresh",
+    "diagStale": "stale",
+    "diagUnknownSource": "未知来源",
+    "diagReasonDisabled": "自动注入已关闭",
+    "diagReasonPersonaExcluded": "该视角不注入博弈背景",
+    "diagReasonNoApiKey": "未配置 API Key",
+    "diagReasonPersonaMissing": "博弈人格配置缺失",
+    "diagReasonLlmError": "前置博弈分析调用失败",
+    "diagReasonSnapshotMissing": "无可用市场快照",
+    "diagReasonStale": "已有博弈背景过期且重新生成失败",
+    "diagReasonConfigError": "LLM 配置解析失败",
+    "diagReasonUnknown": "未知原因（{reason}）"
   },
   "perspectives": {
     "eyebrow": "多策略研究",

@@ -10,13 +10,47 @@ import {
 import { marked } from 'marked';
 import { llmApi } from '../api/tauri.js';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const activeAction = ref('');
 const adversarialLevel = ref('standard');
 const loading = computed(() => dashboardStore.llmLoading);
 const error = computed(() => dashboardStore.llmError);
 const analysis = computed(() => dashboardStore.llmAnalysis);
+
+// ADR-113/114: machine-readable adversarial diag reasons → i18n key suffixes.
+const DIAG_REASON_KEYS = {
+  disabled: 'diagReasonDisabled',
+  persona_excluded: 'diagReasonPersonaExcluded',
+  no_api_key: 'diagReasonNoApiKey',
+  persona_missing: 'diagReasonPersonaMissing',
+  llm_error: 'diagReasonLlmError',
+  snapshot_missing: 'diagReasonSnapshotMissing',
+  stale: 'diagReasonStale',
+  config_error: 'diagReasonConfigError',
+};
+
+function diagReasonLabel(reason) {
+  const suffix = DIAG_REASON_KEYS[reason];
+  if (suffix) return t(`research.${suffix}`);
+  return t('research.diagReasonUnknown', { reason: reason || 'unknown' });
+}
+
+const adversarialDiagLine = computed(() => {
+  const diag = analysis.value?.adversarial;
+  if (!diag) return null;
+  if (diag.injected) {
+    const level = String(diag.level || 'none');
+    const levelKey = `research.adversarial${level.charAt(0).toUpperCase() + level.slice(1)}`;
+    return t('research.diagInjected', {
+      level: te(levelKey) ? t(levelKey) : level,
+      fresh: diag.fresh ? t('research.diagFresh') : t('research.diagStale'),
+      source: diag.source || t('research.diagUnknownSource'),
+      generatedAt: diag.generated_at || '-',
+    });
+  }
+  return t('research.diagNotInjected', { reason: diagReasonLabel(diag.reason) });
+});
 
 const actions = [
   { key: 'market_story', label: t('research.marketStory') },
@@ -118,6 +152,9 @@ function renderMarkdown(text) {
 
     <!-- Content -->
     <div v-else-if="analysis" class="llm-panel__content">
+      <div v-if="adversarialDiagLine" class="llm-panel__diag">
+        {{ adversarialDiagLine }}
+      </div>
       <div
         v-if="analysis.markdown"
         class="llm-panel__markdown"
@@ -236,6 +273,16 @@ function renderMarkdown(text) {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
+}
+
+.llm-panel__diag {
+  font-size: var(--font-size-meta);
+  color: var(--text-secondary);
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .llm-panel__markdown {
