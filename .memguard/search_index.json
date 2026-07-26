@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-26T13:38:28Z",
+    "rebuilt_at": "2026-07-26T15:34:33Z",
     "version": "v4"
   },
   "terms": {
@@ -654,6 +654,10 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "20-day": [
@@ -2478,6 +2482,10 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "adversarial-context": [
@@ -5520,6 +5528,12 @@
         "type": "adr"
       }
     ],
+    "complete@最新日但": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "completed": [
       {
         "id": "ADR-042",
@@ -6700,6 +6714,18 @@
       {
         "id": "ADR-043",
         "type": "adr"
+      }
+    ],
+    "dashboard_available": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "dashboard_latest_date；解释：explain-latest-gate。修复：完整重跑": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "dashboard_snapshot": [
@@ -10144,6 +10170,12 @@
         "type": "adr"
       }
     ],
+    "freshest_market_date": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "from": [
       {
         "id": "ADR-030",
@@ -10504,6 +10536,10 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "gated": [
@@ -11752,6 +11788,12 @@
         "type": "adr"
       }
     ],
+    "ingest": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "ingest-daily": [
       {
         "id": "ADR-030",
@@ -12486,6 +12528,12 @@
         "type": "adr"
       }
     ],
+    "kill": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "kind": [
       {
         "id": "ADR-083",
@@ -12580,6 +12628,12 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      }
+    ],
+    "latest": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "launch": [
@@ -13568,6 +13622,22 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "market-refresh——要么后台跑要么给足": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "market-refresh（增量）即可恢复。预防：绝不用短": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "market-refresh；3": [
@@ -16086,6 +16156,12 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      }
+    ],
+    "pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "pivot": [
@@ -19502,6 +19578,12 @@
         "type": "adr"
       }
     ],
+    "shell": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "shifted": [
       {
         "id": "ADR-091",
@@ -21578,6 +21660,12 @@
         "type": "adr"
       }
     ],
+    "timeout": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "to": [
       {
         "id": "ADR-041",
@@ -23216,6 +23304,10 @@
       {
         "id": "ADR-097",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "vue": [
@@ -24022,6 +24114,12 @@
         "type": "adr"
       }
     ],
+    "不完整导致": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "不拥有投资语义，只展示": [
       {
         "id": "ADR-108",
@@ -24658,6 +24756,12 @@
         "type": "adr"
       }
     ],
+    "分钟；kill": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "列/2": [
       {
         "id": "ADR-037",
@@ -25038,6 +25142,12 @@
         "type": "adr"
       }
     ],
+    "后必须跑": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "后执行。回填后": [
       {
         "id": "ADR-030",
@@ -25158,6 +25268,18 @@
       {
         "id": "ADR-065",
         "type": "adr"
+      }
+    ],
+    "回退。检测：pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "回退到更早日期；llm-analyze": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "回避），这要求": [
@@ -25516,6 +25638,12 @@
         "type": "adr"
       }
     ],
+    "对比": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "对话记忆边界：llm": [
       {
         "id": "ADR-106",
@@ -25574,6 +25702,12 @@
       {
         "id": "ADR-038",
         "type": "adr"
+      }
+    ],
+    "层缓存失效、分析日期静默回退": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "层）；2": [
@@ -25710,6 +25844,12 @@
       {
         "id": "ADR-033",
         "type": "adr"
+      }
+    ],
+    "强杀": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "当": [
@@ -26012,6 +26152,12 @@
         "type": "adr"
       }
     ],
+    "无法推进，dashboard_latest_date": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "无法清理": [
       {
         "id": "ADR-038",
@@ -26094,6 +26240,12 @@
       {
         "id": "ADR-028",
         "type": "adr"
+      }
+    ],
+    "显示所有数据阶段": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "智能分析面板集成（llm": [
@@ -26216,6 +26368,12 @@
         "type": "adr"
       }
     ],
+    "根因：被": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "格式": [
       {
         "id": "ADR-047",
@@ -26274,6 +26432,12 @@
       {
         "id": "ADR-036",
         "type": "adr"
+      }
+    ],
+    "每次调用重新生成（缓存永不命中": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "永远显示空状态": [
@@ -26502,6 +26666,12 @@
         "type": "adr"
       }
     ],
+    "留下缺标的（30/31），daily_bar": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "的": [
       {
         "id": "ADR-029",
@@ -26534,6 +26704,12 @@
       {
         "id": "ADR-047",
         "type": "adr"
+      }
+    ],
+    "的刷新在": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "的基础设施能力。用户裁定：启用语义为'所有人默认获得市场竞争假设背景'，而非'自动接受": [
@@ -26896,6 +27072,12 @@
         "type": "adr"
       }
     ],
+    "被": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "覆盖叙事/归因/风控/质疑/执行/组合视角，但缺少'市场参与者博弈结构'维度——谁在交易、谁被迫交易、当前价格由主动资金还是被动资金决定。徐翔技术翔时期的博弈框架（资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期）提供了可抽象的分析脚手架": [
       {
         "id": "ADR-109",
@@ -27014,6 +27196,12 @@
       {
         "id": "ADR-039",
         "type": "adr"
+      }
+    ],
+    "超时强杀后，pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "轮动排行榜因篇幅限制采用悬浮样式显示中文名称。实施过程中引发": [
@@ -27292,6 +27480,12 @@
         "type": "adr"
       }
     ],
+    "静默使用旧快照且": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "面板。oracle": [
       {
         "id": "ADR-034",
@@ -27374,6 +27568,12 @@
       {
         "id": "ADR-112",
         "type": "adr"
+      }
+    ],
+    "验证数据面完整。注意症状可能首先出现在看似无关的地方（llm": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "验证是": [
