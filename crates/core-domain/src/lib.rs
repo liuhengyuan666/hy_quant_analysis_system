@@ -421,7 +421,7 @@ pub struct LlmSection {
     pub adversarial: Option<AdversarialSection>,
 }
 
-/// Shared adversarial context layer configuration (ADR-112).
+/// Shared adversarial context layer configuration (ADR-112/114).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdversarialSection {
     /// 默认开启：所有 persona 调用自动注入博弈假设背景（除非 CLI 覆盖）。
@@ -430,10 +430,40 @@ pub struct AdversarialSection {
     /// 按 persona 的注入级别映射；未列出的 persona 默认 Full。
     #[serde(default)]
     pub inject: std::collections::HashMap<String, InjectLevel>,
+    /// ADR-114 ContentPolicy: standard 级别注入的最大字符数（按字符计，非字节）。
+    /// 与 InjectionLevel 解耦：级别决定内容粒度，此值是纯粹的体积保护。
+    #[serde(default = "default_adversarial_max_chars")]
+    pub max_chars: usize,
+    /// ADR-114 ContentPolicy: full 级别注入的硬性上限（宽松保护值）。
+    #[serde(default = "default_adversarial_full_max_chars")]
+    pub full_max_chars: usize,
+    /// ADR-114 ContentPolicy: 截断策略（目前仅段落边界）。
+    #[serde(default)]
+    pub truncate_strategy: TruncateStrategy,
 }
 
 fn default_adversarial_auto_inject() -> bool {
     true
+}
+
+/// ADR-114 ContentPolicy 默认上限。
+pub fn default_adversarial_max_chars() -> usize {
+    4000
+}
+
+/// ADR-114 ContentPolicy full 级别默认硬性上限。
+pub fn default_adversarial_full_max_chars() -> usize {
+    12000
+}
+
+/// ADR-114: 截断策略（ContentPolicy，与 InjectionLevel 独立）。
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TruncateStrategy {
+    /// 段落边界截断：只在空行处截断，绝不截断句子中间
+    /// （单个超长段落除外，作为兜底硬切）。
+    #[default]
+    ParagraphBoundary,
 }
 
 /// 共享博弈背景的注入级别（ADR-112）。
