@@ -18,6 +18,7 @@ Orchestration facade for the entire analysis chain. Highest-coupling crate in th
 | V6 Research Surface | `research_srd`, `research_stretch`, `research_review` | read-only observation tools; output `reports/research-*.md` |
 | V7 Research Surface | `research_confirmation`, `research_recovery`, `research_analogues`, `research_calibration`, `research_consensus` | Observation → Evolution → Historical Evidence → Synthesis |
 | V8 Research Asset | `research_analytics`, `research_replay`, `workspace.rs` | Evidence/Snapshot writers, registry indexes, `RA-XXXXXX` lifecycle |
+| 共享博弈假设背景（ADR-112） | `lib.rs::ensure_adversarial_context` + `llm_history::adversarial_context_section` | 每 scope 每日一次前置博弈分析，按 persona 分级注入；失败静默降级 |
 | Internal data workspace | `ResearchDataset` / `ResearchSnapshot` | ephemeral; must not leak outside this crate |
 
 ## CONVENTIONS

@@ -218,8 +218,8 @@ cargo run -p quant-cli -- export-data-health-report
 cargo run -p quant-cli -- dashboard-snapshot --scope cn --date 2026-03-16
 cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
 
-# LLM analysis (config now lives in config/llm.toml — see ADR-032/033)
-cargo run -p quant-cli -- analyze-with-llm --scope global
+# LLM analysis (config now lives in config/llm.toml — see ADR-032/033; shared adversarial background default-on per ADR-112)
+cargo run -p quant-cli -- llm-analyze --scope global
 
 # V6 Research Surface
 cargo run -p quant-cli -- research-srd --scope global

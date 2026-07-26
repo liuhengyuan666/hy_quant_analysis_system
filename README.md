@@ -242,7 +242,17 @@ cargo run -p quant-cli -- llm-analyze
 #   --action explain_decision  解释决策（为什么系统这样决定）
 #   --action devils_advocate   唱反调（质疑系统结论）
 #   --action preclose_review   收盘前复核
+#   --action market_adversarial_lens  市场博弈视角（资金角色/流动性/筹码/预期差）
+#   --adversarial full|standard|compact|none  覆盖共享博弈背景注入级别（单次生效）
 ```
+
+**共享博弈假设背景层（ADR-112，默认开启）**：
+
+- 每次 LLM 分析前，系统确保当日"市场博弈假设背景"已生成（同一 scope 同一日期只算一次，落盘 `workspace/llm-history/{scope}/adversarial/`）
+- 注入语义是**假设背景**而非结论：下游 persona 的职责是结合系统数据验证或反驳其中的假设
+- 按 persona 分级注入：叙事/风控/组合类默认 `standard`（当前同 full 效果；截断策略由 TASK-215 ContentPolicy 决定），`explain_decision` / `preclose_review` 默认 `compact`（摘要），`market_adversarial_lens` 自身不注入（递归防护）
+- 每 scope 每日首次调用多一次 LLM 成本，后续调用零额外成本
+- 配置：`config/llm.toml` 的 `[llm.adversarial]`（总开关 `auto_inject` + `[llm.adversarial.inject]` 分级映射）；CLI 用 `--adversarial` 单次覆盖
 
 说明：
 

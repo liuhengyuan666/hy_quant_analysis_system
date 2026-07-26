@@ -96,6 +96,15 @@
 - **Calibration 语义不变量**：`CURRENT_CALIBRATION_BASELINE_VERSION` 仅在 Evidence 语义变化时递增（距离度量、归一化、特征权重、阈值、报告统计语义），实现优化不触发递增
 - **Historical Analogues 不暴露原始相似度**：对外使用 rank 或定性等级（Very High / High / Moderate / Low），避免用户误读原始距离值
 
+## 12. LLM 集成范式 (LLM Integration)
+
+- **LLM 边界冻结（ADR-106）**：数据流永远为 确定性引擎 → 决策事实 → LLM 解释（LLM 永远在最右端）；LLM 只解释，不创建信号、不评分、不排名、不覆盖决策、不输出仓位/目标价
+- **Prompt 双源解析**：内置 persona 常量（`research-skills/src/action.rs`）+ `config/prompts.toml` 自定义 persona；TOML 只承载视角指令，禁含阈值规则与 if/then 逻辑（ADR-106）
+- **上下文组装**：`app-service::analyze_with_action` 注入策略评分矩阵、数据完整性状态、组合姿态（仅 portfolio_review）与前次解读；`build_snapshot_context()` 刻意排除信号分数/RS 分数/回测指标，只传标签与排名
+- **LLM 历史回环**：每次分析落盘 `workspace/llm-history/{scope}/{action}/{date}.json`，下次分析自动注入"前次解读"段并标注为非证据背景
+- **输出不入户**：LLM 结果不作为分析数据写入 ClickHouse；仅导出 markdown 到 `reports/` 并在 report_snapshot 登记文件路径
+- **未配置降级**：无 API key 时返回 placeholder 文本（`placeholder: true`），不 panic、不阻塞主链路
+
 ## 11. V8 Research Asset & Execution Platform 范式
 
 - **引用而非嵌入**：Snapshot 通过 `EvidenceRef { id, version }` 引用 Evidence，禁止把 Evidence 数据复制进 Snapshot
