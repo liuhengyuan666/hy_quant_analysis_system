@@ -1,49 +1,32 @@
 use anyhow::Result;
 use core_domain::LlmConfig;
 
-/// Render LLM analysis JSON as markdown report.
-/// V4.5: Expects {action, scope, placeholder, markdown} from analyze_with_action.
-pub(crate) fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
-    let mut md = String::new();
+/// Reusable HTTP client type for async_openai.
+pub(crate) type LlmClient = async_openai::Client<async_openai::config::OpenAIConfig>;
 
-    let action = analysis["action"].as_str().unwrap_or("unknown");
-    let scope = analysis["scope"].as_str().unwrap_or("global");
-
-    md.push_str(&format!("# LLM Analysis: {}\n\n", action));
-    md.push_str(&format!("**Scope**: {}\n\n", scope));
-
-    // Placeholder warning
-    if analysis["placeholder"].as_bool().unwrap_or(false) {
-        md.push_str(
-            "> **Warning**: This analysis was generated in placeholder mode. \
-             No real LLM provider was configured.\n\n",
-        );
-    }
-
-    // Markdown content (the actual LLM output)
-    if let Some(content) = analysis["markdown"].as_str() {
-        if !content.is_empty() {
-            md.push_str(content);
-            md.push_str("\n\n");
-        }
-    }
-
-    md
+/// Build an async_openai Client from config + api_key.
+/// This is the single construction point so callers can share one client
+/// between the adversarial pre-call and the main LLM call, avoiding a
+/// second TCP+TLS handshake (TASK-213 / ADR-113).
+pub(crate) fn build_llm_client(config: &LlmConfig, api_key: &str) -> LlmClient {
+    let openai_config = async_openai::config::OpenAIConfig::new()
+        .with_api_key(api_key.to_string())
+        .with_api_base(config.base_url.clone());
+    async_openai::Client::with_config(openai_config)
 }
 
-pub(crate) async fn call_llm_api(
-    config: LlmConfig,
-    api_key: String,
+/// Call the LLM API with a pre-built client.
+/// The api_key is already baked into `client`; the config provides model,
+/// timeout_secs, and the remaining parameters drive the request body.
+pub(crate) async fn call_llm_api_with_client(
+    client: &LlmClient,
+    config: &LlmConfig,
     system_prompt: &str,
     user_prompt: String,
     temperature: f64,
     max_tokens: usize,
     seed: Option<u64>,
 ) -> Result<String> {
-    let openai_config = async_openai::config::OpenAIConfig::new()
-        .with_api_key(api_key)
-        .with_api_base(config.base_url);
-    let client = async_openai::Client::with_config(openai_config);
     let mut request_builder =
         async_openai::types::chat::CreateChatCompletionRequestArgs::default();
     request_builder
@@ -85,6 +68,52 @@ pub(crate) async fn call_llm_api(
         .unwrap_or_default();
 
     Ok(content)
+}
+
+/// Convenience wrapper that builds a client and delegates to
+/// `call_llm_api_with_client`.  Kept for call sites that do not share a
+/// client (e.g. `analyze_report_with_llm`, prewarm thread).
+pub(crate) async fn call_llm_api(
+    config: LlmConfig,
+    api_key: String,
+    system_prompt: &str,
+    user_prompt: String,
+    temperature: f64,
+    max_tokens: usize,
+    seed: Option<u64>,
+) -> Result<String> {
+    let client = build_llm_client(&config, &api_key);
+    call_llm_api_with_client(&client, &config, system_prompt, user_prompt, temperature, max_tokens, seed).await
+}
+
+/// Render LLM analysis JSON as markdown report.
+/// V4.5: Expects {action, scope, placeholder, markdown} from analyze_with_action.
+pub(crate) fn render_llm_analysis_markdown(analysis: &serde_json::Value) -> String {
+    let mut md = String::new();
+
+    let action = analysis["action"].as_str().unwrap_or("unknown");
+    let scope = analysis["scope"].as_str().unwrap_or("global");
+
+    md.push_str(&format!("# LLM Analysis: {}\n\n", action));
+    md.push_str(&format!("**Scope**: {}\n\n", scope));
+
+    // Placeholder warning
+    if analysis["placeholder"].as_bool().unwrap_or(false) {
+        md.push_str(
+            "> **Warning**: This analysis was generated in placeholder mode. \
+             No real LLM provider was configured.\n\n",
+        );
+    }
+
+    // Markdown content (the actual LLM output)
+    if let Some(content) = analysis["markdown"].as_str() {
+        if !content.is_empty() {
+            md.push_str(content);
+            md.push_str("\n\n");
+        }
+    }
+
+    md
 }
 
 /// Extract key drivers from context

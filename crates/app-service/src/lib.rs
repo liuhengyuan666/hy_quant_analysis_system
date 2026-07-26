@@ -4529,6 +4529,24 @@ impl AppContext {
         // ADR-113/114: the diag answers "did it work, and why not" — every
         // not-injected outcome carries a machine-readable `reason`.
         let resolved_cfg = self.get_resolved_llm_config(None)?;
+        // Resolve config + api_key + build ONE client for both the adversarial
+        // pre-call and the main LLM call, sharing the TCP+TLS connection (TASK-213).
+        let config = self.get_llm_config()?;
+        let inference = research_skills::InferenceConfig {
+            temperature: resolved_cfg.temperature,
+            seed: resolved_cfg.seed,
+            max_tokens: resolved_cfg.max_tokens,
+        };
+        let api_key: Option<String> = if let Some(ref key) = resolved_cfg.api_key {
+            if !key.is_empty() {
+                Some(key.clone())
+            } else {
+                self.get_llm_api_key()?
+            }
+        } else {
+            self.get_llm_api_key()?
+        };
+        let llm_client = api_key.as_ref().map(|key| llm::build_llm_client(&config, key));
         let adversarial_enabled = resolved_cfg.adversarial_auto_inject;
         let mut adversarial_diag = serde_json::json!({
             "enabled": adversarial_enabled,
@@ -4561,7 +4579,7 @@ impl AppContext {
                 adversarial_diag["reason"] = serde_json::json!(reason);
             } else {
                 let outcome = self
-                    .ensure_adversarial_context(scope, &snapshot, "on-demand")
+                    .ensure_adversarial_context(scope, &snapshot, "on-demand", llm_client.as_ref())
                     .await;
                 if let Some(record) = outcome.record {
                     let fresh = record.report_date == snapshot.report_date.to_string();
@@ -4616,30 +4634,12 @@ impl AppContext {
             Some(&extra),
         );
 
-        // 5. Call LLM
-        let resolved = self.get_resolved_llm_config(None)?;
-        let inference = research_skills::InferenceConfig {
-            temperature: resolved.temperature,
-            seed: resolved.seed,
-            max_tokens: resolved.max_tokens,
-        };
-        let config = self.get_llm_config()?;
-        let api_key = if let Some(ref key) = resolved.api_key {
-            if !key.is_empty() {
-                Some(key.clone())
-            } else {
-                self.get_llm_api_key()?
-            }
-        } else {
-            self.get_llm_api_key()?
-        };
-
-        let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
-            let _provider = research_skills::OpenAiProvider::from_config(&config, key);
+        // 5. Call LLM (reuses llm_client built above alongside the adversarial pre-call)
+        let (llm_output, is_placeholder) = if let Some(ref client) = llm_client {
             let call_config = inference.to_call_config();
-            let response = llm::call_llm_api(
-                config.clone(),
-                key.clone(),
+            let response = llm::call_llm_api_with_client(
+                client,
+                &config,
                 &system_prompt,
                 user_prompt,
                 call_config.temperature as f64,
@@ -4702,6 +4702,7 @@ impl AppContext {
         scope: ReportScope,
         snapshot: &report_engine::DashboardSnapshot,
         source: &str,
+        client: Option<&LlmClient>,
     ) -> AdversarialOutcome {
         let none = |reason: &'static str| AdversarialOutcome {
             record: None,
@@ -4758,20 +4759,15 @@ impl AppContext {
             Ok(config) => config,
             Err(_) => return stale_or("config_error"),
         };
-        let api_key = match resolved
-            .api_key
-            .clone()
-            .filter(|key| !key.is_empty())
-            .or_else(|| self.get_llm_api_key().ok().flatten())
-        {
-            Some(key) => key,
-            // no key → silent skip, never persist placeholder
+        let llm_client = match client {
+            Some(c) => c,
+            // no client → silent skip, never persist placeholder
             None => return stale_or("no_api_key"),
         };
 
-        let text = match llm::call_llm_api(
-            config,
-            api_key,
+        let text = match llm::call_llm_api_with_client(
+            llm_client,
+            &config,
             &system_prompt,
             user_prompt,
             resolved.temperature,
@@ -4857,6 +4853,18 @@ impl AppContext {
                 }
             };
             runtime.block_on(async move {
+                // Build one client for all scopes to reuse the TCP connection.
+                let llm_config = context.get_llm_config().ok();
+                let llm_client: Option<LlmClient> = llm_config.and_then(|cfg| {
+                    let api_key = context
+                        .get_resolved_llm_config(None)
+                        .ok()?
+                        .api_key
+                        .clone()
+                        .filter(|k| !k.is_empty())
+                        .or_else(|| context.get_llm_api_key().ok().flatten())?;
+                    Some(llm::build_llm_client(&cfg, &api_key))
+                });
                 for scope in scopes {
                     let label = scope.as_str();
                     let snapshot = match context.dashboard_snapshot_with_scope(None, scope) {
@@ -4873,7 +4881,12 @@ impl AppContext {
                         }
                     };
                     let outcome = context
-                        .ensure_adversarial_context(scope, &snapshot, "market-refresh")
+                        .ensure_adversarial_context(
+                            scope,
+                            &snapshot,
+                            "market-refresh",
+                            llm_client.as_ref(),
+                        )
                         .await;
                     match outcome.record {
                         Some(_) => eprintln!("[adversarial-prewarm] {label}: ready"),
