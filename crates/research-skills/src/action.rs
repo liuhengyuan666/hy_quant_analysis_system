@@ -218,11 +218,17 @@ fn build_snapshot_context(snapshot: &DashboardSnapshot) -> String {
     ctx.push_str(&format!("**Scope**: {}\n", snapshot.scope));
 
     ctx.push_str(&format!("**Regime**: {}\n", snapshot.regime_label));
+    ctx.push_str(&format!("**流动性评分**: {:.1}\n", snapshot.liquidity_score));
+    ctx.push_str(&format!("**Regime 数据新鲜度**: {} 天\n", snapshot.regime_stale_days.max(0)));
     if let Some(ref env) = snapshot.environment {
         ctx.push_str(&format!(
             "**Environment**: {} (breadth: {})\n",
             env.environment_label, env.breadth_state
         ));
+        let fmt_opt = |v: Option<f64>| v.map(|x| format!("{:.1}", x)).unwrap_or_else(|| "N/A".to_string());
+        ctx.push_str(&format!("**广度 5 日变化**: {}\n", fmt_opt(env.breadth_5d_delta)));
+        ctx.push_str(&format!("**成交量扩张**: {}\n", fmt_opt(env.volume_expansion_pct)));
+        ctx.push_str(&format!("**换手率覆盖**: {}\n", fmt_opt(env.turnover_coverage_pct)));
     }
     if let Some(ref state) = snapshot.strategy_state {
         ctx.push_str(&format!(
@@ -235,6 +241,14 @@ fn build_snapshot_context(snapshot: &DashboardSnapshot) -> String {
     if !snapshot.top_rotation.is_empty() {
         ctx.push_str("\n**Top Rotation**:\n");
         for (i, item) in snapshot.top_rotation.iter().take(5).enumerate() {
+            ctx.push_str(&format!("{}. {}\n", i + 1, item.symbol));
+        }
+    }
+
+    // Bottom rotation — 退潮方向，只给 symbol 名
+    if !snapshot.bottom_rotation.is_empty() {
+        ctx.push_str("\n**轮动末位（退潮方向）**:\n");
+        for (i, item) in snapshot.bottom_rotation.iter().take(5).enumerate() {
             ctx.push_str(&format!("{}. {}\n", i + 1, item.symbol));
         }
     }
