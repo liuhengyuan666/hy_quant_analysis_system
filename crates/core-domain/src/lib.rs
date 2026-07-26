@@ -417,6 +417,49 @@ pub struct LlmSection {
     pub auth: AuthSection,
     #[serde(default)]
     pub defaults: DefaultsSection,
+    #[serde(default)]
+    pub adversarial: Option<AdversarialSection>,
+}
+
+/// Shared adversarial context layer configuration (ADR-112).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdversarialSection {
+    /// 默认开启：所有 persona 调用自动注入博弈假设背景（除非 CLI 覆盖）。
+    #[serde(default = "default_adversarial_auto_inject")]
+    pub auto_inject: bool,
+    /// 按 persona 的注入级别映射；未列出的 persona 默认 Full。
+    #[serde(default)]
+    pub inject: std::collections::HashMap<String, InjectLevel>,
+}
+
+fn default_adversarial_auto_inject() -> bool {
+    true
+}
+
+/// 共享博弈背景的注入级别（ADR-112）。
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InjectLevel {
+    /// 注入完整博弈分析全文
+    Full,
+    /// 注入默认 analysis_text 全文（当前同 full；截断策略由 TASK-215 ContentPolicy 决定）
+    #[default]
+    Standard,
+    /// 仅注入摘要（~400 字符），弱注入防观点污染
+    Compact,
+    /// 不注入
+    None,
+}
+
+impl InjectLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::Standard => "standard",
+            Self::Compact => "compact",
+            Self::None => "none",
+        }
+    }
 }
 
 /// 认证配置段
@@ -464,6 +507,7 @@ impl Default for LlmSection {
             timeout_secs: 60,
             auth: AuthSection::default(),
             defaults: DefaultsSection::default(),
+            adversarial: None,
         }
     }
 }

@@ -89,6 +89,31 @@ pub fn previous_interpretation_section(record: &LlmAnalysisRecord) -> String {
     )
 }
 
+/// Render the shared adversarial hypothesis-background section (ADR-112).
+///
+/// Semantics: this is a HYPOTHESIS BACKGROUND, not a conclusion. Downstream
+/// personas are instructed to verify or refute it against system data.
+///
+/// Level:
+/// - `"full"`     → inject the complete `analysis_text`
+/// - `"standard"` → inject `analysis_text` (TODO: TASK-215 apply max_chars truncation)
+/// - `"compact"`  → inject the truncated `summary` (~400 chars)
+/// - anything else (including `"none"`, which callers should have filtered
+///   out already) → degrades to compact
+pub fn adversarial_context_section(record: &LlmAnalysisRecord, level: &str) -> String {
+    let body = match level {
+        "full" | "standard" => {
+            // TODO TASK-215: standard level should apply max_chars truncation
+            record.analysis_text.as_str()
+        }
+        _ => record.summary.as_str(), // "compact" and unknown fallback
+    };
+    format!(
+        "## 市场博弈假设背景（{}）\n\n> 注意：以下内容为前置博弈分析产生的**假设性背景**，描述市场可能的博弈结构。\n> 它不是事实证据，不是结论，不得作为你本次判断的依据来源。\n> 你的职责是结合系统数据验证或反驳其中的假设。\n\n{}",
+        record.report_date, body
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,5 +146,60 @@ mod tests {
         let section = previous_interpretation_section(&record);
         assert!(section.contains("前次解读"));
         assert!(section.contains("不是事实证据"));
+    }
+
+    #[test]
+    fn adversarial_section_is_hypothesis_not_conclusion() {
+        let record = LlmAnalysisRecord {
+            scope: "GLOBAL".into(),
+            action: "adversarial".into(),
+            persona_label: "市场博弈视角".into(),
+            report_date: "2026-07-24".into(),
+            created_at: "2026-07-24T15:00:00Z".into(),
+            summary: "摘要内容".into(),
+            analysis_text: "完整的博弈分析全文".into(),
+        };
+        let section = adversarial_context_section(&record, "full");
+        assert!(section.contains("假设性背景"));
+        assert!(section.contains("验证或反驳"));
+        assert!(section.contains("不是结论"));
+        assert!(section.contains("2026-07-24"));
+        assert!(section.contains("完整的博弈分析全文"));
+        assert!(!section.contains("摘要内容"));
+    }
+
+    #[test]
+    fn adversarial_section_compact_level_uses_summary() {
+        let record = LlmAnalysisRecord {
+            scope: "GLOBAL".into(),
+            action: "adversarial".into(),
+            persona_label: "市场博弈视角".into(),
+            report_date: "2026-07-24".into(),
+            created_at: "2026-07-24T15:00:00Z".into(),
+            summary: "摘要内容".into(),
+            analysis_text: "完整的博弈分析全文".into(),
+        };
+        let section = adversarial_context_section(&record, "compact");
+        assert!(section.contains("摘要内容"));
+        assert!(!section.contains("完整的博弈分析全文"));
+        // unknown level degrades to compact
+        let degraded = adversarial_context_section(&record, "none");
+        assert!(degraded.contains("摘要内容"));
+    }
+
+    #[test]
+    fn adversarial_section_standard_level_uses_analysis_text() {
+        let record = LlmAnalysisRecord {
+            scope: "GLOBAL".into(),
+            action: "adversarial".into(),
+            persona_label: "市场博弈视角".into(),
+            report_date: "2026-07-24".into(),
+            created_at: "2026-07-24T15:00:00Z".into(),
+            summary: "摘要内容".into(),
+            analysis_text: "完整的博弈分析全文".into(),
+        };
+        let section = adversarial_context_section(&record, "standard");
+        assert!(section.contains("完整的博弈分析全文"));
+        assert!(!section.contains("摘要内容"));
     }
 }
