@@ -27,7 +27,7 @@ impl EvaluationEngine for RuleBasedEvaluationEngine {
         let max_dd = outcome.max_drawdown.unwrap_or(0.0);
 
         match decision.state {
-            ExecutionState::BuyNow => {
+            ExecutionState::Increase => {
                 evaluate_long(t20, mfe, mae, max_dd, decision)
             }
             ExecutionState::Reduce => {
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn long_hit_when_positive_return() {
-        let event = make_event(ExecutionState::BuyNow, 0.8);
+        let event = make_event(ExecutionState::Increase, 0.8);
         let outcome = ExecutionOutcome { t20_return: Some(0.03), ..Default::default() };
         let eval = RuleBasedEvaluationEngine.evaluate(&event, &outcome);
         assert_eq!(eval, ExecutionEvaluation::Hit);
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn long_false_breakout_when_mfe_positive_but_final_negative() {
-        let event = make_event(ExecutionState::BuyNow, 0.8);
+        let event = make_event(ExecutionState::Increase, 0.8);
         let outcome = ExecutionOutcome {
             t20_return: Some(-0.03),
             mfe: Some(0.04),
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn awaiting_outcome_when_no_t20_return() {
-        let event = make_event(ExecutionState::BuyNow, 0.8);
+        let event = make_event(ExecutionState::Increase, 0.8);
         let outcome = ExecutionOutcome::default();
         let eval = RuleBasedEvaluationEngine.evaluate(&event, &outcome);
         assert_eq!(eval, ExecutionEvaluation::AwaitingOutcome);

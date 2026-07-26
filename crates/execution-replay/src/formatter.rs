@@ -289,7 +289,7 @@ mod tests {
 
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: ExecutionState::BuyNow,
+            state: ExecutionState::Increase,
             confidence: 0.85,
             risk: RiskLevel::Low,
             evidences: vec![],

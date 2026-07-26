@@ -30,17 +30,27 @@ pub fn handle_set_llm_api_key(context: &AppContext, key: String) -> Result<()> {
     Ok(())
 }
 
-pub fn handle_analyze_with_llm(_context: &AppContext, scope: ReportScopeArg, action: String, quiet: bool) -> Result<()> {
+pub fn handle_llm_analyze(context: &AppContext, scope: ReportScopeArg, action: String, adversarial: Option<String>, quiet: bool) -> Result<()> {
+    handle_analyze_with_llm(context, scope, action, adversarial, quiet)
+}
+
+pub fn handle_analyze_with_llm(_context: &AppContext, scope: ReportScopeArg, action: String, adversarial: Option<String>, quiet: bool) -> Result<()> {
     if !quiet {
         eprintln!("[analyze-with-llm] Running research action '{}'...", action);
     }
+    let adversarial_level = adversarial.as_deref().map(|level| match level {
+        "full" => core_domain::InjectLevel::Full,
+        "standard" => core_domain::InjectLevel::Standard,
+        "compact" => core_domain::InjectLevel::Compact,
+        _ => core_domain::InjectLevel::None,
+    });
     let result = std::thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("failed to create tokio runtime");
         let context = AppContext::new(market_store::StorageConfig::default());
-        runtime.block_on(context.analyze_with_action(&action, scope.into()))
+        runtime.block_on(context.analyze_with_action(&action, scope.into(), adversarial_level))
     })
     .join()
     .expect("LLM analysis thread panicked")?;

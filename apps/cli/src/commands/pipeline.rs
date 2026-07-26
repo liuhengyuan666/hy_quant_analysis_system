@@ -82,6 +82,68 @@ pub fn handle_compute_signals(context: &AppContext, quiet: bool) -> Result<()> {
     Ok(())
 }
 
+pub fn handle_daily_analysis(
+    context: &AppContext,
+    scope: crate::ReportScopeArg,
+    quiet: bool,
+) -> Result<()> {
+    let scope: app_service::ReportScope = scope.into();
+    if !quiet {
+        eprintln!("[daily-analysis] Running daily analysis for scope {:?}...", scope);
+    }
+
+    // Step 0: Context Integrity Gate — check data health first
+    let integrity = context.check_data_health()?;
+    let integrity_status = if integrity.freshest_market_date_complete {
+        "PASS"
+    } else {
+        "DEGRADED"
+    };
+
+    // Step 1: Dashboard snapshot for current state
+    let snapshot = context.dashboard_snapshot_with_scope(None, scope)?;
+
+    let (date, bullish_count, top_bullish) = match &snapshot {
+        Some(snap) => {
+            let bullish = &snap.bullish_signals;
+            let top: Vec<serde_json::Value> = bullish.iter().take(5).map(|s| {
+                serde_json::json!({
+                    "symbol": s.symbol,
+                    "final_score": s.final_score,
+                    "signal_label": format!("{:?}", s.signal_label),
+                })
+            }).collect();
+            (snap.report_date.to_string(), bullish.len(), top)
+        }
+        None => ("no data".to_string(), 0, vec![]),
+    };
+
+    // Step 2: Portfolio action
+    let decisions = context.analyze_preclose(scope).unwrap_or_default();
+    let portfolio_actions: Vec<serde_json::Value> = decisions.iter().map(|d| {
+        serde_json::json!({
+            "symbol": d.symbol,
+            "action": d.state.as_str(),
+            "reasons": d.reasons.iter().map(|r| r.as_str()).collect::<Vec<_>>(),
+        })
+    }).collect();
+
+    // Output
+    let output = serde_json::json!({
+        "integrity": integrity_status,
+        "scope": format!("{:?}", scope),
+        "date": date,
+        "signals": {
+            "bullish_count": bullish_count,
+            "top_bullish": top_bullish,
+        },
+        "portfolio_actions": portfolio_actions,
+    });
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
 pub fn handle_refresh_all(
     context: &AppContext,
     to: Option<NaiveDate>,

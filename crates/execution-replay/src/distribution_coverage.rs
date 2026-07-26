@@ -179,7 +179,7 @@ mod tests {
         };
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: execution_engine::ExecutionState::Wait,
+            state: execution_engine::ExecutionState::Maintain,
             confidence: 0.7,
             risk: RiskLevel::Medium,
             evidences: vec![],

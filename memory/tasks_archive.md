@@ -237,6 +237,56 @@
 
 - [Done] [TASK-158] Combine multiple medium-term holding risk signals (LeadershipDecay, BreadthDeterioration, LiquidityDeterioration) into a Holding Risk Evidence Bundle. Evaluate at T+60 natural horizon, not T+20. Output a Holding Risk Score profile as a Research Asset.
 
+
+### 2026-07-21
+- [Done] [TASK-200] RV1 Phase 1: CLI减法 + 重命名 + Integrity集成。107命令→~10核心；refresh-all→market-refresh; preclose-analysis→portfolio-decision; ExecutionState语义变更(BuyNow→Increase); 新增daily-analysis/strategy-perspectives/evidence-status/validation-check; README/操作手册重写; 设计规划-rv1.md落地
+
+- [Done] [TASK-203] RV1 Phase 1.5: 工程卫生 — execution-replay 19文件变体引用更新；删除deprecated枚举变体；audit.rs/research.rs/diagnostics.rs dead_code处理；CLI三级分类(15个工程命令hide=true)；cargo check workspace零warning
+
+- [Done] [TASK-204] RV1 Phase 1.8: Domain Model Freeze ADR-105 — 冻结MarketRegimeSnapshot/EnvironmentSnapshot/Evidence/PortfolioDecision四个现有对象；禁止新建MarketState；daily-analysis契约固定；Phase 2边界写死(允许消费已有分数/场景加权/归因输出，禁止新策略/新指标/新Evidence)
+
+- [Done] [TASK-201] RV1 Phase 2: 策略引擎重构 — signal-engine不再合并四策略为单一分数，独立产出每套策略信号+归因；新增config/scenarios.toml场景配置(短线动量/长线价值/激进)；SignalSnapshot扩展strategy_signals/scenario_scores字段；strategy-perspectives完整实现
+
+- [Done] [TASK-202] RV1 Phase 3: LLM增强 + 组合决策重构 — LLM上下文增强(多策略矛盾点+历史参照+连续性)；对话历史持久化(LlmAnalysisRecord)；config/prompts.toml可定制分析人格(短线交易员/长线配置者)；portfolio-decision用LLM替代3个硬编码Pattern
+
+
+### 2026-07-24
+- [Done] [TASK-205] Frontend Phase 0: ExecutionState contract sync. Fix ExecutionResultsPanel.vue (STATE_ORDER/STATE_META/i18n for INCREASE/MAINTAIN/AVOID/REDUCE/SKIP), main.js preclose notification counts (~L395), zh.json/en.json state labels + notification strings. Root cause: serde rename_all SCREAMING_SNAKE_CASE serializes new variant names; alias is deserialize-only.
+
+- [Done] [TASK-206] Frontend Phase 1: LLM portfolio_review entry + markdown renderer upgrade. Add portfolio_review as 6th action in LlmAnalysisPanel.vue actions array + zh/en i18n keys. Replace hand-rolled renderMarkdown() with marked library (secure config: no raw HTML / sanitize). Zero backend change — analyze_with_llm already dispatches portfolio_review.
+
+
+
+### 2026-07-25
+- [Done] [TASK-209] [market-adversarial-lens] build_snapshot_context() 增强：在 research-skills/src/action.rs 中注入 6 个已计算字段（liquidity_score, regime_stale_days, breadth_5d_delta, volume_expansion_pct, turnover_coverage_pct, bottom_rotation）到 LLM 上下文。Environment 衍生字段走 if-let guard，None 时显示 N/A。Plan: .omo/plans/market-adversarial-lens.md Task 1
+
+- [Done] [TASK-210] [market-adversarial-lens] 新增 market_adversarial_lens persona prompt：在 config/prompts.toml 中写入完整 system + template（5 维博弈分析框架 + web search 引导词 + ADR-106 边界约束）。Plan: .omo/plans/market-adversarial-lens.md Task 2
+
+- [Done] [TASK-211] [market-adversarial-lens] 前端按钮 + i18n：LlmAnalysisPanel.vue actions 数组新增第 7 个条目，zh.json/en.json 新增 research.marketAdversarialLens 键。Plan: .omo/plans/market-adversarial-lens.md Task 3
+
+- [Done] [TASK-212] [market-adversarial-lens] 文档更新：research-skills/AGENTS.md action 表格新增 persona 行，根 AGENTS.md --action 参数列表追加。Plan: .omo/plans/market-adversarial-lens.md Task 4
+
+- [Done] [TASK-213] [market-adversarial-lens] CLI QA：cargo check 零新增 warning + cargo test 三 crate 全绿 + 3 个 persona 调用验证（market_adversarial_lens/market_story/short_term_trader）。Plan: .omo/plans/market-adversarial-lens.md Task 5
+
+- [Done] [TASK-214] [market-adversarial-lens] 前端 QA：Playwright 验证按钮渲染（7 个按钮）、中英文 locale 切换、点击触发 loading 状态。Plan: .omo/plans/market-adversarial-lens.md Task 6
+
+
+### 2026-07-26
+- [Done] [TASK-215] [P2-shared-adversarial] T1: llm_history.rs 新增 adversarial_context_section(record, level) 分级段落构建器（full=全文/summary=摘要）+ 假设背景头部 + 单元测试。Plan: .omo/plans/market-adversarial-shared-layer.md
+
+- [Done] [TASK-216] [P2-shared-adversarial] T2: core-domain InjectLevel 枚举 + AdversarialSection + config_loader ResolvedLlmConfig 解析 + llm.toml.example schema。默认 auto_inject=true，默认分级映射。Plan Task 2
+
+- [Done] [TASK-217] [P2-shared-adversarial] T3: lib.rs analyze_with_action 集成——签名加 adversarial: Option<InjectLevel>，ensure_adversarial_context() 前置逻辑（新鲜度/落盘/降级），分级注入，递归防护硬编码，返回 JSON 加 adversarial 诊断字段。Plan Task 3
+
+- [Done] [TASK-218] [P2-shared-adversarial] T4: CLI main.rs + commands/llm.rs 新增 --adversarial <full|summary|none> flag 并透传。Plan Task 4
+
+- [Done] [TASK-221] [P2-shared-adversarial] T7: 文档更新——README 共享层说明 + --adversarial 用法；research-skills/AGENTS.md CONVENTIONS 条目；app-service/AGENTS.md WHERE TO LOOK 行。Plan Task 7
+
+- [Done] [TASK-220] [P2-shared-adversarial] T6: CLI QA 五场景——S1 默认开启首次注入落盘 / S2 复用无二次调用 / S3 explain_decision 收 summary 级 / S4 CLI 覆盖 none 与 full / S5 adversarial 自身无递归。证据落盘 .omo/evidence/p2-*。Plan Task 6
+
+- [Done] [TASK-219] [P2-shared-adversarial] T5: Tauri analyze_with_llm 加可选 adversarial 参数 + tauri.js 第三参 + LlmAnalysisPanel 注入级别选择器（默认 full）+ 双语 i18n。Plan Task 5
+
+
 ## Superseded
 
 ### 2026-07-09
@@ -311,4 +361,36 @@
 
 
 
+
+
+
+
+
+
+
+
+
+### 2026-07-24
+- [Superseded] [TASK-207] Frontend Phase 2 (GATED until Phase 0+1 real-usage observation): StrategyPerspectivesPanel. Backend: add Serialize derives to StrategyPerspectiveEntry/StrategyAttributionView/StrategyPerspectiveDetail + AppContext thin wrappers (strategy_scoreboard, strategy_attribution). Tauri: 2 thin commands. Frontend: persona-card UI (per-strategy cards with score + drivers, not scoreboard table), scoreboard list loads first, attribution fetched lazily on click (recomputation cost). Keep SignalsPanel unchanged.
+  Superseded by: Task TASK-208
+  Reason: 范围按 ADR-108 修订：增加观察窗门控、禁止 Dashboard 首页入口、允许降级为 SignalDetailModal Tab
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 2026-07-26
+- [Superseded] [TASK-208] Frontend Phase 2 (REVISED scope per ADR-108, supersedes TASK-207): Strategy Perspectives view. GATED on RV1 Real Usage Observation Window (5-10 trading days) — observation outcome decides form: standalone panel (research-level entry, NOT Dashboard home) OR downgraded SignalDetailModal Tab. Design: persona cards (动量交易者/价值投资者 etc. with stance + score + drivers), NOT scoreboard number table. Backend: Serialize derives + named sub-structs for strategy_perspectives structs, AppContext thin wrappers. Tauri: 2 thin commands. Frontend: scoreboard list eager, attribution lazy on click (recompute cost), zero investment semantics in UI.
+  Superseded by: Task TASK-209
+  Reason: 观察窗结论落地：用户高频需要四策略视角，按 ADR-108 规则定为独立 research 级面板；同时纳入 ADR-112 共享博弈层的边界说明
 

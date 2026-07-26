@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-21T02:34:04Z",
+    "rebuilt_at": "2026-07-26T16:27:17Z",
     "version": "v4"
   },
   "terms": {
@@ -19,6 +19,10 @@
       },
       {
         "id": "ADR-090",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -146,6 +150,12 @@
         "type": "adr"
       }
     ],
+    "0/1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "0d": [
       {
         "id": "ADR-058",
@@ -262,7 +272,23 @@
         "type": "adr"
       },
       {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       },
       {
@@ -315,6 +341,12 @@
     "1.53": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "1/1.5": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -442,6 +474,12 @@
         "type": "adr"
       }
     ],
+    "164s": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "19.7%。notrade(fallback": [
       {
         "id": "ADR-065",
@@ -459,6 +497,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "1已完成并验证(cargo": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -568,6 +612,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -602,6 +654,10 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "20-day": [
@@ -687,6 +743,12 @@
     "20），导致每个标的的前": [
       {
         "id": "ADR-028",
+        "type": "adr"
+      }
+    ],
+    "210→212→211（先有可观测性再做截断机制": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -795,6 +857,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -960,6 +1026,12 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      }
+    ],
+    "2（策略多视角）若不设边界，极易重新长回": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "2，避免": [
@@ -1266,6 +1338,12 @@
         "type": "adr"
       }
     ],
+    "4000）配置化": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "400px": [
       {
         "id": "ADR-040",
@@ -1367,6 +1445,10 @@
       },
       {
         "id": "ADR-091",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -1476,11 +1558,21 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "6-step": [
       {
         "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "60": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -1564,6 +1656,12 @@
         "type": "adr"
       }
     ],
+    "77s": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "8": [
       {
         "id": "ADR-041",
@@ -1591,6 +1689,14 @@
       },
       {
         "id": "ADR-059",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -1633,6 +1739,12 @@
     "86": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "87s）确认：adversarial": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -1691,6 +1803,12 @@
     "9000": [
       {
         "id": "ADR-091",
+        "type": "adr"
+      }
+    ],
+    "90天观察期形成'观察→再观察'的自我延续循环而从未闭环到参数调整。与gpt复核交叉验证后确认：v8不是做错了，而是从'收盘前决策系统'演变成了'风险研究平台'，需要能力收敛": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -1936,6 +2054,22 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "action-rs": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "action='adversarial'，复用": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
       }
     ],
     "actions": [
@@ -2078,6 +2212,10 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "adr-029": [
@@ -2188,6 +2326,18 @@
         "type": "adr"
       }
     ],
+    "adr-074": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "adr-074（v4.5": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "adr-077": [
       {
         "id": "ADR-078",
@@ -2204,6 +2354,30 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "adr-079/081）；5": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "adr-084": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "adr-084。v8": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "adr-084）：1": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "adr-090": [
@@ -2230,6 +2404,60 @@
         "type": "adr"
       }
     ],
+    "adr-106": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "adr-107": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "adr-107-extension": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "adr-107（补充而非替代）：1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "adr-112-extension": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "adr-112，不改变其注入语义（假设背景供验证或反驳": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "adr-113": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "adr-113-extension": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "adr-113：1": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "adr/task": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -2242,9 +2470,55 @@
         "type": "trap"
       }
     ],
+    "adversarial": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "adversarial-context": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "adversarial-reasoning": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "adversarial_diag": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "advice": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "advisory": [
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -2371,6 +2645,12 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "alias向后兼容+deprecated旧变体)；5)evidence": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -2627,6 +2907,10 @@
       },
       {
         "id": "ADR-097",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -2924,6 +3208,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       }
@@ -2949,6 +3237,12 @@
     "api（ssl/tls": [
       {
         "id": "ADR-031",
+        "type": "adr"
+      }
+    ],
+    "api；execution": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -3150,6 +3444,20 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "architecture-consolidation": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "architecture-freeze": [
@@ -3312,7 +3620,19 @@
         "type": "adr"
       },
       {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
         "type": "adr"
       },
       {
@@ -3382,6 +3702,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -3414,6 +3738,24 @@
         "type": "adr"
       }
     ],
+    "assistant": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "assistant，边界需要在新领域语言下重锚定。另外": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "assistant；2)cli从107命令精简到~10核心+~9隐藏+~15配置，移除25个audit命令、20个execution实验命令、4个shadow形式化命令的cli暴露(底层crate逻辑保留)；3)核心命令重命名(refresh-all→market-refresh等5个)+新增5个(daily-analysis/strategy-perspectives/evidence-status/validation-check/historical-replay)；4)executionstate语义从buynow/wait/nochase改为increase/maintain/avoid(带serde": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "assumed": [
       {
         "id": "ADR-058",
@@ -3423,6 +3765,12 @@
     "asymmetric": [
       {
         "id": "ADR-098",
+        "type": "adr"
+      }
+    ],
+    "async": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -3450,6 +3798,12 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "attachment": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "attempts": [
@@ -3513,6 +3867,24 @@
     "auditable": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "auto_inject": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "auto_inject=false": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "auto_inject（默认": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -3592,6 +3964,10 @@
       {
         "id": "ADR-047",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "backend-originated": [
@@ -3603,6 +3979,12 @@
     "backfill": [
       {
         "id": "ADR-030",
+        "type": "adr"
+      }
+    ],
+    "background": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -4038,6 +4420,14 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "branch": [
@@ -4136,6 +4526,12 @@
         "type": "adr"
       }
     ],
+    "budget": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "bug": [
       {
         "id": "ADR-059",
@@ -4181,6 +4577,12 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "build_snapshot_context": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -4288,6 +4690,12 @@
         "type": "adr"
       }
     ],
+    "buy/sell/仓位百分比，禁止修改": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "buy=0.6": [
       {
         "id": "ADR-098",
@@ -4355,6 +4763,12 @@
       },
       {
         "id": "ADR-057",
+        "type": "adr"
+      }
+    ],
+    "cache；3": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -4447,6 +4861,12 @@
     "calibration-v2": [
       {
         "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "call": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -4547,6 +4967,10 @@
     "capability": [
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -4746,6 +5170,12 @@
         "type": "adr"
       }
     ],
+    "check": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "child": [
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
@@ -4866,6 +5296,12 @@
         "type": "adr"
       }
     ],
+    "cli-reduction": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "cli/gpt/desktop/future": [
       {
         "id": "ADR-068",
@@ -4884,6 +5320,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "client": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "close": [
@@ -5086,6 +5528,12 @@
         "type": "adr"
       }
     ],
+    "complete@最新日但": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "completed": [
       {
         "id": "ADR-042",
@@ -5218,6 +5666,12 @@
         "type": "adr"
       }
     ],
+    "computes": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "computing": [
       {
         "id": "ADR-099",
@@ -5330,6 +5784,10 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
       }
     ],
     "config/fred.toml": [
@@ -5345,6 +5803,12 @@
       },
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "config/prompts.toml。严格遵循": [
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -5512,6 +5976,12 @@
         "type": "adr"
       }
     ],
+    "consolidation": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "constant": [
       {
         "id": "ADR-076",
@@ -5608,6 +6078,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "consumption": [
@@ -5652,6 +6126,12 @@
         "type": "adr"
       }
     ],
+    "contentpolicy（max_chars": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "context": [
       {
         "id": "ADR-053",
@@ -5684,11 +6164,31 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "context-injection": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "contexts": [
       {
         "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "context（auto_inject=true": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -5711,6 +6211,14 @@
       },
       {
         "id": "ADR-093",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -5744,6 +6252,12 @@
         "type": "adr"
       }
     ],
+    "conversation-memory": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "convert": [
       {
         "id": "ADR-049",
@@ -5753,6 +6267,12 @@
     "converted": [
       {
         "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "core": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -6108,6 +6628,34 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "daily-analysis": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "daily-portfolio-assistant": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "daily_report": [
@@ -6129,6 +6677,14 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -6160,6 +6716,18 @@
         "type": "adr"
       }
     ],
+    "dashboard_available": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "dashboard_latest_date；解释：explain-latest-gate。修复：完整重跑": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "dashboard_snapshot": [
       {
         "id": "ADR-066",
@@ -6189,6 +6757,14 @@
       },
       {
         "id": "ADR-066",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -6254,6 +6830,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "data-gap": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
       }
     ],
     "data-health": [
@@ -6454,6 +7036,18 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "decision-gate": [
@@ -6471,6 +7065,12 @@
     "decision-path-review": [
       {
         "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "decision-semantics": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -6492,6 +7092,22 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "decisionengine（项目历史已证明该风险存在）；2": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "decisionpolicy": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "decisions": [
@@ -6511,6 +7127,10 @@
     "decoupling": [
       {
         "id": "ADR-076",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -6536,8 +7156,18 @@
         "type": "adr"
       },
       {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "default-on": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
       }
     ],
     "defaults": [
@@ -6760,6 +7390,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "destroying": [
@@ -6823,6 +7457,16 @@
     "deterministic": [
       {
         "id": "ADR-084",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "diagnostics": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -7148,6 +7792,16 @@
       {
         "id": "ADR-097",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "domain-freeze": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "domain-modeling": [
@@ -7225,6 +7879,12 @@
     "drift": [
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "drivers/场景对比/evidence": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -7500,6 +8160,12 @@
         "type": "adr"
       }
     ],
+    "enabled/injected/level/fresh/generated_at/source": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "encoded": [
       {
         "id": "ADR-081",
@@ -7542,6 +8208,18 @@
         "type": "adr"
       }
     ],
+    "engines": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "engine，禁止前端出现任何分数到买卖语义的映射判断；2": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "english": [
       {
         "id": "ADR-041",
@@ -7563,6 +8241,12 @@
     "enough": [
       {
         "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "enrichment": [
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -7667,6 +8351,16 @@
       },
       {
         "id": "ADR-070",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "environmentsnapshot（环境分解层）；3": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -7928,6 +8622,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -8005,6 +8707,18 @@
     "evidencetrace/evidencefunnel": [
       {
         "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "evidence。后端不打包超级": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "evidence（证据单元，含": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -8114,6 +8828,18 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "execution-platform": [
@@ -8178,6 +8904,18 @@
         "type": "adr"
       }
     ],
+    "executionresultspanel": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "executionstate": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "executionstatistics": [
       {
         "id": "ADR-093",
@@ -8213,6 +8951,10 @@
       },
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-105",
         "type": "adr"
       },
       {
@@ -8330,11 +9072,33 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "explanation-layer": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "explanations": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "explanation（markdown": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "explanation，llm": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -8412,6 +9176,12 @@
         "type": "adr"
       }
     ],
+    "exposure（暴露": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "extension": [
       {
         "id": "ADR-070",
@@ -8421,6 +9191,12 @@
     "external": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "extra": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -8468,6 +9244,12 @@
         "type": "adr"
       }
     ],
+    "fact": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "factor": [
       {
         "id": "ADR-055",
@@ -8503,6 +9285,10 @@
     "facts": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -8740,6 +9526,10 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "fields": [
@@ -8798,6 +9588,12 @@
         "type": "adr"
       }
     ],
+    "final_score/signal_label/portfolio_decision；4": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "find_cluster": [
       {
         "id": "ADR-072",
@@ -8815,6 +9611,12 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "firewall/horizon": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -9068,6 +9870,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -9280,6 +10086,10 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "four-layer": [
@@ -9340,6 +10150,14 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "frequency": [
@@ -9350,6 +10168,12 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      }
+    ],
+    "freshest_market_date": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "from": [
@@ -9442,6 +10266,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
       },
@@ -9485,6 +10313,14 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -9557,6 +10393,24 @@
       },
       {
         "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "full|summary|none": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -9678,11 +10532,25 @@
       {
         "id": "ADR-097",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "gated": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "gate作为第一步。phase": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -9774,6 +10642,12 @@
         "type": "adr"
       }
     ],
+    "gpt": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "grandfathered": [
       {
         "id": "ADR-081",
@@ -9857,6 +10731,12 @@
     "gt-predictor-separation": [
       {
         "id": "ADR-053",
+        "type": "adr"
+      }
+    ],
+    "guard": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -10140,6 +11020,10 @@
       {
         "id": "ADR-048",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "hero__actions": [
@@ -10320,6 +11204,12 @@
         "type": "adr"
       }
     ],
+    "horizon/role": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "hotfix": [
       {
         "id": "ADR-076",
@@ -10380,6 +11270,12 @@
         "type": "adr"
       }
     ],
+    "http": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "human-readable": [
       {
         "id": "ADR-083",
@@ -10389,6 +11285,18 @@
     "hybrid": [
       {
         "id": "ADR-041",
+        "type": "adr"
+      }
+    ],
+    "hypothesis": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "hypothesis-background": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -10514,9 +11422,21 @@
         "type": "trap"
       }
     ],
+    "if(score>70": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "if-else": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "if-let": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -10768,6 +11688,12 @@
         "type": "trap"
       }
     ],
+    "increase/maintain/reduce/avoid/skip）、strategyperspective（四策略分数+场景对比+归因）、llm": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "incremental": [
       {
         "id": "ADR-091",
@@ -10862,6 +11788,12 @@
         "type": "adr"
       }
     ],
+    "ingest": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "ingest-daily": [
       {
         "id": "ADR-030",
@@ -10881,6 +11813,22 @@
       },
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "injection": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "injectionlevel（compact=结构化摘要/standard=默认结构化正文/full=完整研究文本）与": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -10992,6 +11940,22 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "integrity+signals+portfolio": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "integrity+validation+registry": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "interdependent": [
@@ -11038,11 +12002,21 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "interpretation": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "interpretation（前次解读），绝不能作为": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -11157,6 +12131,10 @@
     "investment": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -11550,6 +12528,12 @@
         "type": "adr"
       }
     ],
+    "kill": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "kind": [
       {
         "id": "ADR-083",
@@ -11646,6 +12630,12 @@
         "type": "adr"
       }
     ],
+    "latest": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "launch": [
       {
         "id": "ADR-060",
@@ -11723,6 +12713,10 @@
       },
       {
         "id": "ADR-094",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -11824,6 +12818,18 @@
         "type": "adr"
       }
     ],
+    "level": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "level/policy": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "levels": [
       {
         "id": "ADR-070",
@@ -11841,6 +12847,16 @@
       },
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "library）将": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -12012,6 +13028,44 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "llm-analyze，不嵌入）；(c": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "llm-assisted": [
@@ -12024,6 +13078,10 @@
       {
         "id": "ADR-082",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "llm-context": [
@@ -12032,9 +13090,33 @@
         "type": "adr"
       }
     ],
+    "llm-history，失败静默、绝不阻塞或失败": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "llm.adversarial": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "llm.adversarial.inject": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "llm.defaults": [
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "llm_history": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -12454,6 +13536,12 @@
         "type": "adr"
       }
     ],
+    "marked": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "market": [
       {
         "id": "ADR-052",
@@ -12494,6 +13582,10 @@
       {
         "id": "ADR-103",
         "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
       }
     ],
     "market-evolution": [
@@ -12512,6 +13604,54 @@
         "type": "adr"
       }
     ],
+    "market-microstructure": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "market-refresh": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "market-refresh——要么后台跑要么给足": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "market-refresh（增量）即可恢复。预防：绝不用短": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "market-refresh；3": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "market-regime": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "market-state": [
       {
         "id": "ADR-053",
@@ -12527,6 +13667,26 @@
     "market-store/agents.md": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "market_adversarial_lens": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "market_adversarial_lens（label": [
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -12550,6 +13710,12 @@
         "type": "adr"
       }
     ],
+    "market_story/portfolio_review/risk_view/devils_advocate/short_term_trader/long_term_allocator=full，explain_decision/preclose_review=summary，market_adversarial_lens=none（代码硬编码递归防护）。4": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "marketfingerprint": [
       {
         "id": "ADR-071",
@@ -12570,9 +13736,21 @@
         "type": "adr"
       }
     ],
+    "marketregimesnapshot（market": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "markets": [
       {
         "id": "ADR-055",
+        "type": "adr"
+      }
+    ],
+    "marketstate": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -12585,6 +13763,12 @@
     "marketstateregime": [
       {
         "id": "ADR-056",
+        "type": "adr"
+      }
+    ],
+    "marketstate{trend,breadth,risk,liquidity": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -12627,6 +13811,18 @@
     "max=50": [
       {
         "id": "ADR-059",
+        "type": "adr"
+      }
+    ],
+    "max_chars": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "max_chars（默认": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -12822,6 +14018,16 @@
         "type": "adr"
       }
     ],
+    "microstructure": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "might": [
       {
         "id": "ADR-052",
@@ -12980,6 +14186,14 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "modeling": [
@@ -12989,6 +14203,12 @@
       },
       {
         "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "model提升为系统一级资产；6)daily-analysis集成integrity": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -13047,6 +14267,12 @@
     "momentumexpansion": [
       {
         "id": "ADR-083",
+        "type": "adr"
+      }
+    ],
+    "momentumright": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -13167,6 +14393,12 @@
     "mvp": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "n/a。bottom_rotation": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -13330,6 +14562,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -13448,6 +14688,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "no-domain-computation": [
@@ -13469,6 +14713,18 @@
     "non-negotiable": [
       {
         "id": "ADR-069",
+        "type": "adr"
+      }
+    ],
+    "none": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "none/compact/standard/full（standard": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -13636,6 +14892,18 @@
         "type": "adr"
       }
     ],
+    "objects": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "observable": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "observation": [
       {
         "id": "ADR-053",
@@ -13675,6 +14943,16 @@
       },
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "observation-window": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -13918,6 +15196,12 @@
         "type": "adr"
       }
     ],
+    "operating": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "opportunity": [
       {
         "id": "ADR-098",
@@ -14066,6 +15350,10 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "oracle-reviewed": [
@@ -14097,6 +15385,12 @@
     "oranges": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "original_chars/final_chars/truncated（符合": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -14252,6 +15546,12 @@
         "type": "adr"
       }
     ],
+    "override、portfolio": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "overweight": [
       {
         "id": "ADR-090",
@@ -14261,6 +15561,12 @@
     "owning": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "owns": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -14288,6 +15594,12 @@
         "type": "adr"
       }
     ],
+    "p1": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "p1，用确定性规则将": [
       {
         "id": "ADR-050",
@@ -14303,6 +15615,18 @@
     "p2，只做聚合不做创作。4": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "p3": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "p4。本": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -14354,6 +15678,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "panel": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "panel-border": [
@@ -14448,6 +15778,10 @@
       {
         "id": "ADR-082",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "patterns": [
@@ -14504,6 +15838,12 @@
         "type": "trap"
       }
     ],
+    "per-persona": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "per-record": [
       {
         "id": "ADR-096",
@@ -14556,6 +15896,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "performs": [
@@ -14590,9 +15934,27 @@
         "type": "adr"
       }
     ],
+    "persona": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "perspective": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -14688,6 +16050,28 @@
       {
         "id": "ADR-103",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "phase-2-gate": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "phase-2a": [
@@ -14701,6 +16085,12 @@
       },
       {
         "id": "ADR-094",
+        "type": "adr"
+      }
+    ],
+    "phase-3-gate": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -14766,6 +16156,12 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      }
+    ],
+    "pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "pivot": [
@@ -14878,11 +16274,33 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "platform改为daily": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "platform，rv1": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
       }
     ],
     "plus": [
       {
         "id": "ADR-072",
+        "type": "adr"
+      }
+    ],
+    "policy": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -14905,6 +16323,44 @@
     "portfolio": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "portfolio-decision": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "portfolio_review": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "portfoliodecision（组合姿态：increase/maintain/reduce/avoid）。明确禁令：(a": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -14937,6 +16393,12 @@
     "posture": [
       {
         "id": "ADR-052",
+        "type": "adr"
+      }
+    ],
+    "posture，llm": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -15060,6 +16522,12 @@
         "type": "adr"
       }
     ],
+    "preference": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "prefixed": [
       {
         "id": "ADR-081",
@@ -15088,6 +16556,18 @@
         "type": "adr"
       }
     ],
+    "preparation": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "preparation≠injection": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "present": [
       {
         "id": "ADR-049",
@@ -15103,6 +16583,12 @@
     "presentation-business": [
       {
         "id": "ADR-068",
+        "type": "adr"
+      }
+    ],
+    "present）。environment": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -15139,6 +16625,20 @@
     "previous": [
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "prewarm": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -15250,6 +16750,10 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "production-change": [
@@ -15293,6 +16797,58 @@
     "projection": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "projection-boundary": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "prompt": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "prompt-engineering": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "prompt-governance": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "prompt-level": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "prompts.toml": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -15341,6 +16897,12 @@
     "proven": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "provenance": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -15668,6 +17230,10 @@
       {
         "id": "ADR-063",
         "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
       }
     ],
     "real": [
@@ -15694,11 +17260,19 @@
       {
         "id": "ADR-103",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "reason": [
       {
         "id": "ADR-083",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -15900,6 +17474,12 @@
         "type": "adr"
       }
     ],
+    "refinements": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "reflect": [
       {
         "id": "ADR-052",
@@ -15996,6 +17576,12 @@
         "type": "adr"
       }
     ],
+    "regime+environment": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "regime-attribution": [
       {
         "id": "ADR-078",
@@ -16017,6 +17603,12 @@
     "regime/breadth": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "regime_label/environment_label/breadth_state/strategy_state/top_rotation/top_signals。6": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -16167,6 +17759,12 @@
     "renamed": [
       {
         "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "render": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -16496,6 +18094,14 @@
         "type": "adr"
       },
       {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -16584,6 +18190,12 @@
         "type": "adr"
       }
     ],
+    "research/decision": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "research_context": [
       {
         "id": "ADR-066",
@@ -16665,6 +18277,10 @@
     "researchsnapshot": [
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -16886,11 +18502,21 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "reviews": [
       {
         "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "right": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -17098,6 +18724,12 @@
         "type": "adr"
       }
     ],
+    "role": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
     "root": [
       {
         "id": "ADR-051",
@@ -17214,6 +18846,12 @@
         "type": "adr"
       }
     ],
+    "rs": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "rs_20": [
       {
         "id": "ADR-028",
@@ -17279,6 +18917,56 @@
     "rust": [
       {
         "id": "ADR-044",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "rv1": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -17366,6 +19054,10 @@
       {
         "id": "ADR-058",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "scope-aware": [
@@ -17394,6 +19086,12 @@
         "type": "adr"
       }
     ],
+    "scoreboard": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "scores": [
       {
         "id": "ADR-053",
@@ -17405,6 +19103,12 @@
       },
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "score、组合策略权重、解释": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -17447,6 +19151,14 @@
     "search": [
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -17620,6 +19332,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "sensitivity": [
@@ -17786,6 +19502,16 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "shared-layer": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
       }
     ],
     "sharing": [
@@ -17850,6 +19576,12 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "shell": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "shifted": [
@@ -18000,6 +19732,10 @@
       {
         "id": "ADR-028",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "signal/condition": [
@@ -18025,6 +19761,10 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -18208,6 +19948,16 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "snapshot.environment": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "snapshots": [
@@ -18258,6 +20008,10 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
       }
     ],
     "sources": [
@@ -18276,6 +20030,12 @@
       {
         "id": "",
         "type": "trap"
+      }
+    ],
+    "spawn": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
       }
     ],
     "split": [
@@ -18419,6 +20179,16 @@
     "standard": [
       {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "standard/full": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -18704,6 +20474,46 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "strategy-engine": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "strategy-perspectives": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectives": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel（人格卡片": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "strategyperspectivespanel（人格视角）保持分离。markdown": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
       }
     ],
     "strategystate": [
@@ -18876,6 +20686,12 @@
         "type": "adr"
       }
     ],
+    "summary": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "superseded": [
       {
         "id": "ADR-053",
@@ -18988,6 +20804,10 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "symbols": [
@@ -19046,6 +20866,16 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "system/context": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "systematic": [
@@ -19076,9 +20906,21 @@
         "type": "adr"
       }
     ],
+    "tab": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "tab：分析结论": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "tab；4": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -19236,6 +21078,30 @@
         "type": "trap"
       }
     ],
+    "task-201": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "task-202": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "task-208": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "task-210→212→211；7": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "task_lookup": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -19299,6 +21165,12 @@
     "temperature/max_tokens/seed": [
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "template，不建立后端搜索基础设施。引导词格式：'如果模型支持网络搜索，请检索以下公开信息...否则明确声明无法获取并仅基于系统数据分析'。不新增": [
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -19764,6 +21636,18 @@
         "type": "adr"
       }
     ],
+    "tiered": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "tiered-injection": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "time": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -19774,6 +21658,12 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      }
+    ],
+    "timeout": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "to": [
@@ -19898,6 +21788,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -19935,6 +21829,10 @@
     "token": [
       {
         "id": "ADR-035",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -20018,6 +21916,12 @@
         "type": "trap"
       }
     ],
+    "top-5": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "top-right": [
       {
         "id": "ADR-041",
@@ -20025,6 +21929,12 @@
       },
       {
         "id": "ADR-042",
+        "type": "adr"
+      }
+    ],
+    "top_rotation": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -20250,6 +22160,22 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "truncate_strategy=paragraph_boundary）解耦为两个独立概念，policy": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "truncated": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
       }
     ],
     "trust": [
@@ -20412,6 +22338,14 @@
       {
         "id": "ADR-066",
         "type": "adr"
+      },
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
       }
     ],
     "ui-ux": [
@@ -20431,6 +22365,12 @@
     "ui/ux": [
       {
         "id": "ADR-034",
+        "type": "adr"
+      }
+    ],
+    "ui、llm": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -20475,6 +22415,12 @@
       },
       {
         "id": "ADR-097",
+        "type": "adr"
+      }
+    ],
+    "understanding": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -20639,6 +22585,12 @@
     "uptrend": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "usage": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -20866,11 +22818,21 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
       }
     ],
     "v6/v7": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "v6→v8": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -21028,8 +22990,22 @@
         "type": "adr"
       },
       {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      }
+    ],
+    "v8。因此需要在": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
       }
     ],
     "valid": [
@@ -21095,6 +23071,12 @@
     "valuable": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "valueleft": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -21240,6 +23222,12 @@
         "type": "adr"
       }
     ],
+    "vocabulary": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "volatility": [
       {
         "id": "ADR-052",
@@ -21316,6 +23304,10 @@
       {
         "id": "ADR-097",
         "type": "adr"
+      },
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "vue": [
@@ -21476,6 +23468,12 @@
         "type": "adr"
       }
     ],
+    "warm": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "warning": [
       {
         "id": "ADR-049",
@@ -21560,6 +23558,10 @@
       {
         "id": "ADR-062",
         "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
       }
     ],
     "wave-9": [
@@ -21581,6 +23583,22 @@
     "weak": [
       {
         "id": "ADR-099",
+        "type": "adr"
+      }
+    ],
+    "web": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "web-search": [
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -21752,9 +23770,21 @@
         "type": "adr"
       }
     ],
+    "window": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "windows": [
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "window（5-10": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -21852,6 +23882,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-112",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -21941,6 +23975,12 @@
     "workspacemanager": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "workspace通过": [
+      {
+        "id": "ADR-104",
         "type": "adr"
       }
     ],
@@ -22034,6 +24074,12 @@
         "type": "adr"
       }
     ],
+    "三开关为未来候选，v1": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "三级回退：toml": [
       {
         "id": "ADR-032",
@@ -22062,9 +24108,39 @@
         "type": "adr"
       }
     ],
+    "不变），llm": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "不完整导致": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "不拥有投资语义，只展示": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "不进入": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "与": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "丢弃的分数），允许消费已有策略分数/场景加权(config/scenarios.toml)/输出解释归因，禁止新策略类型、新评分指标、新": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -22086,6 +24162,12 @@
         "type": "adr"
       }
     ],
+    "严格相等）。2": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "个": [
       {
         "id": "ADR-028",
@@ -22097,6 +24179,20 @@
       },
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "个交易日）：记录": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -22112,6 +24208,12 @@
         "type": "adr"
       }
     ],
+    "个字段的格式化输出。liquidity_score": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "个属性。healthstrip/dateselector/refreshprogress/statuspanel": [
       {
         "id": "ADR-036",
@@ -22121,6 +24223,12 @@
     "个属性，但": [
       {
         "id": "ADR-036",
+        "type": "adr"
+      }
+    ],
+    "个已计算但未注入的字段（volume_expansion_pct/turnover_coverage_pct/breadth_5d_delta/bottom_rotation/regime_stale_days/liquidity_score）可显著提升": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -22194,6 +24302,12 @@
         "type": "adr"
       }
     ],
+    "中新增": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "中添加": [
       {
         "id": "ADR-027",
@@ -22230,6 +24344,24 @@
         "type": "adr"
       }
     ],
+    "为独立后续步骤（daily-analysis": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "主调用": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "之类的展示判断偷偷演变为第二": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "事件不回调": [
       {
         "id": "ADR-039",
@@ -22248,9 +24380,39 @@
         "type": "adr"
       }
     ],
+    "交付的": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "人格卡片（投资者视角）而非": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "仅允许消费三类后端事实——portfoliodecision（executionstate": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "仅占": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "仅解释该决策；5": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "仅输出": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -22310,6 +24472,18 @@
         "type": "adr"
       }
     ],
+    "会污染": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "传评分）需要演进：rv1": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "但": [
       {
         "id": "ADR-029",
@@ -22340,6 +24514,12 @@
         "type": "adr"
       }
     ],
+    "作为纯": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
     "使用": [
       {
         "id": "ADR-032",
@@ -22351,6 +24531,16 @@
       },
       {
         "id": "ADR-037",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "依赖、不新增": [
+      {
+        "id": "ADR-111",
         "type": "adr"
       }
     ],
@@ -22396,6 +24586,24 @@
         "type": "adr"
       }
     ],
+    "修旧": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "入口": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "入口暂缓": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "全宽展示": [
       {
         "id": "ADR-046",
@@ -22408,9 +24616,33 @@
         "type": "adr"
       }
     ],
+    "六字段并在桌面渲染，record": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "共享层的用户可感延迟来自冷路径的首次基础设施初始化，而非注入机制本身。用户裁定：adversarial": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "共享状态架构：reactive": [
       {
         "id": "ADR-035",
+        "type": "adr"
+      }
+    ],
+    "兼容老记录）；5": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "内": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -22432,6 +24664,12 @@
         "type": "adr"
       }
     ],
+    "写": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "冲突修复": [
       {
         "id": "ADR-033",
@@ -22441,6 +24679,28 @@
     "冻结": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "冻结了桌面前端投影边界（零计算）。rv1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "冻结四个现有对象为": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "冻结桌面前端投影边界：desktop": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -22460,6 +24720,12 @@
         "type": "adr"
       }
     ],
+    "分数），镜像": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "分析、查看结构化结果的完整链路": [
       {
         "id": "ADR-048",
@@ -22472,10 +24738,28 @@
         "type": "adr"
       }
     ],
+    "分析的唯一上下文组装函数，当前仅注入": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "分类）。进入": [
       {
         "id": "ADR-065",
         "type": "adr"
+      }
+    ],
+    "分级注入：injectlevel=full/summary/none，full": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "分钟；kill": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "列/2": [
@@ -22499,6 +24783,12 @@
     "列行移出，独占一行（4": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "刚形成": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -22526,9 +24816,27 @@
         "type": "adr"
       }
     ],
+    "刷新的数据语义，预生成必须是异步": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "前次输出在后续对话中只能标注为": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "前端": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "前端仍可能通过": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -22556,9 +24864,33 @@
         "type": "adr"
       }
     ],
+    "前置": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "前置失败静默降级，绝不阻塞主调用；前置与主调用共享同一": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "前置调用并落盘": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "加宽至": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "加解释入口、strategyperspective": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -22575,6 +24907,12 @@
     "加载性能瓶颈：`available_dates_ms": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "动工前冻结领域模型": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -22596,6 +24934,18 @@
         "type": "adr"
       }
     ],
+    "单开关）；4": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "单次覆盖。5": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "占": [
       {
         "id": "ADR-065",
@@ -22611,6 +24961,12 @@
     "卡片内，与": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "原始描述（portfolio-decision": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -22672,6 +25028,12 @@
         "type": "adr"
       }
     ],
+    "只保持": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "只同步了": [
       {
         "id": "ADR-036",
@@ -22684,6 +25046,12 @@
         "type": "adr"
       }
     ],
+    "可接收已计算事实（策略分数/归因": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "右侧": [
       {
         "id": "ADR-046",
@@ -22693,6 +25061,12 @@
     "各自独占一行": [
       {
         "id": "ADR-040",
+        "type": "adr"
+      }
+    ],
+    "各自重复推理博弈结构，token": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -22714,9 +25088,27 @@
         "type": "adr"
       }
     ],
+    "同构的市场状态抽象；(b": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "同模式），含": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "同步": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "同步等待": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -22732,15 +25124,39 @@
         "type": "adr"
       }
     ],
+    "名（不给": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "后": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "后备": [
       {
         "id": "ADR-038",
         "type": "adr"
       }
     ],
+    "后必须跑": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "后执行。回填后": [
       {
         "id": "ADR-030",
+        "type": "adr"
+      }
+    ],
+    "后端三阶段完成后进行桌面前端适配。oracle": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -22751,6 +25167,18 @@
       },
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "含": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "含'证据优先'约束（禁止猜测资金行为）和'反事实检查'（如果主要买方消失，结构是否维持）。template": [
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -22842,6 +25270,24 @@
         "type": "adr"
       }
     ],
+    "回退。检测：pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "回退到更早日期；llm-analyze": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "回避），这要求": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "在": [
       {
         "id": "ADR-027",
@@ -22858,6 +25304,14 @@
       {
         "id": "ADR-048",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
       }
     ],
     "在所有状态变更点调用同步函数": [
@@ -22869,6 +25323,18 @@
     "在状态变更时调用": [
       {
         "id": "ADR-035",
+        "type": "adr"
+      }
+    ],
+    "在管线最右侧，永远不在中间；2": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "在组装": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -22890,9 +25356,31 @@
         "type": "adr"
       }
     ],
+    "基础设施。结构化数据缺口（融资余额/etf": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
     "基础设施接线历史数据验证。2": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "增加": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "复核": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -22932,6 +25420,18 @@
         "type": "adr"
       }
     ],
+    "复核曾建议新建": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "复用降为": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "天": [
       {
         "id": "ADR-028",
@@ -22960,6 +25460,12 @@
         "type": "adr"
       }
     ],
+    "头部标注": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "子句导致双表全扫描": [
       {
         "id": "ADR-027",
@@ -22969,6 +25475,12 @@
     "子句，避免双表全扫描；2": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "字段": [
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -22984,6 +25496,30 @@
         "type": "adr"
       }
     ],
+    "字段的诊断是黑盒。另确定": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "字段（serde": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "字段（stale/persona_excluded/disabled/no_api_key/persona_missing": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "存储，新鲜度=report_date": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "存量回填命令为": [
       {
         "id": "ADR-030",
@@ -22996,9 +25532,21 @@
         "type": "adr"
       }
     ],
+    "完成后，系统处于最适合冻结领域模型的位置。gpt": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "完整同步架构：10": [
       {
         "id": "ADR-036",
+        "type": "adr"
+      }
+    ],
+    "完整流程": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -23014,15 +25562,39 @@
         "type": "adr"
       }
     ],
+    "实测（冷路径": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "实现": [
       {
         "id": "ADR-037",
         "type": "adr"
       }
     ],
+    "实跑观察": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "实际操作的完整日常闭环，验证闭环价值优先于继续增加": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "审计数据：620个交易日": [
       {
         "id": "ADR-065",
+        "type": "adr"
+      }
+    ],
+    "审计确认": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23053,6 +25625,28 @@
     "对": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "对市场微观结构的感知能力": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "对比": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "对话记忆边界：llm": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23110,6 +25704,18 @@
         "type": "adr"
       }
     ],
+    "层缓存失效、分析日期静默回退": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "层）；2": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "属性全覆盖": [
       {
         "id": "ADR-036",
@@ -23128,9 +25734,39 @@
         "type": "adr"
       }
     ],
+    "已从实验性能力进入基础认知设施阶段，它是": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "已支持": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "已覆盖同维度，新建抽象是": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "已计算但被": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "已重定位为": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "市场博弈视角）到": [
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -23164,6 +25800,36 @@
         "type": "adr"
       }
     ],
+    "序列化变更导致前端分组静默失效，且需防止前端把多个认知层揉成单一大盘页面或演变为第二套": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "库并启用安全配置。实施路线：phase": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "引导词尝试补偿，但标注为'如果无法获取请说明": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "引导词嵌入": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "引导词（纯": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
     "引擎（openai": [
       {
         "id": "ADR-048",
@@ -23178,6 +25844,12 @@
       {
         "id": "ADR-033",
         "type": "adr"
+      }
+    ],
+    "强杀": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "当": [
@@ -23204,6 +25876,42 @@
         "type": "adr"
       }
     ],
+    "总开关）；2": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "懒加载、不批量预取": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "成本可控（max_chars+cache": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "或": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "或任何与": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "截断产生": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "所有阈值和状态转移逻辑。仅允许实现层": [
       {
         "id": "ADR-065",
@@ -23214,6 +25922,10 @@
       {
         "id": "ADR-026",
         "type": "adr"
+      },
+      {
+        "id": "ADR-104",
+        "type": "adr"
       }
     ],
     "执行详情": [
@@ -23222,9 +25934,33 @@
         "type": "adr"
       }
     ],
+    "执行顺序": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "扩充为": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "扩展": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-114",
         "type": "adr"
       }
     ],
@@ -23234,9 +25970,27 @@
         "type": "adr"
       }
     ],
+    "批准后用户复审提出三点修订：1": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "把自己的旧结论当事实自我强化；6": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "报告同步**：`render_markdown_report": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "抽象，但经二次审计确认这违背减法原则——marketregimesnapshot+environmentsnapshot": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -23276,15 +26030,45 @@
         "type": "adr"
       }
     ],
+    "提交前完成以避免迁移；3": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "提供尺寸保护但等级不由截断定义；2": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "摘要/integrity": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "改为": [
       {
         "id": "ADR-046",
         "type": "adr"
       }
     ],
+    "放入决策路径，违反": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "政策**：所有从": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "数字表是确认的设计方向；attribution": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23312,6 +26096,18 @@
         "type": "adr"
       }
     ],
+    "数据检查类": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "数据流固定为": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "数据源短期内无法恢复；2": [
       {
         "id": "ADR-029",
@@ -23328,6 +26124,18 @@
         "type": "adr"
       }
     ],
+    "文本，无后端基础设施": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "新增文件": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
     "方向：保持暗色主题，优化布局，简约风格，最大化空间利用": [
       {
         "id": "ADR-034",
@@ -23338,6 +26146,16 @@
       {
         "id": "ADR-029",
         "type": "adr"
+      },
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "无法推进，dashboard_latest_date": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "无法清理": [
@@ -23349,6 +26167,30 @@
     "日期查询性能优化（oracle": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "时发现": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "时按": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "时显示": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "时确保当日": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -23370,6 +26212,24 @@
         "type": "adr"
       }
     ],
+    "映射，cli": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "是": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "是独立": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "是衍生计算指数，非成分股指数）。测试了": [
       {
         "id": "ADR-031",
@@ -23380,6 +26240,12 @@
       {
         "id": "ADR-028",
         "type": "adr"
+      }
+    ],
+    "显示所有数据阶段": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "智能分析面板集成（llm": [
@@ -23400,6 +26266,12 @@
         "type": "adr"
       }
     ],
+    "替代硬编码": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "未并排；3": [
       {
         "id": "ADR-046",
@@ -23412,9 +26284,21 @@
         "type": "adr"
       }
     ],
+    "本质为": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "术语不完整（19个）；2": [
       {
         "id": "ADR-026",
+        "type": "adr"
+      }
+    ],
+    "机制解释类": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -23448,9 +26332,27 @@
         "type": "adr"
       }
     ],
+    "标签由确定性代码产出（v5": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "标识，前端渲染黄色警告横幅，避免误导操作者。6": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "校准后暴露出与用户真实场景的错位：用户的真实交易场景是场外基金收盘决策(加仓/持有/减仓/等待)，不是订单执行。107个cli命令中用户日常只用3-5个；25个audit命令和20个execution实验命令零使用；策略引擎四策略加权成一个平庸平均分；shadow": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "核心领域模型（冻结≠新建）：1": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -23466,15 +26368,39 @@
         "type": "adr"
       }
     ],
+    "根因：被": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "格式": [
       {
         "id": "ADR-047",
         "type": "adr"
       }
     ],
+    "格式。函数长度控制在": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "概念拆分（enabled/auto_prepare/auto_inject": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "模式。5": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "模式下": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -23496,10 +26422,22 @@
         "type": "adr"
       }
     ],
+    "段落边界截断版），改名在": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "每个属性有对应的": [
       {
         "id": "ADR-036",
         "type": "adr"
+      }
+    ],
+    "每次调用重新生成（缓存永不命中": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "永远显示空状态": [
@@ -23508,9 +26446,39 @@
         "type": "adr"
       }
     ],
+    "注入全文、summary": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "注入摘要；默认映射": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "注入级别词表改为": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "注入语义为假设背景：段落头部明确'这是假设性背景，不是事实证据，不是结论，你的职责是结合系统数据验证或反驳其中的假设'。3": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "注册实际实现": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "浪费且结论可能不一致。博弈分析回答'当前价格由谁决定'这一与视角无关的基础问题，属于": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ],
@@ -23543,6 +26511,12 @@
     "添加缺失的": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "渲染采用": [
+      {
+        "id": "ADR-107",
         "type": "adr"
       }
     ],
@@ -23582,6 +26556,12 @@
         "type": "adr"
       }
     ],
+    "状态）作为解释输入——这是对": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "独占一行，限制高度": [
       {
         "id": "ADR-040",
@@ -23594,6 +26574,12 @@
         "type": "adr"
       }
     ],
+    "独立展示层，三个语义层不合并；signalspanel（信号归因）与": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
     "环境变量插值方案：1": [
       {
         "id": "ADR-032",
@@ -23601,6 +26587,24 @@
       },
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "生成而非首次请求时生成": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "生成落盘，source=market-refresh，失败静默降级，尊重": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "用": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23626,6 +26630,12 @@
         "type": "adr"
       }
     ],
+    "用户可见（diag": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "用户在实际使用中发现": [
       {
         "id": "ADR-046",
@@ -23644,6 +26654,24 @@
         "type": "adr"
       }
     ],
+    "用途是解释多策略矛盾点（为什么": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "申赎/持仓成本）也不在当前数据管线中": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "留下缺标的（30/31），daily_bar": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "的": [
       {
         "id": "ADR-029",
@@ -23656,6 +26684,20 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      },
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "的'预期差'维度需要市场叙事信息（政策动态/行业新闻/板块共识），但系统无新闻数据源、无": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
       }
     ],
     "的信号行现在也输出": [
@@ -23664,9 +26706,63 @@
         "type": "adr"
       }
     ],
+    "的刷新在": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "的基础设施能力。用户裁定：启用语义为'所有人默认获得市场竞争假设背景'，而非'自动接受": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "的复杂度老路；3": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "的教训表明：llm": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "的旧路径保留作为": [
       {
         "id": "ADR-038",
+        "type": "adr"
+      }
+    ],
+    "的演进：分数作为事实证据可传，决策权不传；3": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "的真实使用频率与是否改变操作，观察结果决定": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "的认知附件，应随": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "的语义绑定不利于演进——截断是保护机制，不是等级；2": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "的语境是": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23691,6 +26787,18 @@
     "研判": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "研究层不给": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "禁止新建": [
+      {
+        "id": "ADR-105",
         "type": "adr"
       }
     ],
@@ -23750,6 +26858,12 @@
         "type": "adr"
       }
     ],
+    "等）；6": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
     "策略：保留全局": [
       {
         "id": "ADR-034",
@@ -23762,9 +26876,33 @@
         "type": "adr"
       }
     ],
+    "类型（除非重走": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
     "系统是否正确": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "系统现有": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
+    "级系统性流动性，always": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "级页面），首页保持单一决策动线；3": [
+      {
+        "id": "ADR-108",
         "type": "adr"
       }
     ],
@@ -23816,6 +26954,18 @@
         "type": "adr"
       }
     ],
+    "经": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "结论'；且不同职责的": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "统一宽度公式：#app": [
       {
         "id": "ADR-040",
@@ -23840,9 +26990,27 @@
         "type": "adr"
       }
     ],
+    "维分析框架": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
     "耗时": [
       {
         "id": "ADR-027",
+        "type": "adr"
+      }
+    ],
+    "能力收敛(v8→v8.1)：1)系统定位从execution": [
+      {
+        "id": "ADR-104",
+        "type": "adr"
+      }
+    ],
+    "能看到已计算的分数与归因作为事实输入": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23852,9 +27020,43 @@
         "type": "adr"
       }
     ],
+    "膨胀。同时": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "膨胀病理的重演（一个概念不消失而是被包装成另一个概念）。同时": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "若放入": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "落地后复盘发现两个需要补强的风险：1": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "落盘": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
     "行": [
       {
         "id": "ADR-034",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -23864,15 +27066,51 @@
         "type": "adr"
       }
     ],
+    "衍生字段（volume_expansion_pct/turnover_coverage_pct/breadth_5d_delta）通过": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
+    "被": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
+    "覆盖叙事/归因/风控/质疑/执行/组合视角，但缺少'市场参与者博弈结构'维度——谁在交易、谁被迫交易、当前价格由主动资金还是被动资金决定。徐翔技术翔时期的博弈框架（资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期）提供了可抽象的分析脚手架": [
+      {
+        "id": "ADR-109",
+        "type": "adr"
+      }
+    ],
     "观察期": [
       {
         "id": "ADR-065",
         "type": "adr"
       }
     ],
+    "规则引擎、llm": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "视觉重复（plain": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "解读）。禁止前端自行计算": [
+      {
+        "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "警告，不依赖人工；4": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -23888,9 +27126,27 @@
         "type": "adr"
       }
     ],
+    "记录存在（缺失则先跑": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "设立": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
     "设置为": [
       {
         "id": "ADR-029",
+        "type": "adr"
+      }
+    ],
+    "访问，none": [
+      {
+        "id": "ADR-110",
         "type": "adr"
       }
     ],
@@ -23903,6 +27159,18 @@
     "试点组件（非": [
       {
         "id": "ADR-034",
+        "type": "adr"
+      }
+    ],
+    "语义）；4": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "语境重锚定": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23930,9 +27198,57 @@
         "type": "adr"
       }
     ],
+    "超时强杀后，pipeline-dates": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "轮动排行榜因篇幅限制采用悬浮样式显示中文名称。实施过程中引发": [
       {
         "id": "ADR-047",
+        "type": "adr"
+      }
+    ],
+    "输入，防止": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "输出——职责划分为": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "输出仅限解释文本，禁止生成": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "输出契约永久固定为": [
+      {
+        "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "边界（rv1": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "边界：分析人格模板只允许携带视角指令（关注什么/以什么身份说话），禁止包含阈值、打分规则、if/then": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "边界：只解释系统已计算的事实，不输出评分/排名/buy-sell-hold/仓位百分比/分类标签。system": [
+      {
+        "id": "ADR-109",
         "type": "adr"
       }
     ],
@@ -23970,6 +27286,18 @@
         "type": "adr"
       }
     ],
+    "还是降级为": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "进入决策路径会产生决策黑盒、prompt": [
+      {
+        "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
     "进行框架迁移": [
       {
         "id": "ADR-034",
@@ -23979,6 +27307,12 @@
     "连接所有组件事件处理器": [
       {
         "id": "ADR-036",
+        "type": "adr"
+      }
+    ],
+    "退化为第二个": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -23997,6 +27331,12 @@
     "通过": [
       {
         "id": "ADR-039",
+        "type": "adr"
+      }
+    ],
+    "逻辑——防止": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -24054,6 +27394,12 @@
         "type": "adr"
       }
     ],
+    "配置：[llm.adversarial": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "采用": [
       {
         "id": "ADR-032",
@@ -24098,6 +27444,12 @@
         "type": "adr"
       }
     ],
+    "键。结构化数据缺口（融资/etf/成本分布）同样通过": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
     "问题：在": [
       {
         "id": "ADR-047",
@@ -24110,10 +27462,28 @@
         "type": "adr"
       }
     ],
+    "集成、不新增": [
+      {
+        "id": "ADR-111",
+        "type": "adr"
+      }
+    ],
+    "需要不同注入强度（市场叙事类": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
     "需要确认": [
       {
         "id": "ADR-031",
         "type": "adr"
+      }
+    ],
+    "静默使用旧快照且": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
       }
     ],
     "面板。oracle": [
@@ -24134,9 +27504,45 @@
         "type": "adr"
       }
     ],
+    "顶层字段（regime": [
+      {
+        "id": "ADR-110",
+        "type": "adr"
+      }
+    ],
     "项目后端已具备完整的": [
       {
         "id": "ADR-048",
+        "type": "adr"
+      }
+    ],
+    "顺序为": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "预生成": [
+      {
+        "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "预生成为异步后台任务：snapshot": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "预留": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "预算，超限段落边界截断": [
+      {
+        "id": "ADR-113",
         "type": "adr"
       }
     ],
@@ -24146,9 +27552,39 @@
         "type": "adr"
       }
     ],
+    "首页，会让首页重新堆叠市场状态/信号/策略人格/风险/llm/组合，回到": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "首页，只作为二级入口存在（signaldetailmodal": [
+      {
+        "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "验证了博弈分析的价值（adr-109），但独立": [
+      {
+        "id": "ADR-112",
+        "type": "adr"
+      }
+    ],
+    "验证数据面完整。注意症状可能首先出现在看似无关的地方（llm": [
+      {
+        "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      }
+    ],
     "验证是": [
       {
         "id": "ADR-050",
+        "type": "adr"
+      }
+    ],
+    "高分而": [
+      {
+        "id": "ADR-106",
         "type": "adr"
       }
     ],
@@ -24159,6 +27595,18 @@
       },
       {
         "id": "ADR-033",
+        "type": "adr"
+      }
+    ],
+    "默认开启的三条件：失败不影响主流程（已有": [
+      {
+        "id": "ADR-114",
+        "type": "adr"
+      }
+    ],
+    "默认开启：analyze_with_action": [
+      {
+        "id": "ADR-112",
         "type": "adr"
       }
     ]

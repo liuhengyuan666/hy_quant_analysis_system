@@ -131,3 +131,10 @@
 | **Execution Replay** | Execution Replay | V8 证据重放能力（`crates/execution-replay`），基于 ExecutionEvent 重放计算 Holding Risk / Risk Lifecycle / Decision Gate 等证据 | 执行域 |
 | **Holding Risk** | Holding Risk Bundle | 持仓风险证据族（Bundle / Calibration / Persistence），execution-replay 的核心证据之一 | 执行域 |
 | **Risk Lifecycle** | Risk Lifecycle | 风险状态生命周期状态机分析（`risk-lifecycle`），观察 HIGH_RISK 等状态的持续与切换 | 执行域 |
+| **Persona** | LLM Persona | LLM 分析视角人格（6 个内置 action + `config/prompts.toml` 自定义）；只承载视角指令，禁含阈值规则（ADR-106） | LLM集成域 |
+| **Previous Interpretation** | 前次解读 | 上一次 LLM 分析结果，自动注入下次 prompt；标注为非证据背景，永不作为证据输入（ADR-106） | LLM集成域 |
+| **LLM History** | LLM Analysis History | `workspace/llm-history/{scope}/{action}/{date}.json` 下的 LLM 分析对话存档，支撑前次解读回环 | LLM集成域 |
+| **portfolio_review** | Portfolio Review Action | LLM action：解读确定性引擎产出的组合姿态（Increase/Maintain/Reduce/Avoid），LLM 只解释不决策（ADR-106） | LLM集成域 |
+| **market_adversarial_lens** | Market Adversarial Lens | 市场博弈视角 persona（ADR-109）：从资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期 5 维解读市场博弈结构；文件 persona，含 web search 引导词（ADR-111） | LLM集成域 |
+| **Shared Adversarial Context** | 共享博弈假设背景 | ADR-112：每 scope 每日一次的博弈分析落盘 `workspace/llm-history/{scope}/adversarial/`，按 persona 分级注入各 prompt；语义为"供验证或反驳的假设"，非结论 | LLM集成域 |
+| **InjectLevel** | Inject Level (full/standard/compact/none) | ADR-113/114 注入级别：compact=record.summary 摘要 / standard=analysis_text 受 max_chars（默认 4000）保护 / full=analysis_text 受 full_max_chars（默认 12000）保护 / none=不注入；ContentPolicy 与等级解耦（ADR-114）；配置于 `[llm.adversarial.inject]`，CLI `--adversarial` 可单次覆盖 | LLM集成域 |

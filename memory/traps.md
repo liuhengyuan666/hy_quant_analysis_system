@@ -79,3 +79,11 @@ Sequence memory commits when there are dependencies: first commit new ADRs and n
 
 ### Prevention
 Avoid parallel commits for memory events that reference each other. Always commit new entities first, then update existing entities that reference them. Verify with bootstrap + task_lookup after committing interdependent state.
+
+## Trap: market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）
+
+### Context
+
+
+### Solution
+根因：被 kill 的刷新在 ingest 留下缺标的（30/31），daily_bar 不完整导致 latest gate 无法推进，dashboard_latest_date 回退。检测：pipeline-dates 对比 freshest_market_date vs dashboard_latest_date；解释：explain-latest-gate。修复：完整重跑 market-refresh（增量）即可恢复。预防：绝不用短 timeout 强杀 market-refresh——要么后台跑要么给足 20 分钟；kill 后必须跑 pipeline-dates 验证数据面完整。注意症状可能首先出现在看似无关的地方（LLM 层缓存失效、分析日期静默回退）。

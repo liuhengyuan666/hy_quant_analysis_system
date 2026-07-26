@@ -944,6 +944,7 @@ fn get_llm_status() -> Result<LlmStatus, String> {
 async fn analyze_with_llm(
     scope: Option<String>,
     action: String,
+    adversarial: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let scope = scope.unwrap_or_else(|| "global".to_string());
     let report_scope = match scope.as_str() {
@@ -951,10 +952,16 @@ async fn analyze_with_llm(
         "hk" => app_service::ReportScope::Hk,
         _ => app_service::ReportScope::Global,
     };
+    let adversarial_level = adversarial.as_deref().map(|level| match level {
+        "full" => core_domain::InjectLevel::Full,
+        "standard" => core_domain::InjectLevel::Standard,
+        "compact" => core_domain::InjectLevel::Compact,
+        _ => core_domain::InjectLevel::None,
+    });
 
     let context = AppContext::new(StorageConfig::default());
     context
-        .analyze_with_action(&action, report_scope)
+        .analyze_with_action(&action, report_scope, adversarial_level)
         .await
         .map_err(|e| e.to_string())
 }
@@ -1022,6 +1029,67 @@ async fn run_preclose_analysis(
     Ok(decisions)
 }
 
+/// RV1 strategy scoreboard: every symbol's four independent strategy scores
+/// plus scenario weightings for one date + scope. `date` is "YYYY-MM-DD";
+/// `None` resolves to the latest stored strategy_preference date.
+/// Returns `{ "date": "...", "entries": [...] }`.
+#[tauri::command]
+async fn strategy_scoreboard(
+    scope: String,
+    date: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let parsed_date = date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let parsed_scope = match scope.as_str() {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
+    let (date, entries) = tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.strategy_scoreboard(parsed_scope, parsed_date)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+    serde_json::to_value(serde_json::json!({ "date": date, "entries": entries }))
+        .map_err(|error| error.to_string())
+}
+
+/// RV1 strategy attribution detail for one symbol: stored four-strategy
+/// scores plus per-strategy attribution. Attribution is recomputed on demand
+/// from bars + indicators + regime + rotation (intentionally lazy/on-demand),
+/// so this command is heavier than `strategy_scoreboard`.
+#[tauri::command]
+async fn strategy_attribution(
+    symbol: String,
+    scope: String,
+    date: Option<String>,
+) -> Result<app_service::StrategyPerspectiveDetail, String> {
+    let parsed_date = date
+        .as_deref()
+        .map(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|error| error.to_string())?;
+    let parsed_scope = match scope.as_str() {
+        "global" => app_service::ReportScope::Global,
+        "cn" => app_service::ReportScope::Cn,
+        "hk" => app_service::ReportScope::Hk,
+        other => return Err(format!("unsupported scope: {other}")),
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let context = AppContext::new(StorageConfig::default());
+        context.strategy_attribution(&symbol, parsed_scope, parsed_date)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1050,6 +1118,8 @@ pub fn run() {
             export_llm_analysis,
             analyze_with_llm,
             run_preclose_analysis,
+            strategy_scoreboard,
+            strategy_attribution,
             check_startup_freshness,
             auto_ingest_on_startup
         ])

@@ -7,3 +7,6 @@ authors.workspace = true
 
 [dependencies]
 core-domain = { path = "../core-domain" }
+
+[dev-dependencies]
+chrono = { workspace = true }

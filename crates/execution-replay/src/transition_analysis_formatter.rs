@@ -412,7 +412,7 @@ mod horizon_tests {
         };
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: execution_engine::types::ExecutionState::Wait,
+            state: execution_engine::types::ExecutionState::Maintain,
             confidence: 0.5,
             risk: RiskLevel::Medium,
             evidences: vec![Evidence {

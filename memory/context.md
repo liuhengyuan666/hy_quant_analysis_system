@@ -1,5 +1,5 @@
 # Current Phase
-shadow_validation
+rv1_capability_consolidation
 
 # Active Tasks
 - [Todo] [TASK-000] [FROZEN] [TASK-004] P0: Regime Threshold Calibration — FROZEN. Will re-evaluate after Wave 9.

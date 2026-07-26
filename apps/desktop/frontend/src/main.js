@@ -25,10 +25,16 @@ import {
   updateStartupNotice as syncStartupNoticeToStore,
   updatePrecloseAnalyzing as syncPrecloseAnalyzingToStore,
   updateExecutionResults as syncExecutionResultsToStore,
+  updateStrategyScoreboard as syncStrategyScoreboardToStore,
+  updateStrategyScoreboardLoading as syncStrategyScoreboardLoadingToStore,
+  updateStrategyScoreboardError as syncStrategyScoreboardErrorToStore,
+  updateStrategyAttribution as syncStrategyAttributionToStore,
+  updateStrategyAttributionLoading as syncStrategyAttributionLoadingToStore,
+  updateStrategyAttributionError as syncStrategyAttributionErrorToStore,
   initEventBridge,
 } from './store.js';
 import { setLocale, setPersistCallback, i18n } from './i18n.js';
-import { llmApi } from './api/tauri.js';
+import { llmApi, strategyApi } from './api/tauri.js';
 
 // Helper to translate
 function t(key, params) {
@@ -392,7 +398,7 @@ async function runPrecloseAnalysis() {
     syncExecutionResultsToStore(decisions || []);
 
     // Count by state
-    const counts = { BUY_NOW: 0, WAIT: 0, NO_CHASE: 0, REDUCE: 0, SKIP: 0 };
+    const counts = { INCREASE: 0, MAINTAIN: 0, AVOID: 0, REDUCE: 0, SKIP: 0 };
     for (const d of decisions) {
       const state = d.state || 'SKIP';
       counts[state] = (counts[state] || 0) + 1;
@@ -400,9 +406,9 @@ async function runPrecloseAnalysis() {
 
     const summary = t('preclose.analysisComplete', {
       total: decisions.length,
-      buyNow: counts.BUY_NOW || 0,
-      wait: counts.WAIT || 0,
-      noChase: counts.NO_CHASE || 0,
+      increase: counts.INCREASE || 0,
+      maintain: counts.MAINTAIN || 0,
+      avoid: counts.AVOID || 0,
     });
 
     syncStartupNoticeToStore({
@@ -425,6 +431,46 @@ async function runPrecloseAnalysis() {
   }
 }
 
+// ── Strategy perspectives (research-level, lazy) ────────────────────────
+
+function getStrategyDate() {
+  return dashboardStore.selectedReportDate || null;
+}
+
+async function loadStrategyScoreboard() {
+  if (dashboardStore.strategyScoreboardLoading) return;
+  const activeScope = normalizeScope(dashboardStore.selectedScope);
+
+  syncStrategyScoreboardLoadingToStore(true);
+  syncStrategyScoreboardErrorToStore('');
+
+  try {
+    syncStrategyScoreboardToStore(await strategyApi.strategyScoreboard(activeScope, getStrategyDate()));
+  } catch (error) {
+    syncStrategyScoreboardToStore(null);
+    syncStrategyScoreboardErrorToStore(getErrorMessage(error));
+  } finally {
+    syncStrategyScoreboardLoadingToStore(false);
+  }
+}
+
+async function loadStrategyAttribution(symbol) {
+  if (!symbol || dashboardStore.strategyAttributionLoading) return;
+  const activeScope = normalizeScope(dashboardStore.selectedScope);
+
+  syncStrategyAttributionLoadingToStore(true);
+  syncStrategyAttributionErrorToStore('');
+
+  try {
+    syncStrategyAttributionToStore(await strategyApi.strategyAttribution(symbol, activeScope, getStrategyDate()));
+  } catch (error) {
+    syncStrategyAttributionToStore(null);
+    syncStrategyAttributionErrorToStore(getErrorMessage(error));
+  } finally {
+    syncStrategyAttributionLoadingToStore(false);
+  }
+}
+
 // ── Event bridge ────────────────────────────────────────────────────────
 
 initEventBridge({
@@ -436,6 +482,8 @@ initEventBridge({
   exportReport: () => exportReport(),
   analyzeWithLlm: (scope, action) => llmApi.analyzeWithLlm(scope, action),
   runPrecloseAnalysis: () => runPrecloseAnalysis(),
+  loadStrategyScoreboard: () => loadStrategyScoreboard(),
+  loadStrategyAttribution: (symbol) => loadStrategyAttribution(symbol),
 });
 
 // ── Startup freshness check ─────────────────────────────────────────────

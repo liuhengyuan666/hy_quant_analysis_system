@@ -25,6 +25,8 @@ export const COMMANDS = {
   setLlmApiKey: 'set_llm_api_key',
   analyzeWithLlm: 'analyze_with_llm',
   runPrecloseAnalysis: 'run_preclose_analysis',
+  strategyScoreboard: 'strategy_scoreboard',
+  strategyAttribution: 'strategy_attribution',
 };
 
 export async function tauriInvoke(command, args) {
@@ -51,8 +53,12 @@ export const refreshApi = {
 export const llmApi = {
   async getStatus() { return tauriInvoke(COMMANDS.getLlmStatus); },
 
-  async analyzeWithLlm(scope, action) {
-    return tauriInvoke(COMMANDS.analyzeWithLlm, { scope, action });
+  async analyzeWithLlm(scope, action, adversarial) {
+    const args = { scope, action };
+    if (adversarial !== undefined) {
+      args.adversarial = adversarial;
+    }
+    return tauriInvoke(COMMANDS.analyzeWithLlm, args);
   },
 
   async setLlmConfig(baseUrl, model, timeoutSecs) {
@@ -61,5 +67,15 @@ export const llmApi = {
 
   async setLlmApiKey(key) {
     return tauriInvoke(COMMANDS.setLlmApiKey, { key });
+  },
+};
+
+export const strategyApi = {
+  async strategyScoreboard(scope, date) {
+    return tauriInvoke(COMMANDS.strategyScoreboard, { scope, date });
+  },
+
+  async strategyAttribution(symbol, scope, date) {
+    return tauriInvoke(COMMANDS.strategyAttribution, { symbol, scope, date });
   },
 };

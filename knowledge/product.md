@@ -32,7 +32,8 @@
  * **[报告与展示域]**
    * 核心规则 1: Markdown报告导出（日报、LLM分析、Research Quarterly Review）
    * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
-   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径，V4.5 后仅保留 5 个固定 action 的纯 Markdown 输出）
+   * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径，纯 Markdown 输出）。RV1 现状：6 个内置 action（market_story / explain_decision / preclose_review / risk_view / devils_advocate / portfolio_review）+ `config/prompts.toml` 自定义 persona（含 market_adversarial_lens 市场博弈视角、short_term_trader、long_term_allocator）；每次分析自动落盘 `workspace/llm-history/` 并在下次分析注入"前次解读"（标注为背景，非证据）；LLM 边界由 ADR-106 冻结——只解释确定性引擎产出，不决策、不评分、不输出仓位
+    * 核心规则 3b: **共享博弈假设背景层（ADR-112，默认开启）** — 每次 LLM 分析前系统确保当日博弈分析已生成（同一 scope 同一日期只算一次，落盘 `workspace/llm-history/{scope}/adversarial/`），按 persona 分级注入（叙事/风控/组合类 standard 默认正文，机制解释类 compact 摘要，adversarial 自身 none 递归防护）；注入语义为"供验证或反驳的假设背景"，不是结论；可用 `--adversarial` 单次覆盖或 `[llm.adversarial]` 全局配置
    * 核心规则 4: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
    * 核心规则 5: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
     * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台

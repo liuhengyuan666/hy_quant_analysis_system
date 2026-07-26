@@ -39,7 +39,11 @@ pub mod core;
 pub mod dashboard;
 pub mod execution_replay;
 pub mod llm;
+pub mod llm_history;
+pub mod prompts;
 pub mod research_evidence;
+pub mod scenarios;
+pub mod strategy_perspectives;
 pub mod sync;
 pub mod trust;
 pub mod workspace;
@@ -55,6 +59,10 @@ use crate::trust::*;
 pub use core_domain::AnalysisScope as ReportScope;
 pub use report_renderer::ResearchInsight;
 pub use execution_engine::types::ExecutionDecision;
+pub use strategy_perspectives::{
+    AttributionDriverView, ScenarioScore, StrategyAttributionView, StrategyPerspectiveDetail,
+    StrategyPerspectiveEntry,
+};
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -784,6 +792,23 @@ impl<'a> market_fingerprint_engine::ForwardReturnProvider
     }
 }
 
+/// ADR-113/114: outcome of the shared adversarial ensure step — the record
+/// (if one is available for injection) plus a machine-readable reason
+/// explaining the result. Reasons:
+/// - `"injected"`         → record available (fresh cache reuse or new generation)
+/// - `"stale"`            → a record exists but report_date mismatched AND
+///                          regeneration failed
+/// - `"no_api_key"`       → no API key resolvable, pre-pass skipped
+/// - `"persona_missing"`  → `market_adversarial_lens` persona not resolvable
+/// - `"llm_error"`        → the adversarial pre-call (or LLM config) failed
+/// - `"config_error"`     → project root / config not resolvable
+/// Call-site-only reasons (not produced here): `"disabled"`,
+/// `"persona_excluded"`, `"snapshot_missing"`.
+struct AdversarialOutcome {
+    record: Option<llm_history::LlmAnalysisRecord>,
+    reason: &'static str,
+}
+
 impl AppContext {
     pub fn new(storage: StorageConfig) -> Self {
         let calendar = match StorageConfig::project_root() {
@@ -1373,6 +1398,23 @@ impl AppContext {
 
         // 刷新完成后清除缓存，确保下次加载获取最新数据
         self.clear_cache();
+
+        // ADR-113/114: async adversarial prewarm — snapshot cognition attachment.
+        // The refresh covered all standard scopes (ingest → … → signals →
+        // backtests run for GLOBAL/CN/HK), so the ready dashboard snapshot gets
+        // its adversarial hypothesis background pre-generated in a detached
+        // background thread, warming llm-history for the first llm-analyze of
+        // the day. Fire-and-forget: no await, no join, no error propagation.
+        // When the data did not advance, `ensure_adversarial_context` hits the
+        // fresh-record path and costs zero LLM calls. Only on success: a failed
+        // refresh must not spend LLM budget on a stale snapshot.
+        if success {
+            self.spawn_adversarial_prewarm(vec![
+                ReportScope::Global,
+                ReportScope::Cn,
+                ReportScope::Hk,
+            ]);
+        }
 
         Ok(RefreshPipelineSummary {
             success,
@@ -3212,6 +3254,11 @@ impl AppContext {
                     api_key: "none".to_string(),
                     config_file: None,
                 },
+                adversarial_auto_inject: true,
+                adversarial_inject: std::collections::HashMap::new(),
+                adversarial_max_chars: core_domain::default_adversarial_max_chars(),
+                adversarial_full_max_chars: core_domain::default_adversarial_full_max_chars(),
+                adversarial_truncate_strategy: core_domain::TruncateStrategy::default(),
             }
         });
 
@@ -3333,6 +3380,7 @@ impl AppContext {
                     }),
                 },
                 defaults: core_domain::DefaultsSection::default(),
+                adversarial: None,
             },
         };
 
@@ -4438,10 +4486,23 @@ impl AppContext {
     /// - "preclose_review"
     /// - "risk_view"
     /// - "devils_advocate"
+    /// RV1 Phase 3 (ADR-106): LLM Explanation Layer.
+    ///
+    /// Data flow: Deterministic Engines → Decision Fact → LLM Explanation.
+    /// The LLM receives computed facts (strategy scores, scenario contrast,
+    /// integrity status, previous interpretation) as EXPLANATION INPUT and
+    /// produces explanation text only. It never generates action labels,
+    /// position sizing, or modifies final_score / signal_label / portfolio_decision.
+    ///
+    /// ADR-112: before the main call, a shared adversarial hypothesis background
+    /// is ensured for (scope, report_date) and injected per the persona's
+    /// InjectLevel. `adversarial_override` (from CLI/Tauri) wins over config;
+    /// `None` falls back to `[llm.adversarial]` resolution.
     pub async fn analyze_with_action(
         &self,
         action: &str,
         scope: ReportScope,
+        adversarial_override: Option<core_domain::InjectLevel>,
     ) -> anyhow::Result<serde_json::Value> {
         // 1. Build snapshot context
         let snapshot = self.dashboard_snapshot_with_scope(None, scope)?;
@@ -4449,18 +4510,34 @@ impl AppContext {
             return Err(anyhow::anyhow!("No dashboard snapshot available for scope {:?}", scope));
         };
 
-        // 2. Build prompt
-        let (system_prompt, user_prompt) = research_skills::build_prompt(action, &snapshot)?;
+        // 2. Resolve persona (config/prompts.toml → built-in fallback)
+        let project_root = StorageConfig::project_root()?;
+        let prompts_file = prompts::load_prompts(&project_root);
+        let persona = prompts::resolve_persona(&prompts_file, action)?;
 
-        // 3. Call LLM
-        let resolved = self.get_resolved_llm_config(None)?;
-        let inference = research_skills::InferenceConfig {
-            temperature: resolved.temperature,
-            seed: resolved.seed,
-            max_tokens: resolved.max_tokens,
-        };
+        // 3. Compose extra context sections (computed facts as explanation input)
+        let mut extra = String::new();
+        extra.push_str(&self.build_strategy_context_section(scope));
+        extra.push_str(&self.build_integrity_context_section());
+        if action == "portfolio_review" {
+            extra.push_str(&self.build_portfolio_decision_section(scope));
+        }
+
+        // 3b. ADR-112: shared adversarial hypothesis background.
+        // Recursion guard is hardcoded — the adversarial persona never receives
+        // its own shared injection, regardless of config.
+        // ADR-113/114: the diag answers "did it work, and why not" — every
+        // not-injected outcome carries a machine-readable `reason`.
+        let resolved_cfg = self.get_resolved_llm_config(None)?;
+        // Resolve config + api_key + build ONE client for both the adversarial
+        // pre-call and the main LLM call, sharing the TCP+TLS connection (TASK-213).
         let config = self.get_llm_config()?;
-        let api_key = if let Some(ref key) = resolved.api_key {
+        let inference = research_skills::InferenceConfig {
+            temperature: resolved_cfg.temperature,
+            seed: resolved_cfg.seed,
+            max_tokens: resolved_cfg.max_tokens,
+        };
+        let api_key: Option<String> = if let Some(ref key) = resolved_cfg.api_key {
             if !key.is_empty() {
                 Some(key.clone())
             } else {
@@ -4469,14 +4546,101 @@ impl AppContext {
         } else {
             self.get_llm_api_key()?
         };
+        let llm_client = api_key.as_ref().map(|key| llm::build_llm_client(&config, key));
+        let adversarial_enabled = resolved_cfg.adversarial_auto_inject;
+        let mut adversarial_diag = serde_json::json!({
+            "enabled": adversarial_enabled,
+            "injected": false,
+            "level": "none",
+            "fresh": false,
+            "generated_at": serde_json::Value::Null,
+            "source": serde_json::Value::Null,
+            // Default: recursion guard — the adversarial persona never injects itself.
+            "reason": "persona_excluded",
+        });
+        if action != "market_adversarial_lens" {
+            let configured = resolved_cfg
+                .adversarial_inject
+                .get(action)
+                .copied()
+                .unwrap_or(core_domain::InjectLevel::Standard);
+            // CLI/Tauri 显式指定优先；未指定时遵循 auto_inject 总开关
+            let effective = match adversarial_override {
+                Some(level) => level,
+                None if adversarial_enabled => configured,
+                None => core_domain::InjectLevel::None,
+            };
+            if effective == core_domain::InjectLevel::None {
+                let reason = if !adversarial_enabled && adversarial_override.is_none() {
+                    "disabled"
+                } else {
+                    "persona_excluded"
+                };
+                adversarial_diag["reason"] = serde_json::json!(reason);
+            } else {
+                let outcome = self
+                    .ensure_adversarial_context(scope, &snapshot, "on-demand", llm_client.as_ref())
+                    .await;
+                if let Some(record) = outcome.record {
+                    let fresh = record.report_date == snapshot.report_date.to_string();
+                    // ADR-114: ContentPolicy (max_chars / full_max_chars) is
+                    // independent from the InjectionLevel granularity choice.
+                    let section_result = llm_history::adversarial_context_section(
+                        &record,
+                        effective.as_str(),
+                        resolved_cfg.adversarial_max_chars,
+                        resolved_cfg.adversarial_full_max_chars,
+                    );
+                    extra.push_str(&section_result.section);
+                    adversarial_diag = serde_json::json!({
+                        "enabled": adversarial_enabled,
+                        "injected": true,
+                        "level": effective.as_str(),
+                        "fresh": fresh,
+                        "generated_at": record.created_at,
+                        "source": record.source,
+                        "reason": outcome.reason,
+                        "original_chars": section_result.original_chars,
+                        "final_chars": section_result.final_chars,
+                        "truncated": section_result.truncated,
+                    });
+                } else {
+                    adversarial_diag = serde_json::json!({
+                        "enabled": adversarial_enabled,
+                        "injected": false,
+                        "level": effective.as_str(),
+                        "fresh": false,
+                        "generated_at": serde_json::Value::Null,
+                        "source": serde_json::Value::Null,
+                        "reason": outcome.reason,
+                    });
+                }
+            }
+        }
+        // Previous interpretation — labeled as background, never evidence (ADR-106)
+        if let Some(previous) =
+            llm_history::latest_record(&project_root, scope.as_str(), action)
+        {
+            if previous.report_date != snapshot.report_date.to_string() {
+                extra.push_str(&llm_history::previous_interpretation_section(&previous));
+            }
+        }
 
-        let (llm_output, is_placeholder) = if let Some(ref key) = api_key {
-            let _provider = research_skills::OpenAiProvider::from_config(&config, key);
+        // 4. Build prompt
+        let (system_prompt, user_prompt) = research_skills::build_prompt_with_persona(
+            &persona.system,
+            &persona.template,
+            &snapshot,
+            Some(&extra),
+        );
+
+        // 5. Call LLM (reuses llm_client built above alongside the adversarial pre-call)
+        let (llm_output, is_placeholder) = if let Some(ref client) = llm_client {
             let call_config = inference.to_call_config();
-            let response = llm::call_llm_api(
-                config.clone(),
-                key.clone(),
-                system_prompt,
+            let response = llm::call_llm_api_with_client(
+                client,
+                &config,
+                &system_prompt,
                 user_prompt,
                 call_config.temperature as f64,
                 call_config.max_tokens,
@@ -4488,15 +4652,398 @@ impl AppContext {
             (Some("LLM 未配置，这是占位符输出。请配置 API Key 以获取真实分析。".to_string()), true)
         };
 
-        // 4. Return simple markdown result
+        let analysis_text = llm_output.unwrap_or_default();
+
+        // 6. Persist conversation record (workspace/llm-history/)
+        if !is_placeholder {
+            let record = llm_history::LlmAnalysisRecord {
+                scope: scope.as_str().to_string(),
+                action: action.to_string(),
+                persona_label: persona.label.clone(),
+                report_date: snapshot.report_date.to_string(),
+                created_at: chrono::Utc::now().to_rfc3339(),
+                summary: llm_history::make_summary(&analysis_text),
+                analysis_text: analysis_text.clone(),
+                source: Some("on-demand".to_string()),
+            };
+            if let Err(error) = llm_history::save_record(&project_root, &record) {
+                eprintln!("[llm-history] failed to save record: {error}");
+            }
+        }
+
+        // 7. Return markdown result
         let result = serde_json::json!({
             "action": action,
+            "persona": persona.label,
             "scope": scope.as_str(),
             "placeholder": is_placeholder,
-            "markdown": llm_output.unwrap_or_default(),
+            "markdown": analysis_text,
+            "adversarial": adversarial_diag,
         });
 
         Ok(result)
+    }
+
+    /// ADR-112: ensure a fresh shared adversarial hypothesis background exists
+    /// for (scope, snapshot.report_date).
+    ///
+    /// - Fresh hit (same report_date) → reuse the stored record, zero LLM cost.
+    /// - Stale/missing → run the `market_adversarial_lens` persona once on the
+    ///   SAME snapshot and persist under action="adversarial".
+    /// - ANY failure (no API key, network, timeout) → silent `None`; the main
+    ///   call proceeds without injection. Never propagates errors.
+    ///
+    /// ADR-113/114: `source` stamps provenance on the persisted record —
+    /// "on-demand" for the interactive analyze path, "market-refresh" for the
+    /// async post-refresh prewarm. The returned [`AdversarialOutcome`] also
+    /// reports WHY no record is available, so the diag surface can explain it.
+    async fn ensure_adversarial_context(
+        &self,
+        scope: ReportScope,
+        snapshot: &report_engine::DashboardSnapshot,
+        source: &str,
+        client: Option<&LlmClient>,
+    ) -> AdversarialOutcome {
+        let none = |reason: &'static str| AdversarialOutcome {
+            record: None,
+            reason,
+        };
+        let project_root = match StorageConfig::project_root() {
+            Ok(root) => root,
+            Err(_) => return none("config_error"),
+        };
+
+        // 1. Fresh hit → reuse (Daily Shared Context Pattern: 1 LLM call/day/scope)
+        let existing =
+            llm_history::latest_record(&project_root, scope.as_str(), "adversarial");
+        // A record exists but may be date-mismatched: if regeneration below
+        // fails, the reason collapses to "stale" (ADR-114).
+        let has_stale_record = existing.is_some();
+        if let Some(existing) = existing {
+            if existing.report_date == snapshot.report_date.to_string() {
+                return AdversarialOutcome {
+                    record: Some(existing),
+                    reason: "injected",
+                };
+            }
+        }
+        let stale_or = |reason: &'static str| {
+            if has_stale_record {
+                none("stale")
+            } else {
+                none(reason)
+            }
+        };
+
+        // 2. Run the pre-pass on the SAME snapshot (no recursive analyze_with_action)
+        let prompts_file = prompts::load_prompts(&project_root);
+        let persona = match prompts::resolve_persona(&prompts_file, "market_adversarial_lens") {
+            Ok(persona) => persona,
+            Err(_) => return stale_or("persona_missing"),
+        };
+        let mut extra = String::new();
+        extra.push_str(&self.build_strategy_context_section(scope));
+        extra.push_str(&self.build_integrity_context_section());
+        let (system_prompt, user_prompt) = research_skills::build_prompt_with_persona(
+            &persona.system,
+            &persona.template,
+            snapshot,
+            Some(&extra),
+        );
+
+        let resolved = match self.get_resolved_llm_config(None) {
+            Ok(resolved) => resolved,
+            Err(_) => return stale_or("config_error"),
+        };
+        let config = match self.get_llm_config() {
+            Ok(config) => config,
+            Err(_) => return stale_or("config_error"),
+        };
+        let llm_client = match client {
+            Some(c) => c,
+            // no client → silent skip, never persist placeholder
+            None => return stale_or("no_api_key"),
+        };
+
+        let text = match llm::call_llm_api_with_client(
+            llm_client,
+            &config,
+            &system_prompt,
+            user_prompt,
+            resolved.temperature,
+            resolved.max_tokens,
+            resolved.seed,
+        )
+        .await
+        {
+            Ok(text) => text,
+            Err(_) => return stale_or("llm_error"),
+        };
+
+        let record = llm_history::LlmAnalysisRecord {
+            scope: scope.as_str().to_string(),
+            action: "adversarial".to_string(),
+            persona_label: persona.label.clone(),
+            report_date: snapshot.report_date.to_string(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            summary: llm_history::make_summary(&text),
+            analysis_text: text,
+            source: Some(source.to_string()),
+        };
+        if let Err(error) = llm_history::save_record(&project_root, &record) {
+            eprintln!("[adversarial] failed to save record: {error}");
+        }
+        AdversarialOutcome {
+            record: Some(record),
+            reason: "injected",
+        }
+    }
+
+    /// ADR-113/114: async adversarial prewarm after market-refresh.
+    ///
+    /// Spawns a DETACHED `std::thread` that generates the shared adversarial
+    /// hypothesis background (one LLM call per scope, on the just-refreshed
+    /// snapshot) and persists it with source="market-refresh", so the user's
+    /// first `llm-analyze` of the day hits the warm path.
+    ///
+    /// Design constraints (ADR-114):
+    /// - NEVER blocks the caller: a plain `std::thread` is used (not
+    ///   `tokio::spawn`) because the CLI process exits right after refresh and
+    ///   a runtime task would be killed; the detached thread carries its own
+    ///   tokio runtime and dies quietly if the process exits early — the
+    ///   on-demand cold path in `analyze_with_action` is the fallback.
+    /// - NEVER fails the refresh: every error (config, snapshot, LLM, IO) is
+    ///   swallowed with an `eprintln!`.
+    /// - `adversarial_auto_inject == false` is the single master switch: it
+    ///   disables both injection and prewarm. No separate switch (ADR-114
+    ///   reserves `auto_prepare` for the future).
+    ///
+    /// The returned `JoinHandle` is dropped deliberately: joining would defeat
+    /// the fire-and-forget contract.
+    pub fn spawn_adversarial_prewarm(&self, scopes: Vec<ReportScope>) {
+        // Master switch: auto_inject=false disables injection AND prewarm.
+        let resolved = match self.get_resolved_llm_config(None) {
+            Ok(config) => config,
+            Err(error) => {
+                eprintln!("[adversarial-prewarm] skipped (config resolution failed: {error})");
+                return;
+            }
+        };
+        if !resolved.adversarial_auto_inject {
+            return;
+        }
+        // No API key → prewarm would silently produce nothing; skip quietly.
+        let has_api_key = resolved
+            .api_key
+            .clone()
+            .filter(|key| !key.is_empty())
+            .or_else(|| self.get_llm_api_key().ok().flatten())
+            .is_some();
+        if !has_api_key {
+            return;
+        }
+
+        let context = self.clone();
+        std::thread::spawn(move || {
+            let runtime = match tokio::runtime::Runtime::new() {
+                Ok(runtime) => runtime,
+                Err(error) => {
+                    eprintln!("[adversarial-prewarm] skipped (tokio runtime: {error})");
+                    return;
+                }
+            };
+            runtime.block_on(async move {
+                // Build one client for all scopes to reuse the TCP connection.
+                let llm_config = context.get_llm_config().ok();
+                let llm_client: Option<LlmClient> = llm_config.and_then(|cfg| {
+                    let api_key = context
+                        .get_resolved_llm_config(None)
+                        .ok()?
+                        .api_key
+                        .clone()
+                        .filter(|k| !k.is_empty())
+                        .or_else(|| context.get_llm_api_key().ok().flatten())?;
+                    Some(llm::build_llm_client(&cfg, &api_key))
+                });
+                for scope in scopes {
+                    let label = scope.as_str();
+                    let snapshot = match context.dashboard_snapshot_with_scope(None, scope) {
+                        Ok(Some(snapshot)) => snapshot,
+                        Ok(None) => {
+                            eprintln!(
+                                "[adversarial-prewarm] {label}: skipped (reason: snapshot_missing)"
+                            );
+                            continue;
+                        }
+                        Err(error) => {
+                            eprintln!("[adversarial-prewarm] {label}: skipped ({error})");
+                            continue;
+                        }
+                    };
+                    let outcome = context
+                        .ensure_adversarial_context(
+                            scope,
+                            &snapshot,
+                            "market-refresh",
+                            llm_client.as_ref(),
+                        )
+                        .await;
+                    match outcome.record {
+                        Some(_) => eprintln!("[adversarial-prewarm] {label}: ready"),
+                        None => eprintln!(
+                            "[adversarial-prewarm] {label}: skipped (reason: {})",
+                            outcome.reason
+                        ),
+                    }
+                }
+            });
+        });
+    }
+
+    /// Strategy perspectives section: top symbols with 4 independent strategy
+    /// scores and scenario contrast. Bounded to top 5 by confidence.
+    fn build_strategy_context_section(&self, scope: ReportScope) -> String {
+        let analysis_scope = match scope {
+            ReportScope::Global => core_domain::AnalysisScope::Global,
+            ReportScope::Cn => core_domain::AnalysisScope::Cn,
+            ReportScope::Hk => core_domain::AnalysisScope::Hk,
+        };
+        let Ok(project_root) = StorageConfig::project_root() else {
+            return String::new();
+        };
+        let Ok((date, entries)) = strategy_perspectives::strategy_perspectives_scoreboard(
+            &self.storage,
+            analysis_scope,
+            None,
+            &project_root,
+        ) else {
+            return String::new();
+        };
+        if entries.is_empty() {
+            return String::new();
+        }
+
+        let mut section = format!(
+            "\n## 多策略视角（{}，系统已计算的事实，非你的判断）\n\n",
+            date
+        );
+        for entry in entries.iter().take(5) {
+            section.push_str(&format!(
+                "- {}{}：ValueLeft {:.0} / TrendPullback {:.0} / TrendBreakout {:.0} / MomentumRight {:.0}（最佳：{:?}）\n",
+                entry.symbol,
+                entry
+                    .name
+                    .as_ref()
+                    .map(|name| format!("({})", name))
+                    .unwrap_or_default(),
+                entry.value_left_score,
+                entry.trend_pullback_score,
+                entry.trend_breakout_score,
+                entry.momentum_right_score,
+                entry.best_strategy,
+            ));
+            let scenario_text: Vec<String> = entry
+                .scenario_scores
+                .iter()
+                .map(|s| format!("{} {:.0}", s.label, s.score))
+                .collect();
+            if !scenario_text.is_empty() {
+                section.push_str(&format!("  场景对比：{}\n", scenario_text.join(" | ")));
+            }
+        }
+        section
+    }
+
+    /// Strategy scoreboard for the desktop frontend (RV1): every symbol's four
+    /// independent strategy scores plus scenario weightings for one date + scope.
+    /// Thin delegate over `strategy_perspectives::strategy_perspectives_scoreboard`;
+    /// read-only consumption layer (ADR-107/108).
+    pub fn strategy_scoreboard(
+        &self,
+        scope: core_domain::AnalysisScope,
+        date: Option<NaiveDate>,
+    ) -> Result<(NaiveDate, Vec<StrategyPerspectiveEntry>)> {
+        let project_root = StorageConfig::project_root()?;
+        strategy_perspectives::strategy_perspectives_scoreboard(
+            &self.storage,
+            scope,
+            date,
+            &project_root,
+        )
+    }
+
+    /// Strategy attribution detail for one symbol (RV1). Thin delegate over
+    /// `strategy_perspectives::strategy_perspectives_detail`; attribution is
+    /// recomputed on demand from bars + indicators + regime + rotation, so
+    /// this is intentionally lazy and heavier than the scoreboard.
+    pub fn strategy_attribution(
+        &self,
+        symbol: &str,
+        scope: core_domain::AnalysisScope,
+        date: Option<NaiveDate>,
+    ) -> Result<StrategyPerspectiveDetail> {
+        let project_root = StorageConfig::project_root()?;
+        strategy_perspectives::strategy_perspectives_detail(
+            &self.storage,
+            symbol,
+            scope,
+            date,
+            &project_root,
+        )
+    }
+
+    /// Integrity section: data freshness status for the current analysis.
+    fn build_integrity_context_section(&self) -> String {
+        let Ok(health) = self.check_data_health() else {
+            return String::new();
+        };
+        let status = if health.freshest_market_date_complete {
+            "PASS"
+        } else {
+            "DEGRADED"
+        };
+        format!(
+            "\n## 数据完整性（Integrity）\n\n- 状态：{}\n- 最新市场日期：{:?}（标的覆盖 {}/{}）\n- 健康标的 {}，待复核 {}，异常 {}\n",
+            status,
+            health.freshest_market_date,
+            health.symbols_on_freshest_market_date,
+            health.checked_symbols,
+            health.healthy_symbols,
+            health.review_symbols,
+            health.critical_symbols,
+        )
+    }
+
+    /// Deterministic portfolio decision section (portfolio_review only).
+    /// Action labels are produced by the V5 pattern engine — never by the LLM.
+    fn build_portfolio_decision_section(&self, scope: ReportScope) -> String {
+        match self.analyze_preclose(scope) {
+            Ok(decisions) if !decisions.is_empty() => {
+                let mut section = String::from(
+                    "\n## 组合姿态（由确定性引擎产出，不由你生成，不可修改）\n\n",
+                );
+                for decision in &decisions {
+                    let reasons = if decision.reasons.is_empty() {
+                        "（无 Pattern 命中）".to_string()
+                    } else {
+                        decision
+                            .reasons
+                            .iter()
+                            .map(|reason| reason.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    };
+                    section.push_str(&format!(
+                        "- {} → {}（{}）\n",
+                        decision.symbol,
+                        decision.state.as_str(),
+                        reasons
+                    ));
+                }
+                section
+            }
+            _ => "\n## 组合姿态\n\n实时行情不可用，决策引擎本次未能运行。\n".to_string(),
+        }
     }
 
     /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)

@@ -806,7 +806,7 @@ mod tests {
         };
         let decision = ExecutionDecision {
             symbol: "000001".into(),
-            state: ExecutionState::Wait,
+            state: ExecutionState::Maintain,
             confidence,
             risk: RiskLevel::Medium,
             evidences: evidences

@@ -53,6 +53,41 @@ max_tokens = 4096
 # seed = 42
 
 # ============================================================
+# 共享博弈假设背景层（ADR-112）
+# ============================================================
+# 每次 LLM 分析前，系统确保当日"市场博弈假设背景"已生成
+# （同一 scope 同一分析日期只计算一次，落盘 workspace/llm-history/）。
+# 注入语义：假设性背景，供下游 persona 验证或反驳，不是结论。
+#
+# [llm.adversarial]
+# 默认开启（true）。设为 false 可全局关闭注入。
+# auto_inject = true
+#
+# 注入级别（ADR-113/114，InjectionLevel = 内容粒度）：
+#   full     = 完整博弈分析全文（仅受 full_max_chars 宽松硬上限保护）
+#   standard = analysis_text（受 max_chars ContentPolicy 截断保护）
+#   compact  = record.summary 结构化摘要（~400 字符，不经 ContentPolicy）
+#   none     = 不注入
+# 未列出的 persona 默认 standard。以下是内置默认值，按需覆盖：
+#
+# ContentPolicy（ADR-114，与 InjectionLevel 解耦的体积保护，默认即生效）：
+# max_chars = 4000                          # standard 级别注入最大字符数（按字符计）
+# full_max_chars = 12000                    # full 级别注入硬性上限（纯保护值）
+# truncate_strategy = "paragraph_boundary"  # 段落边界截断，绝不截断句子中间
+# [llm.adversarial.inject]
+# market_story = "standard"
+# portfolio_review = "standard"
+# risk_view = "standard"
+# devils_advocate = "standard"
+# short_term_trader = "standard"
+# long_term_allocator = "standard"
+# explain_decision = "compact"
+# preclose_review = "compact"
+# market_adversarial_lens = "none"   # 递归防护（代码已硬编码，此处仅为文档）
+#
+# CLI 单次覆盖：llm-analyze --action <action> --adversarial <full|standard|compact|none>
+
+# ============================================================
 # 多环境配置示例
 # ============================================================
 #

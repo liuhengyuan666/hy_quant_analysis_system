@@ -62,25 +62,25 @@ impl DecisionEngine for DefaultDecisionEngine {
         policy: &ExecutionPolicy,
     ) -> ExecutionDecision {
         let (state, reasons) = if assessment.risk == RiskLevel::Critical {
-            (ExecutionState::Wait, vec![DecisionReason::CriticalRisk])
+            (ExecutionState::Maintain, vec![DecisionReason::CriticalRisk])
         } else if assessment.risk == RiskLevel::High {
-            (ExecutionState::Wait, vec![DecisionReason::RiskTooHigh])
+            (ExecutionState::Maintain, vec![DecisionReason::RiskTooHigh])
         } else if assessment.confidence < policy.confidence_threshold {
             (
-                ExecutionState::Wait,
+                ExecutionState::Maintain,
                 vec![DecisionReason::ConfidenceBelowThreshold],
             )
         } else if assessment.consensus < policy.consensus_threshold {
             (
-                ExecutionState::Wait,
+                ExecutionState::Maintain,
                 vec![DecisionReason::ConsensusBelowThreshold],
             )
         } else if assessment.dominant_direction > policy.buy_threshold {
-            (ExecutionState::BuyNow, vec![DecisionReason::PositiveConsensus])
+            (ExecutionState::Increase, vec![DecisionReason::PositiveConsensus])
         } else if assessment.dominant_direction < policy.reduce_threshold {
             (ExecutionState::Reduce, vec![DecisionReason::NegativeConsensus])
         } else {
-            (ExecutionState::Wait, vec![DecisionReason::WeakDirection])
+            (ExecutionState::Maintain, vec![DecisionReason::WeakDirection])
         };
 
         ExecutionDecision {
@@ -129,11 +129,11 @@ mod tests {
     }
 
     #[test]
-    fn bullish_assessment_becomes_buy_now() {
+    fn bullish_assessment_becomes_increase() {
         let a = make_assessment(0.8, 0.8, RiskLevel::Low, 0.7);
         let d = DefaultDecisionEngine.decide("000001", &a, &policy());
 
-        assert_eq!(d.state, ExecutionState::BuyNow);
+        assert_eq!(d.state, ExecutionState::Increase);
         assert!(d
             .decision_reasons
             .contains(&DecisionReason::PositiveConsensus));
@@ -151,31 +151,31 @@ mod tests {
     }
 
     #[test]
-    fn critical_risk_always_wait() {
+    fn critical_risk_always_maintain() {
         let a = make_assessment(0.9, 0.9, RiskLevel::Critical, 0.8);
         let d = DefaultDecisionEngine.decide("000001", &a, &policy());
 
-        assert_eq!(d.state, ExecutionState::Wait);
+        assert_eq!(d.state, ExecutionState::Maintain);
         assert!(d.decision_reasons.contains(&DecisionReason::CriticalRisk));
     }
 
     #[test]
-    fn low_confidence_wait() {
+    fn low_confidence_maintain() {
         let a = make_assessment(0.3, 0.8, RiskLevel::Low, 0.7);
         let d = DefaultDecisionEngine.decide("000001", &a, &policy());
 
-        assert_eq!(d.state, ExecutionState::Wait);
+        assert_eq!(d.state, ExecutionState::Maintain);
         assert!(d
             .decision_reasons
             .contains(&DecisionReason::ConfidenceBelowThreshold));
     }
 
     #[test]
-    fn weak_direction_wait() {
+    fn weak_direction_maintain() {
         let a = make_assessment(0.8, 0.8, RiskLevel::Low, 0.2);
         let d = DefaultDecisionEngine.decide("000001", &a, &policy());
 
-        assert_eq!(d.state, ExecutionState::Wait);
+        assert_eq!(d.state, ExecutionState::Maintain);
         assert!(d
             .decision_reasons
             .contains(&DecisionReason::WeakDirection));

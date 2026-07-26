@@ -53,7 +53,7 @@ pub fn analyze(symbol: impl Into<String>, snapshot: &IntradaySnapshot) -> Execut
     if let Some(reasons) = check_no_chase(snapshot) {
         return ExecutionDecision {
             symbol,
-            state: ExecutionState::NoChase,
+            state: ExecutionState::Avoid,
             reasons,
         };
     }
@@ -67,7 +67,7 @@ pub fn analyze(symbol: impl Into<String>, snapshot: &IntradaySnapshot) -> Execut
     if let Some(reasons) = check_strong_close(snapshot) {
         return ExecutionDecision {
             symbol,
-            state: ExecutionState::BuyNow,
+            state: ExecutionState::Increase,
             reasons,
         };
     }
@@ -75,7 +75,7 @@ pub fn analyze(symbol: impl Into<String>, snapshot: &IntradaySnapshot) -> Execut
     // Default: no pattern matched
     ExecutionDecision {
         symbol,
-        state: ExecutionState::Wait,
+        state: ExecutionState::Maintain,
         reasons: vec![],
     }
 }

@@ -112,15 +112,15 @@ pub fn compute_decision_margin_review(records: &[ExecutionResearchRecord]) -> De
             let bucket = &mut profile.direction_histogram[bin_idx];
             bucket.total += 1;
             match decision.state {
-                ExecutionState::BuyNow => bucket.buy_now += 1,
-                ExecutionState::Wait => bucket.wait += 1,
+                ExecutionState::Increase => bucket.buy_now += 1,
+                ExecutionState::Maintain => bucket.wait += 1,
                 ExecutionState::Reduce => bucket.reduce += 1,
                 _ => {}
             }
 
             // Direction sign classification.
             if direction > 0.0 {
-                if decision.state == ExecutionState::BuyNow {
+                if decision.state == ExecutionState::Increase {
                     profile.buy_now_when_direction_positive += 1;
                 } else {
                     profile.wait_when_direction_positive += 1;
@@ -128,7 +128,7 @@ pub fn compute_decision_margin_review(records: &[ExecutionResearchRecord]) -> De
             } else if direction < 0.0 {
                 if decision.state == ExecutionState::Reduce {
                     profile.reduce_when_direction_negative += 1;
-                } else if decision.state == ExecutionState::Wait {
+                } else if decision.state == ExecutionState::Maintain {
                     profile.wait_when_direction_negative += 1;
                 }
             }
@@ -298,9 +298,9 @@ mod tests {
     #[test]
     fn decision_margin_counts_missed_reduce() {
         let records = vec![
-            make_record_with_risk(-0.5, ExecutionState::Wait), // below threshold, but Wait
+            make_record_with_risk(-0.5, ExecutionState::Maintain), // below threshold, but Wait
             make_record_with_risk(-0.5, ExecutionState::Reduce), // below threshold, Reduce
-            make_record_with_risk(0.5, ExecutionState::BuyNow),
+            make_record_with_risk(0.5, ExecutionState::Increase),
         ];
         let review = compute_decision_margin_review(&records);
         let profile = review.get(EvidenceKind::RiskExpansion).unwrap();

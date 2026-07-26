@@ -14,6 +14,8 @@ pub fn handle_pipeline_dates(context: &AppContext, scope: ReportScopeArg) -> Res
     Ok(())
 }
 
+/// RV1: superseded by `data-health` (merged check+export); internal library only.
+#[allow(dead_code)]
 pub fn handle_check_data_health(context: &AppContext) -> Result<()> {
     let result = context.check_data_health()?;
     println!("{}", serde_json::to_string_pretty(&result)?);

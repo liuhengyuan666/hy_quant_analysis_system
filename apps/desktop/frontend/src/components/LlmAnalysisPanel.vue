@@ -7,14 +7,50 @@ import {
   updateLlmLoading,
   updateLlmError,
 } from '../store.js';
+import { marked } from 'marked';
 import { llmApi } from '../api/tauri.js';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const activeAction = ref('');
+const adversarialLevel = ref('standard');
 const loading = computed(() => dashboardStore.llmLoading);
 const error = computed(() => dashboardStore.llmError);
 const analysis = computed(() => dashboardStore.llmAnalysis);
+
+// ADR-113/114: machine-readable adversarial diag reasons → i18n key suffixes.
+const DIAG_REASON_KEYS = {
+  disabled: 'diagReasonDisabled',
+  persona_excluded: 'diagReasonPersonaExcluded',
+  no_api_key: 'diagReasonNoApiKey',
+  persona_missing: 'diagReasonPersonaMissing',
+  llm_error: 'diagReasonLlmError',
+  snapshot_missing: 'diagReasonSnapshotMissing',
+  stale: 'diagReasonStale',
+  config_error: 'diagReasonConfigError',
+};
+
+function diagReasonLabel(reason) {
+  const suffix = DIAG_REASON_KEYS[reason];
+  if (suffix) return t(`research.${suffix}`);
+  return t('research.diagReasonUnknown', { reason: reason || 'unknown' });
+}
+
+const adversarialDiagLine = computed(() => {
+  const diag = analysis.value?.adversarial;
+  if (!diag) return null;
+  if (diag.injected) {
+    const level = String(diag.level || 'none');
+    const levelKey = `research.adversarial${level.charAt(0).toUpperCase() + level.slice(1)}`;
+    return t('research.diagInjected', {
+      level: te(levelKey) ? t(levelKey) : level,
+      fresh: diag.fresh ? t('research.diagFresh') : t('research.diagStale'),
+      source: diag.source || t('research.diagUnknownSource'),
+      generatedAt: diag.generated_at || '-',
+    });
+  }
+  return t('research.diagNotInjected', { reason: diagReasonLabel(diag.reason) });
+});
 
 const actions = [
   { key: 'market_story', label: t('research.marketStory') },
@@ -22,6 +58,8 @@ const actions = [
   { key: 'preclose_review', label: t('research.precloseReview') },
   { key: 'risk_view', label: t('research.riskView') },
   { key: 'devils_advocate', label: t('research.devilsAdvocate') },
+  { key: 'portfolio_review', label: t('research.portfolioReview') },
+  { key: 'market_adversarial_lens', label: t('research.marketAdversarialLens') },
 ];
 
 async function handleGenerate(action) {
@@ -31,7 +69,8 @@ async function handleGenerate(action) {
   try {
     const result = await llmApi.analyzeWithLlm(
       dashboardStore.selectedScope,
-      action
+      action,
+      adversarialLevel.value
     );
     updateLlmAnalysis(result);
   } catch (err) {
@@ -44,36 +83,16 @@ async function handleGenerate(action) {
 
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = String(text)
+  // Escape raw HTML in LLM output BEFORE parsing, so injected markup renders
+  // as text while marked's own generated tags survive.
+  const escaped = String(text)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-  html = html
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>');
-
-  const unsafePatterns = [
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
-    /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
-    /<object[^>]*>[\s\S]*?<\/object>/gi,
-    /<embed[^>]*>/gi,
-    /<form[^>]*>[\s\S]*?<\/form>/gi,
-    /on\w+\s*=\s*["']?[^"'>]*["']?/gi,
-    /javascript:/gi,
-  ];
-  unsafePatterns.forEach((pattern) => {
-    html = html.replace(pattern, '');
-  });
-
-  return html;
+  return marked.parse(escaped);
 }
 </script>
 
@@ -101,6 +120,24 @@ function renderMarkdown(text) {
       </button>
     </div>
 
+    <!-- Adversarial Inject Level -->
+    <div class="llm-panel__adversarial">
+      <span class="llm-panel__adversarial-label">{{ t('research.adversarialLevel') }}</span>
+      <div class="llm-panel__adversarial-options" role="radiogroup">
+        <button
+          v-for="level in ['full', 'standard', 'compact', 'none']"
+          :key="level"
+          class="llm-panel__adversarial-btn"
+          :class="{ 'llm-panel__adversarial-btn--active': adversarialLevel === level }"
+          role="radio"
+          :aria-checked="adversarialLevel === level"
+          @click="adversarialLevel = level"
+        >
+          {{ t(`research.adversarial${level.charAt(0).toUpperCase() + level.slice(1)}`) }}
+        </button>
+      </div>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="llm-panel__loading">
       <div class="llm-panel__spinner"></div>
@@ -115,6 +152,9 @@ function renderMarkdown(text) {
 
     <!-- Content -->
     <div v-else-if="analysis" class="llm-panel__content">
+      <div v-if="adversarialDiagLine" class="llm-panel__diag">
+        {{ adversarialDiagLine }}
+      </div>
       <div
         v-if="analysis.markdown"
         class="llm-panel__markdown"
@@ -187,10 +227,62 @@ function renderMarkdown(text) {
   cursor: not-allowed;
 }
 
+.llm-panel__adversarial {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.llm-panel__adversarial-label {
+  font-size: var(--font-size-meta);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.llm-panel__adversarial-options {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.llm-panel__adversarial-btn {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.llm-panel__adversarial-btn:hover {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.llm-panel__adversarial-btn--active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .llm-panel__content {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
+}
+
+.llm-panel__diag {
+  font-size: var(--font-size-meta);
+  color: var(--text-secondary);
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .llm-panel__markdown {
@@ -227,6 +319,86 @@ function renderMarkdown(text) {
 
 .llm-panel__markdown :deep(strong) {
   color: var(--color-accent);
+}
+
+.llm-panel__markdown :deep(p) {
+  margin: var(--space-2) 0;
+}
+
+.llm-panel__markdown :deep(ul),
+.llm-panel__markdown :deep(ol) {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  color: var(--text-primary);
+}
+
+.llm-panel__markdown :deep(li) {
+  margin: var(--space-1) 0;
+}
+
+.llm-panel__markdown :deep(li)::marker {
+  color: var(--color-accent);
+}
+
+.llm-panel__markdown :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+  font-size: var(--font-size-label);
+}
+
+.llm-panel__markdown :deep(th),
+.llm-panel__markdown :deep(td) {
+  border: 1px solid var(--panel-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.llm-panel__markdown :deep(th) {
+  background: var(--panel-bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.llm-panel__markdown :deep(td) {
+  color: var(--text-secondary);
+}
+
+.llm-panel__markdown :deep(tbody tr:hover td) {
+  background: var(--color-surface-raised);
+}
+
+.llm-panel__markdown :deep(blockquote) {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--text-secondary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.llm-panel__markdown :deep(blockquote p) {
+  margin: 0;
+}
+
+.llm-panel__markdown :deep(pre) {
+  background: var(--panel-bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+  overflow-x: auto;
+}
+
+.llm-panel__markdown :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  color: var(--text-primary);
 }
 
 .llm-panel__loading,

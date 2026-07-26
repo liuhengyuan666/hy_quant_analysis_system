@@ -15,6 +15,8 @@ use std::collections::BTreeMap;
 use crate::ReportScopeArg;
 
 /// Render an analyze_with_action result as markdown
+/// RV1: retained for the removed `analyze` command; internal library only.
+#[allow(dead_code)]
 pub fn render_action_result_md(value: &serde_json::Value) -> String {
     let mut md = String::new();
 
@@ -42,6 +44,8 @@ pub fn render_action_result_md(value: &serde_json::Value) -> String {
     md
 }
 
+/// RV1: retained for the removed `list-skills` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_list_actions() -> Result<()> {
     println!("Available Research Actions:");
     println!("  - market_story: 市场叙事");
@@ -52,6 +56,8 @@ pub fn handle_list_actions() -> Result<()> {
     Ok(())
 }
 
+/// RV1: retained for the removed `benchmark-skill` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_benchmark_action(
     _context: &AppContext,
     action: String,
@@ -150,6 +156,8 @@ pub fn handle_research_srd(
     Ok(())
 }
 
+/// RV1: retained for the removed `analyze` command; internal library only.
+#[allow(dead_code)]
 pub fn handle_analyze(
     context: AppContext,
     action: String,
@@ -164,7 +172,7 @@ pub fn handle_analyze(
             .enable_all()
             .build()
             .expect("failed to create tokio runtime");
-        runtime.block_on(context.analyze_with_action(&action, scope))
+        runtime.block_on(context.analyze_with_action(&action, scope, None))
     })
     .join()
     .expect("LLM analysis thread panicked")?;
@@ -1346,5 +1354,256 @@ pub fn handle_research_replay(
     println!("Output directory: {}", out.display());
 
     Ok(())
+}
+
+// ─────────────────────────────────────────────────────────────
+// RV1 New Commands
+// ─────────────────────────────────────────────────────────────
+
+/// Multi-strategy independent scoring + scenario comparison + attribution (RV1 Phase 2, Route B).
+/// Consumption layer only: reads persisted strategy_preference rows, never touches signal computation.
+pub fn handle_strategy_perspectives(
+    context: &AppContext,
+    symbol: Option<String>,
+    date: Option<NaiveDate>,
+    scope_arg: ReportScopeArg,
+    mode: String,
+    scenario: Option<String>,
+) -> Result<()> {
+    let scope: app_service::ReportScope = scope_arg.into();
+    let analysis_scope: AnalysisScope = match scope {
+        app_service::ReportScope::Global => AnalysisScope::Global,
+        app_service::ReportScope::Cn => AnalysisScope::Cn,
+        app_service::ReportScope::Hk => AnalysisScope::Hk,
+    };
+    let project_root = market_store::StorageConfig::project_root()?;
+
+    match mode.as_str() {
+        "scoreboard" => {
+            let (target_date, entries) = app_service::strategy_perspectives::strategy_perspectives_scoreboard(
+                &context.storage,
+                analysis_scope,
+                date,
+                &project_root,
+            )?;
+
+            println!("Strategy Scoreboard — Scope: {:?}, Date: {}", scope, target_date);
+            println!();
+
+            match &scenario {
+                // Focused view: single scenario column
+                Some(key) => {
+                    println!(
+                        "{:<10} {:<10} {:<10} {:<10} {:<10} {:<14} {}",
+                        "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best", "Scenario"
+                    );
+                    println!("{}", "-".repeat(88));
+
+                    for entry in &entries {
+                        let scenario_text = entry
+                            .scenario_scores
+                            .iter()
+                            .find(|s| s.key == *key)
+                            .map(|s| format!("{} {:.1}", s.label, s.score))
+                            .unwrap_or_else(|| format!("(unknown scenario '{}')", key));
+                        println!(
+                            "{:<10} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<14} {}",
+                            entry.symbol,
+                            entry.value_left_score,
+                            entry.trend_pullback_score,
+                            entry.trend_breakout_score,
+                            entry.momentum_right_score,
+                            format!("{:?}", entry.best_strategy),
+                            scenario_text,
+                        );
+                    }
+                }
+                // Default view: all scenario columns as a matrix
+                None => {
+                    let scenario_headers: Vec<String> = entries
+                        .first()
+                        .map(|entry| {
+                            entry
+                                .scenario_scores
+                                .iter()
+                                .map(|s| s.label.chars().take(4).collect::<String>())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    print!(
+                        "{:<10} {:<8} {:<8} {:<8} {:<8} {:<14}",
+                        "Symbol", "ValueL", "TrendPB", "TrendBO", "MomR", "Best"
+                    );
+                    for header in &scenario_headers {
+                        print!(" {:<9}", header);
+                    }
+                    println!();
+                    println!("{}", "-".repeat(64 + scenario_headers.len() * 10));
+
+                    for entry in &entries {
+                        print!(
+                            "{:<10} {:<8.1} {:<8.1} {:<8.1} {:<8.1} {:<14}",
+                            entry.symbol,
+                            entry.value_left_score,
+                            entry.trend_pullback_score,
+                            entry.trend_breakout_score,
+                            entry.momentum_right_score,
+                            format!("{:?}", entry.best_strategy),
+                        );
+                        for s in &entry.scenario_scores {
+                            print!(" {:<9.1}", s.score);
+                        }
+                        println!();
+                    }
+
+                    if !entries.is_empty() {
+                        println!();
+                        println!("All scenario columns shown. Use --scenario <key> to focus on one:");
+                        for s in &entries[0].scenario_scores {
+                            println!("  {} = {}", s.key, s.label);
+                        }
+                    }
+                }
+            }
+        }
+        "detail" => {
+            let sym = symbol.as_deref().unwrap_or("000300");
+            let detail = app_service::strategy_perspectives::strategy_perspectives_detail(
+                &context.storage,
+                sym,
+                analysis_scope,
+                date,
+                &project_root,
+            )?;
+
+            let entry = &detail.entry;
+            println!("Strategy Perspectives — {} ({}), Scope: {:?}", sym, entry.name.clone().unwrap_or_default(), scope);
+            println!();
+
+            println!("{:<16} {:>8} {:>10}", "Strategy", "Score", "State");
+            println!("{}", "-".repeat(36));
+            let rows = [
+                ("ValueLeft", entry.value_left_score),
+                ("TrendPullback", entry.trend_pullback_score),
+                ("TrendBreakout", entry.trend_breakout_score),
+                ("MomentumRight", entry.momentum_right_score),
+            ];
+            for (name, score) in rows {
+                let state = if score >= 60.0 {
+                    "Strong"
+                } else if score >= 40.0 {
+                    "Moderate"
+                } else {
+                    "Weak"
+                };
+                println!("{:<16} {:>8.1} {:>10}", name, score, state);
+            }
+            println!();
+            println!("Best Strategy: {:?} (confidence {:.1}, alignment {}/4 ≥60)",
+                entry.best_strategy, entry.confidence, entry.alignment);
+
+            println!();
+            println!("Scenario Scores:");
+            for s in &entry.scenario_scores {
+                println!("  {:<20} {:>6.1}", s.label, s.score);
+            }
+
+            println!();
+            println!("Attribution (recomputed on demand; drift vs stored should be ~0):");
+            for attr in &detail.attributions {
+                println!();
+                println!("  [{:?}] stored {:.1} / recomputed {:.1} (drift {:.2})",
+                    attr.kind, attr.stored_score, attr.recomputed_score, attr.drift);
+                for d in &attr.drivers {
+                    println!("    {:<10} value {:>8.2}  contrib {:>7.2}  {}", d.factor, d.value, d.contribution, d.note);
+                }
+            }
+        }
+        _ => {
+            anyhow::bail!("Unknown mode '{}'. Use 'scoreboard' or 'detail'.", mode);
+        }
+    }
+
+    Ok(())
+}
+
+/// View Evidence Asset status in workspace registry.
+pub fn handle_evidence_status() -> Result<()> {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let evidence_index = PathBuf::from("workspace/registry/evidence-index.json");
+    let snapshot_index = PathBuf::from("workspace/registry/snapshot-index.json");
+
+    println!("Evidence Asset Status");
+    println!("{}", "=".repeat(50));
+
+    if evidence_index.exists() {
+        let content = fs::read_to_string(&evidence_index)?;
+        let index: serde_json::Value = serde_json::from_str(&content)?;
+        if let Some(evidence) = index.as_array() {
+            println!("\nEvidence Assets: {}", evidence.len());
+            for item in evidence.iter().take(20) {
+                println!(
+                    "  {} | {} | {} | {}",
+                    item["id"].as_str().unwrap_or("?"),
+                    item["kind"].as_str().unwrap_or("?"),
+                    item["scope"].as_str().unwrap_or("?"),
+                    item["state"].as_str().unwrap_or("?"),
+                );
+            }
+            if evidence.len() > 20 {
+                println!("  ... and {} more", evidence.len() - 20);
+            }
+        } else {
+            println!("\nEvidence index exists but is empty or malformed");
+        }
+    } else {
+        println!("\nNo evidence index found at workspace/registry/evidence-index.json");
+        println!("Run `research analytics --save-evidence` or `historical-replay` to create Evidence Assets.");
+    }
+
+    if snapshot_index.exists() {
+        let content = fs::read_to_string(&snapshot_index)?;
+        let index: serde_json::Value = serde_json::from_str(&content)?;
+        if let Some(snapshots) = index.as_array() {
+            println!("\nSnapshot Assets: {}", snapshots.len());
+        }
+    }
+
+    Ok(())
+}
+
+/// Run calibration baseline validation.
+pub fn handle_validation_check(
+    context: &AppContext,
+    scope_arg: ReportScopeArg,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+) -> Result<()> {
+    let scope: app_service::ReportScope = scope_arg.into();
+    println!("Running validation check for scope {:?}...", scope);
+    let result = context.run_research_calibration(
+        scope,
+        from,
+        to,
+        20,   // horizon
+        5,    // top_n
+        252,  // lookback
+    )?;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+/// Run historical analytics replay (wraps research replay).
+pub fn handle_historical_replay(
+    context: &AppContext,
+    scope_arg: ReportScopeArg,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    output_dir: String,
+) -> Result<()> {
+    handle_research_replay(context, scope_arg, from, to, output_dir)
 }
 

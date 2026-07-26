@@ -324,10 +324,10 @@ mod tests {
     #[test]
     fn decision_gate_counts_by_reason() {
         let records = vec![
-            make_record(-0.5, RiskLevel::Critical, 0.8, 0.8, ExecutionState::Wait), // risk critical
-            make_record(-0.5, RiskLevel::High, 0.8, 0.8, ExecutionState::Wait),      // risk high
-            make_record(-0.5, RiskLevel::Medium, 0.5, 0.8, ExecutionState::Wait),   // confidence low
-            make_record(-0.5, RiskLevel::Medium, 0.8, 0.2, ExecutionState::Wait),  // consensus low
+            make_record(-0.5, RiskLevel::Critical, 0.8, 0.8, ExecutionState::Maintain), // risk critical
+            make_record(-0.5, RiskLevel::High, 0.8, 0.8, ExecutionState::Maintain),      // risk high
+            make_record(-0.5, RiskLevel::Medium, 0.5, 0.8, ExecutionState::Maintain),   // confidence low
+            make_record(-0.5, RiskLevel::Medium, 0.8, 0.2, ExecutionState::Maintain),  // consensus low
             make_record(-0.5, RiskLevel::Medium, 0.8, 0.8, ExecutionState::Reduce),  // passed
         ];
         let analysis = compute_decision_gate_analysis(&records);
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn non_candidates_are_excluded() {
         let records = vec![
-            make_record(0.5, RiskLevel::Medium, 0.8, 0.8, ExecutionState::BuyNow),
+            make_record(0.5, RiskLevel::Medium, 0.8, 0.8, ExecutionState::Increase),
             make_record(-0.5, RiskLevel::Medium, 0.8, 0.8, ExecutionState::Reduce),
         ];
         let analysis = compute_decision_gate_analysis(&records);

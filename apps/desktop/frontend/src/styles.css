@@ -108,7 +108,8 @@ body {
 
 body.body--guide-viewer-open,
 body.body--signal-modal-open,
-body.body--llm-panel-open {
+body.body--llm-panel-open,
+body.body--perspectives-open {
   overflow: hidden;
 }
 

@@ -37,6 +37,35 @@ pub struct ResolvedLlmConfig {
     pub max_tokens: usize,
     pub seed: Option<u64>,
     pub source: ConfigSource,
+    /// ADR-112: 共享博弈假设背景是否默认注入（默认 true）
+    pub adversarial_auto_inject: bool,
+    /// ADR-112: 按 persona 的注入级别映射；未列出的 persona 默认 Full
+    pub adversarial_inject: std::collections::HashMap<String, core_domain::InjectLevel>,
+    /// ADR-114 ContentPolicy: standard 级别注入最大字符数（默认 4000）
+    pub adversarial_max_chars: usize,
+    /// ADR-114 ContentPolicy: full 级别注入硬性上限（默认 12000）
+    pub adversarial_full_max_chars: usize,
+    /// ADR-114 ContentPolicy: 截断策略（默认 paragraph_boundary）
+    pub adversarial_truncate_strategy: core_domain::TruncateStrategy,
+}
+
+/// ADR-112 内置默认分级映射（文件未配置时使用）
+fn default_adversarial_inject_map() -> std::collections::HashMap<String, core_domain::InjectLevel> {
+    use core_domain::InjectLevel::*;
+    [
+        ("market_story", Standard),
+        ("portfolio_review", Standard),
+        ("risk_view", Standard),
+        ("devils_advocate", Standard),
+        ("short_term_trader", Standard),
+        ("long_term_allocator", Standard),
+        ("explain_decision", Compact),
+        ("preclose_review", Compact),
+        ("market_adversarial_lens", None),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), v))
+    .collect()
 }
 
 /// CLI 参数覆盖
@@ -195,6 +224,39 @@ impl ResolvedLlmConfig {
         // 4. Windows 安全警告
         warn_if_plaintext_key_windows(&api_key);
 
+        // 5. ADR-112: 共享博弈背景配置（文件缺失时用内置默认映射）
+        //    ADR-114: ContentPolicy（max_chars / full_max_chars / truncate_strategy）
+        //    与 InjectionLevel 解耦——级别是内容粒度，policy 是体积保护。
+        let (
+            adversarial_auto_inject,
+            adversarial_inject,
+            adversarial_max_chars,
+            adversarial_full_max_chars,
+            adversarial_truncate_strategy,
+        ) = match file_config.llm.adversarial {
+            Some(ref section) => {
+                let mut map = default_adversarial_inject_map();
+                // 文件中的显式配置覆盖内置默认
+                for (persona, level) in &section.inject {
+                    map.insert(persona.clone(), *level);
+                }
+                (
+                    section.auto_inject,
+                    map,
+                    section.max_chars,
+                    section.full_max_chars,
+                    section.truncate_strategy,
+                )
+            }
+            None => (
+                true,
+                default_adversarial_inject_map(),
+                core_domain::default_adversarial_max_chars(),
+                core_domain::default_adversarial_full_max_chars(),
+                core_domain::TruncateStrategy::default(),
+            ),
+        };
+
         Ok(Self {
             base_url,
             model,
@@ -204,6 +266,11 @@ impl ResolvedLlmConfig {
             max_tokens: file_config.llm.defaults.max_tokens,
             seed: file_config.llm.defaults.seed,
             source,
+            adversarial_auto_inject,
+            adversarial_inject,
+            adversarial_max_chars,
+            adversarial_full_max_chars,
+            adversarial_truncate_strategy,
         })
     }
 }

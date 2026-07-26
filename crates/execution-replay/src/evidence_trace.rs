@@ -380,14 +380,14 @@ mod tests {
         let records = vec![make_record(
             vec![risk_expansion_observation()],
             vec![market_evidence(EvidenceKind::RiskExpansion, -1.0)],
-            ExecutionState::Wait,
+            ExecutionState::Maintain,
         )];
         let trace = compute_evidence_trace(&records);
         let row = trace.get(EvidenceKind::RiskExpansion).unwrap();
         assert_eq!(row.observation_count, 1);
         assert_eq!(row.evidence_count, 1);
         assert_eq!(row.supporting_count, 1);
-        assert_eq!(row.decision_counts.get(&ExecutionState::Wait), Some(&1));
+        assert_eq!(row.decision_counts.get(&ExecutionState::Maintain), Some(&1));
     }
 
     #[test]
@@ -399,12 +399,12 @@ mod tests {
                     market_evidence(EvidenceKind::RiskExpansion, -1.0),
                     market_evidence(EvidenceKind::Distribution, -1.0),
                 ],
-                ExecutionState::Wait,
+                ExecutionState::Maintain,
             ),
             make_record(
                 vec![risk_expansion_observation()],
                 vec![market_evidence(EvidenceKind::RiskExpansion, -1.0)],
-                ExecutionState::Wait,
+                ExecutionState::Maintain,
             ),
         ];
         let trace = compute_evidence_trace(&records);
