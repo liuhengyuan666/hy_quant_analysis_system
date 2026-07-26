@@ -51,8 +51,12 @@ export const refreshApi = {
 export const llmApi = {
   async getStatus() { return tauriInvoke(COMMANDS.getLlmStatus); },
 
-  async analyzeWithLlm(scope, action) {
-    return tauriInvoke(COMMANDS.analyzeWithLlm, { scope, action });
+  async analyzeWithLlm(scope, action, adversarial) {
+    const args = { scope, action };
+    if (adversarial !== undefined) {
+      args.adversarial = adversarial;
+    }
+    return tauriInvoke(COMMANDS.analyzeWithLlm, args);
   },
 
   async setLlmConfig(baseUrl, model, timeoutSecs) {

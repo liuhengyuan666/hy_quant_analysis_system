@@ -596,8 +596,14 @@
     "riskView": "Risk View",
     "devilsAdvocate": "Devil's Advocate",
     "portfolioReview": "Portfolio Review",
+    "marketAdversarialLens": "Market Adversarial View",
     "analyzing": "Analyzing...",
     "selectAction": "Click a button above to generate analysis",
-    "analysisFailed": "Analysis failed"
+    "analysisFailed": "Analysis failed",
+    "adversarialLevel": "Adversarial Background",
+    "adversarialFull": "Full",
+    "adversarialStandard": "Standard",
+    "adversarialCompact": "Compact",
+    "adversarialNone": "Off"
   }
 }

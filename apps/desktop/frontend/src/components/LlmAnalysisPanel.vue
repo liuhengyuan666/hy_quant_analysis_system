@@ -13,6 +13,7 @@ import { llmApi } from '../api/tauri.js';
 const { t } = useI18n();
 
 const activeAction = ref('');
+const adversarialLevel = ref('standard');
 const loading = computed(() => dashboardStore.llmLoading);
 const error = computed(() => dashboardStore.llmError);
 const analysis = computed(() => dashboardStore.llmAnalysis);
@@ -24,6 +25,7 @@ const actions = [
   { key: 'risk_view', label: t('research.riskView') },
   { key: 'devils_advocate', label: t('research.devilsAdvocate') },
   { key: 'portfolio_review', label: t('research.portfolioReview') },
+  { key: 'market_adversarial_lens', label: t('research.marketAdversarialLens') },
 ];
 
 async function handleGenerate(action) {
@@ -33,7 +35,8 @@ async function handleGenerate(action) {
   try {
     const result = await llmApi.analyzeWithLlm(
       dashboardStore.selectedScope,
-      action
+      action,
+      adversarialLevel.value
     );
     updateLlmAnalysis(result);
   } catch (err) {
@@ -81,6 +84,24 @@ function renderMarkdown(text) {
       >
         {{ act.label }}
       </button>
+    </div>
+
+    <!-- Adversarial Inject Level -->
+    <div class="llm-panel__adversarial">
+      <span class="llm-panel__adversarial-label">{{ t('research.adversarialLevel') }}</span>
+      <div class="llm-panel__adversarial-options" role="radiogroup">
+        <button
+          v-for="level in ['full', 'standard', 'compact', 'none']"
+          :key="level"
+          class="llm-panel__adversarial-btn"
+          :class="{ 'llm-panel__adversarial-btn--active': adversarialLevel === level }"
+          role="radio"
+          :aria-checked="adversarialLevel === level"
+          @click="adversarialLevel = level"
+        >
+          {{ t(`research.adversarial${level.charAt(0).toUpperCase() + level.slice(1)}`) }}
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -167,6 +188,48 @@ function renderMarkdown(text) {
 .llm-panel__action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.llm-panel__adversarial {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.llm-panel__adversarial-label {
+  font-size: var(--font-size-meta);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.llm-panel__adversarial-options {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.llm-panel__adversarial-btn {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.llm-panel__adversarial-btn:hover {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.llm-panel__adversarial-btn--active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .llm-panel__content {

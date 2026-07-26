@@ -596,8 +596,14 @@
     "riskView": "风险视角",
     "devilsAdvocate": "唱反调",
     "portfolioReview": "组合决策解读",
+    "marketAdversarialLens": "市场博弈视角",
     "analyzing": "正在分析...",
     "selectAction": "点击上方按钮生成分析",
-    "analysisFailed": "分析失败"
+    "analysisFailed": "分析失败",
+    "adversarialLevel": "博弈背景注入",
+    "adversarialFull": "完整",
+    "adversarialStandard": "标准",
+    "adversarialCompact": "精简",
+    "adversarialNone": "关闭"
   }
 }
