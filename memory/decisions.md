@@ -978,3 +978,75 @@ ADR-107 冻结了桌面前端投影边界（零计算）。RV1 Phase 0/1 落地�
 扩展 ADR-107（补充而非替代）：1) UI 不拥有投资语义，只展示 Research/Decision Contract 输出——职责划分为 Frontend: Render / Backend: Interpret / Decision: Execution Engine，禁止前端出现任何分数到买卖语义的映射判断；2) StrategyPerspectives 不进入 Dashboard 首页，只作为二级入口存在（SignalDetailModal 内 Tab 或 Research 级页面），首页保持单一决策动线；3) 设立 RV1 Real Usage Observation Window（5-10 个交易日）：记录 ExecutionResultsPanel / portfolio_review / strategy-perspectives / daily-analysis 的真实使用频率与是否改变操作，观察结果决定 TASK-208 是独立 Panel 还是降级为 SignalDetailModal Tab；4) 人格卡片（投资者视角）而非 scoreboard 数字表是确认的设计方向；attribution 懒加载、不批量预取。
 
 **Tags:** rv1, frontend, projection-boundary, observation-window, adr-107-extension
+
+## ADR-109: market_adversarial_lens Persona — Market Microstructure Analysis Perspective
+
+**Status:** Accepted
+
+### Context
+系统现有 8 个 LLM persona 覆盖叙事/归因/风控/质疑/执行/组合视角，但缺少'市场参与者博弈结构'维度——谁在交易、谁被迫交易、当前价格由主动资金还是被动资金决定。徐翔技术翔时期的博弈框架（资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期）提供了可抽象的分析脚手架。
+
+### Decision
+新增文件 persona market_adversarial_lens（label: 市场博弈视角）到 config/prompts.toml。严格遵循 ADR-106 边界：只解释系统已计算的事实，不输出评分/排名/BUY-SELL-HOLD/仓位百分比/分类标签。system prompt 含'证据优先'约束（禁止猜测资金行为）和'反事实检查'（如果主要买方消失，结构是否维持）。template 含 5 维分析框架 + web search 引导词（纯 prompt 文本，无后端基础设施）。
+
+**Tags:** llm, persona, market-microstructure, adversarial-reasoning, rv1
+
+## ADR-110: build_snapshot_context() Microstructure Field Injection
+
+**Status:** Accepted
+
+### Context
+build_snapshot_context() 是 LLM 分析的唯一上下文组装函数，当前仅注入 regime_label/environment_label/breadth_state/strategy_state/top_rotation/top_signals。6 个已计算但未注入的字段（volume_expansion_pct/turnover_coverage_pct/breadth_5d_delta/bottom_rotation/regime_stale_days/liquidity_score）可显著提升 LLM 对市场微观结构的感知能力。
+
+### Decision
+在 build_snapshot_context() 中新增 6 个字段的格式化输出。liquidity_score 使用 DashboardSnapshot 顶层字段（regime 级系统性流动性，always present）。Environment 衍生字段（volume_expansion_pct/turnover_coverage_pct/breadth_5d_delta）通过 snapshot.environment 的 if-let guard 访问，None 时显示 N/A。bottom_rotation 仅输出 top-5 symbol 名（不给 RS 分数），镜像 top_rotation 格式。函数长度控制在 ~60 行。
+
+**Tags:** llm, context-injection, microstructure, action-rs, rv1
+
+## ADR-111: Web Search as Prompt-Level Advisory for LLM Context Enrichment
+
+**Status:** Accepted
+
+### Context
+market_adversarial_lens persona 的'预期差'维度需要市场叙事信息（政策动态/行业新闻/板块共识），但系统无新闻数据源、无 web search 基础设施。结构化数据缺口（融资余额/ETF 申赎/持仓成本）也不在当前数据管线中。
+
+### Decision
+web search 作为纯 prompt 引导词嵌入 persona template，不建立后端搜索基础设施。引导词格式：'如果模型支持网络搜索，请检索以下公开信息...否则明确声明无法获取并仅基于系统数据分析'。不新增 Rust 依赖、不新增 API 集成、不新增 config 键。结构化数据缺口（融资/ETF/成本分布）同样通过 prompt 引导词尝试补偿，但标注为'如果无法获取请说明'。
+
+**Tags:** llm, web-search, prompt-engineering, data-gap, rv1
+
+## ADR-112: Shared Adversarial Context Layer — Default-On Hypothesis Background with Tiered Injection
+
+**Status:** Accepted
+
+### Context
+P1 交付的 market_adversarial_lens 验证了博弈分析的价值（ADR-109），但独立 persona 模式下 8+ 个 persona 各自重复推理博弈结构，token 浪费且结论可能不一致。博弈分析回答'当前价格由谁决定'这一与视角无关的基础问题，属于 Research Operating System 的基础设施能力。用户裁定：启用语义为'所有人默认获得市场竞争假设背景'，而非'自动接受 adversarial 结论'；且不同职责的 persona 需要不同注入强度（市场叙事类 full / 机制解释类 summary / 数据检查类 none）。
+
+### Decision
+1) 默认开启：analyze_with_action 在组装 extra context 时确保当日 adversarial 记录存在（缺失则先跑 market_adversarial_lens 前置调用并落盘 action='adversarial'，复用 llm_history 存储，新鲜度=report_date 严格相等）。2) 注入语义为假设背景：段落头部明确'这是假设性背景，不是事实证据，不是结论，你的职责是结合系统数据验证或反驳其中的假设'。3) 分级注入：InjectLevel=Full/Summary/None，Full 注入全文、Summary 注入摘要；默认映射 market_story/portfolio_review/risk_view/devils_advocate/short_term_trader/long_term_allocator=full，explain_decision/preclose_review=summary，market_adversarial_lens=none（代码硬编码递归防护）。4) 配置：[llm.adversarial] auto_inject（默认 true）+ [llm.adversarial.inject] per-persona 映射，CLI --adversarial <full|summary|none> 单次覆盖。5) 前置失败静默降级，绝不阻塞主调用；前置与主调用共享同一 DashboardSnapshot。
+
+**Tags:** llm, adversarial-context, shared-layer, hypothesis-background, tiered-injection, rv1
+
+## ADR-113: Adversarial as Snapshot Attachment: Prewarm Call Model + Level Vocabulary + Token Budget
+
+**Status:** Accepted
+
+### Context
+Oracle 复核 + 实测（冷路径 164s = 前置 77s + 主调用 87s）确认：adversarial 共享层的用户可感延迟来自冷路径的首次基础设施初始化，而非注入机制本身。用户裁定：adversarial 已从实验性能力进入基础认知设施阶段，它是 ResearchSnapshot 的认知附件，应随 snapshot 生成而非首次请求时生成。
+
+### Decision
+1) market-refresh 预生成 adversarial context（auto_inject=true 时按 scope 生成落盘，source=market-refresh，失败静默降级，尊重 auto_inject=false 总开关）；2) 注入级别词表改为 none/compact/standard/full（standard = full 经 max_chars 段落边界截断版），改名在 adversarial 提交前完成以避免迁移；3) [llm.adversarial] max_chars（默认 4000）配置化 token 预算，超限段落边界截断 + 头部标注 + 警告，不依赖人工；4) adversarial_diag 扩充为 enabled/injected/level/fresh/generated_at/source 六字段并在桌面渲染，record 落盘 source 字段（serde default 兼容老记录）；5) HTTP client 复用降为 P4。本 ADR 扩展 ADR-112，不改变其注入语义（假设背景供验证或反驳）。
+
+**Tags:** rv1, llm, adversarial, performance, architecture, adr-112-extension
+
+## ADR-114: Adversarial Refinements: Level/Policy Decoupling + Async Prewarm + Observable Diagnostics
+
+**Status:** Accepted
+
+### Context
+ADR-113 批准后用户复审提出三点修订：1) standard = truncated full 的语义绑定不利于演进——截断是保护机制，不是等级；2) market-refresh 同步等待 LLM 会污染 V6 刷新的数据语义，预生成必须是异步 warm cache；3) 无 reason 字段的诊断是黑盒。另确定 Wave 1 顺序为 210→212→211（先有可观测性再做截断机制）。
+
+### Decision
+扩展 ADR-113：1) InjectionLevel（compact=结构化摘要/standard=默认结构化正文/full=完整研究文本）与 ContentPolicy（max_chars + truncate_strategy=paragraph_boundary）解耦为两个独立概念，policy 对 standard/full 提供尺寸保护但等级不由截断定义；2) 预生成为异步后台任务：snapshot ready 后 spawn adversarial preparation 写 llm-history，失败静默、绝不阻塞或失败 market-refresh；3) 预留 preparation≠injection 概念拆分（enabled/auto_prepare/auto_inject 三开关为未来候选，V1 只保持 auto_inject 单开关）；4) 截断产生 provenance 字段 original_chars/final_chars/truncated（符合 ADR-079/081）；5) adversarial_diag 增加 reason 字段（stale/persona_excluded/disabled/no_api_key/persona_missing 等）；6) Wave 1 执行顺序 TASK-210→212→211；7) 默认开启的三条件：失败不影响主流程（已有）+ 成本可控（max_chars+cache）+ 用户可见（diag）。
+
+**Tags:** rv1, llm, adversarial, architecture, adr-113-extension
