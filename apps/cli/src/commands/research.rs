@@ -1403,8 +1403,8 @@ pub fn handle_strategy_perspectives(
                         let scenario_text = entry
                             .scenario_scores
                             .iter()
-                            .find(|(k, _, _)| k == key)
-                            .map(|(_, label, s)| format!("{} {:.1}", label, s))
+                            .find(|s| s.key == *key)
+                            .map(|s| format!("{} {:.1}", s.label, s.score))
                             .unwrap_or_else(|| format!("(unknown scenario '{}')", key));
                         println!(
                             "{:<10} {:<10.1} {:<10.1} {:<10.1} {:<10.1} {:<14} {}",
@@ -1426,7 +1426,7 @@ pub fn handle_strategy_perspectives(
                             entry
                                 .scenario_scores
                                 .iter()
-                                .map(|(_, label, _)| label.chars().take(4).collect::<String>())
+                                .map(|s| s.label.chars().take(4).collect::<String>())
                                 .collect()
                         })
                         .unwrap_or_default();
@@ -1451,8 +1451,8 @@ pub fn handle_strategy_perspectives(
                             entry.momentum_right_score,
                             format!("{:?}", entry.best_strategy),
                         );
-                        for (_, _, score) in &entry.scenario_scores {
-                            print!(" {:<9.1}", score);
+                        for s in &entry.scenario_scores {
+                            print!(" {:<9.1}", s.score);
                         }
                         println!();
                     }
@@ -1460,8 +1460,8 @@ pub fn handle_strategy_perspectives(
                     if !entries.is_empty() {
                         println!();
                         println!("All scenario columns shown. Use --scenario <key> to focus on one:");
-                        for (key, label, _) in &entries[0].scenario_scores {
-                            println!("  {} = {}", key, label);
+                        for s in &entries[0].scenario_scores {
+                            println!("  {} = {}", s.key, s.label);
                         }
                     }
                 }
@@ -1505,8 +1505,8 @@ pub fn handle_strategy_perspectives(
 
             println!();
             println!("Scenario Scores:");
-            for (_, label, score) in &entry.scenario_scores {
-                println!("  {:<20} {:>6.1}", label, score);
+            for s in &entry.scenario_scores {
+                println!("  {:<20} {:>6.1}", s.label, s.score);
             }
 
             println!();
@@ -1515,8 +1515,8 @@ pub fn handle_strategy_perspectives(
                 println!();
                 println!("  [{:?}] stored {:.1} / recomputed {:.1} (drift {:.2})",
                     attr.kind, attr.stored_score, attr.recomputed_score, attr.drift);
-                for (factor, value, contribution, note) in &attr.drivers {
-                    println!("    {:<10} value {:>8.2}  contrib {:>7.2}  {}", factor, value, contribution, note);
+                for d in &attr.drivers {
+                    println!("    {:<10} value {:>8.2}  contrib {:>7.2}  {}", d.factor, d.value, d.contribution, d.note);
                 }
             }
         }

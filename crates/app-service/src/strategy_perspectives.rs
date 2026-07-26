@@ -9,10 +9,30 @@ use anyhow::{Context, Result};
 use chrono::NaiveDate;
 use core_domain::{AnalysisScope, StrategyKind, StrategyPreferenceSnapshot};
 use market_store::StorageConfig;
+use serde::{Deserialize, Serialize};
 use strategy_engine::{build_strategy_attributions, AnalysisContext};
 
+/// One scenario's weighted score for a symbol (self-describing JSON at the
+/// Tauri boundary).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScenarioScore {
+    pub key: String,
+    pub label: String,
+    pub score: f64,
+}
+
+/// One attribution driver row for the detail view (self-describing JSON).
+/// Named `*View` to avoid collision with `strategy_engine::AttributionDriver`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AttributionDriverView {
+    pub factor: String,
+    pub value: f64,
+    pub contribution: f64,
+    pub note: String,
+}
+
 /// One row of the strategy scoreboard.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyPerspectiveEntry {
     pub symbol: String,
     pub name: Option<String>,
@@ -23,23 +43,22 @@ pub struct StrategyPerspectiveEntry {
     pub best_strategy: StrategyKind,
     pub confidence: f64,
     pub alignment: u8,
-    /// (scenario_key, scenario_label, weighted_score)
-    pub scenario_scores: Vec<(String, String, f64)>,
+    pub scenario_scores: Vec<ScenarioScore>,
 }
 
 /// Attribution for one strategy, recomputed on demand for the detail view.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyAttributionView {
     pub kind: StrategyKind,
     pub recomputed_score: f64,
     pub stored_score: f64,
     /// |recomputed - stored| — should be ~0 when the pipeline is consistent.
     pub drift: f64,
-    pub drivers: Vec<(String, f64, f64, String)>, // (factor, value, contribution, note)
+    pub drivers: Vec<AttributionDriverView>,
 }
 
 /// Full detail for one symbol: stored scores + per-strategy attribution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyPerspectiveDetail {
     pub entry: StrategyPerspectiveEntry,
     pub attributions: Vec<StrategyAttributionView>,
@@ -60,7 +79,10 @@ fn entry_from_row(
         best_strategy: row.best_strategy.clone(),
         confidence: row.confidence,
         alignment: row.alignment,
-        scenario_scores: all_scenario_scores(scenarios, row),
+        scenario_scores: all_scenario_scores(scenarios, row)
+            .into_iter()
+            .map(|(key, label, score)| ScenarioScore { key, label, score })
+            .collect(),
     }
 }
 
@@ -195,7 +217,12 @@ pub fn strategy_perspectives_detail(
                 drivers: breakdown
                     .drivers
                     .into_iter()
-                    .map(|d| (d.factor, d.value, d.contribution, d.note))
+                    .map(|d| AttributionDriverView {
+                        factor: d.factor,
+                        value: d.value,
+                        contribution: d.contribution,
+                        note: d.note,
+                    })
                     .collect(),
             }
         })

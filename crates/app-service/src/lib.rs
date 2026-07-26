@@ -59,6 +59,10 @@ use crate::trust::*;
 pub use core_domain::AnalysisScope as ReportScope;
 pub use report_renderer::ResearchInsight;
 pub use execution_engine::types::ExecutionDecision;
+pub use strategy_perspectives::{
+    AttributionDriverView, ScenarioScore, StrategyAttributionView, StrategyPerspectiveDetail,
+    StrategyPerspectiveEntry,
+};
 
 const CALENDAR_GAP_REVIEW_THRESHOLD_DAYS: i64 = 12;
 const REFRESH_SOURCE_LOOKBACK_DAYS: i64 = 7;
@@ -4723,13 +4727,51 @@ impl AppContext {
             let scenario_text: Vec<String> = entry
                 .scenario_scores
                 .iter()
-                .map(|(_, label, score)| format!("{} {:.0}", label, score))
+                .map(|s| format!("{} {:.0}", s.label, s.score))
                 .collect();
             if !scenario_text.is_empty() {
                 section.push_str(&format!("  场景对比：{}\n", scenario_text.join(" | ")));
             }
         }
         section
+    }
+
+    /// Strategy scoreboard for the desktop frontend (RV1): every symbol's four
+    /// independent strategy scores plus scenario weightings for one date + scope.
+    /// Thin delegate over `strategy_perspectives::strategy_perspectives_scoreboard`;
+    /// read-only consumption layer (ADR-107/108).
+    pub fn strategy_scoreboard(
+        &self,
+        scope: core_domain::AnalysisScope,
+        date: Option<NaiveDate>,
+    ) -> Result<(NaiveDate, Vec<StrategyPerspectiveEntry>)> {
+        let project_root = StorageConfig::project_root()?;
+        strategy_perspectives::strategy_perspectives_scoreboard(
+            &self.storage,
+            scope,
+            date,
+            &project_root,
+        )
+    }
+
+    /// Strategy attribution detail for one symbol (RV1). Thin delegate over
+    /// `strategy_perspectives::strategy_perspectives_detail`; attribution is
+    /// recomputed on demand from bars + indicators + regime + rotation, so
+    /// this is intentionally lazy and heavier than the scoreboard.
+    pub fn strategy_attribution(
+        &self,
+        symbol: &str,
+        scope: core_domain::AnalysisScope,
+        date: Option<NaiveDate>,
+    ) -> Result<StrategyPerspectiveDetail> {
+        let project_root = StorageConfig::project_root()?;
+        strategy_perspectives::strategy_perspectives_detail(
+            &self.storage,
+            symbol,
+            scope,
+            date,
+            &project_root,
+        )
     }
 
     /// Integrity section: data freshness status for the current analysis.
