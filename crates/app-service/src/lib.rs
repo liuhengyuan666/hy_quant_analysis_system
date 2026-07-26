@@ -3216,6 +3216,8 @@ impl AppContext {
                     api_key: "none".to_string(),
                     config_file: None,
                 },
+                adversarial_auto_inject: true,
+                adversarial_inject: std::collections::HashMap::new(),
             }
         });
 
@@ -3337,6 +3339,7 @@ impl AppContext {
                     }),
                 },
                 defaults: core_domain::DefaultsSection::default(),
+                adversarial: None,
             },
         };
 
@@ -4449,10 +4452,16 @@ impl AppContext {
     /// integrity status, previous interpretation) as EXPLANATION INPUT and
     /// produces explanation text only. It never generates action labels,
     /// position sizing, or modifies final_score / signal_label / portfolio_decision.
+    ///
+    /// ADR-112: before the main call, a shared adversarial hypothesis background
+    /// is ensured for (scope, report_date) and injected per the persona's
+    /// InjectLevel. `adversarial_override` (from CLI/Tauri) wins over config;
+    /// `None` falls back to `[llm.adversarial]` resolution.
     pub async fn analyze_with_action(
         &self,
         action: &str,
         scope: ReportScope,
+        adversarial_override: Option<core_domain::InjectLevel>,
     ) -> anyhow::Result<serde_json::Value> {
         // 1. Build snapshot context
         let snapshot = self.dashboard_snapshot_with_scope(None, scope)?;
@@ -4471,6 +4480,43 @@ impl AppContext {
         extra.push_str(&self.build_integrity_context_section());
         if action == "portfolio_review" {
             extra.push_str(&self.build_portfolio_decision_section(scope));
+        }
+
+        // 3b. ADR-112: shared adversarial hypothesis background.
+        // Recursion guard is hardcoded — the adversarial persona never receives
+        // its own shared injection, regardless of config.
+        let mut adversarial_diag = serde_json::json!({
+            "injected": false,
+            "level": "none",
+            "fresh": false,
+        });
+        if action != "market_adversarial_lens" {
+            let resolved_cfg = self.get_resolved_llm_config(None)?;
+            let configured = resolved_cfg
+                .adversarial_inject
+                .get(action)
+                .copied()
+                .unwrap_or(core_domain::InjectLevel::Standard);
+            // CLI/Tauri 显式指定优先；未指定时遵循 auto_inject 总开关
+            let effective = match adversarial_override {
+                Some(level) => level,
+                None if resolved_cfg.adversarial_auto_inject => configured,
+                None => core_domain::InjectLevel::None,
+            };
+            if effective != core_domain::InjectLevel::None {
+                if let Some(record) = self.ensure_adversarial_context(scope, &snapshot).await {
+                    let fresh = record.report_date == snapshot.report_date.to_string();
+                    extra.push_str(&llm_history::adversarial_context_section(
+                        &record,
+                        effective.as_str(),
+                    ));
+                    adversarial_diag = serde_json::json!({
+                        "injected": true,
+                        "level": effective.as_str(),
+                        "fresh": fresh,
+                    });
+                }
+            }
         }
         // Previous interpretation — labeled as background, never evidence (ADR-106)
         if let Some(previous) =
@@ -4550,9 +4596,86 @@ impl AppContext {
             "scope": scope.as_str(),
             "placeholder": is_placeholder,
             "markdown": analysis_text,
+            "adversarial": adversarial_diag,
         });
 
         Ok(result)
+    }
+
+    /// ADR-112: ensure a fresh shared adversarial hypothesis background exists
+    /// for (scope, snapshot.report_date).
+    ///
+    /// - Fresh hit (same report_date) → reuse the stored record, zero LLM cost.
+    /// - Stale/missing → run the `market_adversarial_lens` persona once on the
+    ///   SAME snapshot and persist under action="adversarial".
+    /// - ANY failure (no API key, network, timeout) → silent `None`; the main
+    ///   call proceeds without injection. Never propagates errors.
+    async fn ensure_adversarial_context(
+        &self,
+        scope: ReportScope,
+        snapshot: &report_engine::DashboardSnapshot,
+    ) -> Option<llm_history::LlmAnalysisRecord> {
+        let project_root = StorageConfig::project_root().ok()?;
+
+        // 1. Fresh hit → reuse (Daily Shared Context Pattern: 1 LLM call/day/scope)
+        if let Some(existing) =
+            llm_history::latest_record(&project_root, scope.as_str(), "adversarial")
+        {
+            if existing.report_date == snapshot.report_date.to_string() {
+                return Some(existing);
+            }
+        }
+
+        // 2. Run the pre-pass on the SAME snapshot (no recursive analyze_with_action)
+        let prompts_file = prompts::load_prompts(&project_root);
+        let persona = prompts::resolve_persona(&prompts_file, "market_adversarial_lens").ok()?;
+        let mut extra = String::new();
+        extra.push_str(&self.build_strategy_context_section(scope));
+        extra.push_str(&self.build_integrity_context_section());
+        let (system_prompt, user_prompt) = research_skills::build_prompt_with_persona(
+            &persona.system,
+            &persona.template,
+            snapshot,
+            Some(&extra),
+        );
+
+        let resolved = self.get_resolved_llm_config(None).ok()?;
+        let config = self.get_llm_config().ok()?;
+        let api_key = match resolved
+            .api_key
+            .clone()
+            .filter(|key| !key.is_empty())
+            .or_else(|| self.get_llm_api_key().ok().flatten())
+        {
+            Some(key) => key,
+            None => return None, // no key → silent skip, never persist placeholder
+        };
+
+        let text = llm::call_llm_api(
+            config,
+            api_key,
+            &system_prompt,
+            user_prompt,
+            resolved.temperature,
+            resolved.max_tokens,
+            resolved.seed,
+        )
+        .await
+        .ok()?;
+
+        let record = llm_history::LlmAnalysisRecord {
+            scope: scope.as_str().to_string(),
+            action: "adversarial".to_string(),
+            persona_label: persona.label.clone(),
+            report_date: snapshot.report_date.to_string(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            summary: llm_history::make_summary(&text),
+            analysis_text: text,
+        };
+        if let Err(error) = llm_history::save_record(&project_root, &record) {
+            eprintln!("[adversarial] failed to save record: {error}");
+        }
+        Some(record)
     }
 
     /// Strategy perspectives section: top symbols with 4 independent strategy

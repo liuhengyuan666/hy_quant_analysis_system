@@ -944,6 +944,7 @@ fn get_llm_status() -> Result<LlmStatus, String> {
 async fn analyze_with_llm(
     scope: Option<String>,
     action: String,
+    adversarial: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let scope = scope.unwrap_or_else(|| "global".to_string());
     let report_scope = match scope.as_str() {
@@ -951,10 +952,16 @@ async fn analyze_with_llm(
         "hk" => app_service::ReportScope::Hk,
         _ => app_service::ReportScope::Global,
     };
+    let adversarial_level = adversarial.as_deref().map(|level| match level {
+        "full" => core_domain::InjectLevel::Full,
+        "standard" => core_domain::InjectLevel::Standard,
+        "compact" => core_domain::InjectLevel::Compact,
+        _ => core_domain::InjectLevel::None,
+    });
 
     let context = AppContext::new(StorageConfig::default());
     context
-        .analyze_with_action(&action, report_scope)
+        .analyze_with_action(&action, report_scope, adversarial_level)
         .await
         .map_err(|e| e.to_string())
 }

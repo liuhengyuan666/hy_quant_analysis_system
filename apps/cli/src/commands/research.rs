@@ -172,7 +172,7 @@ pub fn handle_analyze(
             .enable_all()
             .build()
             .expect("failed to create tokio runtime");
-        runtime.block_on(context.analyze_with_action(&action, scope))
+        runtime.block_on(context.analyze_with_action(&action, scope, None))
     })
     .join()
     .expect("LLM analysis thread panicked")?;

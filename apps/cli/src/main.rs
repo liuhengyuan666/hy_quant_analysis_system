@@ -253,6 +253,8 @@ enum Command {
         scope: ReportScopeArg,
         #[arg(long, default_value = "market_story")]
         action: String,
+        #[arg(long, value_parser = ["full", "standard", "compact", "none"], help = "Override shared adversarial background inject level for this call")]
+        adversarial: Option<String>,
     },
 
     // ── Advanced research (visible in --help) ─────────────────────────
@@ -432,7 +434,7 @@ fn main() -> Result<()> {
         Command::HistoricalReplay { scope, from, to, output_dir } => commands::research::handle_historical_replay(&context, scope, from, to, output_dir)?,
 
         // LLM
-        Command::LlmAnalyze { scope, action } => commands::llm::handle_llm_analyze(&context, scope, action, cli.quiet)?,
+        Command::LlmAnalyze { scope, action, adversarial } => commands::llm::handle_llm_analyze(&context, scope, action, adversarial, cli.quiet)?,
 
         // Research subcommands
         Command::Research(cmd) => match cmd {
