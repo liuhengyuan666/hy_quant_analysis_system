@@ -605,5 +605,42 @@
     "adversarialStandard": "Standard",
     "adversarialCompact": "Compact",
     "adversarialNone": "Off"
+  },
+  "perspectives": {
+    "eyebrow": "Multi-Strategy Research",
+    "title": "Strategy Perspectives",
+    "lede": "Independent scores for the same symbol under four strategy personas, plus scenario comparison; the best strategy is determined by the backend.",
+    "openButton": "Perspectives",
+    "dataDate": "Data date · {date}",
+    "scopeLabel": "Scope · {scope}",
+    "reload": "Reload",
+    "refreshing": "Loading…",
+    "loading": "Loading multi-strategy scores…",
+    "errorTitle": "Strategy scores unavailable",
+    "empty": "No multi-strategy scores available for this scope.",
+    "showAll": "Show all ({count})",
+    "showLess": "Show less",
+    "alignment": "{count}/4 strategies aligned",
+    "confidence": "Confidence {value}",
+    "bestBadge": "Best",
+    "attribution": "Attribution",
+    "attributionTitle": "Strategy Attribution",
+    "attributionLede": "Backend-recomputed strategy scores, stored scores, and factor drivers.",
+    "attributionLoading": "Recomputing strategy attribution…",
+    "attributionError": "Strategy attribution unavailable",
+    "recomputed": "Recomputed",
+    "stored": "Stored",
+    "drift": "drift",
+    "factor": "Factor",
+    "value": "Value",
+    "contribution": "Contribution",
+    "note": "Note",
+    "noDrivers": "No factor drivers available.",
+    "personas": {
+      "valueLeft": "Value Investor (Left-side)",
+      "trendPullback": "Pullback Buyer",
+      "trendBreakout": "Breakout Follower",
+      "momentumRight": "Momentum Trader"
+    }
   }
 }

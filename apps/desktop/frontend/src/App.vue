@@ -17,6 +17,7 @@ import {
   exportReport as bridgeExportReport,
   analyzeWithLlm as bridgeAnalyzeWithLlm,
   runPrecloseAnalysis as bridgeRunPrecloseAnalysis,
+  toggleStrategyPerspectives,
 } from './store.js';
 import TopStatusBar from './components/TopStatusBar.vue';
 import LlmAnalysisPanel from './components/LlmAnalysisPanel.vue';
@@ -36,6 +37,7 @@ import SignalsPanel from './components/SignalsPanel.vue';
 import TrustSummaryPanel from './components/TrustSummaryPanel.vue';
 import InsightPanel from './components/InsightPanel.vue';
 import ExecutionResultsPanel from './components/ExecutionResultsPanel.vue';
+import StrategyPerspectivesPanel from './components/StrategyPerspectivesPanel.vue';
 import RefreshProgress from './components/RefreshProgress.vue';
 import Notice from './components/Notice.vue';
 import Skeleton from './components/Skeleton.vue';
@@ -94,6 +96,10 @@ function handleOpenGuides() {
     usageGuidesRef.value.openUsageGuides();
   }
 }
+
+function handleOpenPerspectives() {
+  toggleStrategyPerspectives(true);
+}
 </script>
 
 <template>
@@ -104,6 +110,7 @@ function handleOpenGuides() {
       @export="handleExport"
       @open-guides="handleOpenGuides"
       @run-preclose-analysis="handleRunPrecloseAnalysis"
+      @open-perspectives="handleOpenPerspectives"
       @change-scope="handleChangeScope"
     />
 
@@ -192,6 +199,9 @@ function handleOpenGuides() {
 
     <!-- Usage guides full-screen viewer -->
     <UsageGuidesPanel ref="usageGuidesRef" />
+
+    <!-- Strategy perspectives research overlay -->
+    <StrategyPerspectivesPanel />
   </div>
 </template>
 

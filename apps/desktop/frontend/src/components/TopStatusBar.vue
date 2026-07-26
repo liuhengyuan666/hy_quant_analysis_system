@@ -6,7 +6,7 @@ import LanguageToggle from './LanguageToggle.vue';
 
 const { t } = useI18n();
 
-const emit = defineEmits(['refresh', 'export', 'openGuides', 'runPrecloseAnalysis', 'changeScope']);
+const emit = defineEmits(['refresh', 'export', 'openGuides', 'runPrecloseAnalysis', 'changeScope', 'openPerspectives']);
 
 const snapshot = computed(() => dashboardStore.snapshot);
 const refreshing = computed(() => dashboardStore.refreshing);
@@ -105,6 +105,9 @@ onBeforeUnmount(() => {
         @click="emit('runPrecloseAnalysis')"
       >
         {{ precloseAnalyzing ? t('hero.analyzing') : t('hero.runPrecloseAnalysis') }}
+      </button>
+      <button class="top-btn" @click="emit('openPerspectives')">
+        {{ t('perspectives.openButton') }}
       </button>
       <LanguageToggle />
     </div>

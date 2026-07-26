@@ -102,6 +102,27 @@ export const dashboardStore = reactive({
 
   /** Execution results from preclose analysis (array of ExecutionDecision) */
   executionResults: [],
+
+  /** Strategy scoreboard (multi-strategy persona scores per symbol) */
+  strategyScoreboard: null,
+
+  /** Strategy scoreboard loading state */
+  strategyScoreboardLoading: false,
+
+  /** Strategy scoreboard error message */
+  strategyScoreboardError: '',
+
+  /** Strategy attribution detail (lazy, per-symbol, explicit click only) */
+  strategyAttribution: null,
+
+  /** Strategy attribution loading state */
+  strategyAttributionLoading: false,
+
+  /** Strategy attribution error message */
+  strategyAttributionError: '',
+
+  /** Whether strategy perspectives overlay is visible */
+  showStrategyPerspectives: false,
 });
 
 /**
@@ -263,6 +284,55 @@ export function updateStartupNotice(notice) {
 }
 
 /**
+ * Update strategy scoreboard payload.
+ */
+export function updateStrategyScoreboard(scoreboard) {
+  dashboardStore.strategyScoreboard = scoreboard;
+}
+
+/**
+ * Update strategy scoreboard loading state.
+ */
+export function updateStrategyScoreboardLoading(loading) {
+  dashboardStore.strategyScoreboardLoading = loading;
+}
+
+/**
+ * Update strategy scoreboard error state.
+ */
+export function updateStrategyScoreboardError(error) {
+  dashboardStore.strategyScoreboardError = error || '';
+}
+
+/**
+ * Update strategy attribution payload.
+ */
+export function updateStrategyAttribution(attribution) {
+  dashboardStore.strategyAttribution = attribution;
+}
+
+/**
+ * Update strategy attribution loading state.
+ */
+export function updateStrategyAttributionLoading(loading) {
+  dashboardStore.strategyAttributionLoading = loading;
+}
+
+/**
+ * Update strategy attribution error state.
+ */
+export function updateStrategyAttributionError(error) {
+  dashboardStore.strategyAttributionError = error || '';
+}
+
+/**
+ * Toggle strategy perspectives overlay visibility.
+ */
+export function toggleStrategyPerspectives(show) {
+  dashboardStore.showStrategyPerspectives = show !== undefined ? show : !dashboardStore.showStrategyPerspectives;
+}
+
+/**
  * Reset store to initial state.
  */
 export function resetStore() {
@@ -301,6 +371,13 @@ export function resetStore() {
   dashboardStore.showLlmPanel = false;
   dashboardStore.precloseAnalyzing = false;
   dashboardStore.executionResults = [];
+  dashboardStore.strategyScoreboard = null;
+  dashboardStore.strategyScoreboardLoading = false;
+  dashboardStore.strategyScoreboardError = '';
+  dashboardStore.strategyAttribution = null;
+  dashboardStore.strategyAttributionLoading = false;
+  dashboardStore.strategyAttributionError = '';
+  dashboardStore.showStrategyPerspectives = false;
 }
 
 /**
@@ -316,6 +393,8 @@ export let cancelRefresh = () => console.warn('[Store] cancelRefresh not yet ini
 export let exportReport = () => console.warn('[Store] exportReport not yet initialized');
 export let analyzeWithLlm = () => console.warn('[Store] analyzeWithLlm not yet initialized');
 export let runPrecloseAnalysis = () => console.warn('[Store] runPrecloseAnalysis not yet initialized');
+export let loadStrategyScoreboard = () => console.warn('[Store] loadStrategyScoreboard not yet initialized');
+export let loadStrategyAttribution = (symbol) => console.warn('[Store] loadStrategyAttribution not yet initialized', symbol);
 
 /**
  * Initialize event bridge with actual implementations from main.js.
@@ -330,4 +409,6 @@ export function initEventBridge(handlers) {
   if (handlers.exportReport) exportReport = handlers.exportReport;
   if (handlers.analyzeWithLlm) analyzeWithLlm = handlers.analyzeWithLlm;
   if (handlers.runPrecloseAnalysis) runPrecloseAnalysis = handlers.runPrecloseAnalysis;
+  if (handlers.loadStrategyScoreboard) loadStrategyScoreboard = handlers.loadStrategyScoreboard;
+  if (handlers.loadStrategyAttribution) loadStrategyAttribution = handlers.loadStrategyAttribution;
 }

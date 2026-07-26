@@ -25,6 +25,8 @@ export const COMMANDS = {
   setLlmApiKey: 'set_llm_api_key',
   analyzeWithLlm: 'analyze_with_llm',
   runPrecloseAnalysis: 'run_preclose_analysis',
+  strategyScoreboard: 'strategy_scoreboard',
+  strategyAttribution: 'strategy_attribution',
 };
 
 export async function tauriInvoke(command, args) {
@@ -65,5 +67,15 @@ export const llmApi = {
 
   async setLlmApiKey(key) {
     return tauriInvoke(COMMANDS.setLlmApiKey, { key });
+  },
+};
+
+export const strategyApi = {
+  async strategyScoreboard(scope, date) {
+    return tauriInvoke(COMMANDS.strategyScoreboard, { scope, date });
+  },
+
+  async strategyAttribution(symbol, scope, date) {
+    return tauriInvoke(COMMANDS.strategyAttribution, { symbol, scope, date });
   },
 };

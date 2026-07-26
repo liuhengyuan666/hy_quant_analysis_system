@@ -605,5 +605,42 @@
     "adversarialStandard": "标准",
     "adversarialCompact": "精简",
     "adversarialNone": "关闭"
+  },
+  "perspectives": {
+    "eyebrow": "多策略研究",
+    "title": "策略视角",
+    "lede": "同一标的在四种策略人格下的独立评分与场景对比；最优策略由后端判定。",
+    "openButton": "策略视角",
+    "dataDate": "数据日期 · {date}",
+    "scopeLabel": "范围 · {scope}",
+    "reload": "重新加载",
+    "refreshing": "加载中…",
+    "loading": "正在加载多策略评分…",
+    "errorTitle": "策略评分不可用",
+    "empty": "当前范围没有可用的多策略评分。",
+    "showAll": "显示全部 ({count})",
+    "showLess": "收起",
+    "alignment": "{count}/4 策略同向",
+    "confidence": "置信度 {value}",
+    "bestBadge": "最优",
+    "attribution": "归因",
+    "attributionTitle": "策略归因",
+    "attributionLede": "后端重算的各策略分数、存储分数与因子驱动。",
+    "attributionLoading": "正在重算策略归因…",
+    "attributionError": "策略归因不可用",
+    "recomputed": "重算",
+    "stored": "存储",
+    "drift": "漂移",
+    "factor": "因子",
+    "value": "数值",
+    "contribution": "贡献",
+    "note": "说明",
+    "noDrivers": "暂无因子驱动数据。",
+    "personas": {
+      "valueLeft": "价值投资者（左侧布局）",
+      "trendPullback": "回调买入者",
+      "trendBreakout": "突破追随者",
+      "momentumRight": "动量交易者"
+    }
   }
 }
