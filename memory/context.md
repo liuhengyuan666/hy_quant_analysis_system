@@ -30,7 +30,6 @@ rv1_capability_consolidation
 - [Todo] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
 - [InProgress] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
 - [Todo] [TASK-030] [TASK-160.4] Add EvidenceValidationRecord to EvidenceDescriptor so every Evidence Asset carries provenance: dataset scope, horizon, sample size, precision, lift, validated_at, report reference. This turns the Evidence Registry from a manual status table into a traceable Research Asset Registry.
-- [InProgress] [TASK-213] [P4] ADR-113 #5: 前置/主 LLM 调用复用 HTTP client（async_openai::Client 或 reqwest::Client 共享，消除冷路径第二次 TLS 握手，收益 ~50-200ms）。优先级最低，等 TASK-210/211/212 落地后顺手做。
 
 # Constraints
 - 静态 JSON 日历覆盖 2024-2027，后续需要人工维护。
