@@ -137,4 +137,4 @@
 | **portfolio_review** | Portfolio Review Action | LLM action：解读确定性引擎产出的组合姿态（Increase/Maintain/Reduce/Avoid），LLM 只解释不决策（ADR-106） | LLM集成域 |
 | **market_adversarial_lens** | Market Adversarial Lens | 市场博弈视角 persona（ADR-109）：从资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期 5 维解读市场博弈结构；文件 persona，含 web search 引导词（ADR-111） | LLM集成域 |
 | **Shared Adversarial Context** | 共享博弈假设背景 | ADR-112：每 scope 每日一次的博弈分析落盘 `workspace/llm-history/{scope}/adversarial/`，按 persona 分级注入各 prompt；语义为"供验证或反驳的假设"，非结论 | LLM集成域 |
-| **InjectLevel** | Inject Level (full/standard/compact/none) | ADR-113/114 注入级别：full=完整 analysis_text / standard=analysis_text 默认正文（等价 full，截断待 TASK-215）/ compact=record.summary 结构化摘要~400字符 / none=不注入；配置于 `[llm.adversarial.inject]`，CLI `--adversarial` 可单次覆盖 | LLM集成域 |
+| **InjectLevel** | Inject Level (full/standard/compact/none) | ADR-113/114 注入级别：compact=record.summary 摘要 / standard=analysis_text 受 max_chars（默认 4000）保护 / full=analysis_text 受 full_max_chars（默认 12000）保护 / none=不注入；ContentPolicy 与等级解耦（ADR-114）；配置于 `[llm.adversarial.inject]`，CLI `--adversarial` 可单次覆盖 | LLM集成域 |

@@ -1,13 +1,13 @@
 # RESEARCH-SKILLS KNOWLEDGE BASE
 
 ## OVERVIEW
-Research Layer — 冻结量化引擎之上的只读叙事层。V4.5 架构：没有 Skill Framework，没有 Agent Registry，没有 Router。只有 5 个 Prompt 常量 + 一个 `build_prompt` 函数。
+Research Layer — 冻结量化引擎之上的只读叙事层。V4.5 架构：没有 Skill Framework，没有 Agent Registry，没有 Router。只有 6 个内置 Prompt 常量 + 1 个文件 persona（market_adversarial_lens）+ 一个 `build_prompt` 函数。
 
 ## STRUCTURE (V4.5)
 ```text
 crates/research-skills/src/
 ├── lib.rs               # 模块声明 + re-exports (action, provider, openai_provider, inference)
-├── action.rs            # 5 个 const PROMPT + build_prompt() + build_snapshot_context()
+├── action.rs            # 6 个 const PROMPT + build_prompt() + build_snapshot_context()
 ├── provider.rs          # LlmProvider trait + LlmCallConfig
 ├── openai_provider.rs   # OpenAI-compatible API implementation
 └── inference.rs         # 推理配置 + 调用编排

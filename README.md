@@ -250,7 +250,7 @@ cargo run -p quant-cli -- llm-analyze
 
 - 每次 LLM 分析前，系统确保当日"市场博弈假设背景"已生成（同一 scope 同一日期只算一次，落盘 `workspace/llm-history/{scope}/adversarial/`）
 - 注入语义是**假设背景**而非结论：下游 persona 的职责是结合系统数据验证或反驳其中的假设
-- 按 persona 分级注入：叙事/风控/组合类默认 `standard`（当前同 full 效果；截断策略由 TASK-215 ContentPolicy 决定），`explain_decision` / `preclose_review` 默认 `compact`（摘要），`market_adversarial_lens` 自身不注入（递归防护）
+- 按 persona 分级注入：叙事/风控/组合类默认 `standard`（analysis_text 受 max_chars 保护，默认 4000 字符），`explain_decision` / `preclose_review` 默认 `compact`（摘要），`market_adversarial_lens` 自身不注入（递归防护）
 - 每 scope 每日首次调用多一次 LLM 成本，后续调用零额外成本
 - 配置：`config/llm.toml` 的 `[llm.adversarial]`（总开关 `auto_inject` + `[llm.adversarial.inject]` 分级映射）；CLI 用 `--adversarial` 单次覆盖
 
@@ -310,7 +310,7 @@ cargo build -p quant-desktop
 cargo run -p quant-desktop
 ```
 
-桌面端展示：Dashboard 总览、Scope 选择器、历史日期选择、Market Regime、Environment Layer、Trust Summary、Top Rotation、Top Signals、Latest Backtest、Data Health、Recent Reports、LLM 智能分析面板（5 个按钮）。
+桌面端展示：Dashboard 总览、Scope 选择器、历史日期选择、Market Regime、Environment Layer、Trust Summary、Top Rotation、Top Signals、Latest Backtest、Data Health、Recent Reports、LLM 智能分析面板（7 个按钮：market_story / explain_decision / preclose_review / risk_view / devils_advocate / portfolio_review / market_adversarial_lens）。LLM 面板同时提供博弈背景注入级别选择器（full/standard/compact/none）与诊断信息条（diag strip）。顶栏「策略视角」按钮打开多策略人格卡片面板（四策略独立评分 + 场景对比 + 点击加载归因）。
 
 ---
 

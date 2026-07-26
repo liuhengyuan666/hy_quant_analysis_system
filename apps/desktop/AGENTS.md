@@ -32,7 +32,7 @@ apps/desktop/
 - Startup and scope reloads use `dashboard_bundle`; historical date changes use `dashboard_snapshot`.
 - `Trust summary` is the primary top-level verdict; `Recent reports` is a research-results action surface, not just a file-path list.
 - Safe artifact opening stays restricted to managed files under `reports/`.
-- V6/V7 Research Surface commands are currently CLI-only; desktop UI may add them later via Tauri commands.
+- `strategy_scoreboard` / `strategy_attribution` and adversarial-aware `analyze_with_llm` are exposed as Tauri commands; V6/V7 Research Surface commands remain CLI-only.
 
 ## ANTI-PATTERNS
 - Do **not** move analytics/business logic into frontend.
