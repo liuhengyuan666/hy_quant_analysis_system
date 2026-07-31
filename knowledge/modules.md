@@ -16,7 +16,7 @@ rust-quant-analysis-system/
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
 ├── crates/               # 核心库crate（26个物理目录；23个在workspace中，3个未加入：report-builder, reporting, research-validation）
-│   ├── app-service/      # 核心服务编排（已模块化：lib.rs ~5,568行 + 10 helper modules，含V8 workspace / execution_replay）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs ~5,900行 + 14 helper modules，含V8 workspace / execution_replay / llm_history / prompts / scenarios / strategy_perspectives）
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块；V7新增 confirmation/recovery/calibration/consensus）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
@@ -47,6 +47,8 @@ rust-quant-analysis-system/
 │   ├── universe.json     # 标的池配置
 │   ├── llm.toml          # LLM配置（gitignored，支持${ENV_VAR}插值）
 │   ├── llm.toml.example  # LLM配置示例
+│   ├── prompts.toml      # LLM persona 配置（ADR-106：只承载视角指令，含 market_adversarial_lens）
+│   ├── scenarios.toml    # 场景权重配置（4 预设场景，RV1 策略多视角）
 │   ├── fred.toml         # FRED宏观因子配置（支持enabled开关）
 │   ├── fred.toml.example # FRED配置示例
 │   └── benchmark-providers.toml # 基准提供者配置

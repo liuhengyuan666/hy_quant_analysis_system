@@ -4,7 +4,7 @@
 
 ## 1. 系统核心定位
 
-本地桌面量化研究系统 V8，面向低频、趋势、长线的指数/ETF研究场景。
+本地桌面量化研究系统（RV1 已合并 main）：**Daily Portfolio Decision Assistant**（每日组合决策辅助系统），面向低频、趋势、长线的指数/ETF研究场景。RV1 完成能力收敛：CLI 从 107 精简至 ~30 命令（`market-refresh → daily-analysis → strategy-perspectives → portfolio-decision → llm-analyze` 为日常闭环），Decision 语义冻结为 Increase/Maintain/Reduce/Avoid。
 
 核心目标：
 - 用 Rust 构建完整研究链路
@@ -33,7 +33,8 @@
    * 核心规则 1: Markdown报告导出（日报、LLM分析、Research Quarterly Review）
    * 核心规则 2: Tauri桌面Dashboard（支持GLOBAL/CN/HK scope）
    * 核心规则 3: LLM智能报告分析（CLI与桌面端双路径，纯 Markdown 输出）。RV1 现状：6 个内置 action（market_story / explain_decision / preclose_review / risk_view / devils_advocate / portfolio_review）+ `config/prompts.toml` 自定义 persona（含 market_adversarial_lens 市场博弈视角、short_term_trader、long_term_allocator）；每次分析自动落盘 `workspace/llm-history/` 并在下次分析注入"前次解读"（标注为背景，非证据）；LLM 边界由 ADR-106 冻结——只解释确定性引擎产出，不决策、不评分、不输出仓位
-    * 核心规则 3b: **共享博弈假设背景层（ADR-112，默认开启）** — 每次 LLM 分析前系统确保当日博弈分析已生成（同一 scope 同一日期只算一次，落盘 `workspace/llm-history/{scope}/adversarial/`），按 persona 分级注入（叙事/风控/组合类 standard 默认正文，机制解释类 compact 摘要，adversarial 自身 none 递归防护）；注入语义为"供验证或反驳的假设背景"，不是结论；可用 `--adversarial` 单次覆盖或 `[llm.adversarial]` 全局配置
+    * 核心规则 3b: **共享博弈假设背景层（ADR-112~114，默认开启）** — 每次 LLM 分析前系统确保当日博弈分析已生成（同一 scope 同一日期只算一次，落盘 `workspace/llm-history/{scope}/adversarial/`），按 persona 分级注入（叙事/风控/组合类 standard，机制解释类 compact，adversarial 自身 none 递归防护）；注入语义为"供验证或反驳的假设背景"，不是结论；`market-refresh` 成功后异步预生成（source="market-refresh"，失败静默不阻塞刷新）；ContentPolicy（max_chars 默认 4000/full 12000，段落边界截断）与注入等级解耦；每次响应携带 adversarial_diag 诊断（enabled/injected/level/fresh/generated_at/source/reason + 截断 provenance）；可用 `--adversarial` 单次覆盖或 `[llm.adversarial]` 全局配置
+   * 核心规则 3c: **Strategy Perspectives（多策略视角）** — 四策略（ValueLeft/TrendPullback/TrendBreakout/MomentumRight）独立评分 + 场景加权对比 + 因子归因；CLI `strategy-perspectives`（scoreboard/detail）与桌面端「策略视角」人格卡片面板（research 级入口，不进 Dashboard 首页，归因点击懒加载）双路径
    * 核心规则 4: **Explainability Layer（可解释性层）** — 单标的归因拆解（symbol-diagnostics）和全标统一视图（symbol-scoreboard），仅解释现有决策，不创建新决策
    * 核心规则 5: **Execution Layer（执行层）** — 收盘前执行过滤（preclose-analysis），基于Pattern Library判断执行时机，不创建新投资想法
     * 核心规则 6: **V6 Reporting Platform** — 已冻结的 Stable Reporting Platform。Production Surface（DashboardSnapshot / sync-and-export / ResearchContext）稳定；新增消费者建立在平台之上，不修改平台

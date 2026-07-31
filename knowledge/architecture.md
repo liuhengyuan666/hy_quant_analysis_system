@@ -5,6 +5,7 @@
 | :--- | :--- | :--- | :--- |
 | Backend/Core | Rust | 2021 edition | 核心量化计算引擎 |
 | Desktop/Frontend | Tauri + Vue 3 | Tauri 2, Vue 3.5 | 桌面端应用容器与UI |
+| Frontend Markdown | marked | 18.x | LLM markdown 渲染（转义后解析，防注入） |
 | Database/Store | ClickHouse + SQLite | ClickHouse 0.13, rusqlite 0.32 | 时序数据存储与本地状态 |
 | Data Ingestion | attohttpc + serde | attohttpc 0.28 | HTTP数据获取与序列化 |
 | Async Runtime | Tokio | 1.x | 异步运行时 |
@@ -22,7 +23,7 @@ ingest-daily → compute-indicators → compute-macro → compute-rotation → c
 ```
 
 关键组件：
-- app-service: 核心服务编排（已模块化，lib.rs ~5,568行 + 10 helper modules：breadth / config_loader / core / dashboard / execution_replay / llm / research_evidence / sync / trust / workspace，后续仍可拆分）
+- app-service: 核心服务编排（已模块化，lib.rs ~5,900行 + 14 helper modules：breadth / config_loader / core / dashboard / execution_replay / llm / llm_history / prompts / research_evidence / scenarios / strategy_perspectives / sync / trust / workspace，后续仍可拆分）
 - execution-replay: V8 Execution Platform 证据重放引擎（51 个模块，计算+formatter 成对组织）：Evidence Registry、Context Integrity Gate/Validator/Audit、Shadow Mode、Shadow Deployment、Holding Risk Bundle/Calibration/Persistence、Risk Lifecycle、Decision Gate/Margin、Bearish Analysis、Transition Analysis 等
 - core-domain: 核心领域模型；V7 新增 `core-domain::research` 子模块（confirmation / recovery / calibration / consensus / stretch / rotation）
 - data-ingestion: 数据获取（Eastmoney/Tencent/FRED）

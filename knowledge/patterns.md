@@ -22,6 +22,7 @@
 - 所有 DTO 使用 `serde` 序列化/反序列化
 - ClickHouse JSON 反序列化字段必须携带 `#[serde(default)]`（Schema Evolution 政策）
 - 状态转换使用显式状态机（Task Lifecycle、ADR Lifecycle）
+- **枚举重命名兼容**：领域枚举重命名时保留 `#[serde(alias = "OLD_NAME")]` 兼容存量数据反序列化（如 ExecutionState: BUY_NOW→Increase）；注意 alias 只管输入，序列化输出永远是新名——所有 consumer（前端分组/i18n/统计）必须同步切换
 
 ## 4. 前端架构范式 (Frontend)
 
@@ -34,6 +35,7 @@
 - **Sticky 布局约束**：`position: sticky` 的侧边栏必须满足 (1) 顶部参考元素（如 header）固定高度，消除 `top` 旷量；(2) sticky 元素高度精确计算，使其 margin-box 不溢出 container 的 padding-box（通常 `height: calc(100vh - headerHeight - padding * 2 - 2px)` 留 2px 安全边距），避免滚动到底部时 push-out 抖动
 - **CSS Hover 内嵌详情卡片**：复杂数据详情（如信号归因 breakdown）优先使用纯 CSS hover 触发内嵌卡片（`position: absolute` + `visibility/opacity` 过渡），替代独立弹窗/抽屉/滑出面板；卡片内使用 `grid` 布局（如 `grid-template-columns: 1fr 1fr`）实现多列信息密度最大化
 - **强制 nowrap 文本策略**：悬浮卡片、内嵌详情面板等空间有限场景，所有文本元素必须声明 `white-space: nowrap` + `flex-shrink: 0`，防止 flex/grid 容器内因换行导致布局崩坏；配合 `overflow: hidden` 或容器扩宽（如 `width: 46rem`）保证可读性
+- **前端投影边界（ADR-107/108）**：UI 不拥有投资语义——Frontend: Render / Backend: Interpret / Decision: Execution Engine。禁止前端出现任何分数到买卖语义的映射判断（如 `if (score > 70) show buy`）；只渲染后端 contract 输出的事实字段（best_strategy 标记、alignment、场景分等后端给定的值）；后端不为前端打包"超级 Dashboard API"，新认知层用独立展示入口而非堆进 Dashboard 首页
 
 ## 5. 数据管线范式 (Data Pipeline)
 
@@ -104,6 +106,9 @@
 - **LLM 历史回环**：每次分析落盘 `workspace/llm-history/{scope}/{action}/{date}.json`，下次分析自动注入"前次解读"段并标注为非证据背景
 - **输出不入户**：LLM 结果不作为分析数据写入 ClickHouse；仅导出 markdown 到 `reports/` 并在 report_snapshot 登记文件路径
 - **未配置降级**：无 API key 时返回 placeholder 文本（`placeholder: true`），不 panic、不阻塞主链路
+- **共享博弈假设背景（ADR-112~114）**：Daily Shared Context Pattern——每 scope 每日一次前置博弈分析落盘复用，按 persona 职责分级注入；注入段头部必须声明"假设背景，供验证或反驳"语义；递归防护硬编码（不依赖配置）；任何失败静默降级，绝不阻塞主调用；Level（粒度）与 ContentPolicy（尺寸保护）解耦为独立旋钮
+- **异步预生成范式**：market-refresh 成功后的 LLM 预生成使用 detached `std::thread` + 独立 tokio runtime（不用 `tokio::spawn`——CLI 进程退出会杀死 runtime task）；fire-and-forget（不 join、不 await、不传播错误），`auto_inject` 单一总开关
+- **LLM HTTP client 复用**：同一 `analyze_with_action` 内的前置调用与主调用共享一个 `async_openai::Client`（`build_llm_client` + `call_llm_api_with_client`），消除冷路径第二次 TLS 握手；跨线程（prewarm）各自建 client
 
 ## 11. V8 Research Asset & Execution Platform 范式
 

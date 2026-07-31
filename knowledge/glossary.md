@@ -68,7 +68,7 @@
 | MVP | Minimum Viable Product | 最小可行产品 | 项目管理域 |
 | **Execution Layer** | Execution Layer | 执行层（V5 新增），基于 Pattern Library 的收盘前执行过滤器，只决定执行时机，不创建投资想法 | 执行域 |
 | **Pattern Library** | Pattern Library | 经验现象库，将市场观察现象（price action, volume, position）映射到执行指引 | 执行域 |
-| **ExecutionState** | Execution State | 执行状态（BuyNow/Wait/NoChase/Reduce/Skip） | 执行域 |
+| **ExecutionState** | Execution State | 执行状态（Increase/Maintain/Reduce/Avoid/Skip）；RV1 重命名自 BuyNow/Wait/NoChase，serde alias 兼容旧名反序列化 | 执行域 |
 | **ReasonTag** | Reason Tag | 执行决策原因标签（如 GapUpOverextended, VolumeSpike, StrongClose） | 执行域 |
 | **SkipReason** | Skip Reason | 跳过原因（NoCandidate/StateGate/DataUnavailable），内部使用 | 执行域 |
 | **IntradaySnapshot** | Intraday Snapshot | 实时市场快照（today_return, close_position, volume_ratio, distance_ma5 等） | 执行域 |
@@ -138,3 +138,9 @@
 | **market_adversarial_lens** | Market Adversarial Lens | 市场博弈视角 persona（ADR-109）：从资金角色冲突/强制卖盘/被套资金/预期差/信号生命周期 5 维解读市场博弈结构；文件 persona，含 web search 引导词（ADR-111） | LLM集成域 |
 | **Shared Adversarial Context** | 共享博弈假设背景 | ADR-112：每 scope 每日一次的博弈分析落盘 `workspace/llm-history/{scope}/adversarial/`，按 persona 分级注入各 prompt；语义为"供验证或反驳的假设"，非结论 | LLM集成域 |
 | **InjectLevel** | Inject Level (full/standard/compact/none) | ADR-113/114 注入级别：compact=record.summary 摘要 / standard=analysis_text 受 max_chars（默认 4000）保护 / full=analysis_text 受 full_max_chars（默认 12000）保护 / none=不注入；ContentPolicy 与等级解耦（ADR-114）；配置于 `[llm.adversarial.inject]`，CLI `--adversarial` 可单次覆盖 | LLM集成域 |
+| **ContentPolicy** | Content Policy | ADR-114 尺寸保护机制（max_chars + truncate_strategy=paragraph_boundary），与 InjectionLevel 解耦；截断产生 provenance（original_chars/final_chars/truncated） | LLM集成域 |
+| **Adversarial Prewarm** | 异步预生成 | ADR-113/114：market-refresh 成功后以 detached std::thread（自带 tokio runtime）按 scope 预生成当日博弈背景落盘（source="market-refresh"），fire-and-forget、失败静默、绝不阻塞 refresh；auto_inject=false 为总开关 | LLM集成域 |
+| **Adversarial Diag** | Adversarial Diagnostics | LLM 响应 JSON 的 adversarial 诊断对象：enabled/injected/level/fresh/generated_at/source/reason（+截断 provenance）；reason 解释未注入原因（disabled/persona_excluded/no_api_key/persona_missing/llm_error/stale/config_error/snapshot_missing） | LLM集成域 |
+| **Scenario** | Scenario Weighting | 场景权重配置（`config/scenarios.toml`，4 预设：momentum_short/value_long/aggressive/balanced），对四策略分数做场景加权对比 | 策略域 |
+| **Strategy Perspectives Panel** | 策略视角面板 / 人格卡片 | 桌面端 research 级覆盖层（顶栏「策略视角」按钮）：每标的 4 张策略人格卡片（价值投资者/回调买入者/突破追随者/动量交易者）+ 场景对比 chips，归因点击懒加载；不进 Dashboard 首页（ADR-108） | 报告与展示域 |
+| **PortfolioDecision** | Portfolio Decision | 组合姿态（Increase/Maintain/Reduce/Avoid），ADR-105 冻结的 RV1 四个核心领域对象之一（另三：MarketRegimeSnapshot / EnvironmentSnapshot / Evidence） | 执行域 |
