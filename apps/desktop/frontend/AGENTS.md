@@ -21,7 +21,9 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 | i18n infrastructure  | `src/i18n.js`                           | vue-i18n@11 config, setLocale/getLocale |
 | Language toggle      | `src/components/LanguageToggle.vue`     | Top-right corner toggle |
 | Locale files         | `src/locales/zh.json`, `src/locales/en.json` | ~280 translation keys each |
-| Vue components | `src/components/*.vue` | 25+ Vue panels (BreadthPanel, MetricCard, DateSelector, LanguageToggle, DataHealthPanel, SignalDetailModal, UsageGuidesPanel, etc.) |
+| Vue components | `src/components/*.vue` | 25+ Vue panels (BreadthPanel, MetricCard, DateSelector, LanguageToggle, DataHealthPanel, SignalDetailModal, UsageGuidesPanel, StrategyPerspectivesPanel, etc.) |
+| Strategy perspectives | `src/components/StrategyPerspectivesPanel.vue` | RV1 策略视角面板：顶栏「策略视角」按钮打开的全屏覆盖层；人格卡片 + 场景对比；归因点击懒加载（research 级入口，不进 Dashboard 首页，ADR-108） |
+| LLM markdown rendering | `src/components/LlmAnalysisPanel.vue` | marked@18 渲染（原始 HTML 先转义再解析，防注入）；含 adversarial 注入级别选择器与 diag 诊断条 |
 | Visual system | `src/styles.css` | panel/grid/pill/refresh/report-history styles + Vue CSS variable bridge |
 
 ## CONVENTIONS
@@ -44,6 +46,7 @@ Plain-JS dashboard frontend with Vue 3 progressive migration. Single root render
 
 ## ANTI-PATTERNS
 - Do **not** add business logic or provider semantics in frontend.
+- Do **not** derive investment semantics in JS (no score→stance/advice mapping, no threshold judgments); frontend renders backend facts only——UI 不拥有投资语义（ADR-107/108）。
 - Do **not** bypass scheduled rendering with scattered direct DOM writes.
 - Do **not** reintroduce root-level startup fan-out when `dashboard_bundle` already supplies the bootstrap payload.
 - Do **not** let snapshot/export/recent-report actions ignore `selectedScope`.

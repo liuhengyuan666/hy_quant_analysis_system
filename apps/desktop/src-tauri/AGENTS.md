@@ -12,6 +12,8 @@ Tauri-native desktop bridge. Owns command registration, refresh-job coordination
 | Refresh orchestration | `src/lib.rs::spawn_dashboard_refresh` | suffix-run flow, cancel/resume coordination, and end-state consistency check |
 | Stage parsing/order | `src/lib.rs::RefreshStartStage` | source of truth for stage names and labels |
 | Safe artifact opening | `src/lib.rs::validate_report_artifact_path` + `open_report_artifact` | canonical path must stay under `reports/` |
+| Strategy perspectives commands | `src/lib.rs::strategy_scoreboard` + `strategy_attribution` | RV1 四策略评分/归因（attribution 为按需重算，成本较高） |
+| LLM bridge | `src/lib.rs::analyze_with_llm` | 透传 action + adversarial 注入级别（full/standard/compact/none） |
 | Packaging assumptions | `tauri.conf.json` | desktop build expects `../frontend/dist` |
 
 ## CONVENTIONS
@@ -21,7 +23,7 @@ Tauri-native desktop bridge. Owns command registration, refresh-job coordination
 - Scope parsing only accepts `global`, `cn`, and `hk`.
 - Refresh stage names, labels, and ordering must stay aligned with the frontend selector.
 - Artifact opening must remain restricted to canonical files under `reports/`.
-- New V6/V7 Research Surface commands are currently CLI-only; if exposed in desktop, register them here and delegate to `app-service`.
+- `strategy_scoreboard` / `strategy_attribution` 与带 adversarial 参数的 `analyze_with_llm` 已注册为 Tauri 命令；V6/V7 Research Surface 命令仍为 CLI-only，如需暴露在此注册并委托 `app-service`。
 
 ## ANTI-PATTERNS
 - Do **not** put quant logic, report shaping, or SQL in this crate.

@@ -1,7 +1,7 @@
 # CLI KNOWLEDGE BASE
 
 ## OVERVIEW
-Thin clap-based operational shell over `AppContext`. Dispatches to orchestration methods; keeps almost no business logic.
+Thin clap-based operational shell over `AppContext`. Dispatches to orchestration methods; keeps almost no business logic. RV1 完成命令面收敛：~30 个命令的日常闭环 + 隐藏工程命令（仍可用，不在 `--help` 显示）。
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
@@ -9,8 +9,9 @@ Thin clap-based operational shell over `AppContext`. Dispatches to orchestration
 | Command list | `src/main.rs::Command` | authoritative CLI surface |
 | Command dispatch | `src/main.rs::main` | nearly 1:1 mapping to `AppContext` |
 | Runtime config source | `StorageConfig::default()` | local ClickHouse / SQLite / universe paths |
-| Command modules | `src/commands/*.rs` | 10 modules: config, pipeline, diagnostics, dashboard, backtest, research, llm, audit, execution |
-| Research commands | `src/commands/research.rs` | V6: `research-srd`, `research-stretch`, `research review`; V7/V8: `research observe`, `research analytics`, `research replay`, `research consensus`, `data-health` |
+| Command modules | `src/commands/*.rs` | 10 modules: audit, backtest, config, dashboard, diagnostics, execution, execution_replay, llm, pipeline, research |
+| Daily loop commands | `src/commands/pipeline.rs` | `market-refresh`, `daily-analysis`, `daily-report`（RV1 核心路径） |
+| Research commands | `src/commands/research.rs` | `research observe`（每日核心）, `strategy-perspectives`, `portfolio-decision`, `validation-check`, `historical-replay`, `evidence-status`；V6–V8: `research analytics/replay/consensus`, `data-health` |
 | Execution commands | `src/commands/execution.rs` | `preclose-analysis` |
 | Audit monolith | `src/commands/audit.rs` | ~3,578 lines; contains many GT/audit/experiment subcommands |
 
@@ -22,6 +23,7 @@ Thin clap-based operational shell over `AppContext`. Dispatches to orchestration
 - Scope-aware dashboard/report commands are the fastest smoke test for Phase 1 semantics.
 - Research Surface commands (`research-srd`, `research-stretch`, `research review`, `research observe`, `research analytics`, `research replay`, `research consensus`, `data-health`) are read-only observation tools.
 - `--quiet` is a global option and must appear before the subcommand, not after.
+- RV1 日常闭环：`market-refresh → daily-analysis → strategy-perspectives → portfolio-decision → llm-analyze`；工程命令（分步管线、sync-and-export、refresh-all）仅用于单阶段修复。
 
 ## ANTI-PATTERNS
 - Do **not** fork business logic inside CLI match arms.
@@ -29,44 +31,53 @@ Thin clap-based operational shell over `AppContext`. Dispatches to orchestration
 - Do **not** hand-format output inconsistently; keep machine-readable JSON for summaries.
 - Do **not** add new audit subcommands to `audit.rs` without considering decomposition; the file is already a monolith (~3,578 lines).
 - Do **not** put `--quiet` after the subcommand.
+- Do **not** kill `market-refresh` with a short shell timeout — an interrupted refresh can silently regress the dashboard latest gate; let it finish and verify with `pipeline-dates`.
 
 ## COMMANDS
 ```bash
 cargo run -p quant-cli -- status
 cargo run -p quant-cli -- init-storage
 cargo run -p quant-cli -- seed-universe
-cargo run -p quant-cli -- compute-macro --from 2025-12-01 --to 2026-04-01
+
+# RV1 每日闭环
+cargo run -p quant-cli -- market-refresh                       # 全链路刷新（成功后异步预生成博弈背景）
+cargo run -p quant-cli -- daily-analysis                       # Integrity + 信号 + 组合姿态
+cargo run -p quant-cli -- research observe --scope global      # 历史语境观测
+cargo run -p quant-cli -- strategy-perspectives                # 四策略 × 四场景矩阵
+cargo run -p quant-cli -- strategy-perspectives --mode detail --symbol 512480
+cargo run -p quant-cli -- portfolio-decision --scope global
+cargo run -p quant-cli -- daily-report
+
+# LLM 分析（共享博弈背景默认开启；--adversarial full|standard|compact|none 单次覆盖）
+cargo run -p quant-cli -- llm-analyze --action market_story --scope global
+cargo run -p quant-cli -- llm-analyze --action portfolio_review --scope global
+cargo run -p quant-cli -- llm-analyze --action explain_decision --adversarial compact
+
+# 周期命令
+cargo run -p quant-cli -- validation-check                     # 每周校准基线
+cargo run -p quant-cli -- run-backtest                         # 双周/月度回测
+cargo run -p quant-cli -- historical-replay                    # Evidence 积累
+cargo run -p quant-cli -- evidence-status
+
+# 诊断
 cargo run -p quant-cli -- pipeline-dates
-cargo run -p quant-cli -- dashboard-dates --scope cn
+cargo run -p quant-cli -- explain-latest-gate
+
+# 工程/高级路径（--help 隐藏，仍可用）
+cargo run -p quant-cli -- sync-and-export --scope global
 cargo run -p quant-cli -- dashboard-snapshot --scope hk --date 2026-03-30
-cargo run -p quant-cli -- export-report --scope cn
+cargo run -p quant-cli -- compute-macro --from 2025-12-01 --to 2026-04-01
+cargo run -p quant-cli -- symbol-diagnostics --symbol 000300 --scope cn
+cargo run -p quant-cli -- symbol-scoreboard --scope cn
 
-# V6 Research Surface
+# V6–V8 Research Surface
 cargo run -p quant-cli -- research-srd --scope global
-cargo run -p quant-cli -- research-stretch --scope cn
-cargo run -p quant-cli -- research review --scope global --from 2026-04-01 --to 2026-06-30
-
-# V7 Research Surface
-cargo run -p quant-cli -- research observe --scope global
-cargo run -p quant-cli -- research confirmation --scope global
-cargo run -p quant-cli -- research recovery --scope global
 cargo run -p quant-cli -- research analogues --scope global
 cargo run -p quant-cli -- research calibration --scope global --from 2026-04-01 --to 2026-06-30
 cargo run -p quant-cli -- research consensus --scope global
-cargo run -p quant-cli -- research replay --scope global --from 2026-04-01 --to 2026-06-30
-
-# V7 workflow: data health + report
-cargo run -p quant-cli -- data-health
-
-# V8 Research Asset (save Evidence)
 cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
-
-# V5 Execution filter
+cargo run -p quant-cli -- data-health
 cargo run -p quant-cli -- preclose-analysis --scope cn
-
-# Shadow Production symbol diagnostics & scoreboard
-cargo run -p quant-cli -- symbol-diagnostics --symbol 000300 --scope cn
-cargo run -p quant-cli -- symbol-scoreboard --scope cn
 ```
 
 ## NOTES

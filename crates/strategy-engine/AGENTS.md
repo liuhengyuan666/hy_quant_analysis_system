@@ -9,6 +9,7 @@ Four-strategy preference scoring crate. Each strategy implements the `StrategySc
 | Trait contract | `src/lib.rs::StrategyScorer` | `kind() -> StrategyKind`, `score(&AnalysisContext) -> f64` |
 | Context | `src/lib.rs::AnalysisContext` | bar, indicators, optional regime/rotation, scopes |
 | Builder | `src/lib.rs::build_strategy_preferences` | contexts -> Vec<StrategyPreferenceSnapshot> |
+| Attribution | `src/lib.rs::build_strategy_attributions` + `ScoreBreakdown` + `AttributionDriver` | RV1 新增：每策略因子级归因（factor/value/contribution/note），供 `strategy-perspectives --mode detail` 重算校验 drift |
 | ValueLeft | `src/lib.rs::ValueLeftScorer` | mean-reversion: low RSI + distance below MA20 + liquidity |
 | TrendPullback | `src/lib.rs::TrendPullbackScorer` | uptrend + price between MA20/MA60 + mid RSI |
 | TrendBreakout | `src/lib.rs::TrendBreakoutScorer` | price above MA20>MA60 + MACD hist + rotation |
@@ -27,4 +28,5 @@ Four-strategy preference scoring crate. Each strategy implements the `StrategySc
 
 ## NOTES
 - `AnalysisContext` is built upstream in `app-service` from bars, indicators, regime, and rotation rows.
+- Attribution（`build_strategy_attributions`）与存储分数同源计算，drift 应≈0；`app-service::strategy_perspectives` 的 detail 路径用它做防漂移校验。
 - No tests currently; validated through downstream signal panel and report export.

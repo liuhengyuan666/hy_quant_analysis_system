@@ -1,11 +1,11 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-07-14
-**Commit:** f54f55b
-**Branch:** v8
+**Generated:** 2026-07-26
+**Commit:** 96ba5eb
+**Branch:** main
 
 ## OVERVIEW
-Local desktop quant research system. The Rust workspace owns the ingestion-to-report pipeline, the Tauri desktop app is the default operator surface, and `docs/` plus `memory/` are part of the working system rather than side notes.
+Local desktop quant research system — **Daily Portfolio Decision Assistant**（每日组合决策辅助系统，RV1 已合并 main）。The Rust workspace owns the ingestion-to-report pipeline, the Tauri desktop app is the default operator surface, and `docs/` plus `memory/` are part of the working system rather than side notes. RV1 完成能力收敛：CLI 精简至 ~30 命令（`market-refresh → daily-analysis → strategy-perspectives → portfolio-decision → llm-analyze` 日常闭环），Decision 语义冻结为 Increase/Maintain/Reduce/Avoid，LLM 边界（ADR-106）与前端投影边界（ADR-107/108）已冻结。
 
 ## ARCHITECTURE OWNERSHIP
 ```text
@@ -51,16 +51,19 @@ rust-quant-analysis-system/
 │   ├── calendars/        # static JSON trading calendars (2024–2027)
 │   ├── llm.toml          # LLM config (gitignored, ${ENV_VAR} interpolation)
 │   ├── llm.toml.example
+│   ├── prompts.toml      # LLM persona 配置（ADR-106：只承载视角指令；含 market_adversarial_lens）
+│   ├── scenarios.toml    # 场景权重配置（4 预设场景，RV1 策略多视角）
 │   ├── fred.toml         # FRED macro config (gitignored)
 │   ├── fred.toml.example
 │   ├── benchmark-providers.toml
 │   └── universe.json     # instrument universe
 ├── crates/               # contracts, engines, persistence, orchestration
-│   ├── app-service/             # orchestration (lib.rs ~5,567 lines + 9 helper modules)
+│   ├── app-service/             # orchestration (lib.rs ~5,900 lines + 14 helper modules)
 │   ├── backtest-engine/         # backtest execution
 │   ├── core-domain/             # shared DTOs, AnalysisScope, provenance, research::* pure computation
 │   ├── data-ingestion/          # Eastmoney / Tencent fetchers
-│   ├── execution-engine/        # V5 pattern-library execution filter
+│   ├── execution-engine/        # V5 pattern-library execution filter (ExecutionState: Increase/Maintain/Reduce/Avoid/Skip)
+│   ├── execution-replay/        # V8 Execution Platform 证据重放（51 模块，计算+formatter 成对）
 │   ├── gt-regime-generator/     # Ground Truth regime generation
 │   ├── indicator-engine/        # MA/EMA/MACD/RSI/ATR/VOL_MA
 │   ├── llm-context/             # LLM-specific 8-dimension ResearchContext builder
@@ -75,7 +78,7 @@ rust-quant-analysis-system/
 │   ├── research-benchmark/      # research benchmarking harness (WIP)
 │   ├── research-context/        # canonical ResearchContext + TrustLevel semantic contract
 │   ├── research-renderer/       # insight/research rendering
-│   ├── research-skills/         # LLM research actions (V4.5: 5 prompts only)
+│   ├── research-skills/         # LLM research actions (6 内置 persona + config/prompts.toml 文件 persona)
 │   ├── research-validation/     # Ground Truth validation
 │   ├── rotation-engine/         # relative strength ranking
 │   ├── signal-engine/           # final signal generation
@@ -145,14 +148,17 @@ rust-quant-analysis-system/
 | Ground Truth regime generation | `crates/gt-regime-generator/src/lib.rs` | 4-layer pipeline: Observation → Candidate → Persistence → Label |
 | Market-state observations | `crates/market-state-extractor/src/lib.rs` | Trend/Volatility/Liquidity dimensions (ADR-053) |
 | Pre-close execution filter | `crates/execution-engine/src/lib.rs` | V5 pattern-library execution filter |
+| Shared adversarial context (ADR-112~114) | `crates/app-service/src/lib.rs::ensure_adversarial_context` + `crates/app-service/src/llm_history.rs` | 每 scope 每日一次前置博弈分析落盘，按 persona 分级注入；`spawn_adversarial_prewarm` 异步预热；`adversarial_context_section` 分级 + ContentPolicy 截断 |
+| LLM persona resolution | `crates/app-service/src/prompts.rs` | 文件 persona（prompts.toml）→ 内置 persona 回退 |
+| Strategy perspectives (RV1) | `crates/app-service/src/strategy_perspectives.rs` + `crates/app-service/src/scenarios.rs` | 四策略独立评分 scoreboard/detail + 场景加权；Tauri `strategy_scoreboard`/`strategy_attribution`；桌面「策略视角」人格卡片面板 |
 | Research rendering | `crates/research-renderer/src/lib.rs` | insight/research rendering |
 | GT validation | `crates/research-validation/src/lib.rs` | Ground Truth label generation/validation |
-| LLM research actions | `crates/research-skills/src/action.rs` | 5 const prompts + `build_prompt()` |
+| LLM research actions | `crates/research-skills/src/action.rs` | 6 内置 persona + `build_prompt()`；文件 persona 见 `config/prompts.toml` |
 | Desktop shell / refresh bridge | `apps/desktop/src-tauri/src/lib.rs` | command boundary, refresh coordinator, safe artifact opening |
 | Frontend composition | `apps/desktop/frontend/src/main.js` | root state, scope/date flow, refresh UI, top-level render |
 | Frontend feature slices | `apps/desktop/frontend/src/components/*.vue` | 25+ Vue panels |
 | Environment + breadth UI | `apps/desktop/frontend/src/components/EnvironmentPanel.vue` + `BreadthPanel.vue` | paired explanation layer + proxy view |
-| CLI surface | `apps/cli/src/main.rs` + `commands/` | thin dispatch over `AppContext` + 10 command modules (`config`, `pipeline`, `diagnostics`, `dashboard`, `backtest`, `research`, `llm`, `audit`, `execution`) |
+| CLI surface | `apps/cli/src/main.rs` + `commands/` | thin dispatch over `AppContext` + 10 command modules (`config`, `pipeline`, `diagnostics`, `dashboard`, `backtest`, `research`, `llm`, `audit`, `execution`, `execution_replay`) |
 | V7 workflow commands | `apps/cli/src/commands/research.rs` + `apps/cli/src/main.rs::Command` | `research observe`, `research replay`, `data-health`, `research explain`, `research calibration`, `research consensus` |
 | Current phase memory | `docs/阶段性更新.md` + `memory/context.md` + `memory/decisions.md` | latest intent, decisions, and next seam |
 
@@ -194,59 +200,50 @@ npm run build        # outputs to dist/, consumed by Tauri
 npm run dev          # Vite dev server
 ```
 
-### Recommended CLI paths
+### Recommended CLI paths (RV1 surface)
 ```bash
-# V3 one-shot: check gate → refresh if needed → export report
-cargo run -p quant-cli -- sync-and-export --scope global
+# 每日闭环（日常操作员路径）
+cargo run -p quant-cli -- market-refresh                          # 全链路刷新（成功后异步预生成当日博弈背景，ADR-113）
+cargo run -p quant-cli -- daily-analysis                          # 30 秒看 Integrity + 信号 + 组合姿态
+cargo run -p quant-cli -- research observe --scope global         # 历史语境观测（每日核心）
+cargo run -p quant-cli -- strategy-perspectives                   # 四策略 × 四场景矩阵
+cargo run -p quant-cli -- daily-report                            # 需要留档时导出
 
-# Full manual refresh (engineering / advanced path)
-cargo run -p quant-cli -- refresh-all --to 2026-06-05
+# 按需下钻
+cargo run -p quant-cli -- strategy-perspectives --mode detail --symbol 512480   # 单标的四策略归因
+cargo run -p quant-cli -- portfolio-decision --scope global       # 组合姿态（Increase/Maintain/Reduce/Avoid）
+cargo run -p quant-cli -- research analogues --scope global       # 历史相似盘面
+
+# LLM 分析（config 在 config/llm.toml，ADR-032/033；共享博弈背景默认开启，ADR-112）
+cargo run -p quant-cli -- llm-analyze --action market_story --scope global
+cargo run -p quant-cli -- llm-analyze --action portfolio_review --scope global
+cargo run -p quant-cli -- llm-analyze --action explain_decision --adversarial compact   # 单次覆盖注入级别 full|standard|compact|none
+
+# 周期命令
+cargo run -p quant-cli -- validation-check                        # 每周：校准基线验证
+cargo run -p quant-cli -- run-backtest                            # 双周/月度：信号回测
+cargo run -p quant-cli -- historical-replay                       # 可脚本化：Evidence 积累
+cargo run -p quant-cli -- evidence-status                         # Evidence 资产积累状态
 
 # Quiet mode: global flag, place BEFORE subcommand
-cargo run -p quant-cli -- --quiet sync-and-export --scope global
-cargo run -p quant-cli -- --quiet refresh-all --to 2026-06-05
+cargo run -p quant-cli -- --quiet daily-analysis
 
 # Pipeline diagnostics (first thing to run when freshness looks off)
 cargo run -p quant-cli -- pipeline-dates
 cargo run -p quant-cli -- explain-latest-gate
 
-# Data health
-cargo run -p quant-cli -- check-data-health
-cargo run -p quant-cli -- export-data-health-report
-
-# Dashboard inspection
+# Engineering / advanced paths (hidden from --help, still executable)
+cargo run -p quant-cli -- sync-and-export --scope global          # 旧版一键同步导出
+cargo run -p quant-cli -- refresh-all --to 2026-06-05             # 旧版全量刷新（被 market-refresh 取代）
 cargo run -p quant-cli -- dashboard-snapshot --scope cn --date 2026-03-16
-cargo run -p quant-cli -- export-report --scope hk --date 2026-05-07
-
-# LLM analysis (config now lives in config/llm.toml — see ADR-032/033; shared adversarial background default-on per ADR-112)
-cargo run -p quant-cli -- llm-analyze --scope global
-
-# V6 Research Surface
-cargo run -p quant-cli -- research-srd --scope global
-cargo run -p quant-cli -- research-stretch --scope cn
-cargo run -p quant-cli -- research review --scope global --from 2026-04-01 --to 2026-06-30
-
-# V7 Research Surface (Observation / Evolution / Historical Evidence / Synthesis)
-cargo run -p quant-cli -- research observe --scope global
-cargo run -p quant-cli -- research confirmation --scope global
-cargo run -p quant-cli -- research recovery --scope global
-cargo run -p quant-cli -- research analogues --scope global
-cargo run -p quant-cli -- research calibration --scope global --from 2026-04-01 --to 2026-06-30
-cargo run -p quant-cli -- research consensus --scope global
-cargo run -p quant-cli -- research replay --scope global --from 2026-04-01 --to 2026-06-30
-
-# V7 workflow: data health + report
-cargo run -p quant-cli -- data-health
-
-# V8 Research Asset (save Evidence)
-cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
-
-# V5 Execution filter
-cargo run -p quant-cli -- preclose-analysis --scope cn
-
-# Symbol diagnostics & scoreboard (Shadow Production)
 cargo run -p quant-cli -- symbol-diagnostics --symbol 000300 --scope cn
 cargo run -p quant-cli -- symbol-scoreboard --scope cn
+
+# V6–V8 Research Surface (read-only observation)
+cargo run -p quant-cli -- research-srd --scope global
+cargo run -p quant-cli -- research calibration --scope global --from 2026-04-01 --to 2026-06-30
+cargo run -p quant-cli -- research consensus --scope global
+cargo run -p quant-cli -- research analytics --condition srd-strong --scope global --horizon 20 --save-evidence
 ```
 
 ### Desktop debug commands (Tauri internal)
@@ -272,6 +269,9 @@ cargo run -p quant-desktop -- analyze-with-llm --scope hk --action risk_view
 - V6 Reporting Platform is frozen; add new consumers on top of it, do not refactor the platform itself.
 - V7 Research Platform (Observation → Evolution → Historical Evidence → Synthesis) is frozen; add new Research Content, not new platform semantics.
 - V8 Research Asset workspace uses `RA-XXXXXX` identity and `Draft → Verified → Published → Superseded → Archived` lifecycle; do not design Evidence Score/Weight (P3) before 1000+ assets, 30-day replay stability, and 2-cycle calibration stability.
+- LLM 边界冻结（ADR-106）：数据流永远为 确定性引擎 → 决策事实 → LLM 解释；LLM 只解释不决策。共享博弈假设背景默认开启（ADR-112~114）：每 scope 每日一次前置分析落盘复用，按 persona 分级注入（full/standard/compact/none），递归防护硬编码，失败静默降级；market-refresh 成功后异步预生成。
+- 前端投影边界（ADR-107/108）：UI 不拥有投资语义——Frontend: Render / Backend: Interpret / Decision: Execution Engine。禁止前端出现分数到买卖语义的映射判断；新认知层用独立展示入口，不堆进 Dashboard 首页。
+- 领域枚举重命名保留 `#[serde(alias = "OLD")]` 兼容反序列化（如 ExecutionState）；alias 只管输入，所有 consumer 必须同步切换到新名。
 - Rust modules use flat named files (`foo.rs`) under `src/`; the only `mod.rs` in the project is `crates/core-domain/src/research/mod.rs` (legacy holdout). New modules must not add `mod.rs` directories.
 - All Rust crates use `anyhow::Result`; there are no shared `thiserror` enums. Lint suppression is exceptional: only 6 inline `#[allow(...)]` annotations exist across the workspace. No custom `rustfmt.toml` or `clippy.toml` is used; rely on Rust defaults.
 - Tests are sparse and inline (`#[cfg(test)] mod tests {}`). There is no integration-test directory, no CI, and no formal test suite. Validation is `cargo check`, targeted `cargo test`, and live CLI/desktop flows.
@@ -291,9 +291,11 @@ cargo run -p quant-desktop -- analyze-with-llm --scope hk --action risk_view
 - Do **not** put metadata (scope/date/generated_at) into `ReportInput` structs.
 - Do **not** add artificial `ReportBuilder` implementations; the trait is pending evaluation.
 - Do **not** add new `mod.rs` directories; use flat named files (`foo.rs`) under `src/` for new modules.
+- Do **not** derive investment semantics in the frontend (no score→stance/advice mapping in JS); frontend renders backend facts only (ADR-107/108).
+- Do **not** kill `market-refresh` with a short shell timeout — an interrupted refresh can silently regress the dashboard latest gate (bars incomplete → gate falls back days); always let it run to completion and verify with `pipeline-dates` afterwards.
 
 ## HOTSPOTS
-- `crates/app-service/src/lib.rs` (~5,567 lines) is the orchestration monolith. Helper modules (`trust.rs`, `workspace.rs`, `config_loader.rs`, `breadth.rs`, `core.rs`, `llm.rs`, `research_evidence.rs`, `sync.rs`, `dashboard.rs`) are extracted, but the main file still carries most high-level flow. Review nearby helpers before adding new orchestration logic.
+- `crates/app-service/src/lib.rs` (~5,900 lines) is the orchestration monolith. Helper modules (`trust.rs`, `workspace.rs`, `config_loader.rs`, `breadth.rs`, `core.rs`, `llm.rs`, `llm_history.rs`, `prompts.rs`, `scenarios.rs`, `strategy_perspectives.rs`, `research_evidence.rs`, `sync.rs`, `dashboard.rs`, `execution_replay.rs`) are extracted, but the main file still carries most high-level flow. Review nearby helpers before adding new orchestration logic.
 - `apps/cli/src/commands/audit.rs` (~3,578 lines) is the largest CLI command module. Prefer adding new audit-like commands as a separate module or upstreaming analysis to `regime-audit` / `research-validation`.
 - `crates/report-builder/src/lib.rs` (~1,145 lines) and `crates/core-domain/src/lib.rs` (~1,111 lines) are single-file hubs. Add new domain-specific DTOs in `core-domain` or new builders in `report-builder` with care; field drift here breaks downstream consumers.
 - `apps/desktop/src-tauri/src/lib.rs` (~1,058 lines) contains the full Tauri command surface and refresh coordinator. Keep it thin over `app-service`.

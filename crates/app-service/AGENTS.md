@@ -43,7 +43,7 @@ Orchestration facade for the entire analysis chain. Highest-coupling crate in th
 - Do **not** move document assembly logic into `app-service`; keep it in `report-builder`.
 
 ## NOTES
-- `src/lib.rs` is ~5,567 lines of `AppContext` orchestration; 9 helper modules have been extracted (`core`, `trust`, `breadth`, `dashboard`, `llm`, `sync`, `config_loader`, `research_evidence`, `workspace`). Prefer further extraction before adding more long methods.
+- `src/lib.rs` is ~5,900 lines of `AppContext` orchestration; 14 helper modules have been extracted (`core`, `trust`, `breadth`, `dashboard`, `llm`, `llm_history`, `prompts`, `scenarios`, `strategy_perspectives`, `sync`, `config_loader`, `research_evidence`, `execution_replay`, `workspace`). Prefer further extraction before adding more long methods.
 - Timing data on `DashboardSnapshot.load_metrics` is the first place to check when dashboard performance regresses.
 - `export_data_health_report` now uses the freshest checked market date for artifact naming; keep that aligned with health semantics.
 - Scoped reports now read scoped regime + scoped environment. Strategy/signal/backtest computations are also scope-aware, with explicit provenance fields (analysis_scope, regime_basis_scope) in the data contract.

@@ -35,3 +35,4 @@ crates/execution-engine/src/
 - Real-time data comes from Tencent API; Eastmoney fallback is not implemented here.
 - Output is written to `reports/execution-samples/YYYY-MM-DD.json`.
 - 90-day observation period; do not claim performance advantage or optimize parameters.
+- RV1 起 `ExecutionState` 重命名为 `Increase/Maintain/Avoid/Reduce/Skip`（serde `rename_all = "SCREAMING_SNAKE_CASE"` + `#[serde(alias)]` 兼容旧名 BUY_NOW/WAIT/NO_CHASE 反序列化；序列化输出永远是新名，所有 consumer 必须使用新名）。
