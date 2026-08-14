@@ -333,10 +333,10 @@ cargo run -p quant-desktop
 - Rotation: ___   Stretch: ___   SRD: ___
 - Strategy State: ___（姿态/仓位%）
 
-### 持仓暴露概览（18 只分三类映射）
-- EXACT（6 只，系统分析 = 持仓市场）: 沪深300 / A500 / 创业板 / 科创100 / 证券 / HSTECH
-- PROXY（5 只，代理近似，非底层等价）: 港股科技 / 港股互联网 / 信息技术 / 创新药×2
-- UNMAPPED（7 只主动基金，暂无可靠映射）: 半导体混合 / AI股票 / 新科技 / 红利 / 久航 / 远航 / 方正
+### 持仓暴露概览（按映射质量分三组）
+- EXACT（系统分析 = 持仓市场）: 你的精确映射标的列表
+- PROXY（代理近似，非底层等价）: 你的代理映射标的列表
+- UNMAPPED（主动型，暂无可靠映射）: 仅记录持仓事实
 
 ### 核心观察
 - ① Signal ↔ Strategy 是否 diverge（如 StrongBuy × DE_RISK）
@@ -376,26 +376,26 @@ cargo run -p quant-desktop
 
 ## 8. Portfolio Context（持仓事实层 P0）
 
-`config/portfolio.toml` 是 RV1 合并后新增的**用户事实输入层**：记录你在支付宝持有的 18 只基金的代码 / 名称 / 类型 / 系统底层映射 / 成本，但**不被任何 engine / signal / decision 路径消费**，仅作为每日复盘时"市场状态 × 我的持仓暴露"人工联动的背景。
+`config/portfolio.toml` 是 RV1 合并后新增的**用户事实输入层**：记录你的基金/股票持仓（代码、名称、类型、系统底层映射、成本），但**不被任何 engine / signal / decision 路径消费**，仅作为每日复盘时"市场状态 × 我的持仓暴露"人工联动的背景。该文件已 gitignore，不会进入公开仓库；格式模板见 `config/portfolio.toml.example`。
 
 ### 三类映射的观察语义
 
-| `mapping_quality` | 数量 | 含义 | 日常观察使用方式 |
-|---|---|---|---|
-| `EXACT` | 6 | 系统分析的底层 instrument 与基金真实跟踪标的等同（如 006131 联接 → 000300 沪深300） | Signal / Strategy / Rotation 可直接作为持仓的市场证据 |
-| `PROXY` | 5 | 基金真实跟踪的指数不在系统 universe，用最近主题 ETF 做代理（如 017126 港股互联网 → 513050 中概互联网） | 代理标的的 Signal 仅作"近似市场参考"，不等于基金本身——见 `portfolio.toml` 头部不变式 |
-| `UNMAPPED` | 7 | 主动型基金无可靠底层映射；部分带 `proxy_symbol` 仅作风格参考 | 仅确认"你持有它"这一事实；不把主题代理 ETF 的 Signal 直接赋予基金净值判断 |
+| `mapping_quality` | 含义 | 日常观察使用方式 |
+|---|---|---|
+| `EXACT` | 系统分析的底层 instrument 与持仓基金真实跟踪标的等同 | Signal / Strategy / Rotation 可直接作为持仓的市场证据 |
+| `PROXY` | 基金真实跟踪的指数不在系统 universe，用最近主题标的做代理 | 代理标的的 Signal 仅作"近似市场参考"，不等于基金本身——见 `portfolio.toml` 头部不变式 |
+| `UNMAPPED` | 主动型基金无可靠底层映射；部分带 `proxy_symbol` 仅作风格参考 | 仅确认"你持有它"这一事实；不把主题代理标的的 Signal 直接赋予基金净值判断 |
 
 ### P0 边界
 
-- **只存事实，不产指标**：`cost_basis` 是真实加权成本，但 P0 不计算 unrealized P/L / profit_pct / lifecycle score / 任何衍生指标
+- **只存事实，不产指标**：`cost_basis` 是真实加权成本，但 P0 不计算盈亏/生命周期分/任何衍生指标
 - **不接 engine**：没有任何 strategy / signal / execution 路径读取 PortfolioConfig
-- **不建模时间**：`entry_date` 暂不要求——分批建仓方式下单点时间会制造伪精确；待未来 Lifecycle Observation 有证据支撑再设计 accumulation-aware 多时间模型（position_start / accumulation_start / last_add）
-- **Next Gate**：Position Lifecycle Observation 等 Shadow Production 90 天 + TASK-093 divergence 实证数据齐备后再决定是否启动；90 天是 Gate 不是 roadmap deadline
+- **不建模时间**：`entry_date` 暂不要求——分批建仓方式下单点时间会制造伪精确；待未来 Lifecycle Observation 有证据支撑再设计
+- **Next Gate**：Position Lifecycle Observation 等 Shadow Production 90 天 + TASK-093 divergence 实证数据齐备后再决定是否启动
 
 ### 修改持仓
 
-直接编辑 `config/portfolio.toml`。文件头部注释有完整 schema 不变式说明；改完跑 `cargo test -p core-domain` 会自动校验映射规则/唯一性/正定边界（8 个 portfolio 测试）。
+复制 `config/portfolio.toml.example` 为 `config/portfolio.toml` 并填写你的持仓；改完跑 `cargo test -p core-domain` 会自动校验映射规则/唯一性/成本边界（8 个 portfolio 测试）。
 
 ---
 

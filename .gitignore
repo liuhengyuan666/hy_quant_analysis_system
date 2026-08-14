@@ -19,6 +19,11 @@ config/fred.toml
 config/fred.*.toml
 !config/fred.toml.example
 
+# Portfolio Context (user holdings — personal, NOT for public repo)
+config/portfolio.toml
+config/portfolio.*.toml
+!config/portfolio.toml.example
+
 # Reports / generated outputs
 /reports/*.md
 /reports/*.png

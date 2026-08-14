@@ -1,0 +1,33 @@
+# Portfolio Context — user facts input layer (RV1 post-merge, P0)
+# 复制本文件为 config/portfolio.toml 并填写你自己的持仓（portfolio.toml 已 gitignore，不会公开）。
+# 注意：本文件仅记录"用户持仓事实"，当前 P0 阶段不被任何 engine / signal / decision 路径消费。
+#
+# mapping_quality 三态：
+#   EXACT     → underlying_symbol 与系统 instrument 精确等同（系统分析可直接作为持仓市场证据）
+#   PROXY     → proxy_symbol 仅为近似市场参考，不确立与 fund_code 的经济等同
+#   UNMAPPED  → 无可靠底层映射（如主动基金）；proxy_symbol 若存在仅作风格参考
+#
+# 不变式：proxy_symbol never establishes economic identity with fund_code.
+# 任何 consumer（LLM / 报告 / 未来 lifecycle observation）必须区分
+# "该基金确实由 instrument X 跟踪"（EXACT）与 "该基金与 instrument X 近似"（PROXY/UNMAPPED）。
+
+[[positions]]
+fund_code = "000000"            # 基金代码（显示用）
+fund_name = "示例指数基金"        # 基金名称
+asset_type = "ETF_LINK"         # ETF_LINK / INDEX_FUND / ACTIVE
+underlying_symbol = "000300"    # EXACT 时必填；否则留空
+proxy_symbol = ""               # PROXY 时填代理标的；否则留空
+mapping_quality = "EXACT"       # EXACT / PROXY / UNMAPPED
+cost_basis = 0.0                # 持仓成本（必须 > 0；只存事实，P0 不消费）
+enabled = true
+
+# [[positions]]
+# fund_code = "000000"
+# fund_name = "示例主动基金"
+# asset_type = "ACTIVE"
+# underlying_symbol = ""
+# proxy_symbol = "515070"        # 仅风格参考，不作底层映射
+# mapping_quality = "UNMAPPED"
+# cost_basis = 0.0
+# monitor_only = true
+# enabled = true
