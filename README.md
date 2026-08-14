@@ -323,6 +323,34 @@ cargo run -p quant-desktop
 3. `research observe` 把今天放进历史语境（SRD 背离 / 拉伸 / 条件收益，归档 markdown）
 4. `strategy-perspectives` 浏览全标的四策略 × 四场景矩阵
 5. `daily-report` 需要留档时导出
+6. **Portfolio Context 人工联动**（`config/portfolio.toml` 见 §8）——在 daily-analysis 输出基础上，把"市场发生了什么"与"我的持仓暴露在哪里"人工对联: 见三个重点观察项
+
+#### Portfolio Overlay 每日记录模板
+
+```markdown
+### 市场状态
+- Regime: ___   Environment: ___   Breadth: ___
+- Rotation: ___   Stretch: ___   SRD: ___
+- Strategy State: ___（姿态/仓位%）
+
+### 持仓暴露概览（18 只分三类映射）
+- EXACT（6 只，系统分析 = 持仓市场）: 沪深300 / A500 / 创业板 / 科创100 / 证券 / HSTECH
+- PROXY（5 只，代理近似，非底层等价）: 港股科技 / 港股互联网 / 信息技术 / 创新药×2
+- UNMAPPED（7 只主动基金，暂无可靠映射）: 半导体混合 / AI股票 / 新科技 / 红利 / 久航 / 远航 / 方正
+
+### 核心观察
+- ① Signal ↔ Strategy 是否 diverge（如 StrongBuy × DE_RISK）
+- ② Market Rotation 主线 ↔ 我的真实暴露方向是否一致
+- ③ Strategy State 对"候选标的"的防守语义 vs "已持仓标的"是否应当不同
+- 市场与持仓是否冲突：YES / NO + 一句话解释
+- 需持续观察：1.___  2.___  3.___
+```
+
+**观察纪律**（守住 P0 事实层边界）：
+- EXACT 标的的市场 Signal/Strategy/Rotation 可直接对持仓做分析判断
+- PROXY 标的仅作近似市场参考，不能把代理 ETF 的 Signal 等同于基金本身（即 `proxy_symbol` 不确立底层经济等同——见 `config/portfolio.toml` 头部 STACK 不变式）
+- UNMAPPED 主动基金不能把主题代理 ETF 的 Signal 直接赋予基金净值判断；只确认"你持有它"这一事实
+- `cost_basis` 是持仓事实可记录但 P0 不消费计算盈亏；`entry_date` 暂不建模（分批建仓方式下单点时间会制造伪精确性）
 
 **何时继续下钻：**
 
@@ -330,10 +358,11 @@ cargo run -p quant-desktop
 |---|---|
 | 信号 StrongBuy 但姿态 Maintain/Avoid | `strategy-perspectives --mode detail --symbol <标的>` 看四策略归因 |
 | SRD 百分位极端 / Stretch=Extreme | `research analogues` 查历史相似盘面的后续走势 |
-| 想要完整的张力解读 | `llm-analyze --action portfolio_review` |
-| 想做连续性趋势跟踪 | `llm-analyze --action market_story`（自动携带前次解读） |
+| 想要完整的张力解读 | `llm-analyze --action portfolio_review` ——LLM 现会自动注入 Strategy Perspectives × 场景 + Integrity + 组合决策事实（ADR-106 边界：只解释不决策） |
+| 想做连续性趋势跟踪 | `llm-analyze --action market_story`（自动携带前次解读 + 默认注入博弈假设背景 ADR-112~114） |
+| Strategy State 与实际持仓反复冲突 | 记录到"需持续观察"区并标注日期——这是 TASK-093 divergence 积累 + Shadow Production 90 天观察期的输入 |
 
-**周期动作：** 每周五 `validation-check`；双周/月度 `run-backtest`；Evidence 积累进度随时 `evidence-status`。
+**周期动作：** 每周五 `validation-check`；双周/月度 `run-backtest`；Evidence 积累进度随时 `evidence-status`。Shadow Production 90 天到期后按 ADR-065 评估 State Layer 冻结是否解冻。
 
 ### 桌面端工作流
 
@@ -345,9 +374,36 @@ cargo run -p quant-desktop
 
 ---
 
+## 8. Portfolio Context（持仓事实层 P0）
+
+`config/portfolio.toml` 是 RV1 合并后新增的**用户事实输入层**：记录你在支付宝持有的 18 只基金的代码 / 名称 / 类型 / 系统底层映射 / 成本，但**不被任何 engine / signal / decision 路径消费**，仅作为每日复盘时"市场状态 × 我的持仓暴露"人工联动的背景。
+
+### 三类映射的观察语义
+
+| `mapping_quality` | 数量 | 含义 | 日常观察使用方式 |
+|---|---|---|---|
+| `EXACT` | 6 | 系统分析的底层 instrument 与基金真实跟踪标的等同（如 006131 联接 → 000300 沪深300） | Signal / Strategy / Rotation 可直接作为持仓的市场证据 |
+| `PROXY` | 5 | 基金真实跟踪的指数不在系统 universe，用最近主题 ETF 做代理（如 017126 港股互联网 → 513050 中概互联网） | 代理标的的 Signal 仅作"近似市场参考"，不等于基金本身——见 `portfolio.toml` 头部不变式 |
+| `UNMAPPED` | 7 | 主动型基金无可靠底层映射；部分带 `proxy_symbol` 仅作风格参考 | 仅确认"你持有它"这一事实；不把主题代理 ETF 的 Signal 直接赋予基金净值判断 |
+
+### P0 边界
+
+- **只存事实，不产指标**：`cost_basis` 是真实加权成本，但 P0 不计算 unrealized P/L / profit_pct / lifecycle score / 任何衍生指标
+- **不接 engine**：没有任何 strategy / signal / execution 路径读取 PortfolioConfig
+- **不建模时间**：`entry_date` 暂不要求——分批建仓方式下单点时间会制造伪精确；待未来 Lifecycle Observation 有证据支撑再设计 accumulation-aware 多时间模型（position_start / accumulation_start / last_add）
+- **Next Gate**：Position Lifecycle Observation 等 Shadow Production 90 天 + TASK-093 divergence 实证数据齐备后再决定是否启动；90 天是 Gate 不是 roadmap deadline
+
+### 修改持仓
+
+直接编辑 `config/portfolio.toml`。文件头部注释有完整 schema 不变式说明；改完跑 `cargo test -p core-domain` 会自动校验映射规则/唯一性/正定边界（8 个 portfolio 测试）。
+
+---
+
 ## 附录. 已知限制
 
 - 没有正式测试套件 / CI
 - 桌面端 LLM 仅支持 OpenAI-compatible API，不支持流式输出
-- 前端面板仍为单信号视图，多策略视角目前仅在 CLI（`strategy-perspectives`）与 LLM 上下文中呈现，前端适配待后续
+- 前端已支持多策略视角桌面端入口「策略视角」按钮（人格卡片 + 场景对比 + 点击加载归因）；多策略矩阵的 CLI 入口为 `strategy-perspectives`
+- 桌面端 LLM 面板含 7 个 action 按钮（含 `portfolio_review`/`market_adversarial_lens`），共享博弈假设背景默认开启（ADR-112~114），注入级别四档可选（full/standard/compact/none）
+- `config/portfolio.toml`（Portfolio Context P0）记录用户真实持仓事实，但 P0 阶段**不被任何 engine / signal / decision 路径消费**，仅供人工联动观察；Position Lifecycle 等更深的消费层待 Shadow Production + TASK-093 实证后决策
 - Evidence 权重设计（P3）延迟，直到积累 1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定
