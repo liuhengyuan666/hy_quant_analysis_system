@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-07-31T01:46:38Z",
+    "rebuilt_at": "2026-08-18T13:44:08Z",
     "version": "v4"
   },
   "terms": {
@@ -472,6 +472,12 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      }
+    ],
+    "16384": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "164s": [
@@ -5574,6 +5580,12 @@
         "type": "adr"
       }
     ],
+    "completion": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "component": [
       {
         "id": "ADR-042",
@@ -5794,6 +5806,12 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      }
+    ],
+    "config/llm.toml": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "config/llm.toml（gitignore），api_key": [
@@ -6124,6 +6142,10 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "contentpolicy（max_chars": [
@@ -7132,6 +7154,12 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      }
+    ],
+    "deepseek-v4-flash": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "default": [
@@ -9612,6 +9640,12 @@
       {
         "id": "ADR-072",
         "type": "adr"
+      }
+    ],
+    "finish_reason=length，原因：reasoning_tokens": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "firewall/horizon": [
@@ -13114,6 +13148,12 @@
         "type": "adr"
       }
     ],
+    "llm.toml.example": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "llm_history": [
       {
         "id": "ADR-112",
@@ -13832,6 +13872,24 @@
         "type": "trap"
       }
     ],
+    "max_tokens": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
+    "max_tokens（实测": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
+    "max_tokens，4096": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "maximization": [
       {
         "id": "ADR-058",
@@ -14194,6 +14252,10 @@
       {
         "id": "ADR-113",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "modeling": [
@@ -16356,6 +16418,10 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "portfoliodecision（组合姿态：increase/maintain/reduce/avoid）。明确禁令：(a": [
@@ -16826,6 +16892,10 @@
       {
         "id": "ADR-111",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "prompt-engineering": [
@@ -17274,6 +17344,12 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      }
+    ],
+    "reasoning": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "recalibrated": [
@@ -21666,6 +21742,12 @@
         "type": "trap"
       }
     ],
+    "timeout_secs（60→300）。根因不是": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "to": [
       {
         "id": "ADR-041",
@@ -21834,6 +21916,10 @@
       {
         "id": "ADR-113",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "token，vue": [
@@ -24108,6 +24194,12 @@
         "type": "adr"
       }
     ],
+    "下返回空": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "不变），llm": [
       {
         "id": "ADR-106",
@@ -24136,6 +24228,10 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "丢弃的分数），允许消费已有策略分数/场景加权(config/scenarios.toml)/输出解释归因，禁止新策略类型、新评分指标、新": [
@@ -25312,6 +25408,10 @@
       {
         "id": "ADR-110",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "在所有状态变更点调用同步函数": [
@@ -25430,6 +25530,12 @@
       {
         "id": "ADR-113",
         "type": "adr"
+      }
+    ],
+    "够用）与": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "天": [
@@ -26476,6 +26582,12 @@
         "type": "adr"
       }
     ],
+    "注明": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "浪费且结论可能不一致。博弈分析回答'当前价格由谁决定'这一与视角无关的基础问题，属于": [
       {
         "id": "ADR-112",
@@ -26692,6 +26804,10 @@
       {
         "id": "ADR-110",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "的'预期差'维度需要市场叙事信息（政策动态/行业新闻/板块共识），但系统无新闻数据源、无": [
@@ -26850,6 +26966,10 @@
       {
         "id": "ADR-039",
         "type": "adr"
+      },
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "等），确认": [
@@ -27114,6 +27234,12 @@
         "type": "adr"
       }
     ],
+    "计入": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "计算将更准确": [
       {
         "id": "ADR-030",
@@ -27162,6 +27288,12 @@
         "type": "adr"
       }
     ],
+    "语义。建议在": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "语义）；4": [
       {
         "id": "ADR-105",
@@ -27196,6 +27328,12 @@
       {
         "id": "ADR-039",
         "type": "adr"
+      }
+    ],
+    "调高": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "超时强杀后，pipeline-dates": [
@@ -27278,6 +27416,12 @@
       {
         "id": "ADR-037",
         "type": "adr"
+      }
+    ],
+    "过长或引擎错误，而是": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "返回的占位数据添加": [
@@ -27474,6 +27618,12 @@
         "type": "adr"
       }
     ],
+    "需要更大": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
     "需要确认": [
       {
         "id": "ADR-031",
@@ -27538,6 +27688,18 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      }
+    ],
+    "预算机制。区分普通": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
+      }
+    ],
+    "预算被推理全消耗": [
+      {
+        "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
+        "type": "trap"
       }
     ],
     "预算，超限段落边界截断": [
