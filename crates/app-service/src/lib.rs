@@ -4521,6 +4521,9 @@ impl AppContext {
         extra.push_str(&self.build_integrity_context_section());
         if action == "portfolio_review" {
             extra.push_str(&self.build_portfolio_decision_section(scope));
+            // Portfolio Context P0: user holdings facts (config/portfolio.toml).
+            // Explanation-layer read only — never consumed by engines (ADR-106/107).
+            extra.push_str(&self.build_portfolio_context_section());
         }
 
         // 3b. ADR-112: shared adversarial hypothesis background.
@@ -5046,6 +5049,20 @@ impl AppContext {
         }
     }
 
+    /// Portfolio context section (portfolio_review only): the user's real
+    /// holdings facts from `config/portfolio.toml` (Portfolio Context P0).
+    ///
+    /// This is a Reporting/Explanation Layer read (ADR-106/107 boundary) —
+    /// PortfolioConfig is never consumed by any engine, signal, or decision
+    /// path. Any failure (missing file / parse error / validation error)
+    /// silently skips the section; the rest of portfolio_review still works.
+    fn build_portfolio_context_section(&self) -> String {
+        let Ok(project_root) = StorageConfig::project_root() else {
+            return String::new();
+        };
+        portfolio_context_section_from_path(&project_root.join("config").join("portfolio.toml"))
+    }
+
     /// TASK-120: Execution Layer — Preclose analysis (Pattern Library filter)
     ///
     /// Candidate filter: signal >= Buy AND state != NO_TRADE
@@ -5160,6 +5177,127 @@ impl AppContext {
         Ok(all_decisions)
     }
 
+}
+
+/// Load + parse + validate `config/portfolio.toml` and render the layered
+/// portfolio context section. Silent skip (empty string) on any failure —
+/// portfolio context is optional; exactly one diagnostic line is logged.
+fn portfolio_context_section_from_path(path: &std::path::Path) -> String {
+    let raw = match fs::read_to_string(path) {
+        Ok(raw) => raw,
+        Err(e) => {
+            eprintln!("[portfolio-context] skip: cannot read {}: {e}", path.display());
+            return String::new();
+        }
+    };
+    let config: core_domain::PortfolioConfig = match toml::from_str(&raw) {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("[portfolio-context] skip: cannot parse {}: {e}", path.display());
+            return String::new();
+        }
+    };
+    if let Err(e) = config.validate() {
+        eprintln!("[portfolio-context] skip: {} invalid: {e}", path.display());
+        return String::new();
+    }
+    if config.positions.is_empty() {
+        return String::new();
+    }
+    render_portfolio_context_section(&config)
+}
+
+/// Render the layered Portfolio Context section. Pure presentation of user
+/// facts — no computation, no scoring, no P&L. Structure: exposure summary
+/// (counts + deduped underlying/proxy symbol lists) → compact EXACT/PROXY
+/// mapping detail → data limitations. UNMAPPED positions are counted but
+/// never row-listed: they carry no reliable market mapping by definition.
+fn render_portfolio_context_section(config: &core_domain::PortfolioConfig) -> String {
+    use core_domain::MappingQuality;
+
+    let exact: Vec<&core_domain::Position> = config
+        .positions
+        .iter()
+        .filter(|p| p.mapping_quality == MappingQuality::Exact)
+        .collect();
+    let proxy: Vec<&core_domain::Position> = config
+        .positions
+        .iter()
+        .filter(|p| p.mapping_quality == MappingQuality::Proxy)
+        .collect();
+    let unmapped_count = config
+        .positions
+        .iter()
+        .filter(|p| p.mapping_quality == MappingQuality::Unmapped)
+        .count();
+
+    // Deduped symbol lists (presentation facts only — the LLM infers themes).
+    let mut underlyings: Vec<&str> = exact
+        .iter()
+        .map(|p| p.underlying_symbol.as_str())
+        .collect();
+    underlyings.sort_unstable();
+    underlyings.dedup();
+    let mut proxies: Vec<&str> = proxy.iter().map(|p| p.proxy_symbol.as_str()).collect();
+    proxies.sort_unstable();
+    proxies.dedup();
+
+    let mut section = String::from(
+        "\n## 组合持仓背景（用户事实输入，Portfolio Context P0）\n\n\
+         > 注意：以下为用户真实持仓事实，由 `config/portfolio.toml` 提供。proxy_symbol 不确立与 fund_code 的底层经济等同（EXACT 才是真实底层映射）。\n\
+         > 你的职责是解释市场状态与用户实际暴露之间的关系，不输出买卖/调仓建议（ADR-106 边界）。\n\n\
+         ### 暴露概览\n",
+    );
+    section.push_str(&format!(
+        "- 底层/代理标的列表：EXACT 底层 [{}]；PROXY 代理 [{}]\n",
+        underlyings.join(", "),
+        proxies.join(", "),
+    ));
+    section.push_str(&format!(
+        "- EXACT 持仓：{} 只（系统分析 = 持仓市场）\n",
+        exact.len()
+    ));
+    section.push_str(&format!(
+        "- PROXY 持仓：{} 只（代理近似，非底层等价）\n",
+        proxy.len()
+    ));
+    section.push_str(&format!(
+        "- UNMAPPED 持仓：{} 只（主动基金，无可靠映射）\n",
+        unmapped_count
+    ));
+
+    if !exact.is_empty() || !proxy.is_empty() {
+        section.push_str("\n### 持仓映射明细（EXACT / PROXY）\n");
+        for p in &exact {
+            section.push_str(&format!(
+                "- {} {} → 底层 {}（EXACT）\n",
+                p.fund_code, p.fund_name, p.underlying_symbol
+            ));
+        }
+        for p in &proxy {
+            section.push_str(&format!(
+                "- {} {} → 代理 {}（PROXY，非底层等价）\n",
+                p.fund_code, p.fund_name, p.proxy_symbol
+            ));
+        }
+    }
+
+    section.push_str("\n### 数据限制\n");
+    section.push_str(&format!(
+        "- {} 只 EXACT 可直接将市场信号归因到持仓底层\n",
+        exact.len()
+    ));
+    section.push_str(&format!(
+        "- {} 只 PROXY 仅可作方向参考，不可等价推断\n",
+        proxy.len()
+    ));
+    section.push_str(&format!(
+        "- {} 只 UNMAPPED 仅确认持仓存在，暴露不可推断\n",
+        unmapped_count
+    ));
+    section.push_str("- cost_basis 为用户事实，本系统当前不计算盈亏/生命周期\n");
+
+    section
 }
 
 /// Build ResearchContext (Canonical Semantic Contract) from a ResearchDataset.
@@ -5726,6 +5864,77 @@ fn parse_trust_level(level: &str) -> research_context::TrustLevel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn portfolio_context_missing_file_returns_empty() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("config").join("portfolio.toml");
+        assert!(portfolio_context_section_from_path(&path).is_empty());
+    }
+
+    #[test]
+    fn portfolio_context_invalid_toml_returns_empty() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("portfolio.toml");
+        std::fs::write(&path, "this is [[ not valid toml").expect("write");
+        assert!(portfolio_context_section_from_path(&path).is_empty());
+    }
+
+    #[test]
+    fn portfolio_context_validation_failure_returns_empty() {
+        // EXACT mapping with empty underlying_symbol violates validate().
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("portfolio.toml");
+        std::fs::write(
+            &path,
+            "[[positions]]\n\
+             fund_code = \"F1\"\n\
+             fund_name = \"fund-F1\"\n\
+             asset_type = \"ETF_LINK\"\n\
+             underlying_symbol = \"\"\n\
+             mapping_quality = \"EXACT\"\n\
+             cost_basis = 1.0\n\
+             enabled = true\n",
+        )
+        .expect("write");
+        assert!(portfolio_context_section_from_path(&path).is_empty());
+    }
+
+    #[test]
+    fn portfolio_context_empty_positions_returns_empty() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("portfolio.toml");
+        std::fs::write(&path, "positions = []\n").expect("write");
+        assert!(portfolio_context_section_from_path(&path).is_empty());
+    }
+
+    #[test]
+    fn portfolio_context_real_file_renders_layered_counts() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("config")
+            .join("portfolio.toml");
+        let section = portfolio_context_section_from_path(&path);
+        assert!(section.contains("组合持仓背景"), "missing section header: {section}");
+        // Layered exposure counts from the real 18-position file (6/5/7).
+        assert!(section.contains("EXACT 持仓：6"), "missing EXACT count: {section}");
+        assert!(section.contains("PROXY 持仓：5"), "missing PROXY count: {section}");
+        assert!(section.contains("UNMAPPED 持仓：7"), "missing UNMAPPED count: {section}");
+        // Invariant line: proxy_symbol never establishes economic identity.
+        assert!(
+            section.contains("proxy_symbol 不确立与 fund_code 的底层经济等同"),
+            "missing invariant line: {section}"
+        );
+        // ADR-106 boundary line.
+        assert!(section.contains("不输出买卖/调仓建议"), "missing ADR-106 line: {section}");
+        // Per-position detail rows exist for EXACT and PROXY only.
+        assert!(section.contains("006131"), "EXACT fund_code missing: {section}");
+        assert!(section.contains("024038"), "PROXY fund_code missing: {section}");
+        // UNMAPPED active funds are counted but never row-listed.
+        assert!(!section.contains("021511"), "UNMAPPED fund leaked into detail: {section}");
+        assert!(!section.contains("018816"), "UNMAPPED fund leaked into detail: {section}");
+    }
 
     #[test]
     fn parse_trust_level_maps_known_levels() {
