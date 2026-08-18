@@ -318,39 +318,12 @@ cargo run -p quant-desktop
 
 ### 每日收盘后
 
-1. `market-refresh` 拉取最新数据
+1. `market-refresh` 拉取最新数据（成功后异步预生成当日博弈背景，ADR-113）
 2. `daily-analysis` 30 秒看 Integrity 状态、信号、组合姿态
 3. `research observe` 把今天放进历史语境（SRD 背离 / 拉伸 / 条件收益，归档 markdown）
 4. `strategy-perspectives` 浏览全标的四策略 × 四场景矩阵
-5. `daily-report` 需要留档时导出
-6. **Portfolio Context 人工联动**（`config/portfolio.toml` 见 §8）——在 daily-analysis 输出基础上，把"市场发生了什么"与"我的持仓暴露在哪里"人工对联: 见三个重点观察项
-
-#### Portfolio Overlay 每日记录模板
-
-```markdown
-### 市场状态
-- Regime: ___   Environment: ___   Breadth: ___
-- Rotation: ___   Stretch: ___   SRD: ___
-- Strategy State: ___（姿态/仓位%）
-
-### 持仓暴露概览（按映射质量分三组）
-- EXACT（系统分析 = 持仓市场）: 你的精确映射标的列表
-- PROXY（代理近似，非底层等价）: 你的代理映射标的列表
-- UNMAPPED（主动型，暂无可靠映射）: 仅记录持仓事实
-
-### 核心观察
-- ① Signal ↔ Strategy 是否 diverge（如 StrongBuy × DE_RISK）
-- ② Market Rotation 主线 ↔ 我的真实暴露方向是否一致
-- ③ Strategy State 对"候选标的"的防守语义 vs "已持仓标的"是否应当不同
-- 市场与持仓是否冲突：YES / NO + 一句话解释
-- 需持续观察：1.___  2.___  3.___
-```
-
-**观察纪律**（守住 P0 事实层边界）：
-- EXACT 标的的市场 Signal/Strategy/Rotation 可直接对持仓做分析判断
-- PROXY 标的仅作近似市场参考，不能把代理 ETF 的 Signal 等同于基金本身（即 `proxy_symbol` 不确立底层经济等同——见 `config/portfolio.toml` 头部 STACK 不变式）
-- UNMAPPED 主动基金不能把主题代理 ETF 的 Signal 直接赋予基金净值判断；只确认"你持有它"这一事实
-- `cost_basis` 是持仓事实可记录但 P0 不消费计算盈亏；`entry_date` 暂不建模（分批建仓方式下单点时间会制造伪精确性）
+5. `llm-analyze --action portfolio_review --scope global` —— LLM 自动读 `config/portfolio.toml`（见 §8），输出"我的真实暴露 / 映射可信度 / 市场×持仓张力 / 未知项"四段解读；ADR-106 边界：只解释不决策
+6. `daily-report` 需要留档时导出
 
 **何时继续下钻：**
 
@@ -358,9 +331,8 @@ cargo run -p quant-desktop
 |---|---|
 | 信号 StrongBuy 但姿态 Maintain/Avoid | `strategy-perspectives --mode detail --symbol <标的>` 看四策略归因 |
 | SRD 百分位极端 / Stretch=Extreme | `research analogues` 查历史相似盘面的后续走势 |
-| 想要完整的张力解读 | `llm-analyze --action portfolio_review` ——LLM 现会自动注入 Strategy Perspectives × 场景 + Integrity + 组合决策事实（ADR-106 边界：只解释不决策） |
 | 想做连续性趋势跟踪 | `llm-analyze --action market_story`（自动携带前次解读 + 默认注入博弈假设背景 ADR-112~114） |
-| Strategy State 与实际持仓反复冲突 | 记录到"需持续观察"区并标注日期——这是 TASK-093 divergence 积累 + Shadow Production 90 天观察期的输入 |
+| Strategy State 与实际持仓反复冲突 | 记录日期与现象——这是 TASK-093 divergence 积累 + Shadow Production 90 天观察期的输入 |
 
 **周期动作：** 每周五 `validation-check`；双周/月度 `run-backtest`；Evidence 积累进度随时 `evidence-status`。Shadow Production 90 天到期后按 ADR-065 评估 State Layer 冻结是否解冻。
 
@@ -369,7 +341,7 @@ cargo run -p quant-desktop
 1. 打开桌面端 → 点击 `Refresh data`
 2. 先看 `Trust summary` → 再下钻 `Pipeline freshness` 与 `Data health`
 3. 确认后继续阅读 `Environment / Rotation / Signals / Backtest`
-4. 需要 LLM 解读时切换到 LLM 分析面板
+4. 需要 LLM 解读时切换到 LLM 分析面板——点 `portfolio_review` 按钮可自动结合你的持仓事实输出市场×持仓张力解读；其他 persona（`market_story` / `market_adversarial_lens` 等）按需选择
 5. 需要留档时再导出 report
 
 ---
