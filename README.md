@@ -181,6 +181,10 @@ cargo run -p quant-cli -- daily-report
 #   --scope cn|hk           导出对应市场日报
 #   --date 2026-07-20       导出指定历史日期（跳过 gate 检查）
 #   --concise               精简版日报
+
+# 6. 持仓分析 (自动读 portfolio.toml，输出四段解读（真实暴露 / 映射可信度 / 市场×持仓张力 / 未知项）)
+cargo run -p quant-cli -- llm-analyze --action portfolio_review --scope global 
+
 ```
 
 ### 按需下钻（遇到张力 / 极端读数时）

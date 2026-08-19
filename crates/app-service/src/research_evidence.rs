@@ -12,7 +12,7 @@ use anyhow::{Result};
 use chrono::NaiveDate;
 use core_domain::research::attribution::Evidence;
 use core_domain::research::classification::classify_level;
-use core_domain::AnalysisScope;
+use core_domain::{AnalysisScope, MappingQuality, PortfolioConfig};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
@@ -21,6 +21,8 @@ use crate::AppContext;
 /// Supported research conditions for evidence computation.
 pub const SUPPORTED_CONDITIONS: &[&str] = &[
     "srd-strong",
+    "srd-strong-held",
+    "srd-strong-non-held",
     "stretch-extreme-crowding-momentum",
 ];
 
@@ -60,6 +62,8 @@ pub fn compute_condition_evidence(
 
     let matched_dates = match condition {
         "srd-strong" => match_srd_strong(context, scope, effective_from, effective_to)?,
+        "srd-strong-held" => match_srd_strong_portfolio(context, scope, effective_from, effective_to, true)?,
+        "srd-strong-non-held" => match_srd_strong_portfolio(context, scope, effective_from, effective_to, false)?,
         "stretch-extreme-crowding-momentum" => {
             match_stretch_extreme(context, scope, effective_from, effective_to)?
         }
@@ -165,6 +169,98 @@ fn match_srd_strong(
     Ok(matched)
 }
 
+/// Load PortfolioConfig from `config/portfolio.toml`.
+/// Returns None if the file is missing, unparseable, or fails validation (silent skip).
+fn load_portfolio_config() -> Option<PortfolioConfig> {
+    let project_root = market_store::StorageConfig::project_root().ok()?;
+    let path = project_root.join("config").join("portfolio.toml");
+    let content = std::fs::read_to_string(&path).ok()?;
+    let config: PortfolioConfig = toml::from_str(&content).ok()?;
+    config.validate().ok()?;
+    Some(config)
+}
+
+/// Extract the set of EXACT-held underlying symbols from a PortfolioConfig.
+/// Only EXACT positions with `enabled = true` participate.
+/// PROXY and UNMAPPED symbols are deliberately excluded (ADR-067: no false precision).
+fn exact_held_symbols(config: &PortfolioConfig) -> BTreeSet<String> {
+    config
+        .positions
+        .iter()
+        .filter(|p| p.enabled && p.mapping_quality == MappingQuality::Exact)
+        .map(|p| p.underlying_symbol.clone())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// Portfolio-aware SRD-strong matcher.
+///
+/// When `held = true`: matches conservative dates where StrongBuy ≥ 5 AND at least one
+/// StrongBuy signal is for a symbol in the user's EXACT-held set.
+/// When `held = false`: matches conservative dates where StrongBuy ≥ 5 AND none of the
+/// StrongBuy signals are for EXACT-held symbols (i.e. the divergence is on non-held positions).
+///
+/// If PortfolioConfig is unavailable (missing/invalid), `held` returns empty Vec
+/// (no held positions to filter on); `non-held` falls back to all conservative StrongBuy ≥ 5
+/// dates (equivalent to `srd-strong`).
+fn match_srd_strong_portfolio(
+    context: &AppContext,
+    scope: AnalysisScope,
+    from: NaiveDate,
+    to: NaiveDate,
+    held: bool,
+) -> Result<Vec<NaiveDate>> {
+    let portfolio = load_portfolio_config();
+    let held_set = portfolio.as_ref().map(|c| exact_held_symbols(c)).unwrap_or_default();
+
+    let states = market_store::fetch_strategy_states_for_scope(&context.storage, scope)?;
+    let conservative_dates: BTreeSet<NaiveDate> = states
+        .iter()
+        .filter(|s| {
+            s.date >= from
+                && s.date <= to
+                && matches!(
+                    s.state,
+                    core_domain::StrategyState::NoTrade
+                        | core_domain::StrategyState::DeRisk
+                        | core_domain::StrategyState::LeftProbe
+                )
+        })
+        .map(|s| s.date)
+        .collect();
+
+    let signal_snapshots = market_store::fetch_signal_snapshots_for_range_with_scope(
+        &context.storage, scope, from, to,
+    )?;
+
+    let mut strong_buy_by_date: BTreeMap<NaiveDate, Vec<String>> = BTreeMap::new();
+    for s in &signal_snapshots {
+        if matches!(s.signal_label, core_domain::SignalLabel::StrongBuy) {
+            strong_buy_by_date
+                .entry(s.date)
+                .or_default()
+                .push(s.symbol.clone());
+        }
+    }
+
+    let mut matched = Vec::new();
+    for date in conservative_dates {
+        let strong_symbols = strong_buy_by_date.get(&date);
+        let count = strong_symbols.map(|v| v.len()).unwrap_or(0);
+        if count < 5 {
+            continue;
+        }
+        let symbols = strong_symbols.cloned().unwrap_or_default();
+        let has_held = symbols.iter().any(|s| held_set.contains(s));
+        let qualifies = if held { has_held } else { !has_held };
+        if qualifies {
+            matched.push(date);
+        }
+    }
+    matched.sort();
+    Ok(matched)
+}
+
 /// Match dates where Stretch Overall=Extreme, Crowding=Extreme, Momentum=Extreme, Breadth=Normal.
 fn match_stretch_extreme(
     context: &AppContext,
@@ -243,6 +339,8 @@ mod tests {
     #[test]
     fn supported_conditions_constant() {
         assert!(SUPPORTED_CONDITIONS.contains(&"srd-strong"));
+        assert!(SUPPORTED_CONDITIONS.contains(&"srd-strong-held"));
+        assert!(SUPPORTED_CONDITIONS.contains(&"srd-strong-non-held"));
         assert!(SUPPORTED_CONDITIONS.contains(&"stretch-extreme-crowding-momentum"));
     }
 
