@@ -169,6 +169,7 @@ cargo run -p quant-cli -- research observe
 #   --condition srd-strong        分析条件（默认 srd-strong）
 #   --horizon 60                前向收益窗口（默认 20，可填任意交易日数）
 #   --output <path>               自定义输出（默认 reports/research-observe-{scope}-{date}.md）
+#   命中案例（标的当日 StrongBuy 信号 + scope 当日 DE_RISK 状态）自动写入/更新本地 divergence ledger（workspace/divergence-ledger/，gitignored）；该逐标的台账与 shadow-master.csv 日主台账并存
 
 # 4. 多策略评分矩阵（默认：global、全标的、4 策略独立分 + 全部场景列）
 cargo run -p quant-cli -- strategy-perspectives
