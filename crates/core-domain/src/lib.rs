@@ -1,5 +1,8 @@
 pub mod calendar;
+pub mod portfolio;
 pub mod research;
+
+pub use portfolio::{AssetType, MappingQuality, PortfolioConfig, Position};
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
