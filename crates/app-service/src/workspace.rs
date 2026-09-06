@@ -281,14 +281,33 @@ pub struct WorkspaceManager {
 }
 
 impl WorkspaceManager {
+    /// Open a writer workspace rooted at `root`, creating all directories on
+    /// first use. Writer constructors ensure the full layout exists up front.
     pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
         let paths = WorkspacePaths::from_root(root);
         paths.ensure_directories()?;
         Ok(Self { paths })
     }
 
+    /// Open the default writer workspace, creating all directories.
     pub fn default_workspace() -> Result<Self> {
         Self::new(WorkspacePaths::default_workspace())
+    }
+
+    /// Open a read-only workspace rooted at `root` without touching the
+    /// filesystem. No directories are created; this is intended for status /
+    /// inspection commands that must not have side effects. Writer methods on
+    /// this instance are not supported and may fail when directories are absent.
+    pub fn open<P: AsRef<Path>>(root: P) -> Self {
+        Self {
+            paths: WorkspacePaths::from_root(root),
+        }
+    }
+
+    /// Open the default workspace in read-only mode without touching the
+    /// filesystem. See [`Self::open`].
+    pub fn open_default_workspace() -> Self {
+        Self::open(WorkspacePaths::default_workspace())
     }
 
     /// Load or create the workspace-wide asset sequence counter.
@@ -665,6 +684,25 @@ mod tests {
         paths.ensure_directories().unwrap();
         assert!(paths.evidence_replay.exists());
         assert!(paths.registry.exists());
+    }
+
+    #[test]
+    fn open_readonly_does_not_create_dirs_and_loads_empty() {
+        // A root that does not exist yet, inside a temp parent so nothing leaks.
+        let parent = TempDir::new().unwrap();
+        let root = parent.path().join("missing-workspace");
+
+        let manager = WorkspaceManager::open(&root);
+        assert!(!root.exists(), "open() must not create the workspace root");
+
+        // Typed loaders return empty indexes without any filesystem side effect.
+        let evidence = manager.load_evidence_index().unwrap();
+        assert_eq!(evidence.entries.len(), 0);
+        let snapshots = manager.load_snapshot_index().unwrap();
+        assert_eq!(snapshots.entries.len(), 0);
+
+        // Still nothing was materialized on disk.
+        assert!(!root.exists(), "typed loaders must not create the workspace root");
     }
 
     #[test]

@@ -23,7 +23,7 @@ use report_engine::{
 use report_renderer::DashboardInsightComposer;
 use serde::Serialize;
 use signal_engine::build_signal_snapshots;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -37,6 +37,7 @@ pub mod config_loader;
 pub mod breadth;
 pub mod core;
 pub mod dashboard;
+pub mod divergence_ledger;
 pub mod execution_replay;
 pub mod llm;
 pub mod llm_history;
@@ -3484,6 +3485,145 @@ impl AppContext {
             output_path: output_path.display().to_string(),
             analysis_text,
         })
+    }
+
+    /// Update the scoped divergence ledger for an observation date.
+    pub fn update_divergence_ledger_for_observe(
+        &self,
+        scope: ReportScope,
+        target_date: NaiveDate,
+        explicit_date: bool,
+    ) -> Result<divergence_ledger::DivergenceLedgerUpdateSummary> {
+        let latest_signal_date = market_store::fetch_latest_signal_snapshot_date_for_scope(
+            &self.storage,
+            scope,
+        )
+        .with_context(|| {
+            format!(
+                "failed to resolve latest signal date for divergence ledger scope {}",
+                scope.as_str()
+            )
+        })?;
+        let observation_mode = divergence_ledger::resolve_observation_mode(
+            target_date,
+            latest_signal_date,
+            explicit_date,
+        );
+        let signals = market_store::fetch_signal_snapshots_for_date_with_scope(
+            &self.storage,
+            target_date,
+            scope,
+        )
+        .with_context(|| {
+            format!(
+                "failed to fetch signals for divergence ledger scope {} on {}",
+                scope.as_str(),
+                target_date
+            )
+        })?;
+        let strategy_state = market_store::fetch_latest_strategy_state_on_or_before(
+            &self.storage,
+            target_date,
+            scope,
+        )
+        .with_context(|| {
+            format!(
+                "failed to fetch strategy state for divergence ledger scope {} on or before {}",
+                scope.as_str(),
+                target_date
+            )
+        })?;
+        let ledger = divergence_ledger::DivergenceLedger::workspace_default()
+            .context("failed to initialize divergence ledger workspace")?;
+        let mut summary = divergence_ledger::DivergenceLedgerUpdateSummary::default();
+
+        if let Some(state) = strategy_state.as_ref().filter(|state| {
+            state.date == target_date && state.scope == scope.as_str()
+        }) {
+            divergence_ledger::create_candidates(
+                &ledger,
+                scope,
+                target_date,
+                observation_mode,
+                &signals,
+                state,
+                &mut summary,
+            )
+            .with_context(|| {
+                format!(
+                    "failed to create divergence ledger candidates for scope {} on {}",
+                    scope.as_str(),
+                    target_date
+                )
+            })?;
+        }
+
+        let records = ledger
+            .enumerate_scope_records(scope)
+            .with_context(|| {
+                format!(
+                    "failed to enumerate divergence ledger records for scope {}",
+                    scope.as_str()
+                )
+            })?;
+        if !records.is_empty() {
+            let earliest_date = records
+                .iter()
+                .map(|record| record.case_key.observation_date)
+                .min()
+                .context("divergence ledger records did not contain an observation date")?;
+            let mut symbols: Vec<String> = records
+                .iter()
+                .map(|record| record.case_key.symbol.clone())
+                .collect();
+            symbols.sort();
+            symbols.dedup();
+
+            if let Some(latest_bar_date) = market_store::fetch_latest_daily_bar_date(&self.storage)
+                .context("failed to fetch latest daily bar date for divergence ledger")?
+            {
+                let bars = market_store::fetch_daily_bars_for_symbols_in_range(
+                    &self.storage,
+                    &symbols,
+                    earliest_date,
+                    latest_bar_date,
+                )
+                .with_context(|| {
+                    format!(
+                        "failed to fetch divergence ledger bars for {} symbols from {} to {}",
+                        symbols.len(),
+                        earliest_date,
+                        latest_bar_date
+                    )
+                })?;
+                let mut bars_by_symbol: HashMap<String, Vec<core_domain::DailyBar>> =
+                    HashMap::new();
+                for bar in bars {
+                    bars_by_symbol
+                        .entry(bar.symbol.clone())
+                        .or_default()
+                        .push(bar);
+                }
+                let sweep = divergence_ledger::sweep_scope_outcomes(
+                    &ledger,
+                    scope,
+                    &bars_by_symbol,
+                )
+                .with_context(|| {
+                    format!(
+                        "failed to sweep divergence ledger outcomes for scope {}",
+                        scope.as_str()
+                    )
+                })?;
+                summary.horizons_filled = sweep.horizons_filled;
+                summary.horizons_unavailable = sweep.horizons_unavailable;
+                summary.horizons_pending = sweep.horizons_pending;
+                summary.horizons_terminal = sweep.horizons_terminal;
+                summary.records_scanned = sweep.records_scanned;
+            }
+        }
+
+        Ok(summary)
     }
 
     /// Build ResearchContext for a given scope
