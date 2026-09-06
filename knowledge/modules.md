@@ -16,7 +16,7 @@ rust-quant-analysis-system/
 │       ├── frontend/     # Vue 3前端（Vite构建）
 │       └── src-tauri/    # Tauri Rust后端
 ├── crates/               # 核心库crate（26个物理目录；23个在workspace中，3个未加入：report-builder, reporting, research-validation）
-│   ├── app-service/      # 核心服务编排（已模块化：lib.rs ~5,900行 + 14 helper modules，含V8 workspace / execution_replay / llm_history / prompts / scenarios / strategy_perspectives）
+│   ├── app-service/      # 核心服务编排（已模块化：lib.rs ~5,900行 + 15 helper modules，含V8 workspace / execution_replay / llm_history / prompts / scenarios / strategy_perspectives / divergence_ledger（TASK-093 本地 divergence 观察台账））
 │   ├── backtest-engine/  # 回测引擎
 │   ├── core-domain/      # 核心领域模型（V6新增 core-domain::research 子模块；V7新增 confirmation/recovery/calibration/consensus）
 │   ├── data-ingestion/   # 数据获取（Eastmoney/Tencent/FRED）
@@ -82,7 +82,7 @@ rust-quant-analysis-system/
 └── target/              # Rust构建产物（未在目录树中显式列出，但存在）
 ```
 
-> 说明：`workspace/` 是 V8 运行时生成的研究资产目录（gitignored），由 `app-service::workspace` 管理，CLI 通过 `--save-evidence` 或 Historical Replay 写入。首次运行前可能不存在。
+> 说明：`workspace/` 是 V8 运行时生成的研究资产目录（gitignored），由 `app-service::workspace` 管理，CLI 通过 `--save-evidence` 或 Historical Replay 写入。首次运行前可能不存在。该目录下另有非 Research Asset 的运行时观察子树：`workspace/divergence-ledger/{scope}/{symbol}/{YYYY-MM-DD}.json`（scope 小写，TASK-093，由 `app-service::divergence_ledger` 写入；无 RA-XXXXXX / AssetKind，无 DB 写入）。
 
 ## 2. 核心模块调用边界与依赖方向
 

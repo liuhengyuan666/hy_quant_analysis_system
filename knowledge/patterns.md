@@ -118,3 +118,10 @@
 - **门控式演进（P3 Gate）**：Evidence Score/Weight 等数值化权重必须等真实资产积累达标（1000+ 资产、30 天 Replay 稳定、2 周期 Calibration 稳定）后才设计；权重基于真实资产分布而非假设
 - **计算+格式化成对模块**：`execution-replay` 内每个证据域由 `<domain>.rs`（计算）+ `<domain>_formatter.rs`（输出）成对组成，新证据沿用该结构
 - **Shadow 只读约束**：Shadow Validation 产物（ShadowRiskAssessment 等）只读观察，不进交易链路；禁止 DecisionEngine 消费、禁止修改 ExecutionPolicy、禁止自动交易
+
+## 13. 不可变观察 / 可变成熟度范式 (Immutable Observation / Mutable Maturity)
+
+- **as-of 事实写一次（write-once）**：观察事实（如 divergence case 的完整 `SignalSnapshot` + 当日 `StrategyStateSnapshot`）、case key、observation mode 与 schema version 一旦落盘不可变；重复写相同事实是 no-op（不重写字节），事实冲突则保留既有记录，绝不覆盖（`divergence_ledger.rs`）
+- **结果独立成熟（mutable maturity）**：T+20 / T+60 / T+120 等前向结果彼此独立，仅由已持久化的严格后续交易 bars 驱动；成熟后从 `Pending` 变为 `Filled`。缺失或无效观察 bar 仍保持 `Pending`，允许后续数据回填修复；只有可证实的永久结构性失败才可进入 `Unavailable`，`Filled` / `Unavailable` 不因新 bars 回改
+- **无自动分类**：自动化层永远只写 `Unclassified`（无 category/notes），并原样保留人工填入的分类字段；taxonomy 由未来任务/人工定义（如 TASK-100），系统层不发明、不指派分类
+- **确定性落盘、无 DB 写入**：此类本地观察台账以稳定声明序的 pretty JSON 写入 gitignored 的 `workspace/` 子树（如 `divergence-ledger/`），不做任何 ClickHouse/SQLite 写入，也不进入 Research Asset 体系（无 RA-XXXXXX / AssetKind）

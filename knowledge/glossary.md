@@ -77,6 +77,7 @@
 | **Production Surface** | Production Surface | 生产表面，Shadow Production 期间冻结的核心观察链路（DashboardSnapshot, ResearchContext, Markdown Report） | 治理域 |
 | **Attribution Breakdown** | Attribution Breakdown | 归因拆解，信号得分的四段贡献：Strategy (45%) + Alignment (15%) + Regime (20%) + Rotation (20%) | 可解释性域 |
 | **Divergence Sample Library** | Divergence Sample Library | 分歧样本库，用于追踪 StrongBuy+DE_RISK 等模式的 T+20/T+60/T+120 收益样本 | 研究验证域 |
+| **Divergence Ledger** | Divergence Ledger | TASK-093 本地确定性逐标的观察台账：`research observe` 将 exact-date `StrongBuy` 信号 + scope exact-date `DE_RISK` 状态自动写入 `workspace/divergence-ledger/{scope}/{symbol}/{YYYY-MM-DD}.json`（gitignored，scope 小写；无 RA-XXXXXX / AssetKind）。案例身份 `(scope, symbol, observation_date)`，落盘完整 SignalSnapshot 与当日 StrategyStateSnapshot；T+20/T+60/T+120 由严格后续交易日独立成熟（缺失/无效观察 bar 保持 Pending 以等待回填）；分类初始 Unclassified。它与 `shadow-master.csv` 日主台账并存，**不是** Research Asset、不是报告、也不是 DB 表，无 DB 写入 | 研究验证域 |
 | **Symbol Diagnostics** | Symbol Diagnostics | 标的诊断，单标的深度归因拆解 CLI 工具（TASK-092 P0） | 可解释性域 |
 | **Symbol Scoreboard** | Symbol Scoreboard | 标的记分板，全标的统一视图横向对比 CLI 工具（TASK-092 P1） | 可解释性域 |
 | **TRAP** | Trap Record | 陷阱记录，记录已修复的根因和预防措施（如 TRAP-004, TRAP-005） | 项目管理域 |
