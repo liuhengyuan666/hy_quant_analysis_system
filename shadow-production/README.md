@@ -1,12 +1,10 @@
-# Shadow Production — 90-Day Observation
+# Shadow Production
 
 ## Overview
 
 This directory contains the Shadow Production logging infrastructure for the quant analysis system.
 
-**Status:** Phase A (State Layer observation only)  
-**Start Date:** 2026-06-07  
-**End Date:** 2026-09-05 (90 days)  
+**Status:** The original 90-day observation window (Phases A/B/C below) ran 2026-06-07 → 2026-09-05 and is complete. Observation continues under `rv1_capability_consolidation`; `daily-log.ps1` still appends to `shadow-master.csv`, and the `A`/`B`/`C` phase values remain valid record-depth selectors (`A` = state layer, `B` = + economic layer, `C` = + allocation suggestion).
 **Rule:** NO REAL MONEY EXECUTION
 
 ---
@@ -25,6 +23,8 @@ shadow-production/
 ---
 
 ## Phases
+
+The Phase A/B/C schedule below documents the original 90-day protocol (2026-06-07 → 2026-09-05) and is retained as the reference for how each phase defined its records and columns. Continued observation under `rv1_capability_consolidation` uses the same `A`/`B`/`C` values as record-depth selectors, not as day-range gates.
 
 ### Phase A: State Layer Observation (Days 1-30)
 
@@ -86,13 +86,18 @@ shadow-production/
 
 ## Forward Return Tracking
 
-After T+20/60/120 days, fill in the returns in `shadow-master.csv`:
+The `T20_Return` / `T60_Return` / `T120_Return` columns in `shadow-master.csv` are broader, per-day market and state-layer observations that are filled in manually. They are **not** interchangeable with the automatic per-symbol `StrongBuy + DE_RISK` trading-bar outcomes that `quant-cli research observe` maintains in `workspace/divergence-ledger/`; that ledger matures each case independently from strictly subsequent persisted trading bars.
+
+Where a matching persisted trading-bar series applies to a CSV row, use the Nth strictly subsequent persisted trading bar:
 
 ```powershell
-# Example: Fill T+20 return for 2026-06-07
-# Look up market return from 2026-06-07 to 2026-06-27
-# Update the T20_Return column
+# Example: Fill T20_Return for the 2026-06-07 row
+# Look up the market return from that row date to the 20th strictly
+# subsequent persisted trading bar (not 20 calendar days).
+# Update the T20_Return column.
 ```
+
+Where no such trading-bar series applies, treat the CSV columns as a manually defined broader metric and note the window basis used in the cell or in the weekly/monthly report.
 
 ---
 

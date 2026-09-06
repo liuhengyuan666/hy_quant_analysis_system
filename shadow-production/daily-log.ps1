@@ -23,7 +23,7 @@ Write-Host ""
 # Function to get dashboard snapshot
 function Get-DashboardSnapshot($scope) {
     try {
-        $result = cargo run --release -p quant-cli -- dashboard-snapshot --scope $scope --quiet 2>$null | ConvertFrom-Json
+        $result = cargo run --release -p quant-cli -- --quiet dashboard-snapshot --scope $scope 2>$null | ConvertFrom-Json
         return $result
     } catch {
         Write-Warning "Failed to get $scope dashboard snapshot: $_"
