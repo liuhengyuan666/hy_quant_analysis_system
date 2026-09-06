@@ -420,6 +420,7 @@ pub fn compute_analytics_input(
     condition: &str,
     horizon: usize,
     scope: AnalysisScope,
+    requested_date: Option<NaiveDate>,
 ) -> Result<(AnalyticsReportInput, ReportingSnapshot, core_domain::research::attribution::Evidence)> {
     if horizon != 20 && horizon != 60 {
         anyhow::bail!(
@@ -437,7 +438,7 @@ pub fn compute_analytics_input(
     let close_by_date: BTreeMap<NaiveDate, f64> =
         anchor_bars.iter().map(|b| (b.date, b.close)).collect();
 
-    let Some(target_date) = close_by_date.keys().last().copied() else {
+    let Some(target_date) = requested_date.or_else(|| close_by_date.keys().last().copied()) else {
         anyhow::bail!("No anchor bars available for {}", anchor_symbol);
     };
     let Some(earliest_date) = close_by_date.keys().next().copied() else {
@@ -508,7 +509,8 @@ pub fn handle_research_analytics(
         ReportScopeArg::Hk => AnalysisScope::Hk,
     };
 
-    let (input, reporting_snapshot, evidence) = compute_analytics_input(context, &condition, horizon, scope)?;
+    let (input, reporting_snapshot, evidence) =
+        compute_analytics_input(context, &condition, horizon, scope, None)?;
 
     let doc = ResearchReportBuilder::build_analytics(&reporting_snapshot, &input)?;
     let mut formatter = TextFormatter::new();
@@ -549,17 +551,19 @@ pub fn handle_research_observe(
         ReportScopeArg::Hk => AnalysisScope::Hk,
     };
 
+    let explicit_date = date.is_some();
     let target_date = match date {
-        Some(d) => d,
-        None => market_store::fetch_latest_table_date(&context.storage, "signal_snapshot")
-            .unwrap_or(None)
-            .unwrap_or_else(|| Local::now().date_naive()),
+        Some(date) => date,
+        None => resolve_observe_target_date(
+            market_store::fetch_latest_signal_snapshot_date_for_scope(&context.storage, scope)?,
+            Local::now().date_naive(),
+        ),
     };
 
     let (srd_input, srd_snapshot) = compute_srd_input(context, scope, Some(target_date))?;
     let (stretch_input, stretch_snapshot) = compute_stretch_input(context, scope, Some(target_date))?;
     let (analytics_input, analytics_snapshot, _evidence) =
-        compute_analytics_input(context, &condition, horizon, scope)?;
+        compute_analytics_input(context, &condition, horizon, scope, Some(target_date))?;
     let health = context.check_data_health()?;
 
     let srd_doc = ResearchReportBuilder::build_srd(&srd_snapshot, &srd_input)?;
@@ -580,7 +584,7 @@ pub fn handle_research_observe(
 
     let mut combined = String::new();
     combined.push_str(&format!(
-        "# Research Observation Report: {} ({}\n\n",
+        "# Research Observation Report: {} ({})\n\n",
         scope.as_str(),
         target_date
     ));
@@ -629,6 +633,17 @@ pub fn handle_research_observe(
         .with_context(|| format!("Failed to write observation report to {:?}", output_path))?;
 
     println!("Research observation report written to: {}", output_path.display());
+
+    let ledger_summary = context
+        .update_divergence_ledger_for_observe(scope, target_date, explicit_date)
+        .with_context(|| {
+            format!(
+                "Failed to update divergence ledger for scope {} on {}",
+                scope.as_str(),
+                target_date
+            )
+        })?;
+    println!("{}", format_divergence_ledger_summary(&ledger_summary));
 
     Ok(())
 }
@@ -1529,50 +1544,203 @@ pub fn handle_strategy_perspectives(
 }
 
 /// View Evidence Asset status in workspace registry.
+///
+/// Read-only: uses the non-creating `open_default_workspace()` constructor so
+/// merely viewing status never materializes `workspace/` directories.
 pub fn handle_evidence_status() -> Result<()> {
-    use std::fs;
-    use std::path::PathBuf;
+    let workspace = app_service::workspace::WorkspaceManager::open_default_workspace();
+    let evidence_index_exists = workspace
+        .paths
+        .registry
+        .join("evidence-index.json")
+        .exists();
+    let snapshot_index_exists = workspace
+        .paths
+        .registry
+        .join("snapshot-index.json")
+        .exists();
+    let evidence_index = workspace
+        .load_evidence_index()
+        .context("Failed to load evidence index")?;
+    let snapshot_index = workspace
+        .load_snapshot_index()
+        .context("Failed to load snapshot index")?;
+    println!(
+        "{}",
+        format_evidence_status(
+            &evidence_index,
+            &snapshot_index,
+            evidence_index_exists,
+            snapshot_index_exists,
+        )
+    );
+    Ok(())
+}
 
-    let evidence_index = PathBuf::from("workspace/registry/evidence-index.json");
-    let snapshot_index = PathBuf::from("workspace/registry/snapshot-index.json");
+fn resolve_observe_target_date(
+    latest_signal_date: Option<NaiveDate>,
+    today: NaiveDate,
+) -> NaiveDate {
+    latest_signal_date.unwrap_or(today)
+}
 
-    println!("Evidence Asset Status");
-    println!("{}", "=".repeat(50));
+fn format_divergence_ledger_summary(
+    summary: &app_service::divergence_ledger::DivergenceLedgerUpdateSummary,
+) -> String {
+    format!(
+        "Divergence ledger updated:\n\
+  Cases created: {}\n\
+  Cases existing: {}\n\
+  Cases conflicted: {}\n\
+  Horizons filled: {}\n\
+  Horizons unavailable: {}\n\
+  Horizons pending: {}\n\
+  Horizons terminal: {}\n\
+  Records scanned: {}",
+        summary.cases_created,
+        summary.cases_existing,
+        summary.cases_conflicted,
+        summary.horizons_filled,
+        summary.horizons_unavailable,
+        summary.horizons_pending,
+        summary.horizons_terminal,
+        summary.records_scanned,
+    )
+}
 
-    if evidence_index.exists() {
-        let content = fs::read_to_string(&evidence_index)?;
-        let index: serde_json::Value = serde_json::from_str(&content)?;
-        if let Some(evidence) = index.as_array() {
-            println!("\nEvidence Assets: {}", evidence.len());
-            for item in evidence.iter().take(20) {
-                println!(
-                    "  {} | {} | {} | {}",
-                    item["id"].as_str().unwrap_or("?"),
-                    item["kind"].as_str().unwrap_or("?"),
-                    item["scope"].as_str().unwrap_or("?"),
-                    item["state"].as_str().unwrap_or("?"),
-                );
-            }
-            if evidence.len() > 20 {
-                println!("  ... and {} more", evidence.len() - 20);
-            }
-        } else {
-            println!("\nEvidence index exists but is empty or malformed");
+fn format_evidence_status(
+    evidence_index: &app_service::workspace::EvidenceIndex,
+    snapshot_index: &app_service::workspace::SnapshotIndex,
+    evidence_index_exists: bool,
+    snapshot_index_exists: bool,
+) -> String {
+    let mut output = String::from("Evidence Asset Status\n");
+    output.push_str(&"=".repeat(50));
+    if evidence_index_exists {
+        output.push_str(&format!("\n\nEvidence Assets: {}", evidence_index.entries.len()));
+        for entry in evidence_index.entries.iter().take(20) {
+            output.push_str(&format!(
+                "\n  {} | {} | {} | {}",
+                entry.id, entry.condition, entry.scope, entry.status
+            ));
+        }
+        if evidence_index.entries.len() > 20 {
+            output.push_str(&format!(
+                "\n  ... and {} more",
+                evidence_index.entries.len() - 20
+            ));
         }
     } else {
-        println!("\nNo evidence index found at workspace/registry/evidence-index.json");
-        println!("Run `research analytics --save-evidence` or `historical-replay` to create Evidence Assets.");
+        output.push_str("\n\nNo evidence index found at workspace/registry/evidence-index.json");
+        output.push_str(
+            "\nRun `research analytics --save-evidence` or `historical-replay` to create Evidence Assets.",
+        );
     }
+    if snapshot_index_exists {
+        output.push_str(&format!("\n\nSnapshot Assets: {}", snapshot_index.entries.len()));
+    }
+    output
+}
 
-    if snapshot_index.exists() {
-        let content = fs::read_to_string(&snapshot_index)?;
-        let index: serde_json::Value = serde_json::from_str(&content)?;
-        if let Some(snapshots) = index.as_array() {
-            println!("\nSnapshot Assets: {}", snapshots.len());
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use app_service::divergence_ledger::DivergenceLedgerUpdateSummary;
+    use app_service::workspace::{EvidenceIndex, EvidenceIndexEntry, SnapshotIndex};
+    use chrono::{DateTime, Utc};
+
+    fn evidence_entry(sequence: u64) -> EvidenceIndexEntry {
+        EvidenceIndexEntry {
+            id: app_service::workspace::ResearchAssetId::new(sequence),
+            version: 1,
+            condition: "srd-strong".to_string(),
+            scope: "GLOBAL".to_string(),
+            horizon: 20,
+            status: "draft".to_string(),
+            created_at: DateTime::<Utc>::from_timestamp(0, 0).unwrap(),
+            path: format!("evidence/{sequence}.json"),
         }
     }
 
-    Ok(())
+    #[test]
+    fn evidence_status_formats_populated_typed_rows() {
+        let mut evidence = EvidenceIndex::empty();
+        evidence.entries.push(evidence_entry(1));
+        let output = format_evidence_status(&evidence, &SnapshotIndex::empty(), true, false);
+        assert!(output.contains("Evidence Assets: 1"));
+        assert!(output.contains("RA-000001 | srd-strong | GLOBAL | draft"));
+    }
+
+    #[test]
+    fn evidence_status_formats_missing_guidance() {
+        let output = format_evidence_status(
+            &EvidenceIndex::empty(),
+            &SnapshotIndex::empty(),
+            false,
+            false,
+        );
+        assert!(output.contains("No evidence index found at workspace/registry/evidence-index.json"));
+        assert!(output.contains("research analytics --save-evidence"));
+    }
+
+    #[test]
+    fn evidence_status_formats_first_twenty_and_overflow() {
+        let mut evidence = EvidenceIndex::empty();
+        evidence.entries = (1..=21).map(evidence_entry).collect();
+        let output = format_evidence_status(&evidence, &SnapshotIndex::empty(), true, false);
+        assert!(output.contains("RA-000001 | srd-strong | GLOBAL | draft"));
+        assert!(output.contains("RA-000020 | srd-strong | GLOBAL | draft"));
+        assert!(!output.contains("RA-000021 | srd-strong | GLOBAL | draft"));
+        assert!(output.contains("... and 1 more"));
+    }
+
+    #[test]
+    fn explicit_observe_date_preserves_provenance() {
+        let requested = NaiveDate::from_ymd_opt(2026, 7, 20).unwrap();
+        let latest = NaiveDate::from_ymd_opt(2026, 7, 21).unwrap();
+        let explicit_date = Some(requested).is_some();
+        let target_date = match Some(requested) {
+            Some(date) => date,
+            None => resolve_observe_target_date(Some(latest), latest),
+        };
+        assert_eq!((target_date, explicit_date), (requested, true));
+    }
+
+    #[test]
+    fn default_observe_date_uses_latest_then_today() {
+        let latest = NaiveDate::from_ymd_opt(2026, 7, 21).unwrap();
+        let today = NaiveDate::from_ymd_opt(2026, 9, 5).unwrap();
+        assert_eq!(resolve_observe_target_date(Some(latest), today), latest);
+        assert_eq!(resolve_observe_target_date(None, today), today);
+    }
+
+    #[test]
+    fn divergence_ledger_summary_formats_all_counts() {
+        let summary = DivergenceLedgerUpdateSummary {
+            cases_created: 1,
+            cases_existing: 2,
+            cases_conflicted: 3,
+            horizons_filled: 4,
+            horizons_unavailable: 5,
+            horizons_pending: 6,
+            horizons_terminal: 7,
+            records_scanned: 8,
+            created_paths: vec!["global/000300/2026-07-21.json".to_string()],
+        };
+        let output = format_divergence_ledger_summary(&summary);
+        assert_eq!(
+            output,
+            "Divergence ledger updated:\n\
+  Cases created: 1\n\
+  Cases existing: 2\n\
+  Cases conflicted: 3\n\
+  Horizons filled: 4\n\
+  Horizons unavailable: 5\n\
+  Horizons pending: 6\n\
+  Horizons terminal: 7\n\
+  Records scanned: 8"
+        );
+    }
 }
 
 /// Run calibration baseline validation.
@@ -1606,4 +1774,3 @@ pub fn handle_historical_replay(
 ) -> Result<()> {
     handle_research_replay(context, scope_arg, from, to, output_dir)
 }
-
