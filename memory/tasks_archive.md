@@ -287,6 +287,23 @@
 - [Done] [TASK-219] [P2-shared-adversarial] T5: Tauri analyze_with_llm 加可选 adversarial 参数 + tauri.js 第三参 + LlmAnalysisPanel 注入级别选择器（默认 full）+ 双语 i18n。Plan Task 5
 
 
+
+### 2026-09-03
+- [Done] [TASK-119] Feature Layer: implement QuoteSnapshot, IntradayFeatures, and FeatureExtractor
+
+- [Done] [TASK-140] Real-data validation: run 20-50 historical cases to verify ExecutionEvent can explain decisions
+
+- [Done] [TASK-121] Evidence Layer: implement Evidence, EvidenceKind, EvidencePayload, and EvidenceBuilder
+
+- [Done] [TASK-130] Replay Engine: consume ExecutionEvent and record outcomes (T+20/T+60/MFE/MAE) for Research Asset calibration
+
+
+
+
+
+
+- [Done] [TASK-122] Assessment Layer: implement ExecutionAssessment and AssessmentEngine
+
 ## Superseded
 
 ### 2026-07-09
@@ -394,3 +411,28 @@
   Superseded by: Task TASK-209
   Reason: 观察窗结论落地：用户高频需要四策略视角，按 ADR-108 规则定为独立 research 级面板；同时纳入 ADR-112 共享博弈层的边界说明
 
+
+
+
+
+
+### 2026-09-03
+- [Superseded] [TASK-124] Execution Replay: record ExecutionRequest→Decision→Outcome and feed Research Assets
+  Superseded by: Task TASK-222
+  Reason: ExecutionRequest→Decision→Outcome recording and replay are already implemented in execution-engine v2/execution-replay; only the gated WorkspaceManager persistence residual remains, now tracked narrowly by TASK-222 under RV1 boundaries.
+
+- [Superseded] [TASK-131] Research Asset Integration: write ExecutionEvent to V8 workspace as durable Research Asset
+  Superseded by: Task TASK-222
+  Reason: Replaced by the uniquely identified, RV1-scoped and explicitly gated ExecutionEvent-to-Research-Asset persistence task TASK-222.
+
+- [Superseded] [TASK-125] Explanation Layer: implement ExecutionExplanation in report-engine for CLI/Desktop/PDF/LLM consumers
+  Superseded by: ADR ADR-106
+  Reason: RV1 abandoned the report-engine ExecutionExplanation object in favor of deterministic Decision Facts consumed only by rightmost LLM explanation personas.
+
+- [Superseded] [TASK-132] Report Engine: build ExecutionExplanation from ExecutionEvent in report-engine (not execution-engine)
+  Superseded by: ADR ADR-106
+  Reason: RV1 no longer requires report-engine to build ExecutionExplanation from ExecutionEvent; explanation consumes frozen deterministic facts under ADR-106.
+
+- [Superseded] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
+  Superseded by: ADR ADR-106
+  Reason: The V8 ExecutionExplanation consumer design was replaced by RV1 llm-analyze personas that explain deterministic Decision Facts and never decide.

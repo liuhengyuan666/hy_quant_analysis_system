@@ -91,6 +91,7 @@ Avoid parallel commits for memory events that reference each other. Always commi
 ## Trap: deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗
 
 ### Context
-portfolio_review 第一次实测时 LLM 返回空 content + finish_reason=length。排查发现 config/llm.toml 配置的 deepseek-v4-flash 是 reasoning model，其 reasoning_tokens 计入 max_tokens 预算，4096 token 全被推理过程消耗，留给 completion 输出的预算为 0。这不是 prompt 过长或引擎 bug，而是 reasoning model 与普通 completion model 的 max_tokens 语义差异。
+
+
 ### Solution
 config/llm.toml 调高 max_tokens（实测 16384 够用）与 timeout_secs（60→300）。根因不是 prompt 过长或引擎错误，而是 reasoning model 的 token 预算机制。区分普通 completion model 与 reasoning model 的 max_tokens 语义。建议在 llm.toml.example 注明 reasoning model 需要更大 max_tokens。
