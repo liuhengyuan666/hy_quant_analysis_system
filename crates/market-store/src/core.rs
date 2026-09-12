@@ -312,6 +312,31 @@ pub fn fetch_max_date_for_table_with_filter(
     Ok(Some(NaiveDate::parse_from_str(text, "%Y-%m-%d")?))
 }
 
+fn max_date_with_filter_on_or_before_query(
+    table_name: &str,
+    filter_column: &str,
+    filter_value: &str,
+    cutoff: NaiveDate,
+) -> String {
+    format!(
+        "SELECT count() AS row_count, max(date) AS max_date FROM quant.{table_name} WHERE {filter_column} = '{}' AND date <= '{cutoff}' FORMAT JSONEachRow",
+        escape_sql_string(filter_value)
+    )
+}
+
+pub fn fetch_max_date_for_table_with_filter_on_or_before(
+    config: &StorageConfig,
+    table_name: &str,
+    filter_column: &str,
+    filter_value: &str,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    let query =
+        max_date_with_filter_on_or_before_query(table_name, filter_column, filter_value, cutoff);
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_max_date_row(&body, "failed to parse scoped bounded max date row")
+}
+
 pub fn fetch_distinct_entity_count_for_date_with_filter(
     config: &StorageConfig,
     table_name: &str,
@@ -351,6 +376,82 @@ pub fn fetch_max_date_for_table(config: &StorageConfig, table_name: &str) -> Res
         return Ok(None);
     };
     Ok(Some(NaiveDate::parse_from_str(text, "%Y-%m-%d")?))
+}
+
+fn max_date_on_or_before_query(table_name: &str, cutoff: NaiveDate) -> String {
+    format!(
+        "SELECT count() AS row_count, max(date) AS max_date FROM quant.{table_name} WHERE date <= '{cutoff}' FORMAT JSONEachRow"
+    )
+}
+
+fn parse_max_date_row(body: &str, row_context: &str) -> Result<Option<NaiveDate>> {
+    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let row: serde_json::Value = serde_json::from_str(line).context(row_context.to_string())?;
+    if json_u64(row.get("row_count")).unwrap_or(0) == 0 {
+        return Ok(None);
+    }
+    let Some(text) = row.get("max_date").and_then(|value| value.as_str()) else {
+        return Ok(None);
+    };
+    Ok(Some(NaiveDate::parse_from_str(text, "%Y-%m-%d")?))
+}
+
+pub fn fetch_max_date_for_table_on_or_before(
+    config: &StorageConfig,
+    table_name: &str,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    let query = max_date_on_or_before_query(table_name, cutoff);
+    let body = fetch_clickhouse_text(config, &query)?;
+    parse_max_date_row(&body, "failed to parse bounded max date row")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bounded_max_date_query_limits_rows_to_cutoff() {
+        let cutoff = NaiveDate::from_ymd_opt(2026, 3, 30).expect("valid cutoff");
+
+        assert_eq!(
+            max_date_on_or_before_query("signal_snapshot", cutoff),
+            "SELECT count() AS row_count, max(date) AS max_date FROM quant.signal_snapshot WHERE date <= '2026-03-30' FORMAT JSONEachRow"
+        );
+    }
+
+    #[test]
+    fn filtered_bounded_max_date_query_escapes_filter_and_limits_rows() {
+        let cutoff = NaiveDate::from_ymd_opt(2026, 3, 30).expect("valid cutoff");
+
+        assert_eq!(
+            max_date_with_filter_on_or_before_query(
+                "market_regime",
+                "market",
+                "H'K",
+                cutoff,
+            ),
+            "SELECT count() AS row_count, max(date) AS max_date FROM quant.market_regime WHERE market = 'H\\'K' AND date <= '2026-03-30' FORMAT JSONEachRow"
+        );
+    }
+
+    #[test]
+    fn max_date_parser_preserves_none_for_empty_results() {
+        assert_eq!(
+            parse_max_date_row("", "test parse context").expect("empty result should parse"),
+            None
+        );
+        assert_eq!(
+            parse_max_date_row(
+                r#"{"row_count":0,"max_date":"1970-01-01"}"#,
+                "test parse context",
+            )
+            .expect("zero-row result should parse"),
+            None
+        );
+    }
 }
 
 pub fn fetch_clickhouse_text(config: &StorageConfig, query: &str) -> Result<String> {
