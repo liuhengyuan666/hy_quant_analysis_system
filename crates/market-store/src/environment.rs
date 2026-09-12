@@ -117,6 +117,21 @@ pub fn fetch_latest_environment_date_for_scope(
     fetch_max_date_for_table_with_filter(config, "environment_snapshot", "scope", scope.as_str())
 }
 
+pub fn fetch_latest_environment_date_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    ensure_environment_snapshot_table(config)?;
+    fetch_max_date_for_table_with_filter_on_or_before(
+        config,
+        "environment_snapshot",
+        "scope",
+        scope.as_str(),
+        cutoff,
+    )
+}
+
 /// Fetch all environment snapshots for a scope within a date range.
 pub fn fetch_environment_snapshots_for_scope(
     config: &StorageConfig,

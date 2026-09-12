@@ -138,3 +138,17 @@ pub fn fetch_latest_market_regime_date_for_scope(
 ) -> Result<Option<NaiveDate>> {
     fetch_max_date_for_table_with_filter(config, "market_regime", "market", scope.as_str())
 }
+
+pub fn fetch_latest_market_regime_date_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table_with_filter_on_or_before(
+        config,
+        "market_regime",
+        "market",
+        scope.as_str(),
+        cutoff,
+    )
+}

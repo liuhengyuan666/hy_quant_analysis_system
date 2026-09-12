@@ -10,6 +10,14 @@ pub fn fetch_latest_table_date(
     fetch_max_date_for_table(config, table_name)
 }
 
+pub fn fetch_latest_table_date_on_or_before(
+    config: &StorageConfig,
+    table_name: &str,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    fetch_max_date_for_table_on_or_before(config, table_name, cutoff)
+}
+
 pub fn fetch_distinct_entity_count_for_date(
     config: &StorageConfig,
     table_name: &str,

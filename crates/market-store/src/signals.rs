@@ -91,6 +91,21 @@ pub fn fetch_latest_signal_snapshot_date_for_scope(
     )
 }
 
+pub fn fetch_latest_signal_snapshot_date_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    ensure_signal_snapshot_provenance_columns(config)?;
+    fetch_max_date_for_table_with_filter_on_or_before(
+        config,
+        "signal_snapshot",
+        "analysis_scope",
+        scope.as_str(),
+        cutoff,
+    )
+}
+
 pub fn insert_signal_snapshots(config: &StorageConfig, rows: &[SignalSnapshot]) -> Result<()> {
     if rows.is_empty() {
         return Ok(());

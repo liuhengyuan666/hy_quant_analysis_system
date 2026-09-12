@@ -118,6 +118,21 @@ pub fn fetch_latest_strategy_state_date_for_scope(
     fetch_max_date_for_table_with_filter(config, "strategy_state", "scope", scope.as_str())
 }
 
+pub fn fetch_latest_strategy_state_date_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    ensure_strategy_state_table(config)?;
+    fetch_max_date_for_table_with_filter_on_or_before(
+        config,
+        "strategy_state",
+        "scope",
+        scope.as_str(),
+        cutoff,
+    )
+}
+
 pub fn insert_strategy_preferences(
     config: &StorageConfig,
     rows: &[StrategyPreferenceSnapshot],
@@ -306,5 +321,20 @@ pub fn fetch_latest_strategy_preference_date_for_scope(
         "strategy_preference",
         "analysis_scope",
         scope.as_str(),
+    )
+}
+
+pub fn fetch_latest_strategy_preference_date_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<NaiveDate>> {
+    ensure_strategy_preference_scope_columns(config)?;
+    fetch_max_date_for_table_with_filter_on_or_before(
+        config,
+        "strategy_preference",
+        "analysis_scope",
+        scope.as_str(),
+        cutoff,
     )
 }

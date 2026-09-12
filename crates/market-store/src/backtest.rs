@@ -13,17 +13,28 @@ fn parse_state_trajectory(value: Option<&serde_json::Value>) -> Vec<(NaiveDate, 
         .unwrap_or_default()
 }
 
-pub fn fetch_latest_backtest_run(
+const BACKTEST_RUN_COLUMNS: &str = "run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at";
+
+fn latest_backtest_run_for_scope_on_or_before_query(
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> String {
+    format!(
+        "SELECT {BACKTEST_RUN_COLUMNS} FROM quant.backtest_run WHERE analysis_scope = '{}' AND run_version = 'v1' AND signal_end_date <= '{cutoff}' ORDER BY signal_end_date DESC, started_at DESC LIMIT 1 FORMAT JSONEachRow",
+        escape_sql_string(scope.as_str())
+    )
+}
+
+fn fetch_backtest_summary_from_query(
     config: &StorageConfig,
+    query: &str,
+    row_context: &str,
 ) -> Result<Option<BacktestSummary>> {
-    ensure_backtest_run_provenance_columns(config)?;
-    let query = "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at FROM quant.backtest_run WHERE run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow";
     let body = fetch_clickhouse_text(config, query)?;
     let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
         return Ok(None);
     };
-    let row: serde_json::Value =
-        serde_json::from_str(line).context("failed to parse latest backtest run row")?;
+    let row: serde_json::Value = serde_json::from_str(line).context(row_context.to_string())?;
     let run_id = row
         .get("run_id")
         .and_then(|value| value.as_str())
@@ -137,132 +148,44 @@ pub fn fetch_latest_backtest_run(
     }))
 }
 
+pub fn fetch_latest_backtest_run(
+    config: &StorageConfig,
+) -> Result<Option<BacktestSummary>> {
+    ensure_backtest_run_provenance_columns(config)?;
+    let query = format!(
+        "SELECT {BACKTEST_RUN_COLUMNS} FROM quant.backtest_run WHERE run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow"
+    );
+    fetch_backtest_summary_from_query(config, &query, "failed to parse latest backtest run row")
+}
+
 pub fn fetch_latest_backtest_run_for_scope(
     config: &StorageConfig,
     scope: AnalysisScope,
 ) -> Result<Option<BacktestSummary>> {
     ensure_backtest_run_provenance_columns(config)?;
     let query = format!(
-        "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at FROM quant.backtest_run WHERE analysis_scope = '{}' AND run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
-        scope.as_str()
+        "SELECT {BACKTEST_RUN_COLUMNS} FROM quant.backtest_run WHERE analysis_scope = '{}' AND run_version = 'v1' ORDER BY started_at DESC LIMIT 1 FORMAT JSONEachRow",
+        escape_sql_string(scope.as_str())
     );
-    let body = fetch_clickhouse_text(config, &query)?;
-    let Some(line) = body.lines().find(|line| !line.trim().is_empty()) else {
-        return Ok(None);
-    };
-    let row: serde_json::Value =
-        serde_json::from_str(line).context("failed to parse scoped latest backtest run row")?;
-    let run_id = row
-        .get("run_id")
-        .and_then(|value| value.as_str())
-        .unwrap_or_default()
-        .to_string();
-    let final_equity = fetch_clickhouse_text(
+    fetch_backtest_summary_from_query(
         config,
-        &format!(
-            "SELECT equity FROM quant.backtest_equity_curve WHERE run_id = '{}' ORDER BY date DESC LIMIT 1 FORMAT JSONEachRow",
-            escape_sql_string(&run_id)
-        ),
-    )?
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-    .and_then(|json| json.get("equity").and_then(|value| value.as_f64()))
-    .unwrap_or(0.0);
-    let trades = fetch_clickhouse_text(
-        config,
-        &format!(
-            "SELECT count() AS trades FROM quant.backtest_trade WHERE run_id = '{}' FORMAT JSONEachRow",
-            escape_sql_string(&run_id)
-        ),
-    )?
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-    .and_then(|json| json_u64(json.get("trades")))
-    .unwrap_or(0) as usize;
-    let trading_days = fetch_clickhouse_text(
-        config,
-        &format!(
-            "SELECT count() AS points FROM quant.backtest_equity_curve WHERE run_id = '{}' FORMAT JSONEachRow",
-            escape_sql_string(&run_id)
-        ),
-    )?
-    .lines()
-    .find(|line| !line.trim().is_empty())
-    .and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-    .and_then(|json| json_u64(json.get("points")))
-    .unwrap_or(0)
-    .saturating_sub(1) as usize;
+        &query,
+        "failed to parse scoped latest backtest run row",
+    )
+}
 
-    Ok(Some(BacktestSummary {
-        run_id,
-        strategy_name: row
-            .get("strategy_name")
-            .and_then(|value| value.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        analysis_scope: row
-            .get("analysis_scope")
-            .and_then(|value| value.as_str())
-            .unwrap_or("GLOBAL")
-            .to_string(),
-        signal_scope: row
-            .get("signal_scope")
-            .and_then(|value| value.as_str())
-            .unwrap_or("GLOBAL")
-            .to_string(),
-        regime_basis_scope: row
-            .get("regime_basis_scope")
-            .and_then(|value| value.as_str())
-            .unwrap_or("GLOBAL")
-            .to_string(),
-        signal_start_date: row
-            .get("signal_start_date")
-            .and_then(|value| value.as_str())
-            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
-        signal_end_date: row
-            .get("signal_end_date")
-            .and_then(|value| value.as_str())
-            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()),
-        config_summary: row
-            .get("config_summary")
-            .and_then(|value| value.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        cagr: row
-            .get("cagr")
-            .and_then(|value| value.as_f64())
-            .unwrap_or(0.0),
-        max_drawdown: row
-            .get("max_drawdown")
-            .and_then(|value| value.as_f64())
-            .unwrap_or(0.0),
-        sharpe: row
-            .get("sharpe")
-            .and_then(|value| value.as_f64())
-            .unwrap_or(0.0),
-        final_equity,
-        trades,
-        trading_days,
-        drawdown_events: json_u64(row.get("drawdown_events")).unwrap_or(0) as usize,
-        state_trajectory: parse_state_trajectory(row.get("state_trajectory_json")),
-        run_version: row
-            .get("run_version")
-            .and_then(|value| value.as_str())
-            .unwrap_or("legacy")
-            .to_string(),
-        git_commit: row
-            .get("git_commit")
-            .and_then(|value| value.as_str())
-            .unwrap_or("unknown")
-            .to_string(),
-        generated_at: row
-            .get("generated_at")
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-            .to_string(),
-    }))
+pub fn fetch_latest_backtest_run_for_scope_on_or_before(
+    config: &StorageConfig,
+    scope: AnalysisScope,
+    cutoff: NaiveDate,
+) -> Result<Option<BacktestSummary>> {
+    ensure_backtest_run_provenance_columns(config)?;
+    let query = latest_backtest_run_for_scope_on_or_before_query(scope, cutoff);
+    fetch_backtest_summary_from_query(
+        config,
+        &query,
+        "failed to parse scoped historical backtest run row",
+    )
 }
 
 pub fn insert_backtest_result(
@@ -413,4 +336,19 @@ pub fn insert_backtest_result(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scoped_historical_backtest_query_uses_signal_end_date_and_stable_ordering() {
+        let cutoff = NaiveDate::from_ymd_opt(2026, 3, 30).expect("valid cutoff");
+
+        assert_eq!(
+            latest_backtest_run_for_scope_on_or_before_query(AnalysisScope::Hk, cutoff),
+            "SELECT run_id,strategy_name,analysis_scope,signal_scope,regime_basis_scope,signal_start_date,signal_end_date,config_summary,drawdown_events,state_trajectory_json,cagr,max_drawdown,sharpe,run_version,git_commit,generated_at FROM quant.backtest_run WHERE analysis_scope = 'HK' AND run_version = 'v1' AND signal_end_date <= '2026-03-30' ORDER BY signal_end_date DESC, started_at DESC LIMIT 1 FORMAT JSONEachRow"
+        );
+    }
 }
