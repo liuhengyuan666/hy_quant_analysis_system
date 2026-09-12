@@ -114,6 +114,30 @@
       "description": "RV1-gated residual: persist deterministic ExecutionEvent/ExecutionResearchRecord as a durable Research Asset through the existing WorkspaceManager lifecycle. This is not a new execution architecture or decision path. Blocked from implementation until TASK-111 gates are met: 1000+ Research Assets, 30-day replay stability, and 2-cycle calibration stability; must preserve ADR-104 capability consolidation, ADR-105 domain freeze, and ADR-106 LLM explanation-only boundary.",
       "status": "Todo",
       "superseded_by": null
+    },
+    {
+      "id": "TASK-224",
+      "description": "P0/P1 Research Asset Provenance: extend existing WorkspaceManager AssetMetadata with backward-compatible factual provenance and truthful created_at/generated_at/producer semantics; populate bounded replay provenance without creating a parallel asset system, rewriting legacy assets, adding scores/weights, or wiring TASK-222.",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-225",
+      "description": "P1 Path-Based Evaluation Foundation: add pure core-domain path calculations for T+5/T+20/T+60/T+120, MFE, MAE, MaxDD, time-to-MFE, giveback, and benchmark excess; make outcome resolution honor explicit as_of. Measurements only—no thresholds, classifications, portfolio decisions, or ledger schema expansion initially.",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-226",
+      "description": "P1 Episode-Based Evaluation Read Model: derive scope-date episodes and conservative-state runs from existing divergence ledger CaseKey records and state history; preserve Prospective/Reconstructed separation and nested symbol membership. Do not persist synthetic episode IDs, create new Research Asset kinds, or auto-classify TASK-100 records.",
+      "status": "Todo",
+      "superseded_by": null
+    },
+    {
+      "id": "TASK-227",
+      "description": "P1 Evidence Semantic Integrity: represent unavailable leverage as Unknown/Unavailable instead of Normal and prevent missing data from contributing zero-risk semantics; preserve numeric breadth facts while qualifying consumer-specific labels by producer/schema. Requires a Proposed ADR before changing persisted or shared enums; no threshold changes.",
+      "status": "Todo",
+      "superseded_by": null
     }
   ],
   "done_tasks": [],

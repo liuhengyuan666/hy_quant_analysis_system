@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "rebuilt_at": "2026-09-06T16:59:08Z",
+    "rebuilt_at": "2026-09-12T15:29:02Z",
     "version": "v4"
   },
   "terms": {
@@ -490,6 +490,18 @@
       {
         "id": "ADR-065",
         "type": "adr"
+      }
+    ],
+    "1900-01-01": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "1970-01-01": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "1d": [
@@ -1932,6 +1944,14 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "abandoned": [
@@ -2138,6 +2158,14 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "added": [
@@ -2166,6 +2194,12 @@
         "type": "adr"
       }
     ],
+    "adding": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "additions": [
       {
         "id": "ADR-077",
@@ -2175,6 +2209,10 @@
     "additive": [
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -2590,6 +2628,10 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "against": [
@@ -2792,6 +2834,10 @@
       {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "allocation": [
@@ -2801,6 +2847,12 @@
       },
       {
         "id": "ADR-062",
+        "type": "adr"
+      }
+    ],
+    "allow": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -2882,6 +2934,14 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "analogues": [
@@ -2976,6 +3036,12 @@
       {
         "id": "ADR-059",
         "type": "adr"
+      }
+    ],
+    "anchor-bar": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "anchor-symbol": [
@@ -3134,7 +3200,19 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -3644,6 +3722,32 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "as-of": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "assembling": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "assembly": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "assessment": [
@@ -3804,6 +3908,10 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "attachment": [
@@ -3868,6 +3976,14 @@
       {
         "id": "ADR-080",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "auditable": [
@@ -3897,6 +4013,12 @@
     "automatic": [
       {
         "id": "",
+        "type": "trap"
+      }
+    ],
+    "available": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -4007,6 +4129,12 @@
     "backtestpanel": [
       {
         "id": "ADR-046",
+        "type": "adr"
+      }
+    ],
+    "backward-compatible": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -4148,6 +4276,12 @@
         "type": "adr"
       }
     ],
+    "became": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "because": [
       {
         "id": "ADR-052",
@@ -4184,6 +4318,10 @@
       {
         "id": "ADR-082",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "been": [
@@ -4244,12 +4382,20 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "begins": [
       {
         "id": "ADR-052",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "behavior": [
@@ -4260,6 +4406,10 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "being": [
@@ -4408,6 +4558,12 @@
         "type": "trap"
       }
     ],
+    "bound": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "boundaries": [
       {
         "id": "ADR-072",
@@ -4434,6 +4590,22 @@
       {
         "id": "ADR-107",
         "type": "adr"
+      }
+    ],
+    "bounded": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "bounds": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "branch": [
@@ -4672,6 +4844,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -4681,6 +4857,14 @@
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -4814,6 +4998,12 @@
         "type": "trap"
       }
     ],
+    "calculation": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "calibration": [
       {
         "id": "ADR-051",
@@ -4874,6 +5064,18 @@
       {
         "id": "ADR-113",
         "type": "adr"
+      }
+    ],
+    "caller": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "caller-level": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "calls": [
@@ -5140,6 +5342,16 @@
       {
         "id": "ADR-077",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "changed": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "changes": [
@@ -5212,6 +5424,12 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      }
+    ],
+    "clamp": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "clarifies": [
@@ -5326,6 +5544,10 @@
       {
         "id": "",
         "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "client": [
@@ -5432,6 +5654,12 @@
         "type": "adr"
       }
     ],
+    "collapsed": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "command": [
       {
         "id": "ADR-049",
@@ -5440,6 +5668,10 @@
       {
         "id": "ADR-071",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "commands": [
@@ -5490,6 +5722,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "compares": [
@@ -5742,9 +5978,21 @@
         "type": "adr"
       }
     ],
+    "conditional": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "conditionally": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      }
+    ],
+    "conditions": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -5920,6 +6168,12 @@
         "type": "adr"
       }
     ],
+    "conflated": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "consensus": [
       {
         "id": "ADR-070",
@@ -6086,6 +6340,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "consumes": [
@@ -6211,6 +6469,18 @@
     "context（auto_inject=true": [
       {
         "id": "ADR-113",
+        "type": "adr"
+      }
+    ],
+    "continue": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "continued": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -6364,6 +6634,12 @@
         "type": "adr"
       }
     ],
+    "correctness": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "correlation": [
       {
         "id": "ADR-093",
@@ -6440,6 +6716,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "covering": [
@@ -6461,6 +6741,12 @@
     "create": [
       {
         "id": "ADR-067",
+        "type": "adr"
+      }
+    ],
+    "create/modify": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -6626,6 +6912,18 @@
         "type": "adr"
       }
     ],
+    "cutoff": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "cutoff-aware": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "cwd-dependent": [
       {
         "id": "ADR-049",
@@ -6708,6 +7006,10 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "dashboard-research": [
@@ -6788,6 +7090,10 @@
       {
         "id": "ADR-112",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "dashboardsnapshot.symbol_names": [
@@ -6940,12 +7246,26 @@
       {
         "id": "ADR-027",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "date/number": [
       {
         "id": "ADR-042",
         "type": "adr"
+      }
+    ],
+    "dates": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "dateselector": [
@@ -7143,6 +7463,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -7354,6 +7678,10 @@
       {
         "id": "ADR-071",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "describe": [
@@ -7424,6 +7752,12 @@
         "type": "adr"
       }
     ],
+    "desktop/report": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "destroying": [
       {
         "id": "ADR-058",
@@ -7452,6 +7786,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "detection": [
@@ -7482,6 +7820,12 @@
         "type": "adr"
       }
     ],
+    "determinism": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "deterministic": [
       {
         "id": "ADR-084",
@@ -7496,6 +7840,10 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "dies": [
@@ -7644,6 +7992,12 @@
         "type": "adr"
       }
     ],
+    "distinguishable": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "distribution": [
       {
         "id": "ADR-059",
@@ -7702,6 +8056,10 @@
       {
         "id": "ADR-067",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "divergence-sample": [
@@ -7725,6 +8083,10 @@
       },
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -7884,6 +8246,10 @@
       {
         "id": "ADR-082",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "draft": [
@@ -8004,6 +8370,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -8108,6 +8478,12 @@
       {
         "id": "ADR-056",
         "type": "adr"
+      }
+    ],
+    "effective-window": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "element": [
@@ -8240,6 +8616,10 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "engine，禁止前端出现任何分数到买卖语义的映射判断；2": [
@@ -8295,6 +8675,12 @@
     "entered": [
       {
         "id": "ADR-092",
+        "type": "adr"
+      }
+    ],
+    "entering": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -8395,6 +8781,16 @@
     "episode": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "episode-evaluation": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -8568,6 +8964,14 @@
       {
         "id": "ADR-096",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "everything": [
@@ -8658,7 +9062,21 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
+        "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "evidence-infrastructure": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -8723,6 +9141,10 @@
     "evidenceref": [
       {
         "id": "ADR-079",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -8868,6 +9290,10 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "execution-platform": [
@@ -8986,7 +9412,15 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -9080,6 +9514,10 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "explainability": [
@@ -9104,11 +9542,21 @@
       {
         "id": "ADR-106",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "explanation-layer": [
       {
         "id": "ADR-106",
+        "type": "adr"
+      }
+    ],
+    "explanation-only": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -9207,6 +9655,12 @@
     "exposure（暴露": [
       {
         "id": "ADR-105",
+        "type": "adr"
+      }
+    ],
+    "extend": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -9317,6 +9771,12 @@
       },
       {
         "id": "ADR-107",
+        "type": "adr"
+      }
+    ],
+    "factual": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -9514,6 +9974,10 @@
       {
         "id": "ADR-047",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "fetch_daily_bars": [
@@ -9540,6 +10004,12 @@
         "type": "trap"
       }
     ],
+    "fetches": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "fetching": [
       {
         "id": "ADR-064",
@@ -9558,6 +10028,10 @@
       {
         "id": "ADR-110",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "fields": [
@@ -9676,6 +10150,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -9709,6 +10187,10 @@
       },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -9908,6 +10390,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -9917,6 +10403,14 @@
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -10116,6 +10610,12 @@
         "type": "adr"
       }
     ],
+    "foundations": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "four": [
       {
         "id": "ADR-077",
@@ -10310,6 +10810,16 @@
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
         "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "from/to": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "frontend": [
@@ -10406,6 +10916,10 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "full": [
@@ -10440,6 +10954,12 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      }
+    ],
+    "full-history": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "full|summary|none": [
@@ -10579,6 +11099,12 @@
     "gated": [
       {
         "id": "ADR-051",
+        "type": "adr"
+      }
+    ],
+    "gates": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -11034,6 +11560,10 @@
       {
         "id": "ADR-044",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "helpers": [
@@ -11132,13 +11662,27 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
     "historical-evidence": [
       {
         "id": "ADR-071",
+        "type": "adr"
+      }
+    ],
+    "historical-provenance": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -11432,6 +11976,16 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "ids": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "if": [
@@ -11690,6 +12244,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
@@ -11820,6 +12378,10 @@
       {
         "id": "ADR-041",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "ingest": [
@@ -11892,6 +12454,10 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "insight": [
@@ -11941,6 +12507,12 @@
       },
       {
         "id": "ADR-095",
+        "type": "adr"
+      }
+    ],
+    "insufficient": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -12100,6 +12672,10 @@
       {
         "id": "ADR-092",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "intraday": [
@@ -12136,6 +12712,12 @@
       {
         "id": "ADR-080",
         "type": "adr"
+      }
+    ],
+    "introducing": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "intuitively": [
@@ -12302,11 +12884,19 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "",
         "type": "trap"
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -12496,6 +13086,12 @@
         "type": "adr"
       }
     ],
+    "keep": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "key": [
       {
         "id": "ADR-032",
@@ -12628,6 +13224,12 @@
         "type": "adr"
       }
     ],
+    "lack": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "lacks": [
       {
         "id": "ADR-070",
@@ -12664,9 +13266,25 @@
         "type": "adr"
       }
     ],
+    "later": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "latest": [
       {
         "id": "market-refresh 被 shell 超时强杀后，pipeline-dates 显示所有数据阶段 complete@最新日但 dashboard_available 回退到更早日期；llm-analyze 静默使用旧快照且 adversarial 每次调用重新生成（缓存永不命中）",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "latest_available_date": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -12824,9 +13442,21 @@
         "type": "adr"
       }
     ],
+    "leakage": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "least": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "ledger": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -13024,6 +13654,12 @@
         "type": "adr"
       }
     ],
+    "literal": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "lives": [
       {
         "id": "ADR-068",
@@ -13093,6 +13729,10 @@
       },
       {
         "id": "ADR-114",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -13272,6 +13912,12 @@
         "type": "adr"
       }
     ],
+    "longitudinal": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "lookback/forward": [
       {
         "id": "ADR-060",
@@ -13305,6 +13951,12 @@
       },
       {
         "id": "",
+        "type": "trap"
+      }
+    ],
+    "lower": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -13896,6 +14548,12 @@
         "type": "adr"
       }
     ],
+    "maximum": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "may": [
       {
         "id": "ADR-060",
@@ -14034,6 +14692,18 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "metric": [
@@ -14073,6 +14743,10 @@
       },
       {
         "id": "ADR-072",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -14210,6 +14884,10 @@
       {
         "id": "ADR-042",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "model": [
@@ -14265,6 +14943,12 @@
       },
       {
         "id": "ADR-103",
+        "type": "adr"
+      }
+    ],
+    "models": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -14544,6 +15228,10 @@
       {
         "id": "ADR-082",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "needs": [
@@ -14896,6 +15584,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -15009,6 +15701,10 @@
       },
       {
         "id": "ADR-108",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -15238,6 +15934,14 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "open": [
@@ -15376,6 +16080,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -15448,6 +16156,12 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "original": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "original_chars/final_chars/truncated（符合": [
@@ -15564,6 +16278,10 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "outputs": [
@@ -15573,6 +16291,18 @@
       },
       {
         "id": "ADR-093",
+        "type": "adr"
+      }
+    ],
+    "outside": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "over": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -15798,6 +16528,12 @@
         "type": "adr"
       }
     ],
+    "passed": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "passes": [
       {
         "id": "ADR-051",
@@ -15819,6 +16555,22 @@
       },
       {
         "id": "ADR-099",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "path-metrics": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "path/episode": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -15967,6 +16719,12 @@
     "performs": [
       {
         "id": "ADR-078",
+        "type": "adr"
+      }
+    ],
+    "persist": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -16218,6 +16976,10 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "pipeline-dates": [
@@ -16360,6 +17122,16 @@
         "type": "adr"
       }
     ],
+    "point-in-time": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "policy": [
       {
         "id": "ADR-106",
@@ -16396,6 +17168,12 @@
         "type": "adr"
       }
     ],
+    "portfolio-aware": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "portfolio-decision": [
       {
         "id": "ADR-105",
@@ -16422,6 +17200,12 @@
       {
         "id": "deepseek-v4-flash 等 reasoning model 在 portfolio_review prompt 下返回空 content + finish_reason=length，原因：reasoning_tokens 计入 max_tokens，4096 预算被推理全消耗",
         "type": "trap"
+      }
+    ],
+    "portfolioconfig": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "portfoliodecision（组合姿态：increase/maintain/reduce/avoid）。明确禁令：(a": [
@@ -16476,6 +17260,12 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      }
+    ],
+    "pre-1970": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "pre-computed": [
@@ -16658,6 +17448,12 @@
         "type": "adr"
       }
     ],
+    "preserving": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "prevent": [
       {
         "id": "ADR-053",
@@ -16820,6 +17616,10 @@
       {
         "id": "ADR-104",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "production-change": [
@@ -16854,6 +17654,12 @@
         "type": "adr"
       }
     ],
+    "program": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "progressive-migration": [
       {
         "id": "ADR-035",
@@ -16877,6 +17683,12 @@
       },
       {
         "id": "ADR-108",
+        "type": "adr"
+      }
+    ],
+    "projections": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -16974,6 +17786,10 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "proves": [
@@ -16983,6 +17799,12 @@
       },
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "provide": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -17011,6 +17833,12 @@
     "published": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      }
+    ],
+    "pure": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -17070,9 +17898,21 @@
         "type": "trap"
       }
     ],
+    "query": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "quote": [
       {
         "id": "ADR-082",
+        "type": "adr"
+      }
+    ],
+    "ra": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -17090,6 +17930,12 @@
       {
         "id": "ADR-078",
         "type": "adr"
+      }
+    ],
+    "range": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "rank": [
@@ -17278,6 +18124,16 @@
         "type": "adr"
       }
     ],
+    "read": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "read-only": [
       {
         "id": "ADR-078",
@@ -17294,6 +18150,16 @@
       {
         "id": "ADR-084",
         "type": "adr"
+      }
+    ],
+    "reads": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "ready": [
@@ -17392,6 +18258,12 @@
         "type": "adr"
       }
     ],
+    "reconciling": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "record": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -17421,6 +18293,10 @@
       },
       {
         "id": "ADR-098",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -17720,6 +18596,12 @@
         "type": "adr"
       }
     ],
+    "regression": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "rejected": [
       {
         "id": "ADR-099",
@@ -17760,6 +18642,10 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "remaining": [
@@ -17796,6 +18682,10 @@
       {
         "id": "ADR-096",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "remap。已在": [
@@ -17866,6 +18756,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -17916,6 +18810,10 @@
       {
         "id": "ADR-098",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "report": [
@@ -17938,6 +18836,14 @@
       {
         "id": "ADR-096",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "report-builder": [
@@ -17956,6 +18862,18 @@
       {
         "id": "ADR-070",
         "type": "adr"
+      }
+    ],
+    "report-versus-market": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "report_date": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "reportdocument/section/formatter": [
@@ -18026,6 +18944,12 @@
         "type": "adr"
       }
     ],
+    "representable": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "representation": [
       {
         "id": "ADR-071",
@@ -18040,6 +18964,12 @@
       {
         "id": "ADR-093",
         "type": "adr"
+      }
+    ],
+    "representing": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "reproducibility": [
@@ -18057,6 +18987,12 @@
     "request": [
       {
         "id": "",
+        "type": "trap"
+      }
+    ],
+    "requested": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -18178,7 +19114,15 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -18498,6 +19442,16 @@
       {
         "id": "ADR-068",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "reused": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "reveal": [
@@ -19044,6 +19998,10 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "safety": [
@@ -19136,6 +20094,12 @@
         "type": "adr"
       }
     ],
+    "scope's": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "scope-aware": [
       {
         "id": "ADR-055",
@@ -19159,6 +20123,12 @@
       },
       {
         "id": "ADR-060",
+        "type": "adr"
+      }
+    ],
+    "score/weight": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -19296,6 +20266,10 @@
       {
         "id": "ADR-046",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "selectedreportdate": [
@@ -19326,6 +20300,10 @@
       {
         "id": "ADR-049",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "selector": [
@@ -19370,6 +20348,10 @@
       {
         "id": "ADR-097",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "semantic-architecture": [
@@ -19412,12 +20394,28 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "sensitivity": [
       {
         "id": "ADR-051",
         "type": "adr"
+      }
+    ],
+    "sentinel": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "sentinels": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "separate": [
@@ -19436,6 +20434,16 @@
       {
         "id": "ADR-057",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "separately": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "separation": [
@@ -19537,6 +20545,10 @@
       },
       {
         "id": "ADR-078",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -19826,6 +20838,12 @@
         "type": "adr"
       }
     ],
+    "signal/state": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "signaldetailmodal": [
       {
         "id": "ADR-037",
@@ -20028,6 +21046,10 @@
       {
         "id": "ADR-113",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "snapshot.environment": [
@@ -20134,6 +21156,10 @@
       {
         "id": "ADR-069",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "sqlite": [
@@ -20476,6 +21502,10 @@
       {
         "id": "ADR-064",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "storageconfig::project_root()?.join(\"research/agents": [
@@ -20601,6 +21631,12 @@
     "streak": [
       {
         "id": "ADR-058",
+        "type": "adr"
+      }
+    ],
+    "strengthening": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -20926,6 +21962,12 @@
         "type": "adr"
       }
     ],
+    "synthetic": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "system": [
       {
         "id": "ADR-052",
@@ -21178,6 +22220,22 @@
         "type": "adr"
       }
     ],
+    "task-222": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
+    "task-223": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
     "task_lookup": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
@@ -21274,6 +22332,10 @@
       {
         "id": "ADR-076",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "text": [
@@ -21476,6 +22538,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -21485,6 +22551,14 @@
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -21517,6 +22591,10 @@
     "then": [
       {
         "id": "ADR-049",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       },
       {
@@ -21660,6 +22738,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       }
@@ -21694,6 +22776,10 @@
       {
         "id": "ADR-099",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "through": [
@@ -21704,6 +22790,10 @@
       {
         "id": "ADR-056",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "throwaway": [
@@ -21874,6 +22964,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "ADR-057",
         "type": "adr"
       },
@@ -21891,6 +22985,14 @@
       },
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -22048,6 +23150,10 @@
       {
         "id": "ADR-095",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "trace/funnel": [
@@ -22250,6 +23356,10 @@
       {
         "id": "ADR-112",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "truncate_strategy=paragraph_boundary）解耦为两个独立概念，policy": [
@@ -22332,9 +23442,21 @@
         "type": "adr"
       }
     ],
+    "truthful": [
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      }
+    ],
     "truthy": [
       {
         "id": "ADR-038",
+        "type": "adr"
+      }
+    ],
+    "tuning": [
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -22380,6 +23502,16 @@
       {
         "id": "ADR-081",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
+      }
+    ],
+    "type's": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "typed": [
@@ -22390,6 +23522,12 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      }
+    ],
+    "typed-storage": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "types": [
@@ -22448,6 +23586,12 @@
         "type": "adr"
       }
     ],
+    "ui/disclaimer": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
     "ui/ux": [
       {
         "id": "ADR-034",
@@ -22470,6 +23614,16 @@
       {
         "id": "ADR-053",
         "type": "adr"
+      }
+    ],
+    "unbounded": [
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "uncomputable": [
@@ -22804,6 +23958,10 @@
       {
         "id": "ADR-083",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "using": [
@@ -22908,6 +24066,10 @@
       {
         "id": "ADR-114",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "v6/v7": [
@@ -23084,6 +24246,10 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
       }
@@ -23170,6 +24336,10 @@
       {
         "id": "ADR-103",
         "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "var": [
@@ -23208,11 +24378,19 @@
       {
         "id": "ADR-080",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
       }
     ],
     "verify": [
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -23594,6 +24772,10 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "watch(immediate": [
@@ -23750,6 +24932,16 @@
       {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
         "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      }
+    ],
+    "whenever": [
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "where": [
@@ -23764,6 +24956,10 @@
       {
         "id": "ADR-094",
         "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
       }
     ],
     "whether": [
@@ -23806,6 +25002,18 @@
       {
         "id": "ADR-060",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "why": [
@@ -23860,6 +25068,14 @@
       {
         "id": "ADR-108",
         "type": "adr"
+      },
+      {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
+        "type": "trap"
       }
     ],
     "windows": [
@@ -23885,6 +25101,10 @@
       },
       {
         "id": "ADR-092",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
@@ -23972,7 +25192,15 @@
         "type": "adr"
       },
       {
+        "id": "ADR-115",
+        "type": "adr"
+      },
+      {
         "id": "MemGuard: TaskUpdated superseded_by lost after parallel commit with referenced ADR/Task",
+        "type": "trap"
+      },
+      {
+        "id": "Historical DashboardSnapshot latest_available_date collapsed to report cutoff",
         "type": "trap"
       }
     ],
@@ -24001,6 +25229,10 @@
       },
       {
         "id": "CSS position:sticky sidebar jitter when scrolling to page bottom",
+        "type": "trap"
+      },
+      {
+        "id": "Pre-1970 sentinel passed to ClickHouse Date range query",
         "type": "trap"
       }
     ],
@@ -24061,6 +25293,10 @@
     "workspacemanager": [
       {
         "id": "ADR-080",
+        "type": "adr"
+      },
+      {
+        "id": "ADR-115",
         "type": "adr"
       }
     ],
