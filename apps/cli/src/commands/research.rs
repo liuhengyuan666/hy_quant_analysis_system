@@ -588,7 +588,11 @@ pub fn handle_research_observe(
         scope.as_str(),
         target_date
     ));
-    combined.push_str("## Data Health\n\n");
+    combined.push_str(&render_observe_data_health_header(
+        explicit_date,
+        target_date,
+        &health.generated_at,
+    ));
     combined.push_str(&format!(
         "- Freshest market date: {:?}\n",
         health.freshest_market_date
@@ -1246,8 +1250,7 @@ pub fn handle_research_replay(
 
     let scope: app_service::ReportScope = scope_arg.into();
 
-    // Resolve date window. Analytics themselves use the full available history;
-    // from/to are recorded as replay-window metadata.
+    // Resolve the inclusive computation and forward-outcome window.
     let to = to.unwrap_or_else(|| Local::now().date_naive());
     let from = from.unwrap_or_else(|| to - chrono::Duration::days(90));
 
@@ -1584,6 +1587,23 @@ fn resolve_observe_target_date(
     latest_signal_date.unwrap_or(today)
 }
 
+fn render_observe_data_health_header(
+    explicit_date: bool,
+    target_date: NaiveDate,
+    generated_at: &str,
+) -> String {
+    if explicit_date {
+        format!(
+            "## Live Data Health\n\n\
+- This live health check was generated at execution time: {}.\n\
+- It is not point-in-time evidence for target_date {}.\n\n",
+            generated_at, target_date
+        )
+    } else {
+        "## Data Health\n\n".to_string()
+    }
+}
+
 fn format_divergence_ledger_summary(
     summary: &app_service::divergence_ledger::DivergenceLedgerUpdateSummary,
 ) -> String {
@@ -1712,6 +1732,26 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2026, 9, 5).unwrap();
         assert_eq!(resolve_observe_target_date(Some(latest), today), latest);
         assert_eq!(resolve_observe_target_date(None, today), today);
+    }
+
+    #[test]
+    fn default_observe_data_health_retains_heading_and_shape() {
+        let target_date = NaiveDate::from_ymd_opt(2026, 7, 21).unwrap();
+        assert_eq!(
+            render_observe_data_health_header(false, target_date, "2026-09-08T10:00:00Z"),
+            "## Data Health\n\n"
+        );
+    }
+
+    #[test]
+    fn historical_observe_qualifies_live_data_health_provenance() {
+        let target_date = NaiveDate::from_ymd_opt(2026, 7, 20).unwrap();
+        let output = render_observe_data_health_header(true, target_date, "2026-09-08T10:00:00Z");
+
+        assert!(output.starts_with("## Live Data Health\n\n"));
+        assert!(output.contains("generated at execution time: 2026-09-08T10:00:00Z"));
+        assert!(output.contains("not point-in-time evidence for target_date 2026-07-20"));
+        assert!(!output.contains("## Data Health\n"));
     }
 
     #[test]
