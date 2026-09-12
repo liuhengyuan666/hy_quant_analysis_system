@@ -95,3 +95,31 @@ Avoid parallel commits for memory events that reference each other. Always commi
 
 ### Solution
 config/llm.toml 调高 max_tokens（实测 16384 够用）与 timeout_secs（60→300）。根因不是 prompt 过长或引擎错误，而是 reasoning model 的 token 预算机制。区分普通 completion model 与 reasoning model 的 max_tokens 语义。建议在 llm.toml.example 注明 reasoning model 需要更大 max_tokens。
+
+## Trap: Historical DashboardSnapshot latest_available_date collapsed to report cutoff
+
+### Context
+TASK-223 historical point-in-time fix reused a cutoff-aware dashboard date helper when assembling DashboardSnapshot metadata. Existing desktop/report consumers compare report_date with latest_available_date to detect historical mode.
+
+### Root Cause
+The as-of date needed for bounded diagnostics was conflated with the frozen V6 metadata field representing the scope's true latest available dashboard date.
+
+### Solution
+Select snapshot dates through separate semantics: report_date is the requested historical date, while latest_available_date remains the unbounded maximum available date. Keep cutoff-aware date selection only inside historical pipeline diagnostics.
+
+### Prevention
+When adding point-in-time reads, trace every date field through all consumers. Add regression coverage where report_date is historical but latest_available_date is later, and verify historical UI/disclaimer behavior remains distinguishable.
+
+## Trap: Pre-1970 sentinel passed to ClickHouse Date range query
+
+### Context
+TASK-223 changed research evidence anchor-bar reads from unbounded fetches to bounded SQL. The research explain command uses 1900-01-01 as a semantic full-history sentinel, but ClickHouse Date begins at 1970-01-01.
+
+### Root Cause
+A caller-level semantic sentinel became a storage query literal after introducing the bounded fetch, without reconciling the storage type's representable range.
+
+### Solution
+Clamp only the ClickHouse query lower bound to 1970-01-01, while preserving the original semantic from/to values for Evidence effective-window calculation and metadata.
+
+### Prevention
+Whenever an unbounded read becomes a bounded typed-storage query, audit every caller for sentinels outside the storage type range. Test query bounds separately from semantic window bounds.

@@ -1050,3 +1050,15 @@ ADR-113 批准后用户复审提出三点修订：1) standard = truncated full �
 扩展 ADR-113：1) InjectionLevel（compact=结构化摘要/standard=默认结构化正文/full=完整研究文本）与 ContentPolicy（max_chars + truncate_strategy=paragraph_boundary）解耦为两个独立概念，policy 对 standard/full 提供尺寸保护但等级不由截断定义；2) 预生成为异步后台任务：snapshot ready 后 spawn adversarial preparation 写 llm-history，失败静默、绝不阻塞或失败 market-refresh；3) 预留 preparation≠injection 概念拆分（enabled/auto_prepare/auto_inject 三开关为未来候选，V1 只保持 auto_inject 单开关）；4) 截断产生 provenance 字段 original_chars/final_chars/truncated（符合 ADR-079/081）；5) adversarial_diag 增加 reason 字段（stale/persona_excluded/disabled/no_api_key/persona_missing 等）；6) Wave 1 执行顺序 TASK-210→212→211；7) 默认开启的三条件：失败不影响主流程（已有）+ 成本可控（max_chars+cache）+ 用户可见（diag）。
 
 **Tags:** rv1, llm, adversarial, architecture, adr-113-extension
+
+## ADR-115: RV1 Evidence Infrastructure Strengthening During Continued Observation
+
+**Status:** Accepted
+
+### Context
+The longitudinal report-versus-market audit verified point-in-time leakage in historical report assembly and replay, while evidence is insufficient for Signal/State threshold tuning. Existing V8 WorkspaceManager, RA identity, EvidenceRef, divergence ledger, and portfolio-aware research conditions provide reusable foundations but lack truthful historical provenance and path/episode read models.
+
+### Decision
+Continue Shadow Production observation while entering an additive Evidence Infrastructure strengthening program. First repair historical as-of correctness and replay window determinism; then extend the existing WorkspaceManager metadata with backward-compatible factual provenance; then add pure path metrics and derived episode projections over existing records. Do not persist synthetic episode IDs, add Evidence Score/Weight, change Signal/State thresholds, wire PortfolioConfig into engines, persist TASK-222 execution records before gates, or allow LLM output to create/modify decisions. Portfolio-aware evidence and conditional LLM explanation remain downstream and explanation-only.
+
+**Tags:** rv1, evidence-infrastructure, historical-provenance, as-of, episode-evaluation, path-metrics, observation

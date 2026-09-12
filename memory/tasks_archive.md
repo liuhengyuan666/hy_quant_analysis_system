@@ -304,6 +304,10 @@
 
 - [Done] [TASK-122] Assessment Layer: implement ExecutionAssessment and AssessmentEngine
 
+
+### 2026-09-08
+- [Done] [TASK-223] P0 Historical Point-in-Time Correctness: add bounded backtest and pipeline-date reads, derive historical Trust from as-of diagnostics, separate live Data Health in historical observe output, and freeze research replay to the declared window. Must preserve latest/default dashboard behavior and frozen V6 contracts.
+
 ## Superseded
 
 ### 2026-07-09
@@ -436,3 +440,4 @@
 - [Superseded] [TASK-133] LLM Explanation: consume ExecutionExplanation via LLM, never ExecutionEvent or raw engine internals
   Superseded by: ADR ADR-106
   Reason: The V8 ExecutionExplanation consumer design was replaced by RV1 llm-analyze personas that explain deterministic Decision Facts and never decide.
+
