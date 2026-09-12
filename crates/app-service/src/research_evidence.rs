@@ -8,7 +8,7 @@
 //! Future: when a dedicated `research-engine` crate is introduced, this module
 //! should migrate there. AppService should then only orchestrate the call.
 
-use anyhow::{Result};
+use anyhow::Result;
 use chrono::NaiveDate;
 use core_domain::research::attribution::Evidence;
 use core_domain::research::classification::classify_level;
@@ -17,6 +17,21 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use crate::AppContext;
+
+fn clickhouse_date_query_from(from: NaiveDate) -> NaiveDate {
+    from.max(NaiveDate::from_ymd_opt(1970, 1, 1).expect("valid ClickHouse Date lower bound"))
+}
+
+fn effective_evidence_window(
+    from: NaiveDate,
+    to: NaiveDate,
+    earliest_available: Option<NaiveDate>,
+    latest_available: Option<NaiveDate>,
+) -> Option<(NaiveDate, NaiveDate)> {
+    let effective_from = earliest_available.map(|date| date.max(from)).unwrap_or(from);
+    let effective_to = latest_available.map(|date| date.min(to)).unwrap_or(to);
+    (effective_from <= effective_to).then_some((effective_from, effective_to))
+}
 
 /// Supported research conditions for evidence computation.
 pub const SUPPORTED_CONDITIONS: &[&str] = &[
@@ -32,7 +47,8 @@ pub const SUPPORTED_CONDITIONS: &[&str] = &[
 /// statistics (positive ratio, median forward return). It is reproducible from
 /// the same market data.
 ///
-/// If `from` is later than `to`, the window is clamped to available data.
+/// Both condition matching and forward outcomes are bounded by the inclusive
+/// `[from, to]` research window.
 pub fn compute_condition_evidence(
     context: &AppContext,
     condition: &str,
@@ -46,19 +62,23 @@ pub fn compute_condition_evidence(
         AnalysisScope::Hk => "HSCEI",
     };
 
-    let anchor_bars = market_store::fetch_daily_bars(&context.storage, anchor_symbol)?;
+    let anchor_bars = market_store::fetch_daily_bars_for_symbols_in_range(
+        &context.storage,
+        &[anchor_symbol.to_string()],
+        clickhouse_date_query_from(from),
+        to,
+    )?;
     let close_by_date: BTreeMap<NaiveDate, f64> =
         anchor_bars.iter().map(|b| (b.date, b.close)).collect();
 
     let earliest_available = close_by_date.keys().next().copied();
     let latest_available = close_by_date.keys().last().copied();
 
-    let effective_from = earliest_available.map(|d| d.max(from)).unwrap_or(from);
-    let effective_to = latest_available.map(|d| d.min(to)).unwrap_or(to);
-
-    if effective_from > effective_to {
+    let Some((effective_from, effective_to)) =
+        effective_evidence_window(from, to, earliest_available, latest_available)
+    else {
         return Ok(Evidence::default());
-    }
+    };
 
     let matched_dates = match condition {
         "srd-strong" => match_srd_strong(context, scope, effective_from, effective_to)?,
@@ -84,31 +104,11 @@ pub fn compute_condition_evidence(
             continue;
         }
 
-        let start = date.succ_opt().unwrap_or(date);
-        let forward_entries: Vec<(NaiveDate, f64)> = close_by_date
-            .range(start..)
-            .take(horizon)
-            .map(|(d, c)| (*d, *c))
-            .collect();
-
-        if forward_entries.len() < horizon {
+        let Some((ret, max_dd)) =
+            forward_outcome_on_or_before(&close_by_date, date, *current_close, horizon, to)
+        else {
             continue;
-        }
-
-        let forward_close = forward_entries.last().unwrap().1;
-        let ret = (forward_close - *current_close) / *current_close;
-
-        let mut peak = *current_close;
-        let mut max_dd = 0.0;
-        for (_, price) in &forward_entries {
-            if *price > peak {
-                peak = *price;
-            }
-            let dd = (peak - *price) / peak;
-            if dd > max_dd {
-                max_dd = dd;
-            }
-        }
+        };
 
         matched_dates_out.push(date);
         forward_returns.push(ret);
@@ -122,6 +122,44 @@ pub fn compute_condition_evidence(
         effective_from,
         effective_to,
     ))
+}
+
+fn forward_outcome_on_or_before(
+    close_by_date: &BTreeMap<NaiveDate, f64>,
+    observation_date: NaiveDate,
+    observation_close: f64,
+    horizon: usize,
+    cutoff: NaiveDate,
+) -> Option<(f64, f64)> {
+    if horizon == 0 || observation_close <= 0.0 || observation_date >= cutoff {
+        return None;
+    }
+
+    let start = observation_date.succ_opt()?;
+    let forward_entries: Vec<f64> = close_by_date
+        .range(start..=cutoff)
+        .take(horizon)
+        .map(|(_, close)| *close)
+        .collect();
+    if forward_entries.len() != horizon {
+        return None;
+    }
+
+    let forward_close = *forward_entries.last()?;
+    let forward_return = (forward_close - observation_close) / observation_close;
+    let mut peak = observation_close;
+    let mut max_drawdown = 0.0;
+    for price in forward_entries {
+        if price > peak {
+            peak = price;
+        }
+        let drawdown = (peak - price) / peak;
+        if drawdown > max_drawdown {
+            max_drawdown = drawdown;
+        }
+    }
+
+    Some((forward_return, max_drawdown))
 }
 
 /// Match dates where StrongBuy >= 5 and StrategyState is conservative.
@@ -335,6 +373,83 @@ fn match_stretch_extreme(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn closes(rows: &[(u32, f64)]) -> BTreeMap<NaiveDate, f64> {
+        rows.iter()
+            .map(|(day, close)| (NaiveDate::from_ymd_opt(2026, 1, *day).unwrap(), *close))
+            .collect()
+    }
+
+    #[test]
+    fn forward_outcome_requires_exact_horizon_on_or_before_cutoff() {
+        let observation_date = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let cutoff = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        let close_by_date = closes(&[(1, 100.0), (2, 90.0), (3, 120.0), (4, 150.0)]);
+
+        assert_eq!(
+            forward_outcome_on_or_before(&close_by_date, observation_date, 100.0, 3, cutoff),
+            None
+        );
+        assert_eq!(
+            forward_outcome_on_or_before(&close_by_date, observation_date, 100.0, 2, cutoff),
+            Some((0.2, 0.1))
+        );
+        assert_eq!(
+            forward_outcome_on_or_before(&close_by_date, cutoff, 120.0, 1, cutoff),
+            None
+        );
+    }
+
+    #[test]
+    fn bars_after_cutoff_cannot_mature_or_change_forward_outcome() {
+        let observation_date = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let cutoff = NaiveDate::from_ymd_opt(2026, 1, 3).unwrap();
+        let without_future = closes(&[(1, 100.0), (2, 90.0), (3, 120.0)]);
+        let with_future = closes(&[(1, 100.0), (2, 90.0), (3, 120.0), (4, 1.0)]);
+
+        assert_eq!(
+            forward_outcome_on_or_before(&without_future, observation_date, 100.0, 3, cutoff),
+            None
+        );
+        assert_eq!(
+            forward_outcome_on_or_before(&with_future, observation_date, 100.0, 3, cutoff),
+            None
+        );
+        assert_eq!(
+            forward_outcome_on_or_before(&without_future, observation_date, 100.0, 2, cutoff),
+            forward_outcome_on_or_before(&with_future, observation_date, 100.0, 2, cutoff)
+        );
+    }
+
+    #[test]
+    fn clickhouse_date_query_from_clamps_pre_1970_date() {
+        let requested = NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+
+        assert_eq!(
+            clickhouse_date_query_from(requested),
+            NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+        );
+    }
+
+    #[test]
+    fn clickhouse_date_query_from_preserves_supported_date() {
+        let requested = NaiveDate::from_ymd_opt(2005, 1, 4).unwrap();
+
+        assert_eq!(clickhouse_date_query_from(requested), requested);
+    }
+
+    #[test]
+    fn effective_evidence_window_uses_semantic_bounds() {
+        let from = NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+        let to = NaiveDate::from_ymd_opt(2026, 3, 30).unwrap();
+        let earliest = NaiveDate::from_ymd_opt(2005, 1, 4).unwrap();
+        let latest = NaiveDate::from_ymd_opt(2026, 9, 4).unwrap();
+
+        assert_eq!(
+            effective_evidence_window(from, to, Some(earliest), Some(latest)),
+            Some((earliest, to))
+        );
+    }
 
     #[test]
     fn supported_conditions_constant() {
