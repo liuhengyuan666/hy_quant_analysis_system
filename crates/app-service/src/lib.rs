@@ -2114,7 +2114,14 @@ impl AppContext {
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         metrics.available_dates_ms = available_dates_ms;
         metrics.total_ms = elapsed_ms(total_started_at);
-        let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
+        let pipeline_dates = match report_date {
+            Some(cutoff) => self.pipeline_date_diagnostics_for_scope_on_or_before(
+                scope,
+                &available_dates,
+                cutoff,
+            )?,
+            None => self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?,
+        };
         let data_health = None; // 不再同步调用 check_data_health
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         Ok(snapshot.map(|mut snapshot| {
@@ -2153,7 +2160,14 @@ impl AppContext {
         let (snapshot, mut metrics) =
             self.dashboard_snapshot_from_available_dates(report_date, &available_dates, scope)?;
         let recent_reports = self.recent_reports(recent_report_limit)?;
-        let pipeline_dates = self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?;
+        let pipeline_dates = match report_date {
+            Some(cutoff) => self.pipeline_date_diagnostics_for_scope_on_or_before(
+                scope,
+                &available_dates,
+                cutoff,
+            )?,
+            None => self.pipeline_date_diagnostics_for_scope(scope, &available_dates)?,
+        };
         let data_health = None; // 不再同步调用 check_data_health
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
         metrics.available_dates_ms = available_dates_ms;
@@ -2204,44 +2218,119 @@ impl AppContext {
         scope: ReportScope,
         available_dates: &[NaiveDate],
     ) -> Result<PipelineDateDiagnostics> {
+        self.pipeline_date_diagnostics_for_scope_with_cutoff(scope, available_dates, None)
+    }
+
+    fn pipeline_date_diagnostics_for_scope_on_or_before(
+        &self,
+        scope: ReportScope,
+        available_dates: &[NaiveDate],
+        cutoff: NaiveDate,
+    ) -> Result<PipelineDateDiagnostics> {
+        self.pipeline_date_diagnostics_for_scope_with_cutoff(scope, available_dates, Some(cutoff))
+    }
+
+    fn pipeline_date_diagnostics_for_scope_with_cutoff(
+        &self,
+        scope: ReportScope,
+        available_dates: &[NaiveDate],
+        cutoff: Option<NaiveDate>,
+    ) -> Result<PipelineDateDiagnostics> {
         let scoped_instruments = self.latest_gate_instruments_for_scope(scope)?;
-        let freshest_market_date =
-            market_store::fetch_latest_table_date(&self.storage, "daily_bar")?;
-        let dashboard_latest_date = available_dates.first().copied();
+        let table_date = |table_name| match cutoff {
+            Some(cutoff) => market_store::fetch_latest_table_date_on_or_before(
+                &self.storage,
+                table_name,
+                cutoff,
+            ),
+            None => market_store::fetch_latest_table_date(&self.storage, table_name),
+        };
+        let freshest_market_date = table_date("daily_bar")?;
+        let diagnostic_dashboard_date = dashboard_latest_date(available_dates, cutoff);
         let stage_rows = [
             ("daily_bar", freshest_market_date),
-            (
-                "indicator_snapshot",
-                market_store::fetch_latest_table_date(&self.storage, "indicator_snapshot")?,
-            ),
+            ("indicator_snapshot", table_date("indicator_snapshot")?),
             (
                 "market_regime",
-                market_store::fetch_latest_market_regime_date_for_scope(&self.storage, scope)?,
+                match cutoff {
+                    Some(cutoff) => {
+                        market_store::fetch_latest_market_regime_date_for_scope_on_or_before(
+                            &self.storage,
+                            scope,
+                            cutoff,
+                        )?
+                    }
+                    None => market_store::fetch_latest_market_regime_date_for_scope(
+                        &self.storage,
+                        scope,
+                    )?,
+                },
             ),
             (
                 "environment_snapshot",
-                market_store::fetch_latest_environment_date_for_scope(&self.storage, scope)?,
+                match cutoff {
+                    Some(cutoff) => {
+                        market_store::fetch_latest_environment_date_for_scope_on_or_before(
+                            &self.storage,
+                            scope,
+                            cutoff,
+                        )?
+                    }
+                    None => {
+                        market_store::fetch_latest_environment_date_for_scope(&self.storage, scope)?
+                    }
+                },
             ),
             (
                 "strategy_state",
-                market_store::fetch_latest_strategy_state_date_for_scope(&self.storage, scope)?,
+                match cutoff {
+                    Some(cutoff) => {
+                        market_store::fetch_latest_strategy_state_date_for_scope_on_or_before(
+                            &self.storage,
+                            scope,
+                            cutoff,
+                        )?
+                    }
+                    None => market_store::fetch_latest_strategy_state_date_for_scope(
+                        &self.storage,
+                        scope,
+                    )?,
+                },
             ),
-            (
-                "rotation_rank",
-                market_store::fetch_latest_table_date(&self.storage, "rotation_rank")?,
-            ),
+            ("rotation_rank", table_date("rotation_rank")?),
             (
                 "strategy_preference",
-                market_store::fetch_latest_strategy_preference_date_for_scope(
-                    &self.storage,
-                    scope,
-                )?,
+                match cutoff {
+                    Some(cutoff) => {
+                        market_store::fetch_latest_strategy_preference_date_for_scope_on_or_before(
+                            &self.storage,
+                            scope,
+                            cutoff,
+                        )?
+                    }
+                    None => market_store::fetch_latest_strategy_preference_date_for_scope(
+                        &self.storage,
+                        scope,
+                    )?,
+                },
             ),
             (
                 "signal_snapshot",
-                market_store::fetch_latest_signal_snapshot_date_for_scope(&self.storage, scope)?,
+                match cutoff {
+                    Some(cutoff) => {
+                        market_store::fetch_latest_signal_snapshot_date_for_scope_on_or_before(
+                            &self.storage,
+                            scope,
+                            cutoff,
+                        )?
+                    }
+                    None => market_store::fetch_latest_signal_snapshot_date_for_scope(
+                        &self.storage,
+                        scope,
+                    )?,
+                },
             ),
-            ("dashboard_available", dashboard_latest_date),
+            ("dashboard_available", diagnostic_dashboard_date),
         ];
         let stages = stage_rows
             .into_iter()
@@ -2366,7 +2455,7 @@ impl AppContext {
 
         Ok(PipelineDateDiagnostics {
             freshest_market_date: freshest_market_date.map(|date| date.to_string()),
-            dashboard_latest_date: dashboard_latest_date.map(|date| date.to_string()),
+            dashboard_latest_date: diagnostic_dashboard_date.map(|date| date.to_string()),
             alerts,
             stages,
         })
@@ -2389,17 +2478,11 @@ impl AppContext {
             assembly_ms: 0,
             total_ms: 0,
         };
-        let Some(latest_available_date) = available_dates.first().copied() else {
+        let requested_report_date = report_date;
+        let Some((report_date, latest_available_date)) =
+            dashboard_snapshot_dates(available_dates, report_date)
+        else {
             return Ok((None, zero_metrics));
-        };
-        let report_date = if let Some(date) = report_date {
-            if available_dates.contains(&date) {
-                date
-            } else {
-                return Ok((None, zero_metrics));
-            }
-        } else {
-            latest_available_date
         };
         let regime_started_at = Instant::now();
         let regime = market_store::fetch_latest_market_regime_on_or_before(
@@ -2440,8 +2523,14 @@ impl AppContext {
         .collect::<Vec<_>>();
         let signals_ms = elapsed_ms(signals_started_at);
         let backtest_started_at = Instant::now();
-        let latest_backtest =
-            market_store::fetch_latest_backtest_run_for_scope(&self.storage, scope)?;
+        let latest_backtest = match requested_report_date {
+            Some(cutoff) => market_store::fetch_latest_backtest_run_for_scope_on_or_before(
+                &self.storage,
+                scope,
+                cutoff,
+            )?,
+            None => market_store::fetch_latest_backtest_run_for_scope(&self.storage, scope)?,
+        };
         let backtest_ms = elapsed_ms(backtest_started_at);
         let assembly_started_at = Instant::now();
         let mut snapshot = build_dashboard_snapshot_for_date(
@@ -3722,20 +3811,15 @@ impl AppContext {
         conditions: &[String],
         horizons: &[usize],
     ) -> Result<Vec<ReplayEvidenceSummary>> {
+        anyhow::ensure!(
+            from <= to,
+            "Replay window start {} must be on or before end {}",
+            from,
+            to
+        );
+
         let workspace = workspace::WorkspaceManager::default_workspace()
             .context("Failed to initialize workspace")?;
-
-        let anchor_symbol = match scope {
-            core_domain::AnalysisScope::Global | core_domain::AnalysisScope::Cn => "000300",
-            core_domain::AnalysisScope::Hk => "HSCEI",
-        };
-
-        let anchor_bars = market_store::fetch_daily_bars(&self.storage, anchor_symbol)?;
-        let close_by_date: BTreeMap<NaiveDate, f64> =
-            anchor_bars.iter().map(|b| (b.date, b.close)).collect();
-
-        let earliest_date = close_by_date.keys().next().copied().unwrap_or(from);
-        let target_date = close_by_date.keys().last().copied().unwrap_or(to);
 
         let mut summaries = Vec::new();
 
@@ -3745,8 +3829,8 @@ impl AppContext {
                     condition,
                     scope,
                     *horizon,
-                    earliest_date,
-                    target_date,
+                    from,
+                    to,
                 )?;
 
                 let id = workspace.write_evidence(
